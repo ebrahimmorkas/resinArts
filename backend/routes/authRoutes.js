@@ -3,6 +3,7 @@ const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
 
+// Route for registering the new user
 router.post('/register', async (req, res) => {
     console.log("Request received")
     const {first_name, middle_name, last_name, email, phone_number, state, city, address, password, confirm_password} = req.body;
@@ -40,6 +41,25 @@ try {
 } catch(err) {
     return res.status(500).json({message: "Server error"});
 }
+})
+
+router.post('/login', async (req, res) => {
+    // console.log(req.body.email);
+    const {email, password} = req.body;
+    try{
+        const user = await User.findOne({email});
+
+        if(user && await bcrypt.compare(password, user.password)) {
+            // email is present and password is correct
+            console.log("Login");
+        } 
+        else {
+            // email is not present
+            console.log("Email or password is wrong");
+        }
+    } catch(err) {
+        console.log(err);
+    }
 })
 
 module.exports = router;

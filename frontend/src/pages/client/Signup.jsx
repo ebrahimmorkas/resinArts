@@ -71,7 +71,7 @@ const Signup = () => {
   try {
     const res = await axios.post('http://localhost:3000/api/auth/register', formData);
     console.log(res.data); // should log: { message: "User created successfully" }
-    alert(res.data.message); // optional: show message to user
+    // alert(res.data.message); // optional: show message to user
   } catch (err) {
     if (err.response && err.response.data) {
       console.error('Error:', err.response.data.message);
