@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -14,7 +16,18 @@ const Login = () => {
     }
 
     try{
-        const res = await axios.post('http://localhost:3000/api/auth/login', formData)
+        const res = await axios.post(
+          'http://localhost:3000/api/auth/login', 
+          formData,
+          {withCredentials: true}
+        )
+
+        if(res.data.user.role === 'admin') {
+          navigate('/admin/panel');
+        } else {
+          navigate('/');
+        }
+
     } catch(err) {
         console.log(err);
     }

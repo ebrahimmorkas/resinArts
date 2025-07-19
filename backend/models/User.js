@@ -9,7 +9,11 @@ const userSchema = mongoose.Schema({
     address: String,
     email: String,
     phone_number: String,
-    password: String
+    password: String,
+    role: {
+        type: String,
+        default: 'admin',
+    }
 });
 
 module.exports = mongoose.model('User', userSchema);

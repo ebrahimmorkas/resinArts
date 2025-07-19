@@ -2,6 +2,8 @@ const express = require('express');
 const router = express.Router();
 const User = require('../models/User');
 const bcrypt = require('bcrypt');
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
 
 // Route for registering the new user
 router.post('/register', async (req, res) => {
@@ -44,7 +46,8 @@ try {
 })
 
 router.post('/login', async (req, res) => {
-    // console.log(req.body.email);
+    console.log(req.body.email);
+    console.log("Request received for login");
     const {email, password} = req.body;
     try{
         const user = await User.findOne({email});
@@ -52,6 +55,32 @@ router.post('/login', async (req, res) => {
         if(user && await bcrypt.compare(password, user.password)) {
             // email is present and password is correct
             console.log("Login");
+            const token = jwt.sign({
+                id: user._id,
+                iat: Math.floor(Date.now() / 1000),  // issued at
+                type: 'access',     
+            },
+            process.env.JWT_SECRET,
+            {expiresIn: '15d'}
+        );
+
+        // Setting cookies:
+        res.cookie('token', token, {
+            httpOnly: true,
+            secure: false,
+            sameSite: 'Strict',
+            maxAge: 15 * 24 * 60 * 60 * 1000
+        });
+
+        return res.status(200).json({
+  message: 'Login successful',
+  user: {
+    id: user._id,
+    name: user.first_name + " " + user.middle_name + " " + user.last_name,
+    email: user.email,
+    role: user.role
+  }
+});
         } 
         else {
             // email is not present
