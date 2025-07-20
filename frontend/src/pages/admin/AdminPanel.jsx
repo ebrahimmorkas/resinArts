@@ -1,12 +1,34 @@
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Navbar from '../../components/admin/Navbar'
 import Sidebar from '../../components/admin/Sidebar'
 import AddProduct from '../../components/admin/SidebarLinks/AddProduct';
+import axios from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 function AdminPanel() {
   // State to manage sidebar open/close
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [user, setUser] = useState(null);
+  const navigate = useNavigate();
 
+  useEffect(() => {
+    const checkLogin = async() => {
+      try {
+        const res = await axios.get(
+          'http://localhost:3000/api/auth/me',
+          {withCredentials: true},
+        );
+        console.log("You are logged in")
+        setUser(res.data.user)
+      } catch(err) {
+        setUser(null);
+        navigate('/auth/login');
+      }
+
+    }
+    checkLogin();
+  }, [])
+  
   // Function to toggle sidebar
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
