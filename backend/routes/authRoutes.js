@@ -46,8 +46,8 @@ try {
 })
 
 router.post('/login', async (req, res) => {
-    console.log(req.body.email);
-    console.log("Request received for login");
+    // console.log(req.body.email);
+    // console.log("Request received for login");
     const {email, password} = req.body;
     try{
         const user = await User.findOne({email});
@@ -61,7 +61,7 @@ router.post('/login', async (req, res) => {
                 type: 'access',     
             },
             process.env.JWT_SECRET,
-            {expiresIn: '15d'}
+            {expiresIn: '24h'}
         );
 
         // Setting cookies:
@@ -84,10 +84,12 @@ router.post('/login', async (req, res) => {
         } 
         else {
             // email is not present
-            console.log("Email or password is wrong");
+            // console.log("Email or password is wrong");
+            return res.status(401).json({message: "Invalid credentials"});
         }
     } catch(err) {
-        console.log(err);
+        // console.log(err);
+        return res.status(500).json({message: "Server Problem. Please try again after sometime"})
     }
 })
 

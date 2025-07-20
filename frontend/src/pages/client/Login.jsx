@@ -6,9 +6,12 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
+  const [errorMessages, setErrorMessages] = useState('');
+  const [isLoading, setLoading] = useState(false);
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
+    setLoading(true);
     e.preventDefault();
     const formData = {
         email,
@@ -22,6 +25,7 @@ const Login = () => {
           {withCredentials: true}
         )
 
+        setLoading(false)
         if(res.data.user.role === 'admin') {
           navigate('/admin/panel');
         } else {
@@ -29,7 +33,15 @@ const Login = () => {
         }
 
     } catch(err) {
-        console.log(err);
+      setLoading(false)
+      setPassword('');
+        // console.log(err);
+        if(err.response && err.response.data) {
+          setErrorMessages(err.response.data.message);
+        }
+        else {
+          setErrorMessages('Something went wrong. Please try again');
+        }
     }
     
     console.log('Login submitted:', { email, password });
@@ -44,6 +56,7 @@ const Login = () => {
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Mouldmarket</h2>
         <p className="text-center text-gray-600 mb-8">Sign in to your creative marketplace</p>
         <form onSubmit={handleSubmit} className="space-y-6">
+          <div className='bg-red-200 rounded py-4'>{errorMessages}</div>
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email
@@ -99,7 +112,10 @@ const Login = () => {
         <p className="mt-6 text-center text-sm text-gray-600">
           Don't have an account?{' '}
           <a href="/signup" className="text-purple-600 hover:text-purple-800 font-medium">
-            Sign up
+          {
+            isLoading ? 'Signing in' : 'Sign up'
+          }
+            
           </a>
         </p>
       </div>
