@@ -4,6 +4,7 @@ import Sidebar from '../../components/admin/Sidebar'
 import AddProduct from '../../components/admin/SidebarLinks/AddProduct';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import AddCategory from '../../components/admin/SidebarLinks/AddCategory';
 
 function AdminPanel() {
   // State to manage sidebar open/close
@@ -48,9 +49,9 @@ function AdminPanel() {
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       
       {/* Your main content goes here */}
-      <main className="w-screen bg-red-700
-      ">
-        <AddProduct></AddProduct>
+      <main className="w-screen my-8">
+        {/* <AddProduct></AddProduct> */}
+        <AddCategory></AddCategory>
       </main>
     </div>
   )

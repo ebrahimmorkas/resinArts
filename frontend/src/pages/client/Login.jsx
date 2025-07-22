@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
+import useAuth from '../../../hooks/useAuth';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -9,6 +10,7 @@ const Login = () => {
   const [errorMessages, setErrorMessages] = useState('');
   const [isLoading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const {setUser} = useAuth();
 
   const handleSubmit = async (e) => {
     setLoading(true);
@@ -24,6 +26,9 @@ const Login = () => {
           formData,
           {withCredentials: true}
         )
+        // Setting the global state of the user
+        setUser(res.data.user);
+
 
         setLoading(false)
         if(res.data.user.role === 'admin') {
