@@ -1,1083 +1,1219 @@
 "use client"
 
-import { useState, useEffect, useRef, useContext } from "react"
+import { useState, useEffect, useRef } from "react"
 import {
   Search,
-  ShoppingCart,
   User,
+  ShoppingCart,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
-  Star,
-  Heart,
-  Eye,
   X,
   Plus,
   Minus,
+  Eye,
+  Star,
+  Check,
+  Heart,
+  Palette,
   Trash2,
-  LogOut,
-  Package,
-  Settings,
 } from "lucide-react"
-import { useNavigate } from "react-router-dom"
-import axios from "axios"
-import logo from "../../assets/logo.png"
-import useAuth from "../../../hooks/useAuth"
-import { AuthContext } from "../../../Context/AuthContext"
 
-const Home = () => {
-  const [cartItems, setCartItems] = useState([])
-  const [searchTerm, setSearchTerm] = useState("")
-  const [selectedCategory, setSelectedCategory] = useState("all")
-  const [currentAnnouncement, setCurrentAnnouncement] = useState(0)
-  const [notification, setNotification] = useState("")
-  const [isCartOpen, setIsCartOpen] = useState(false)
-  const [isProfileDropdownOpen, setIsProfileDropdownOpen] = useState(false)
-  // const [user, setUser] = useState(null)
-  const categoriesRef = useRef(null)
-  const newArrivalsRef = useRef(null)
-  const revisedRatesRef = useRef(null)
-  const navigate = useNavigate()
-  const {user, loading} = useContext(AuthContext);
-
-  // Sample product data with revised rates
-  const products = [
-    {
-      id: 1,
-      name: "Ocean Wave Coasters Set",
-      price: 29.99,
-      originalPrice: 39.99,
-      category: "coasters",
-      rating: 4.8,
-      reviews: 124,
-      image: "🌊",
-      isFeatured: true,
-      isNew: true,
-      isRevised: false,
-    },
-    {
-      id: 2,
-      name: "Galaxy Wall Art Panel",
-      price: 89.99,
-      originalPrice: 129.99,
-      category: "wall-art",
-      rating: 4.9,
-      reviews: 87,
-      image: "🌌",
-      isFeatured: true,
-      isNew: false,
-      isRevised: true,
-    },
-    {
-      id: 3,
-      name: "Crystal Drop Earrings",
-      price: 24.99,
-      originalPrice: 34.99,
-      category: "jewelry",
-      rating: 4.7,
-      reviews: 203,
-      image: "💎",
-      isFeatured: true,
-      isNew: true,
-      isRevised: false,
-    },
-    {
-      id: 4,
-      name: "Marble Effect Serving Tray",
-      price: 45.99,
-      originalPrice: 65.99,
-      category: "trays",
-      rating: 4.6,
-      reviews: 156,
-      image: "🍽️",
-      isFeatured: true,
-      isNew: false,
-      isRevised: true,
-    },
-    {
-      id: 5,
-      name: "Forest Scene Keychain",
-      price: 12.99,
-      originalPrice: 18.99,
-      category: "keychains",
-      rating: 4.8,
-      reviews: 94,
-      image: "🌲",
-      isFeatured: false,
-      isNew: true,
-      isRevised: false,
-    },
-    {
-      id: 6,
-      name: "Flower Pressed Bookmark",
-      price: 8.99,
-      originalPrice: 12.99,
-      category: "bookmarks",
-      rating: 4.5,
-      reviews: 67,
-      image: "🌸",
-      isFeatured: false,
-      isNew: false,
-      isRevised: true,
-    },
-    {
-      id: 7,
-      name: "Sunset Gradient Coasters",
-      price: 32.99,
-      originalPrice: 49.99,
-      category: "coasters",
-      rating: 4.9,
-      reviews: 178,
-      image: "🌅",
-      isFeatured: true,
-      isNew: false,
-      isRevised: true,
-    },
-    {
-      id: 8,
-      name: "Abstract Rainbow Wall Art",
-      price: 124.99,
-      originalPrice: 179.99,
-      category: "wall-art",
-      rating: 5.0,
-      reviews: 45,
-      image: "🌈",
-      isFeatured: true,
-      isNew: true,
-      isRevised: false,
-    },
-    {
-      id: 9,
-      name: "Geometric Pendant Necklace",
-      price: 39.99,
-      originalPrice: 59.99,
-      category: "jewelry",
-      rating: 4.7,
-      reviews: 112,
-      image: "⬡",
-      isFeatured: false,
-      isNew: false,
-      isRevised: true,
-    },
-    {
-      id: 10,
-      name: "Gold Leaf Serving Tray",
-      price: 67.99,
-      originalPrice: 89.99,
-      category: "trays",
-      rating: 4.8,
-      reviews: 89,
-      image: "🍃",
-      isFeatured: true,
-      isNew: true,
-      isRevised: false,
-    },
-    {
-      id: 11,
-      name: "Mountain Landscape Keychain",
-      price: 14.99,
-      originalPrice: 22.99,
-      category: "keychains",
-      rating: 4.6,
-      reviews: 76,
-      image: "🏔️",
-      isFeatured: false,
-      isNew: false,
-      isRevised: true,
-    },
-    {
-      id: 12,
-      name: "Butterfly Garden Bookmark",
-      price: 10.99,
-      originalPrice: 16.99,
-      category: "bookmarks",
-      rating: 4.4,
-      reviews: 52,
-      image: "🦋",
-      isFeatured: false,
-      isNew: true,
-      isRevised: false,
-    },
-    {
-      id: 13,
-      name: "Celestial Phone Case",
-      price: 18.99,
-      originalPrice: 28.99,
-      category: "phone-cases",
-      rating: 4.6,
-      reviews: 89,
-      image: "📱",
-      isFeatured: false,
-      isNew: true,
-      isRevised: false,
-    },
-    {
-      id: 14,
-      name: "Geometric Candle Holder",
-      price: 28.99,
-      originalPrice: 42.99,
-      category: "candles",
-      rating: 4.7,
-      reviews: 156,
-      image: "🕯️",
-      isFeatured: false,
-      isNew: false,
-      isRevised: true,
-    },
-    {
-      id: 15,
-      name: "Ocean Waves Ring Dish",
-      price: 22.99,
-      originalPrice: 34.99,
-      category: "dishes",
-      rating: 4.8,
-      reviews: 73,
-      image: "🌀",
-      isFeatured: false,
-      isNew: true,
-      isRevised: false,
-    },
-    {
-      id: 16,
-      name: "Vintage Rose Coasters",
-      price: 26.99,
-      originalPrice: 38.99,
-      category: "coasters",
-      rating: 4.5,
-      reviews: 91,
-      image: "🌹",
-      isFeatured: false,
-      isNew: false,
-      isRevised: true,
-    },
-    {
-      id: 17,
-      name: "Starry Night Wall Art",
-      price: 95.99,
-      originalPrice: 145.99,
-      category: "wall-art",
-      rating: 4.9,
-      reviews: 67,
-      image: "⭐",
-      isFeatured: false,
-      isNew: false,
-      isRevised: true,
-    },
-    {
-      id: 18,
-      name: "Pearl Drop Earrings",
-      price: 34.99,
-      originalPrice: 49.99,
-      category: "jewelry",
-      rating: 4.6,
-      reviews: 128,
-      image: "🔮",
-      isFeatured: false,
-      isNew: false,
-      isRevised: true,
-    },
-  ]
-
-  const categories = [
-    { id: "all", name: "All Products", icon: "🎨", count: products.length },
-    { id: "coasters", name: "Coasters", icon: "☕", count: products.filter((p) => p.category === "coasters").length },
-    { id: "wall-art", name: "Wall Art", icon: "🖼️", count: products.filter((p) => p.category === "wall-art").length },
-    { id: "jewelry", name: "Jewelry", icon: "💎", count: products.filter((p) => p.category === "jewelry").length },
-    { id: "trays", name: "Serving Trays", icon: "🍽️", count: products.filter((p) => p.category === "trays").length },
-    {
-      id: "keychains",
-      name: "Keychains",
-      icon: "🔑",
-      count: products.filter((p) => p.category === "keychains").length,
-    },
-    {
-      id: "bookmarks",
-      name: "Bookmarks",
-      icon: "📚",
-      count: products.filter((p) => p.category === "bookmarks").length,
-    },
-    {
-      id: "phone-cases",
-      name: "Phone Cases",
-      icon: "📱",
-      count: products.filter((p) => p.category === "phone-cases").length,
-    },
-    {
-      id: "candles",
-      name: "Candle Holders",
-      icon: "🕯️",
-      count: products.filter((p) => p.category === "candles").length,
-    },
-    { id: "dishes", name: "Ring Dishes", icon: "🌀", count: products.filter((p) => p.category === "dishes").length },
-  ]
-
-  const announcements = [
-    "🎉 FREE SHIPPING on orders over $75! | New Resin Art Collection Available Now! 🎨",
-    "✨ Limited Time: 30% OFF all Wall Art pieces! Use code WALL30 ✨",
-    "🆕 Just Added: Custom Resin Art Commissions Now Available! 🎨",
-    "💝 Perfect Gifts: Resin Jewelry Starting at $24.99! 💎",
-  ]
-
-  // Filter products based on search and category
-  const filteredProducts = products.filter((product) => {
-    const matchesSearch =
-      product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      product.category.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesCategory = selectedCategory === "all" || product.category === selectedCategory
-    return matchesSearch && matchesCategory
-  })
-
-  const featuredProducts = products.filter((product) => product.isFeatured)
-  const newProducts = products.filter((product) => product.isNew)
-  const revisedProducts = products.filter((product) => product.isRevised)
-
-  // Check if product is in cart
-  const isProductInCart = (productId) => {
-    return cartItems.some((item) => item.id === productId)
-  }
-
-  // Add to cart functionality
-  const addToCart = (product) => {
-    setCartItems((prev) => {
-      const existing = prev.find((item) => item.id === product.id)
-      if (existing) {
-        return prev.map((item) => (item.id === product.id ? { ...item, quantity: item.quantity + 1 } : item))
-      } else {
-        return [...prev, { ...product, quantity: 1 }]
-      }
-    })
-
-    setNotification(`✅ ${product.name} added to cart!`)
-    setTimeout(() => setNotification(""), 3000)
-  }
-
-  // Remove from cart functionality
-  const removeFromCart = (productId) => {
-    setCartItems((prev) => prev.filter((item) => item.id !== productId))
-    const product = products.find((p) => p.id === productId)
-    setNotification(`❌ ${product?.name} removed from cart!`)
-    setTimeout(() => setNotification(""), 3000)
-  }
-
-  // Update cart item quantity
-  const updateCartQuantity = (productId, newQuantity) => {
-    if (newQuantity === 0) {
-      setCartItems((prev) => prev.filter((item) => item.id !== productId))
-    } else {
-      setCartItems((prev) => prev.map((item) => (item.id === productId ? { ...item, quantity: newQuantity } : item)))
-    }
-  }
-
-  const getTotalCartItems = () => {
-    return cartItems.reduce((total, item) => total + item.quantity, 0)
-  }
-
-  const getTotalCartValue = () => {
-    return cartItems.reduce((total, item) => total + item.price * item.quantity, 0)
-  }
-
-  // Function to handle the logout
-  const handleLogout = async () => {
-    try {
-      const res = await axios.post(
-        "http://localhost:3000/api/auth/logout",
-        {},
+// Mock data with real sample images and variants
+const mockProducts = [
+  {
+    id: 1,
+    name: "Premium Wireless Headphones",
+    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
+    price: 150,
+    originalPrice: 200,
+    badge: "NEW",
+    category: "Electronics",
+    type: "just-arrived",
+    rating: 4.5,
+    variants: {
+      colors: [
         {
-          withCredentials: true,
+          name: "Black",
+          value: "#000000",
+          image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
         },
-      )
-      navigate("/auth/login")
-    } catch (err) {
-      console.log(err)
-    }
-  }
+        {
+          name: "White",
+          value: "#FFFFFF",
+          image: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Blue",
+          value: "#3B82F6",
+          image: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=300&h=300&fit=crop",
+        },
+      ],
+      sizes: ["One Size"],
+    },
+    priceChart: [
+      { quantity: "1-4", price: 150 },
+      { quantity: "5-9", price: 140 },
+      { quantity: "10+", price: 130 },
+    ],
+  },
+  {
+    id: 2,
+    name: "Smart Fitness Watch",
+    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
+    price: 100,
+    originalPrice: 150,
+    badge: "-33%",
+    category: "Electronics",
+    type: "revised-rates",
+    rating: 4.8,
+    variants: {
+      colors: [
+        {
+          name: "Black",
+          value: "#000000",
+          image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Silver",
+          value: "#C0C0C0",
+          image: "https://images.unsplash.com/photo-1579586337278-3f436f25d4d6?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Rose Gold",
+          value: "#E8B4B8",
+          image: "https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=300&h=300&fit=crop",
+        },
+      ],
+      sizes: ["38mm", "42mm", "44mm"],
+    },
+    priceChart: [
+      { quantity: "1-2", price: 100 },
+      { quantity: "3-5", price: 95 },
+      { quantity: "6+", price: 90 },
+    ],
+  },
+  {
+    id: 3,
+    name: "Organic Cotton T-Shirt",
+    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
+    price: 25,
+    originalPrice: 35,
+    badge: "RESTOCKED",
+    category: "Clothing",
+    type: "restocked",
+    rating: 4.3,
+    variants: {
+      colors: [
+        {
+          name: "White",
+          value: "#FFFFFF",
+          image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Black",
+          value: "#000000",
+          image: "https://images.unsplash.com/photo-1583743814966-8936f37f4678?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Navy",
+          value: "#1E3A8A",
+          image: "https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Gray",
+          value: "#6B7280",
+          image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=300&h=300&fit=crop",
+        },
+      ],
+      sizes: ["XS", "S", "M", "L", "XL", "XXL"],
+    },
+    priceChart: [
+      { quantity: "1-4", price: 25 },
+      { quantity: "5-9", price: 22 },
+      { quantity: "10+", price: 20 },
+    ],
+  },
+  {
+    id: 4,
+    name: "Professional Camera Lens",
+    image: "https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=300&h=300&fit=crop",
+    price: 299,
+    originalPrice: 399,
+    badge: "-25%",
+    category: "Electronics",
+    type: "just-arrived",
+    rating: 4.9,
+    variants: {
+      colors: [
+        {
+          name: "Black",
+          value: "#000000",
+          image: "https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=300&h=300&fit=crop",
+        },
+      ],
+      sizes: ["50mm", "85mm", "135mm"],
+    },
+    priceChart: [
+      { quantity: "1", price: 299 },
+      { quantity: "2-3", price: 289 },
+      { quantity: "4+", price: 279 },
+    ],
+  },
+  {
+    id: 5,
+    name: "Luxury Leather Wallet",
+    image: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=300&h=300&fit=crop",
+    price: 80,
+    originalPrice: 120,
+    badge: "HOT",
+    category: "Accessories",
+    type: "revised-rates",
+    rating: 4.6,
+    variants: {
+      colors: [
+        {
+          name: "Brown",
+          value: "#8B4513",
+          image: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Black",
+          value: "#000000",
+          image: "https://images.unsplash.com/photo-1553062407984-6d7b8b5c8f7b?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Tan",
+          value: "#D2B48C",
+          image: "https://images.unsplash.com/photo-1608070740394-6d7b8b83add3?w=300&h=300&fit=crop",
+        },
+      ],
+      sizes: ["Standard"],
+    },
+    priceChart: [
+      { quantity: "1-2", price: 80 },
+      { quantity: "3-5", price: 75 },
+      { quantity: "6+", price: 70 },
+    ],
+  },
+  {
+    id: 6,
+    name: "Gaming Mechanical Keyboard",
+    image: "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=300&h=300&fit=crop",
+    price: 120,
+    originalPrice: 160,
+    badge: "RESTOCKED",
+    category: "Electronics",
+    type: "restocked",
+    rating: 4.7,
+    variants: {
+      colors: [
+        {
+          name: "RGB",
+          value: "#FF6B6B",
+          image: "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=300&h=300&fit=crop",
+        },
+        {
+          name: "White",
+          value: "#FFFFFF",
+          image: "https://images.unsplash.com/photo-1587829741301-dc798b83add3?w=300&h=300&fit=crop",
+        },
+      ],
+      sizes: ["60%", "TKL", "Full Size"],
+    },
+    priceChart: [
+      { quantity: "1-3", price: 120 },
+      { quantity: "4-7", price: 115 },
+      { quantity: "8+", price: 110 },
+    ],
+  },
+  {
+    id: 7,
+    name: "Wireless Bluetooth Speaker",
+    image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop",
+    price: 75,
+    originalPrice: 100,
+    badge: "-25%",
+    category: "Electronics",
+    type: "just-arrived",
+    rating: 4.4,
+    variants: {
+      colors: [
+        {
+          name: "Black",
+          value: "#000000",
+          image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Blue",
+          value: "#3B82F6",
+          image: "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Red",
+          value: "#EF4444",
+          image: "https://images.unsplash.com/photo-1589003077984-894e133dabab?w=300&h=300&fit=crop",
+        },
+      ],
+      sizes: ["Compact", "Standard", "Large"],
+    },
+    priceChart: [
+      { quantity: "1-3", price: 75 },
+      { quantity: "4-6", price: 70 },
+      { quantity: "7+", price: 65 },
+    ],
+  },
+  {
+    id: 8,
+    name: "Designer Sunglasses",
+    image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=300&h=300&fit=crop",
+    price: 120,
+    originalPrice: 180,
+    badge: "HOT",
+    category: "Accessories",
+    type: "revised-rates",
+    rating: 4.7,
+    variants: {
+      colors: [
+        {
+          name: "Black",
+          value: "#000000",
+          image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Tortoise",
+          value: "#8B4513",
+          image: "https://images.unsplash.com/photo-1511499794561-7780e7231661?w=300&h=300&fit=crop",
+        },
+        {
+          name: "Gold",
+          value: "#FFD700",
+          image: "https://images.unsplash.com/photo-1473496169904-658ba7c44d8a?w=300&h=300&fit=crop",
+        },
+      ],
+      sizes: ["Small", "Medium", "Large"],
+    },
+    priceChart: [
+      { quantity: "1-2", price: 120 },
+      { quantity: "3-4", price: 115 },
+      { quantity: "5+", price: 110 },
+    ],
+  },
+]
 
-  // Cycle through announcements
+const categories = [
+  {
+    id: 1,
+    name: "Electronics",
+    image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=100&h=100&fit=crop",
+  },
+  {
+    id: 2,
+    name: "Clothing",
+    image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=100&h=100&fit=crop",
+  },
+  {
+    id: 3,
+    name: "Home & Garden",
+    image: "https://images.unsplash.com/photo-1586023492125-27b2c8ce0db2?w=100&h=100&fit=crop",
+  },
+  { id: 4, name: "Sports", image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop" },
+  { id: 5, name: "Books", image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=100&h=100&fit=crop" },
+  { id: 6, name: "Beauty", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=100&h=100&fit=crop" },
+  { id: 7, name: "Toys", image: "https://images.unsplash.com/photo-1558877385-1c2d7b8e8b8b?w=100&h=100&fit=crop" },
+  {
+    id: 8,
+    name: "Automotive",
+    image: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=100&h=100&fit=crop",
+  },
+  {
+    id: 9,
+    name: "Jewelry",
+    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7d3138?w=100&h=100&fit=crop",
+  },
+  { id: 10, name: "Kitchen", image: "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=100&h=100&fit=crop" },
+]
+
+const banners = [
+  "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop",
+  "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop",
+]
+
+export default function HomePage() {
+  const [cartItems, setCartItems] = useState({})
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [isProfileOpen, setIsProfileOpen] = useState(false)
+  const [selectedFilters, setSelectedFilters] = useState(["all"])
+  const [selectedCategory, setSelectedCategory] = useState(null)
+  const [currentBanner, setCurrentBanner] = useState(0)
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [wishlist, setWishlist] = useState([])
+  const [selectedVariantProduct, setSelectedVariantProduct] = useState(null)
+
+  // Refs for scrolling to sections
+  const justArrivedRef = useRef(null)
+  const restockedRef = useRef(null)
+  const revisedRatesRef = useRef(null)
+
+  // Auto-rotate banners - FIXED: Added empty dependency array
   useEffect(() => {
     const interval = setInterval(() => {
-      setCurrentAnnouncement((prev) => (prev + 1) % announcements.length)
+      setCurrentBanner((prev) => (prev + 1) % banners.length)
     }, 5000)
     return () => clearInterval(interval)
-  }, [])
+  }, []) // Fixed: Empty dependency array prevents continuous re-creation
 
-  // Use effect for checking whether user is login or not
-  // useEffect(() => {
-  //   const checkLogin = async () => {
-  //     try {
-  //       const res = await axios.get("http://localhost:3000/api/auth/me", { withCredentials: true })
-  //       setUser(res.data.user)
-  //     } catch (err) {
-  //       setUser(null)
-  //       navigate("/auth/login")
-  //     }
-  //   }
-  //   checkLogin()
-  // }, [])
-
-  useEffect(() => {
-    if(!user && !loading) {
-      navigate('/auth/login');
-    }
-  }, [loading, user, navigate]);
-
-  // Close dropdowns when clicking outside
+  // Close dropdowns when clicking outside - FIXED: Proper dependency array
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (!event.target.closest(".profile-dropdown") && !event.target.closest(".profile-button")) {
-        setIsProfileDropdownOpen(false)
+      if (isProfileOpen && !event.target.closest(".profile-dropdown")) {
+        setIsProfileOpen(false)
       }
     }
-    document.addEventListener("mousedown", handleClickOutside)
+    
+    if (isProfileOpen) {
+      document.addEventListener("mousedown", handleClickOutside)
+    }
+    
     return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [])
+  }, [isProfileOpen]) // Fixed: Only add listener when dropdown is open
 
-  // Scroll functions
-  const scrollCategories = (direction) => {
-    if (categoriesRef.current) {
-      const scrollAmount = 200
-      const newScrollLeft = categoriesRef.current.scrollLeft + (direction === "left" ? -scrollAmount : scrollAmount)
-      categoriesRef.current.scrollTo({ left: newScrollLeft, behavior: "smooth" })
+  // Generate cart key for variant-specific items
+  const generateCartKey = (productId, color = null, size = null) => {
+    if (color && size) {
+      return `${productId}-${color}-${size}`
+    }
+    return `${productId}-default-default`
+  }
+
+  // Parse cart key to get product details
+  const parseCartKey = (cartKey) => {
+    const [productId, color, size] = cartKey.split("-")
+    return {
+      productId: Number.parseInt(productId),
+      color: color === "default" ? null : color,
+      size: size === "default" ? null : size,
     }
   }
 
-  const scrollNewArrivals = (direction) => {
-    if (newArrivalsRef.current) {
-      const scrollAmount = 300
-      const newScrollLeft = newArrivalsRef.current.scrollLeft + (direction === "left" ? -scrollAmount : scrollAmount)
-      newArrivalsRef.current.scrollTo({ left: newScrollLeft, behavior: "smooth" })
+  const handleAddToCart = (productId, selectedColor = null, selectedSize = null) => {
+    const cartKey = generateCartKey(productId, selectedColor, selectedSize)
+    setCartItems((prev) => ({
+      ...prev,
+      [cartKey]: (prev[cartKey] || 0) + 1,
+    }))
+  }
+
+  const handleUpdateQuantity = (cartKey, change) => {
+    setCartItems((prev) => {
+      const newQuantity = (prev[cartKey] || 0) + change
+      if (newQuantity <= 0) {
+        const { [cartKey]: removed, ...rest } = prev
+        return rest
+      }
+      return { ...prev, [cartKey]: newQuantity }
+    })
+  }
+
+  const handleRemoveFromCart = (cartKey) => {
+    setCartItems((prev) => {
+      const { [cartKey]: removed, ...rest } = prev
+      return rest
+    })
+  }
+
+  const handleCategoryClick = (category) => {
+    if (selectedCategory === category.name) {
+      setSelectedCategory(null)
+    } else {
+      setSelectedCategory(category.name)
     }
   }
 
-  const scrollRevisedRates = (direction) => {
-    if (revisedRatesRef.current) {
-      const scrollAmount = 300
-      const newScrollLeft = revisedRatesRef.current.scrollLeft + (direction === "left" ? -scrollAmount : scrollAmount)
-      revisedRatesRef.current.scrollTo({ left: newScrollLeft, behavior: "smooth" })
+  const handleFilterChange = (filter) => {
+    const wasSelected = selectedFilters.includes(filter)
+
+    setSelectedFilters((prev) => {
+      if (filter === "all") {
+        return ["all"]
+      }
+      const newFilters = prev.filter((f) => f !== "all")
+      if (newFilters.includes(filter)) {
+        const filtered = newFilters.filter((f) => f !== filter)
+        return filtered.length === 0 ? ["all"] : filtered
+      }
+      return [...newFilters, filter]
+    })
+
+    // Only scroll to section if filter is being selected (not deselected)
+    if (!wasSelected) {
+      if (filter === "just-arrived") {
+        setTimeout(() => justArrivedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+      } else if (filter === "restocked") {
+        setTimeout(() => restockedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+      } else if (filter === "revised-rates") {
+        setTimeout(() => revisedRatesRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+      }
     }
   }
 
-  // Scroll to restocked items
-  const scrollToRestockedItems = () => {
-    const element = document.getElementById("restocked-items")
-    if (element) {
-      element.scrollIntoView({ behavior: "smooth" })
-    }
+  const toggleWishlist = (productId) => {
+    setWishlist((prev) => (prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]))
   }
 
-  // Product Card Component
-  const ProductCard = ({ product, showDiscount = false }) => {
-    const discountPercentage =
-      showDiscount && product.originalPrice
-        ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100)
-        : 0
+  const getFilteredProducts = () => {
+    let filtered = mockProducts
 
-    const productInCart = isProductInCart(product.id)
-    if (loading) return <div className="text-center mt-10">Checking Login</div>
+    // Filter by category if selected
+    if (selectedCategory) {
+      filtered = filtered.filter((product) => product.category === selectedCategory)
+    }
+
+    // Filter by selected filters
+    if (!selectedFilters.includes("all")) {
+      filtered = filtered.filter((product) =>
+        selectedFilters.some((filter) => {
+          if (filter === "category") return true
+          if (filter === "just-arrived") return product.type === "just-arrived"
+          if (filter === "revised-rates") return product.type === "revised-rates"
+          if (filter === "restocked") return product.type === "restocked"
+          return false
+        }),
+      )
+    }
+
+    return filtered
+  }
+
+  // Check if product has any variant in cart
+  const getProductCartQuantity = (productId) => {
+    return Object.entries(cartItems)
+      .filter(([cartKey]) => parseCartKey(cartKey).productId === productId)
+      .reduce((total, [, quantity]) => total + quantity, 0)
+  }
+
+  const ProductCard = ({ product }) => {
+    const totalQuantity = getProductCartQuantity(product.id)
+    const isInWishlist = wishlist.includes(product.id)
+
+    // Get all cart keys for this product
+    const getProductCartKeys = (productId) => {
+      return Object.keys(cartItems).filter((cartKey) => parseCartKey(cartKey).productId === productId)
+    }
+
+    const handleRemoveAllVariants = (productId) => {
+      const productCartKeys = getProductCartKeys(productId)
+      productCartKeys.forEach((cartKey) => {
+        handleRemoveFromCart(cartKey)
+      })
+    }
+
     return (
-      <div className="group relative bg-white rounded-xl sm:rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 sm:hover:-translate-y-2 overflow-hidden flex-shrink-0 w-64 sm:w-auto">
-        {product.isNew && (
-          <div className="absolute top-2 sm:top-3 left-2 sm:left-3 z-10 bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-            NEW
+      <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group w-full">
+        <div className="relative">
+          <img
+            src={product.image || "/placeholder.svg"}
+            alt={product.name}
+            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+            onError={(e) => {
+              e.target.src = "/placeholder.svg?height=300&width=300"
+            }}
+          />
+          <div className="absolute top-2 left-2">
+            <span
+              className={`px-2 py-1 text-xs font-bold rounded-full ${
+                product.badge === "NEW"
+                  ? "bg-green-500 text-white"
+                  : product.badge === "HOT"
+                    ? "bg-red-500 text-white"
+                    : product.badge === "RESTOCKED"
+                      ? "bg-blue-500 text-white"
+                      : "bg-orange-500 text-white"
+              }`}
+            >
+              {product.badge}
+            </span>
           </div>
-        )}
-
-        {showDiscount && discountPercentage > 0 && (
-          <div className="absolute top-2 sm:top-3 right-2 sm:right-3 z-10 bg-gradient-to-r from-red-500 to-rose-500 text-white px-2 py-1 rounded-full text-xs font-semibold">
-            {discountPercentage}% OFF
-          </div>
-        )}
-
-        <div className="relative bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400 h-40 sm:h-48 flex items-center justify-center text-3xl sm:text-4xl overflow-hidden">
-          <div className="absolute inset-0 bg-black opacity-0 group-hover:opacity-10 transition-opacity duration-300"></div>
-          <span className="filter drop-shadow-lg text-3xl sm:text-4xl lg:text-6xl">{product.image}</span>
-
-          <div className="absolute top-2 sm:top-3 right-2 sm:right-3 flex space-x-1 sm:space-x-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-            <button className="p-1.5 sm:p-2 bg-white/90 rounded-full shadow-lg hover:bg-white transition-colors">
-              <Heart className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
+          <div className="absolute top-2 right-2 flex items-center gap-2">
+            <button
+              onClick={() => toggleWishlist(product.id)}
+              className={`p-1 rounded-full transition-colors ${
+                isInWishlist ? "bg-red-500 text-white" : "bg-white/90 text-gray-600 hover:text-red-500"
+              }`}
+            >
+              <Heart className={`w-4 h-4 ${isInWishlist ? "fill-current" : ""}`} />
             </button>
-            <button className="p-1.5 sm:p-2 bg-white/90 rounded-full shadow-lg hover:bg-white transition-colors">
-              <Eye className="w-3 h-3 sm:w-4 sm:h-4 text-gray-600" />
-            </button>
+            <div className="flex items-center bg-white/90 rounded-full px-2 py-1">
+              <Star className="w-3 h-3 fill-yellow-400 text-yellow-400" />
+              <span className="text-xs ml-1">{product.rating}</span>
+            </div>
           </div>
         </div>
 
-        <div className="p-3 sm:p-4">
-          <h3 className="font-bold text-gray-800 mb-2 sm:mb-4 lg:mb-6 px-2">{product.name}</h3>
+        <div className="p-4">
+          <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
 
-          <div className="flex items-center mb-3">
-            <div className="flex items-center space-x-1">
-              {[...Array(5)].map((_, i) => (
-                <Star
-                  key={i}
-                  className={`w-3 h-3 sm:w-4 sm:h-4 ${
-                    i < Math.floor(product.rating) ? "text-yellow-400 fill-current" : "text-gray-300"
-                  }`}
-                />
-              ))}
-            </div>
-            <span className="text-xs sm:text-sm text-gray-600 ml-2">({product.reviews})</span>
+          <div className="flex items-center gap-2 mb-3">
+            <span className="text-lg font-bold text-gray-900">${product.price}</span>
+            <span className="text-sm text-gray-500 line-through">${product.originalPrice}</span>
           </div>
 
-          <div className="flex items-center justify-between gap-2">
-            <div className="flex flex-col">
-              {showDiscount && product.originalPrice && (
-                <span className="text-xs sm:text-sm text-gray-500 line-through">${product.originalPrice}</span>
-              )}
-              <span className="font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-yellow-600 text-base sm:text-lg lg:text-xl">
-                ${product.price}
-              </span>
+          {/* Variants Preview */}
+          <div className="mb-3">
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-xs text-gray-600">Colors:</span>
+              <div className="flex gap-1">
+                {product.variants.colors.slice(0, 3).map((color, index) => (
+                  <div
+                    key={index}
+                    className="w-3 h-3 rounded-full border border-gray-300"
+                    style={{ backgroundColor: color.value }}
+                  />
+                ))}
+                {product.variants.colors.length > 3 && (
+                  <span className="text-xs text-gray-500">+{product.variants.colors.length - 3}</span>
+                )}
+              </div>
             </div>
-            <button
-              onClick={() => (productInCart ? removeFromCart(product.id) : addToCart(product))}
-              className={`px-2 py-1.5 sm:px-3 sm:py-2 lg:px-4 lg:py-2 rounded-full font-semibold transform hover:scale-105 transition-all duration-200 shadow-lg text-xs sm:text-sm ${
-                productInCart
-                  ? "bg-gradient-to-r from-red-500 to-rose-500 text-white hover:from-red-600 hover:to-rose-600"
-                  : "bg-gradient-to-r from-amber-500 to-yellow-500 text-white hover:from-amber-600 hover:to-yellow-600"
-              }`}
-            >
-              {productInCart ? "Remove from Cart" : "Add to Cart"}
-            </button>
+            <div className="text-xs text-gray-600">
+              Sizes: {product.variants.sizes.slice(0, 3).join(", ")}
+              {product.variants.sizes.length > 3 && ` +${product.variants.sizes.length - 3} more`}
+            </div>
+          </div>
+
+          {/* Price Chart */}
+          <div className="mb-3 p-2 bg-gray-50 rounded-lg">
+            <p className="text-xs font-semibold text-gray-600 mb-1">Bulk Pricing:</p>
+            <div className="space-y-1">
+              {product.priceChart.map((tier, index) => (
+                <div key={index} className="flex justify-between text-xs">
+                  <span>{tier.quantity} pcs</span>
+                  <span className="font-semibold">${tier.price} each</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            {/* First Row - Details and Select Variant */}
+            <div className="flex gap-2">
+              <button
+                onClick={() => setSelectedProduct(product)}
+                className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1"
+              >
+                <Eye className="w-4 h-4" />
+                Details
+              </button>
+              <button
+                onClick={() => setSelectedVariantProduct(product)}
+                className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-800 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1"
+              >
+                <Palette className="w-4 h-4" />
+                Variants
+              </button>
+            </div>
+
+            {/* Second Row - Add to Cart or Cart Status */}
+            {totalQuantity === 0 ? (
+              <button
+                onClick={() => setSelectedVariantProduct(product)}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200"
+              >
+                Select Variant & Add to Cart
+              </button>
+            ) : (
+              <div className="space-y-2">
+                <div className="w-full bg-green-100 border border-green-300 rounded-lg px-3 py-2 text-center">
+                  <span className="font-medium text-green-800">In Cart: {totalQuantity} items</span>
+                  <button
+                    onClick={() => setSelectedVariantProduct(product)}
+                    className="block w-full mt-1 text-xs text-green-600 hover:text-green-800 transition-colors"
+                  >
+                    Add more variants
+                  </button>
+                </div>
+
+                {/* Remove from Cart Button */}
+                <button
+                  onClick={() => handleRemoveAllVariants(product.id)}
+                  className="w-full bg-red-100 hover:bg-red-200 text-red-800 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1"
+                >
+                  <Trash2 className="w-4 h-4" />
+                  Remove All from Cart
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </div>
     )
   }
 
-  // Cart Sidebar Component
-  const CartSidebar = () => (
-    <div className={`fixed inset-0 z-50 ${isCartOpen ? "pointer-events-auto" : "pointer-events-none"}`}>
-      {/* Backdrop */}
-      <div
-        className={`absolute inset-0 bg-black transition-opacity duration-300 ${
-          isCartOpen ? "opacity-50" : "opacity-0"
-        }`}
-        onClick={() => setIsCartOpen(false)}
-      ></div>
+  const ProductModal = ({ product, onClose }) => {
+    if (!product) return null
 
-      {/* Cart Panel */}
-      <div
-        className={`absolute right-0 top-0 h-full w-full max-w-sm sm:max-w-md bg-white shadow-2xl transform transition-transform duration-300 ${
-          isCartOpen ? "translate-x-0" : "translate-x-full"
-        } flex flex-col`}
-      >
-        {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Shopping Cart ({getTotalCartItems()})</h3>
-          <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* Cart Items */}
-        <div className="flex-1 overflow-y-auto p-4">
-          {cartItems.length === 0 ? (
-            <div className="text-center py-8">
-              <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500">Your cart is empty</p>
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-2xl font-bold text-gray-800">{product.name}</h2>
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
             </div>
-          ) : (
-            <div className="space-y-4">
-              {cartItems.map((item) => (
-                <div key={item.id} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
-                  <div className="w-12 h-12 sm:w-16 sm:h-16 bg-gradient-to-br from-amber-400 via-yellow-400 to-orange-400 rounded-lg flex items-center justify-center text-xl sm:text-2xl">
-                    {item.image}
-                  </div>
 
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-medium text-gray-900 truncate text-sm sm:text-base">{item.name}</h4>
-                    <p className="text-sm text-gray-500">${item.price}</p>
-                  </div>
+            <div className="grid md:grid-cols-2 gap-6">
+              <div>
+                <img
+                  src={product.image || "/placeholder.svg"}
+                  alt={product.name}
+                  className="w-full rounded-lg object-cover"
+                  onError={(e) => {
+                    e.target.src = "/placeholder.svg?height=400&width=400"
+                  }}
+                />
+              </div>
 
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => updateCartQuantity(item.id, item.quantity - 1)}
-                      className="p-1 hover:bg-white rounded"
-                    >
-                      <Minus className="w-4 h-4" />
-                    </button>
-                    <span className="w-8 text-center text-sm font-medium">{item.quantity}</span>
-                    <button
-                      onClick={() => updateCartQuantity(item.id, item.quantity + 1)}
-                      className="p-1 hover:bg-white rounded"
-                    >
-                      <Plus className="w-4 h-4" />
-                    </button>
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="p-1 hover:bg-red-100 rounded text-red-500 ml-2"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+              <div>
+                <div className="flex items-center gap-2 mb-4">
+                  <span className="text-2xl font-bold text-gray-900">${product.price}</span>
+                  <span className="text-lg text-gray-500 line-through">${product.originalPrice}</span>
+                </div>
+
+                <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center">
+                    {[...Array(5)].map((_, i) => (
+                      <Star
+                        key={i}
+                        className={`w-4 h-4 ${
+                          i < Math.floor(product.rating) ? "fill-yellow-400 text-yellow-400" : "text-gray-300"
+                        }`}
+                      />
+                    ))}
+                  </div>
+                  <span className="text-sm text-gray-600">({product.rating})</span>
+                </div>
+
+                <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                  <h3 className="font-semibold text-gray-800 mb-2">Bulk Pricing</h3>
+                  <div className="space-y-2">
+                    {product.priceChart.map((tier, index) => (
+                      <div key={index} className="flex justify-between">
+                        <span>{tier.quantity} pieces</span>
+                        <span className="font-semibold">${tier.price} each</span>
+                      </div>
+                    ))}
                   </div>
                 </div>
-              ))}
-            </div>
-          )}
-        </div>
 
-        {/* Footer */}
-        {cartItems.length > 0 && (
-          <div className="border-t border-gray-200 p-4">
-            <div className="flex items-center justify-between mb-4">
-              <span className="text-lg font-semibold">Total: ${getTotalCartValue().toFixed(2)}</span>
+                <p className="text-gray-600 mb-6">
+                  Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed do eiusmod tempor incididunt ut labore et
+                  dolore magna aliqua. Ut enim ad minim veniam, quis nostrud exercitation ullamco laboris.
+                </p>
+
+                <button
+                  onClick={() => {
+                    setSelectedVariantProduct(product)
+                    onClose()
+                  }}
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+                >
+                  Select Variant & Add to Cart
+                </button>
+              </div>
             </div>
-            <button className="w-full bg-gradient-to-r from-amber-500 to-yellow-500 text-white py-3 rounded-lg font-semibold hover:from-amber-600 hover:to-yellow-600 transition-colors">
-              Checkout
-            </button>
           </div>
-        )}
+        </div>
       </div>
-    </div>
-  )
+    )
+  }
+
+  const VariantModal = ({ product, onClose }) => {
+    const [selectedColor, setSelectedColor] = useState(null)
+    const [selectedSize, setSelectedSize] = useState(null)
+
+    // Initialize selected variants when product changes - FIXED: Added proper cleanup
+    useEffect(() => {
+      if (product?.variants) {
+        setSelectedColor(product.variants.colors[0] || null)
+        setSelectedSize(product.variants.sizes[0] || null)
+      } else {
+        setSelectedColor(null)
+        setSelectedSize(null)
+      }
+    }, [product]) // Fixed: Reset when product changes
+
+    if (!product) return null
+
+    const cartKey = generateCartKey(product.id, selectedColor?.name, selectedSize)
+    const currentVariantQuantity = cartItems[cartKey] || 0
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] overflow-y-auto">
+          <div className="p-6">
+            <div className="flex justify-between items-start mb-4">
+              <h2 className="text-xl font-bold text-gray-800">Select Variants</h2>
+              <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <img
+                src={selectedColor?.image || product.image}
+                alt={product.name}
+                className="w-full h-48 object-cover rounded-lg mb-4"
+                onError={(e) => {
+                  e.target.src = "/placeholder.svg?height=300&width=300"
+                }}
+              />
+              <h3 className="font-semibold text-lg">{product.name}</h3>
+              <p className="text-2xl font-bold text-blue-600">${product.price}</p>
+            </div>
+
+            {/* Color Selection */}
+            <div className="mb-6">
+              <h4 className="font-semibold mb-3">Color: {selectedColor?.name}</h4>
+              <div className="flex gap-3 flex-wrap">
+                {product.variants.colors.map((color, index) => (
+                  <button
+                    key={`${color.name}-${index}`}
+                    onClick={() => setSelectedColor(color)}
+                    className={`relative w-12 h-12 sm:w-20 sm:h-20 bg-white rounded-lg border-2 transition-all ${
+                      selectedColor?.name === color.name ? "border-blue-500 scale-110" : "border-gray-300"
+                    }`}
+                    style={{ backgroundColor: color.value }}
+                  >
+                    {selectedColor?.name === color.name && (
+                      <Check className="absolute inset-0 m-auto w-6 h-6 text-white drop-shadow-lg" />
+                    )}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Size Selection */}
+            <div className="mb-6">
+              <h4 className="font-semibold mb-3">Size: {selectedSize}</h4>
+              <div className="flex gap-2 flex-wrap">
+                {product.variants.sizes.map((size, index) => (
+                  <button
+                    key={`${size}-${index}`}
+                    onClick={() => setSelectedSize(size)}
+                    className={`px-4 py-2 rounded-lg border transition-all ${
+                      selectedSize === size
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Current variant quantity display */}
+            {currentVariantQuantity > 0 && (
+              <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                <p className="text-green-800 text-sm">
+                  This variant ({selectedColor?.name}, {selectedSize}) is already in your cart: {currentVariantQuantity}{" "}
+                  items
+                </p>
+              </div>
+            )}
+
+            {/* Add to Cart or Quantity Controls */}
+            {currentVariantQuantity === 0 ? (
+              <button
+                onClick={() => {
+                  handleAddToCart(product.id, selectedColor?.name, selectedSize)
+                  onClose()
+                }}
+                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+              >
+                Add to Cart - {selectedColor?.name}, {selectedSize}
+              </button>
+            ) : (
+              <div className="space-y-3">
+                <div className="flex items-center justify-between bg-blue-600 text-white rounded-lg px-4 py-3">
+                  <button onClick={() => handleUpdateQuantity(cartKey, -1)} className="p-1 hover:bg-blue-700 rounded">
+                    <Minus className="w-4 h-4" />
+                  </button>
+                  <span className="font-medium">Qty: {currentVariantQuantity}</span>
+                  <button onClick={() => handleUpdateQuantity(cartKey, 1)} className="p-1 hover:bg-blue-700 rounded">
+                    <Plus className="w-4 h-4" />
+                  </button>
+                </div>
+                <button
+                  onClick={onClose}
+                  className="w-full bg-gray-600 hover:bg-gray-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+                >
+                  Continue Shopping
+                </button>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-amber-50 via-yellow-50 to-orange-50">
-      {/* Notification */}
-      {notification && (
-        <div className="fixed top-20 sm:top-24 right-2 sm:right-4 z-50 bg-gradient-to-r from-green-500 to-emerald-500 text-white px-3 py-2 sm:px-4 sm:py-2 lg:px-6 lg:py-3 rounded-lg shadow-lg animate-pulse text-xs sm:text-sm lg:text-base max-w-xs sm:max-w-sm">
-          {notification}
-        </div>
-      )}
-
-      {/* Cart Sidebar */}
-      <CartSidebar />
-
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 w-full">
       {/* Announcement Bar */}
-      <div className="bg-gradient-to-r from-amber-600 to-yellow-600 text-white text-center py-2 sm:py-3 px-2 sm:px-4 text-xs sm:text-sm font-medium overflow-hidden">
-        <div className="animate-pulse">{announcements[currentAnnouncement]}</div>
+      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center w-full">
+        <p className="text-sm font-medium">
+          🎉 Special Festival Sale - Up to 50% Off! Free Shipping on Orders Over $100
+        </p>
       </div>
 
-      {/* Header */}
-      <header className="sticky top-0 z-40 bg-white/95 backdrop-blur-md shadow-lg">
-        <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-6 xl:px-8">
-          <div className="flex items-center justify-between h-16 sm:h-18 lg:h-20">
-            {/* Logo */}
-            <div className="flex-shrink-0 flex items-center">
-              <img src={logo || "/placeholder.svg"} alt="Logo" className="h-10 sm:h-12 lg:h-14 w-auto object-contain" />
+      {/* Navbar */}
+      <nav className="bg-white shadow-lg sticky top-0 z-40 w-full">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Logo - Full Height */}
+            <div className="flex-shrink-0 h-full flex items-center">
+              <img src="/logo.png" alt="Oula Market" className="h-full w-auto py-2" />
             </div>
 
-            {/* Search Bar - Hidden on mobile, shown on larger screens */}
-            <div className="hidden lg:flex flex-1 max-w-md mx-4 xl:mx-8">
-              <div className="relative w-full">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            {/* Search Bar */}
+            <div className="flex-1 max-w-lg mx-4">
+              <div className="relative">
                 <input
                   type="text"
                   placeholder="Search products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none bg-white/90 backdrop-blur-sm"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 />
+                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
             </div>
 
-            {/* Right Section */}
-            <div className="flex items-center space-x-1 sm:space-x-2 lg:space-x-4">
-              {/* Mobile Search */}
-              <div className="lg:hidden">
-                <button className="p-1.5 sm:p-2 text-gray-700 hover:text-amber-600 transition-colors">
-                  <Search className="w-4 h-4 sm:w-5 sm:h-5" />
-                </button>
-              </div>
-
+            {/* Right Side Icons */}
+            <div className="flex items-center space-x-4">
               {/* Profile Dropdown */}
-              <div className="relative">
+              <div className="relative profile-dropdown">
                 <button
-                  className="profile-button p-1.5 sm:p-2 text-gray-700 hover:text-amber-600 transition-colors"
-                  onClick={() => setIsProfileDropdownOpen(!isProfileDropdownOpen)}
+                  onClick={() => setIsProfileOpen(!isProfileOpen)}
+                  className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors duration-200"
                 >
-                  <User className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
+                  <User className="h-6 w-6" />
+                  <ChevronDown className="h-4 w-4" />
                 </button>
 
-                {/* Dropdown Menu */}
-                {isProfileDropdownOpen && (
-                  <div className="profile-dropdown absolute right-0 mt-2 w-44 sm:w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                    <a
-                      href="#"
-                      className="flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <Settings className="w-3 h-3 sm:w-4 sm:h-4 mr-2 sm:mr-3" />
-                      Manage Profile
+                {isProfileOpen && (
+                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      Edit Profile
                     </a>
-                    <a
-                      href="#"
-                      className="flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <Package className="w-3 h-3 sm:w-4 sm:h-4 mr-2 sm:mr-3" />
-                      Orders
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
+                      My Orders
                     </a>
-                    <hr className="my-1" />
-                    <button
-                      onClick={handleLogout}
-                      className="flex items-center px-3 sm:px-4 py-2 text-xs sm:text-sm text-gray-700 hover:bg-gray-100 transition-colors w-full text-left"
-                    >
-                      <LogOut className="w-3 h-3 sm:w-4 sm:h-4 mr-2 sm:mr-3" />
+                    <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors">
                       Logout
-                    </button>
+                    </a>
                   </div>
                 )}
               </div>
 
-              {/* Cart Button */}
+              {/* Cart */}
               <button
                 onClick={() => setIsCartOpen(true)}
-                className="relative p-1.5 sm:p-2 text-gray-700 hover:text-amber-600 transition-colors"
+                className="relative text-gray-700 hover:text-blue-600 transition-colors duration-200"
               >
-                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 lg:w-6 lg:h-6" />
-                {getTotalCartItems() > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-gradient-to-r from-red-500 to-rose-500 text-white text-xs rounded-full w-4 h-4 sm:w-5 sm:h-5 flex items-center justify-center font-bold">
-                    {getTotalCartItems()}
+                <ShoppingCart className="h-6 w-6" />
+                {Object.keys(cartItems).length > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                    {Object.values(cartItems).reduce((sum, qty) => sum + qty, 0)}
                   </span>
                 )}
               </button>
             </div>
           </div>
+        </div>
+      </nav>
 
-          {/* Mobile Search Bar */}
-          <div className="lg:hidden pb-3 sm:pb-4">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-              <input
-                type="text"
-                placeholder="Search products..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:ring-2 focus:ring-amber-500 focus:border-transparent outline-none"
+      {/* Cart Sidebar */}
+      {isCartOpen && (
+        <div className="fixed inset-0 z-50">
+          <div className="absolute inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
+          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
+            <div className="p-6 h-full overflow-y-auto">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-xl font-bold">Shopping Cart</h2>
+                <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+
+              {Object.keys(cartItems).length === 0 ? (
+                <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+              ) : (
+                <div className="space-y-4">
+                  {Object.entries(cartItems).map(([cartKey, quantity]) => {
+                    const { productId, color, size } = parseCartKey(cartKey)
+                    const product = mockProducts.find((p) => p.id === productId)
+                    const colorInfo = product.variants.colors.find((c) => c.name === color)
+
+                    return (
+                      <div key={cartKey} className="flex items-center space-x-4 p-4 border rounded-lg">
+                        <img
+                          src={colorInfo?.image || product.image || "/placeholder.svg"}
+                          alt={product.name}
+                          className="w-15 h-15 rounded-lg object-cover"
+                          onError={(e) => {
+                            e.target.src = "/placeholder.svg?height=60&width=60"
+                          }}
+                        />
+                        <div className="flex-1">
+                          <h3 className="font-medium text-sm">{product.name}</h3>
+                          <p className="text-xs text-gray-500">
+                            {color && size ? `${color}, ${size}` : "Default variant"}
+                          </p>
+                          <p className="text-blue-600 font-bold">${product.price}</p>
+                        </div>
+                        <div className="flex flex-col items-center space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <button
+                              onClick={() => handleUpdateQuantity(cartKey, -1)}
+                              className="p-1 hover:bg-gray-100 rounded"
+                            >
+                              <Minus className="h-4 w-4" />
+                            </button>
+                            <span className="font-medium">{quantity}</span>
+                            <button
+                              onClick={() => handleUpdateQuantity(cartKey, 1)}
+                              className="p-1 hover:bg-gray-100 rounded"
+                            >
+                              <Plus className="h-4 w-4" />
+                            </button>
+                          </div>
+                          <button
+                            onClick={() => handleRemoveFromCart(cartKey)}
+                            className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
+                            title="Remove from cart"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+
+                  <div className="border-t pt-4">
+                    <div className="flex justify-between items-center mb-4">
+                      <span className="font-bold">Total:</span>
+                      <span className="font-bold text-xl">
+                        $
+                        {Object.entries(cartItems)
+                          .reduce((total, [cartKey, quantity]) => {
+                            const { productId } = parseCartKey(cartKey)
+                            const product = mockProducts.find((p) => p.id === productId)
+                            return total + product.price * quantity
+                          }, 0)
+                          .toFixed(2)}
+                      </span>
+                    </div>
+                    <button className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200">
+                      Checkout
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Banner Carousel */}
+      <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden w-full">
+        <div
+          className="flex transition-transform duration-500 ease-in-out h-full"
+          style={{ transform: `translateX(-${currentBanner * 100}%)` }}
+        >
+          {banners.map((banner, index) => (
+            <div key={index} className="w-full flex-shrink-0 relative">
+              <img
+                src={banner || "/placeholder.svg"}
+                alt={`Banner ${index + 1}`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  e.target.src = "/placeholder.svg?height=400&width=800"
+                }}
               />
+              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                <div className="text-center text-white">
+                  <h2 className="text-2xl sm:text-4xl font-bold mb-2">Special Offers</h2>
+                  <p className="text-lg sm:text-xl">Up to 50% Off on Selected Items</p>
+                </div>
+              </div>
             </div>
-          </div>
+          ))}
         </div>
-      </header>
 
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-8 sm:py-12 lg:py-16 xl:py-20 px-2 sm:px-4 lg:px-6 xl:px-8">
-        <div className="absolute inset-0 bg-gradient-to-br from-amber-100 via-yellow-50 to-orange-100 opacity-70"></div>
-        <div className="relative max-w-7xl mx-auto text-center">
-          <h2 className="text-2xl sm:text-3xl lg:text-4xl xl:text-5xl 2xl:text-6xl font-bold text-gray-900 mb-3 sm:mb-4 lg:mb-6 px-2">
-            Stunning{" "}
-            <span className="text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-yellow-600">
-              Resin Art
-            </span>{" "}
-            Creations
-          </h2>
-          <p className="text-sm sm:text-base lg:text-lg xl:text-xl text-gray-600 mb-4 sm:mb-6 lg:mb-8 max-w-3xl mx-auto px-2 sm:px-4">
-            Discover handcrafted resin masterpieces that bring color and elegance to your space. From functional
-            coasters to breathtaking wall art.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:gap-4 justify-center px-2 sm:px-4">
-            <button className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8 lg:py-3 rounded-full font-semibold hover:from-amber-600 hover:to-yellow-600 transform hover:scale-105 transition-all duration-200 shadow-lg text-sm sm:text-base">
-              Shop Now
-            </button>
+        <button
+          onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}
+          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
+        >
+          <ChevronLeft className="h-6 w-6" />
+        </button>
+
+        <button
+          onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}
+          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
+        >
+          <ChevronRight className="h-6 w-6" />
+        </button>
+
+        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+          {banners.map((_, index) => (
             <button
-              onClick={scrollToRestockedItems}
-              className="border-2 border-amber-600 text-amber-600 px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8 lg:py-3 rounded-full font-semibold hover:bg-amber-600 hover:text-white transition-all duration-200 text-sm sm:text-base"
-            >
-              Explore Restocked Items
-            </button>
-          </div>
+              key={index}
+              onClick={() => setCurrentBanner(index)}
+              className={`w-3 h-3 rounded-full transition-colors duration-200 ${
+                index === currentBanner ? "bg-white" : "bg-white/50"
+              }`}
+            />
+          ))}
         </div>
-      </section>
+      </div>
 
-      {/* New Arrivals This Week - Scrollable */}
-      <section className="bg-gradient-to-r from-orange-500 to-amber-500 text-white py-6 sm:py-8 lg:py-12 px-2 sm:px-4 lg:px-6 xl:px-8 relative overflow-hidden">
-        <div className="absolute inset-0 bg-black opacity-10"></div>
-        <div className="relative max-w-7xl mx-auto">
-          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-3 sm:mb-4 lg:mb-6 text-center">
-            ✨ New Arrivals This Week ✨
-          </h3>
-          <p className="text-sm sm:text-base lg:text-lg opacity-90 mb-4 sm:mb-6 lg:mb-8 text-center">
-            Check out our latest collection of handcrafted resin art pieces
-          </p>
-
-          <div className="relative">
-            {/* Scroll Buttons */}
-            <button
-              onClick={() => scrollNewArrivals("left")}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 shadow-lg rounded-full p-2 hover:bg-white transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-            </button>
-
-            <button
-              onClick={() => scrollNewArrivals("right")}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white/90 shadow-lg rounded-full p-2 hover:bg-white transition-colors"
-            >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-            </button>
-
-            {/* Scrollable New Products */}
-            <div
-              ref={newArrivalsRef}
-              className="flex space-x-3 sm:space-x-4 lg:space-x-6 overflow-x-auto scrollbar-hide pb-4 px-8 scroll-smooth"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              {newProducts.map((product) => (
-                <ProductCard key={product.id} product={product} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Categories with Scroll */}
-      <section className="py-8 sm:py-12 lg:py-16 px-2 sm:px-4 lg:px-6 xl:px-8" id="categories">
-        <div className="max-w-7xl mx-auto">
-          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center mb-6 sm:mb-8 lg:mb-12 text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-yellow-600">
-            Shop by Category
-          </h3>
-
-          <div className="relative">
-            {/* Scroll Buttons */}
-            <button
-              onClick={() => scrollCategories("left")}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-            </button>
-
-            <button
-              onClick={() => scrollCategories("right")}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50 transition-colors"
-            >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-            </button>
-
-            {/* Scrollable Categories */}
-            <div
-              ref={categoriesRef}
-              className="flex space-x-3 sm:space-x-4 overflow-x-auto scrollbar-hide pb-4 px-6 sm:px-8 scroll-smooth"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              {categories.map((category) => (
-                <button
-                  key={category.id}
-                  onClick={() => setSelectedCategory(category.id)}
-                  className={`flex-shrink-0 p-3 sm:p-4 lg:p-6 rounded-xl sm:rounded-2xl text-center transition-all duration-300 transform hover:scale-105 min-w-[100px] sm:min-w-[120px] lg:min-w-[140px] ${
-                    selectedCategory === category.id
-                      ? "bg-gradient-to-br from-amber-500 to-yellow-500 text-white shadow-xl"
-                      : "bg-white shadow-lg hover:shadow-xl text-gray-700"
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+        {/* Shop by Categories - FIXED GRID, NO SCROLLING */}
+        <section className="mb-12">
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Categories</h2>
+          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
+            {categories.slice(0, 10).map((category) => (
+              <div
+                key={category.id}
+                onClick={() => handleCategoryClick(category)}
+                className={`text-center cursor-pointer group transition-all duration-200 ${
+                  selectedCategory === category.name ? "transform scale-105" : ""
+                }`}
+              >
+                <div
+                  className={`w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-lg flex items-center justify-center mb-2 group-hover:shadow-xl transition-all duration-300 overflow-hidden relative ${
+                    selectedCategory === category.name ? "ring-4 ring-blue-500 shadow-xl" : ""
                   }`}
                 >
-                  <div className="text-xl sm:text-2xl lg:text-3xl mb-1 sm:mb-2">{category.icon}</div>
-                  <h4 className="font-semibold text-xs sm:text-sm mb-1 leading-tight">{category.name}</h4>
-                  <p className="text-xs opacity-75">({category.count} items)</p>
-                </button>
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Revised Rates Section - Scrollable */}
-      <section className="py-8 sm:py-12 lg:py-16 px-2 sm:px-4 lg:px-6 xl:px-8 bg-white/50">
-        <div className="max-w-7xl mx-auto">
-          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center mb-6 sm:mb-8 lg:mb-12 text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-yellow-600">
-            🔥 Revised Rates - Limited Time Offers
-          </h3>
-
-          <div className="relative">
-            {/* Scroll Buttons */}
-            <button
-              onClick={() => scrollRevisedRates("left")}
-              className="absolute left-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50 transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-            </button>
-
-            <button
-              onClick={() => scrollRevisedRates("right")}
-              className="absolute right-0 top-1/2 -translate-y-1/2 z-10 bg-white shadow-lg rounded-full p-2 hover:bg-gray-50 transition-colors"
-            >
-              <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600" />
-            </button>
-
-            {/* Scrollable Revised Products */}
-            <div
-              ref={revisedRatesRef}
-              className="flex space-x-3 sm:space-x-4 lg:space-x-6 overflow-x-auto scrollbar-hide pb-4 px-6 sm:px-8 scroll-smooth"
-              style={{ scrollbarWidth: "none", msOverflowStyle: "none" }}
-            >
-              {revisedProducts.map((product) => (
-                <ProductCard key={product.id} product={product} showDiscount={true} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Products */}
-      <section className="py-8 sm:py-12 lg:py-16 px-2 sm:px-4 lg:px-6 xl:px-8" id="products">
-        <div className="max-w-7xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 sm:mb-8 lg:mb-12 gap-2 sm:gap-4">
-            <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-yellow-600">
-              {selectedCategory === "all"
-                ? "Featured Products"
-                : categories.find((c) => c.id === selectedCategory)?.name}
-            </h3>
-            <div className="text-xs sm:text-sm text-gray-600">Showing {filteredProducts.length} products</div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6 xl:gap-8">
-            {filteredProducts.slice(0, 8).map((product) => (
-              <div key={product.id} className="w-full">
-                <ProductCard product={product} />
+                  <img
+                    src={category.image || "/placeholder.svg"}
+                    alt={category.name}
+                    className="w-full h-full object-cover rounded-full"
+                    onError={(e) => {
+                      e.target.src = "/placeholder.svg?height=40&width=40"
+                    }}
+                  />
+                  {selectedCategory === category.name && (
+                    <div className="absolute inset-0 bg-blue-500/20 rounded-full flex items-center justify-center">
+                      <Check className="w-6 h-6 text-blue-600 bg-white rounded-full p-1" />
+                    </div>
+                  )}
+                </div>
+                <p
+                  className={`text-xs sm:text-sm font-medium transition-colors duration-200 ${
+                    selectedCategory === category.name
+                      ? "text-blue-600 font-bold"
+                      : "text-gray-700 group-hover:text-blue-600"
+                  }`}
+                >
+                  {category.name}
+                </p>
               </div>
             ))}
           </div>
+        </section>
 
-          {filteredProducts.length > 8 && (
-            <div className="text-center mt-6 sm:mt-8 lg:mt-12">
-              <button className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8 lg:py-3 rounded-full font-semibold hover:from-amber-600 hover:to-yellow-600 transform hover:scale-105 transition-all duration-200 shadow-lg text-sm sm:text-base">
-                Load More Products
+        {/* Filters - Centered */}
+        <section className="mb-8">
+          <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Filters</h2>
+          <div className="flex flex-wrap gap-3 justify-center">
+            {[
+              { key: "all", label: "All Products" },
+              { key: "category", label: "Shop by Category" },
+              { key: "just-arrived", label: "Just Arrived" },
+              { key: "revised-rates", label: "Revised Rates" },
+              { key: "restocked", label: "Restocked Items" },
+            ].map((filter) => (
+              <button
+                key={filter.key}
+                onClick={() => handleFilterChange(filter.key)}
+                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+                  selectedFilters.includes(filter.key)
+                    ? "bg-blue-600 text-white shadow-lg scale-105"
+                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-blue-300"
+                }`}
+              >
+                {selectedFilters.includes(filter.key) && <Check className="w-4 h-4 text-white" />}
+                {filter.label}
               </button>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Restocked Items Section */}
-      <section id="restocked-items" className="py-8 sm:py-12 lg:py-16 px-2 sm:px-4 lg:px-6 xl:px-8 bg-white/50">
-        <div className="max-w-7xl mx-auto">
-          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-center mb-6 sm:mb-8 lg:mb-12 text-transparent bg-clip-text bg-gradient-to-r from-amber-600 to-yellow-600">
-            📦 Restocked Items
-          </h3>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4 lg:gap-6">
-            {revisedProducts.slice(0, 8).map((product) => (
-              <div key={product.id} className="w-full">
-                <ProductCard product={product} />
-              </div>
             ))}
           </div>
+        </section>
 
-          {revisedProducts.length > 8 && (
-            <div className="text-center mt-6 sm:mt-8 lg:mt-12">
-              <button className="bg-gradient-to-r from-amber-500 to-yellow-500 text-white px-4 py-2.5 sm:px-6 sm:py-3 lg:px-8 lg:py-3 rounded-full font-semibold hover:from-amber-600 hover:to-yellow-600 transform hover:scale-105 transition-all duration-200 shadow-lg text-sm sm:text-base">
-                View All Restocked Items
-              </button>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Newsletter Section */}
-      <section className="py-8 sm:py-12 lg:py-16 px-2 sm:px-4 lg:px-6 xl:px-8 bg-gradient-to-r from-amber-600 to-yellow-600">
-        <div className="max-w-4xl mx-auto text-center">
-          <h3 className="text-xl sm:text-2xl lg:text-3xl font-bold text-white mb-3 sm:mb-4">
-            Stay Updated with New Collections
-          </h3>
-          <p className="text-amber-100 mb-4 sm:mb-6 lg:mb-8 text-sm sm:text-base lg:text-lg px-2">
-            Be the first to know about new arrivals, special offers, and exclusive resin art pieces.
-          </p>
-          <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 lg:gap-4 max-w-md mx-auto px-2">
-            <input
-              type="email"
-              placeholder="Enter your email"
-              className="flex-1 px-3 py-2.5 sm:px-4 sm:py-3 rounded-full border-0 focus:ring-2 focus:ring-amber-300 outline-none text-sm sm:text-base"
-            />
-            <button className="bg-white text-amber-600 px-4 py-2.5 sm:px-6 sm:py-3 rounded-full font-semibold hover:bg-gray-100 transition-colors whitespace-nowrap text-sm sm:text-base">
-              Subscribe Now
-            </button>
+        {/* Just Arrived Products */}
+        <section className="mb-12" ref={justArrivedRef}>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Just Arrived</h2>
+          <div className="flex space-x-6 overflow-x-auto pb-4">
+            {mockProducts
+              .filter((p) => p.type === "just-arrived")
+              .map((product) => (
+                <div key={product.id} className="flex-shrink-0 w-72">
+                  <ProductCard product={product} />
+                </div>
+              ))}
           </div>
-        </div>
-      </section>
+        </section>
 
-      {/* Footer */}
-      <footer className="bg-gray-900 text-white py-8 sm:py-12 lg:py-16 px-2 sm:px-4 lg:px-6 xl:px-8">
-        <div className="max-w-7xl mx-auto">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 lg:gap-8">
-            <div className="sm:col-span-2 lg:col-span-1">
-              <p className="text-gray-300 text-xs sm:text-sm lg:text-base">
-                Creating handcrafted resin art pieces that blend functionality with beauty. Each piece is unique and
-                made with love.
-              </p>
-            </div>
-
-            <div>
-              <h5 className="font-semibold text-amber-400 mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">Quick Links</h5>
-              <ul className="space-y-1 sm:space-y-2">
-                {["Home", "Products", "Categories", "About Us", "Contact"].map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="text-gray-300 hover:text-white transition-colors text-xs sm:text-sm lg:text-base"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h5 className="font-semibold text-amber-400 mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">
-                Customer Service
-              </h5>
-              <ul className="space-y-1 sm:space-y-2">
-                {["Contact Us", "Shipping Info", "Returns", "Size Guide", "FAQ"].map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="text-gray-300 hover:text-white transition-colors text-xs sm:text-sm lg:text-base"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
-
-            <div>
-              <h5 className="font-semibold text-amber-400 mb-3 sm:mb-4 text-sm sm:text-base lg:text-lg">
-                Connect With Us
-              </h5>
-              <ul className="space-y-1 sm:space-y-2">
-                {["Instagram", "Facebook", "Pinterest", "Email Newsletter"].map((link) => (
-                  <li key={link}>
-                    <a
-                      href="#"
-                      className="text-gray-300 hover:text-white transition-colors text-xs sm:text-sm lg:text-base"
-                    >
-                      {link}
-                    </a>
-                  </li>
-                ))}
-              </ul>
-            </div>
+        {/* Restocked Items */}
+        <section className="mb-12" ref={restockedRef}>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Restocked Items</h2>
+          <div className="flex space-x-6 overflow-x-auto pb-4">
+            {mockProducts
+              .filter((p) => p.type === "restocked")
+              .map((product) => (
+                <div key={product.id} className="flex-shrink-0 w-72">
+                  <ProductCard product={product} />
+                </div>
+              ))}
           </div>
+        </section>
 
-          <div className="border-t border-gray-800 mt-6 sm:mt-8 lg:mt-12 pt-4 sm:pt-6 lg:pt-8 text-center">
-            <div className="text-center space-y-2">
-              <p className="text-gray-400 text-xs sm:text-sm lg:text-base">
-                &copy; 2025 Oula Market. All rights reserved. | Made with ❤️ for art lovers
-              </p>
-              <p className="text-amber-400 text-xs sm:text-sm">
-                Design and Developed by{" "}
-                <a href="mailto:contact@abc.com" className="hover:text-amber-300 transition-colors font-semibold">
-                  ABC
-                </a>{" "}
-                | Contact us for your web solutions
-              </p>
-            </div>
+        {/* Revised Rates */}
+        <section className="mb-12" ref={revisedRatesRef}>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">Revised Rates</h2>
+          <div className="flex space-x-6 overflow-x-auto pb-4">
+            {mockProducts
+              .filter((p) => p.type === "revised-rates")
+              .map((product) => (
+                <div key={product.id} className="flex-shrink-0 w-72">
+                  <ProductCard product={product} />
+                </div>
+              ))}
           </div>
-        </div>
-      </footer>
+        </section>
 
-      {/* Custom Styles */}
-      <style jsx>{`
-        .scrollbar-hide {
-          -ms-overflow-style: none;
-          scrollbar-width: none;
-        }
-        .scrollbar-hide::-webkit-scrollbar {
-          display: none;
-        }
-        .line-clamp-2 {
-          display: -webkit-box;
-          -webkit-line-clamp: 2;
-          -webkit-box-orient: vertical;
-          overflow: hidden;
-        }
-      `}</style>
+        {/* All Products Grid */}
+        <section>
+          <h2 className="text-2xl font-bold text-gray-800 mb-6">All Products</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
+            {getFilteredProducts().map((product) => (
+              <ProductCard key={product.id} product={product} />
+            ))}
+          </div>
+        </section>
+      </div>
+
+      {/* Product Modal */}
+      <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />
+
+      {/* Variant Selection Modal */}
+      <VariantModal product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} />
     </div>
   )
 }
-
-export default Home

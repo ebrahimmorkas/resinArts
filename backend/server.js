@@ -6,6 +6,7 @@ const authRoutes = require('./routes/authRoutes');
 const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
+const categoryRoutes = require('./routes/categoryRoutes');
 
 const app = express();
 
@@ -52,6 +53,9 @@ app.post('/register', (req, res) => {
     console.log("Debug success");
 })
 
+// Login and Signup routes
 app.use('/api/auth', authRoutes);
+// Categories routes
+app.use('/api/category', categoryRoutes);
 
 app.listen(3000, () => console.log("Server running on port 3000"));
