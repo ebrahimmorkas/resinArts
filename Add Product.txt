@@ -1,14 +1,12 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Trash2, Plus } from 'lucide-react';
-import axios from 'axios';
 
 const AddProduct = () => {
   const [formData, setFormData] = useState({
     name: '',
     price: '',
     category: '',
-    subCategory: '',
-    categoryPath: [] // Store full category path
+    subCategory: ''
   });
 
   const [details, setDetails] = useState([
@@ -58,10 +56,10 @@ const AddProduct = () => {
   ]);
 
   const [pricingSections, setPricingSections] = useState([
-    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] },
-    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] },
-    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] },
-    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] }
+    { color: '', size: '', price: '', priceRanges: [] },
+    { color: '', size: '', price: '', priceRanges: [] },
+    { color: '', size: '', price: '', priceRanges: [] },
+    { color: '', size: '', price: '', priceRanges: [] }
   ]);
 
   // Add base price ranges for the main product
@@ -69,131 +67,17 @@ const AddProduct = () => {
     { minQuantity: 1, maxQuantity: '', unitPrice: '' }
   ]);
 
-  // Category-related states
-  const [categories, setCategories] = useState([]);
-  const [categoryHierarchy, setCategoryHierarchy] = useState({});
-  const [selectedPath, setSelectedPath] = useState([]);
-  const [dropdownLevels, setDropdownLevels] = useState([]);
-  const [loading, setLoading] = useState(true);
+  // Dummy category data
+  const categories = [
+    { id: '1', name: 'Clothing' },
+    { id: '2', name: 'Electronics' },
+    { id: '3', name: 'Home & Garden' }
+  ];
 
-  // Fetch categories from MongoDB
-  useEffect(() => {
-    fetchCategories();
-  }, []);
-
-  const fetchCategories = async () => {
-    try {
-      setLoading(true);
-      const response = await axios.get('http://localhost:3000/api/category/all');
-      const categoriesData = response.data;
-      console.log(categoriesData)
-      
-      setCategories(categoriesData);
-      buildCategoryHierarchy(categoriesData);
-      setLoading(false);
-    } catch (error) {
-      console.error('Error fetching categories:', error);
-      setLoading(false);
-    }
-  };
-
-  // Build category hierarchy from flat array
-  const buildCategoryHierarchy = (categoriesData) => {
-    const hierarchy = {};
-    const categoryMap = {};
-    
-    // First, create a map of all categories by ID
-    categoriesData.forEach(category => {
-      categoryMap[category._id] = {
-        ...category,
-        children: []
-      };
-    });
-    
-    // Then, organize into hierarchy
-    categoriesData.forEach(category => {
-      if (category.parent_category_id === null) {
-        // Root category
-        hierarchy[category._id] = categoryMap[category._id];
-      } else {
-        // Find parent and add as child
-        const parentId = typeof category.parent_category_id === 'object' 
-          ? category.parent_category_id.$oid 
-          : category.parent_category_id;
-        
-        if (categoryMap[parentId]) {
-          categoryMap[parentId].children.push(categoryMap[category._id]);
-        }
-      }
-    });
-    
-    setCategoryHierarchy(hierarchy);
-    
-    // Initialize first level dropdown
-    const rootCategories = Object.values(hierarchy);
-    setDropdownLevels([rootCategories]);
-  };
-
-  // Handle category selection at any level
-  const handleCategorySelect = (selectedCategory, level) => {
-    const newSelectedPath = selectedPath.slice(0, level);
-    newSelectedPath[level] = selectedCategory;
-    
-    setSelectedPath(newSelectedPath);
-    
-    // Update form data with the full category path
-    setFormData(prev => ({
-      ...prev,
-      category: selectedCategory._id,
-      subCategory: level > 0 ? selectedCategory._id : '',
-      categoryPath: newSelectedPath.map(cat => cat._id)
-    }));
-    
-    // Update dropdown levels
-    const newDropdownLevels = dropdownLevels.slice(0, level + 1);
-    
-    // If selected category has children, add next level dropdown
-    if (selectedCategory.children && selectedCategory.children.length > 0) {
-      newDropdownLevels[level + 1] = selectedCategory.children;
-    }
-    
-    setDropdownLevels(newDropdownLevels);
-  };
-
-  // Get category breadcrumb display
-  const getCategoryBreadcrumb = () => {
-    return selectedPath.map(cat => cat.categoryName).join(' > ');
-  };
-
-  // Render dynamic category dropdowns
-  const renderCategoryDropdowns = () => {
-    return dropdownLevels.map((levelCategories, level) => (
-      <div key={level} className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {level === 0 ? 'Category' : `Sub Category Level ${level}`} *
-        </label>
-        <select
-          value={selectedPath[level]?._id || ''}
-          onChange={(e) => {
-            const selectedCategory = levelCategories.find(cat => cat._id === e.target.value);
-            if (selectedCategory) {
-              handleCategorySelect(selectedCategory, level);
-            }
-          }}
-          className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
-          required={level === 0}
-        >
-          <option value="">
-            {level === 0 ? 'Select Category' : `Select Sub Category Level ${level}`}
-          </option>
-          {levelCategories.map((category) => (
-            <option key={category._id} value={category._id}>
-              {category.categoryName}
-            </option>
-          ))}
-        </select>
-      </div>
-    ));
+  const subCategories = {
+    '1': ['T-Shirts', 'Jeans', 'Jackets'],
+    '2': ['Phones', 'Laptops', 'Accessories'],
+    '3': ['Furniture', 'Decor', 'Appliances']
   };
 
   // Pricing validation logic
@@ -409,7 +293,7 @@ const AddProduct = () => {
   };
 
   const addPricingSection = () => {
-    setPricingSections([...pricingSections, { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] }]);
+    setPricingSections([...pricingSections, { color: '', size: '', price: '', priceRanges: [] }]);
   };
 
   const removePricingSection = (index) => {
@@ -418,37 +302,14 @@ const AddProduct = () => {
     }
   };
 
-  const handleSubmit = async () => {
-    if (!formData.category) {
-      alert('Please select a category');
-      return;
-    }
-
-    try {
-      const productData = {
-        ...formData,
-        details,
-        colorVariants,
-        sizeVariants,
-        pricingSections,
-        basePriceRanges
-      };
-
-      console.log('Product Data:', productData);
-      
-      // Make API call to save product
-      const response = await axios.post('http://localhost:3000/api/product/add', productData);
-      
-      console.log('Product added successfully:', response.data);
-      alert('Product added successfully!');
-      
-      // Reset form if needed
-      // resetForm();
-      
-    } catch (error) {
-      console.error('Error adding product:', error);
-      alert('Failed to add product. Please try again.');
-    }
+  const handleSubmit = () => {
+    console.log('Form Data:', formData);
+    console.log('Base Price Ranges:', basePriceRanges);
+    console.log('Details:', details);
+    console.log('Color Variants:', colorVariants);
+    console.log('Size Variants:', sizeVariants);
+    console.log('Pricing Sections:', pricingSections);
+    // Handle form submission here
   };
 
   // Price Range Component
@@ -562,19 +423,6 @@ const AddProduct = () => {
     </div>
   );
 
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-gray-50 to-white shadow-xl rounded-2xl">
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading categories...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-gray-50 to-white shadow-xl rounded-2xl">
       <div className="mb-8 lg:mb-10">
@@ -633,27 +481,48 @@ const AddProduct = () => {
           )}
         </div>
 
-        {/* Dynamic Category Section */}
+        {/* Category Section */}
         <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">Category Selection</h2>
-          
-          {dropdownLevels.length > 0 ? (
-            <div className="space-y-4">
-              {renderCategoryDropdowns()}
-              
-              {/* Category Breadcrumb */}
-              {selectedPath.length > 0 && (
-                <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                  <p className="text-sm font-medium text-indigo-800 mb-1">Selected Category Path:</p>
-                  <p className="text-indigo-600 font-semibold text-lg">{getCategoryBreadcrumb()}</p>
-                </div>
-              )}
+          <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">Category</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Category *
+              </label>
+              <select
+                value={formData.category}
+                onChange={(e) => handleFormChange('category', e.target.value)}
+                className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                required
+              >
+                <option value="">Select category</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.name}
+                  </option>
+                ))}
+              </select>
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <p>No categories available. Please add categories first.</p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sub-Category *
+              </label>
+              <select
+                value={formData.subCategory}
+                onChange={(e) => handleFormChange('subCategory', e.target.value)}
+                className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                required
+                disabled={!formData.category}
+              >
+                <option value="">Select sub-category</option>
+                {formData.category && subCategories[formData.category]?.map((subCategory, index) => (
+                  <option key={index} value={subCategory}>
+                    {subCategory}
+                  </option>
+                ))}
+              </select>
             </div>
-          )}
+          </div>
         </div>
 
         {/* Details Section */}
@@ -781,6 +650,19 @@ const AddProduct = () => {
                     <span className="ml-2 text-sm font-medium text-gray-700">Set as default variant</span>
                   </label>
                 </div>
+
+                {/* Color Variant Price Ranges */}
+                {(variant.price || variantIndex === 0) && (
+                  <PriceRangeSection
+                    ranges={variant.priceRanges}
+                    onRangeChange={(rangeIndex, field, value) => handleColorPriceRangeChange(variantIndex, rangeIndex, field, value)}
+                    onAddRange={() => addColorPriceRange(variantIndex)}
+                    onRemoveRange={(rangeIndex) => removeColorPriceRange(variantIndex, rangeIndex)}
+                    title={`Bulk Pricing for ${variant.color || `Color ${variantIndex + 1}`}`}
+                    isRequired={variantIndex === 0}
+                    disabled={!variant.price && variantIndex !== 0}
+                  />
+                )}
 
                 {variant.optionalDetails.length > 0 && (
                   <div className="mb-4 mt-6">
@@ -980,7 +862,7 @@ const AddProduct = () => {
                   )}
                 </div>
                 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Color
@@ -1021,7 +903,7 @@ const AddProduct = () => {
                   
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Retail Price
+                      Price
                     </label>
                     <input
                       type="number"
@@ -1034,39 +916,19 @@ const AddProduct = () => {
                       disabled={!isPricingSectionEnabled}
                     />
                   </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Wholesale Price
-                    </label>
-                    <input
-                      type="number"
-                      value={section.wholesalePrice || ''}
-                      onChange={(e) => handlePricingSectionChange(index, 'wholesalePrice', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                      disabled={!isPricingSectionEnabled}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Threshold Quantity
-                    </label>
-                    <input
-                      type="number"
-                      value={section.thresholdQuantity || ''}
-                      onChange={(e) => handlePricingSectionChange(index, 'thresholdQuantity', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
-                      placeholder="10"
-                      min="1"
-                      disabled={!isPricingSectionEnabled}
-                    />
-                    <p className="text-xs text-gray-500 mt-1">This number will be included</p>
-                  </div>
                 </div>
+
+                {/* Pricing Section Price Ranges */}
+                {section.price && isPricingSectionEnabled && (
+                  <PriceRangeSection
+                    ranges={section.priceRanges}
+                    onRangeChange={(rangeIndex, field, value) => handlePricingSectionPriceRangeChange(index, rangeIndex, field, value)}
+                    onAddRange={() => addPricingSectionPriceRange(index)}
+                    onRemoveRange={(rangeIndex) => removePricingSectionPriceRange(index, rangeIndex)}
+                    title={`Bulk Pricing for ${section.color || 'Color'} - ${section.size || 'Size'}`}
+                    disabled={!isPricingSectionEnabled}
+                  />
+                )}
               </div>
             ))}
           </div>
