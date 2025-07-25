@@ -1,1 +1,253 @@
 I am developing an e-commerce website using Mern stack and javascript and tailwind css. Make sure not to use type script I am using JavaScript. I want to create the Home page where user can see the products. Above the navbar I want to create the section for annoncement which will be made from the admin side. Then navbar. Navbar shoould only contain the Logo which I will provide you and it should take al the height of the navbar leving only 2 px from top and bottom, the search bar for searching the items, profile logo which hover should show links like:Edit profile, My Orders, Logout. Then cart icon. the cart should open from right.Below the navbar there should be Banner where admin can upload the picture for eg for some festivals the admin can upload banner for discounts. Then there should be shop by categories and it should be scrollable as we dont know the exact number of categories. Then there should be option for filters. The filters should include:All productsShop by categoryJust arrived itemsRevised ratesRestocked itemsLow to high User should be able to select the multiple filtersAfter this then display the section for 'Just arrived' Products below it display 'Restocked items' and below it show 'Reviseed rates' All of these sections should be scrollable When clicked on some filter it should tak me that particular section. For eg if just arrived is clicked take me to the just arrived section .Also create the section for out of stock items but their color should be little differnet type and all buttons which are mentioned below should be disabled. Now lets talk about the product card. The product should be displayed like this way:It should contain the image, Some badge that is new, -20%, etc and some buttons such as:'Details' which clicked some modal should open that displays the details of the product, 'Add to cart' button which clicked should be replaced by 'remove from cart' Display meachnism where user can increase and decrease the quantity. When the product is added into the cart the quantity which was there should also be added into the cart. The quantity can also e change form cart. Below product show the price chart that will addeed dynamically by the admin. It is like if user buys more than 5 piece than product will cost 100 per pirece instead of 150. Show the price of single piece on the product and also show the price which has strike on it.There should be dtails button i th product card whcih clicked the modal should be open which shows the detailed description and all of the products.The product card should have variants optio where user can select the different variant of the roduct. That is Speaker can be of differnet color and differnet sizes Ad the footer and ad the line such as design and developed by : abc .It should be very beautiful and eye catching. It should be very effective. It should be very responsive so that it can work on world's smallest device to the world's largest device without any problem.This is my logo:Logo should also be respnsive and should be seen very clearly.This are specifications according to me. You can add some more on your own and design it very effectively. Add some transitions as well wherever applicable. Take the all the available width. The user should be able to remove the item from the cart and shol;d be able to increase or decrease the quntity directly from te cart and also should be able to change between variants. Make sure that when user add the product to cart and the variannnt is black and user swucthes the variant that is red then user should se 'add to cart' button for red variant and not remove from cart for red variant because black variant is added into cart.
+
+
+
+Category dropdown on add product:
+I am developing ecommerce website with MERN stack and tailwind css.
+While adding the product the admin needs to select the category as well. 
+Now I have stored nested categories in the mongoDB. For example:
+main category: Electronics
+First Sub category electronics: Mobiles
+First Sub category of Sub category Mobiles : Vivo
+Sub category of sub category Vivo : V11
+Second Sub category of Sub category Mobiles : Oppo
+Sub category of sub category Oppo : O11
+Second Sub category electronics: TV's
+
+Hoerarchy:
+Electronics
+      Mobiles
+              Vivo
+                   V11
+               Oppo
+                    O11
+      TV's
+
+Now I created the model for storing the category that is nested categories into mongoDB and it is working fine.
+I have also fetched it on the frontend of AddProduct.jsx form with the help of axios.
+
+Now comes my main requirement:
+On the AddProduct.jsx form I have created the dropdown for selecting the main category. When user selects the main category then besides the another dropdown will be displayed that contains all the sub categories of the selected main category. Then user selects the subcategory and if that sub category of the main category again contains the sub categories then in the same dropdown the values of that sub category should be displayed and so on since it is nested categories.
+
+I will provide you:
+AddProduct.jsx  -- frontend for adding the product
+addcategoryController.js -- backend for fetching the categories from frontend that is AddProduct.jsx
+resinArts.categories.json -- I have previously added 2 categories in the mongoDB through AddCategory.jsx and its backend addCategoryController.js
+While fetching the categories from AddProduct.jsx I have consoled log the results which are returned from mongoDB and it is:
+Array(2)
+0
+: 
+categoryName
+: 
+"abc"
+image
+: 
+null
+subcategories
+: 
+Array(2)
+0
+: 
+categoryName
+: 
+"abc s"
+image
+: 
+null
+subcategories
+: 
+Array(1)
+0
+: 
+categoryName
+: 
+"abc s s"
+image
+: 
+null
+subcategories
+: 
+Array(1)
+0
+: 
+{_id: '688110bc5387fa46bb139d77', categoryName: 's', image: null, subcategories: Array(0)}
+length
+: 
+1
+[[Prototype]]
+: 
+Array(0)
+_id
+: 
+"688110bc5387fa46bb139d75"
+[[Prototype]]
+: 
+Object
+length
+: 
+1
+[[Prototype]]
+: 
+Array(0)
+_id
+: 
+"688110bc5387fa46bb139d73"
+[[Prototype]]
+: 
+Object
+1
+: 
+categoryName
+: 
+"x"
+image
+: 
+null
+subcategories
+: 
+Array(0)
+length
+: 
+0
+[[Prototype]]
+: 
+Array(0)
+_id
+: 
+"688110bc5387fa46bb139d79"
+[[Prototype]]
+: 
+Object
+length
+: 
+2
+[[Prototype]]
+: 
+Array(0)
+_id
+: 
+"688110bc5387fa46bb139d71"
+[[Prototype]]
+: 
+Object
+1
+: 
+categoryName
+: 
+"abcd"
+image
+: 
+"data:image/png;base64,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"
+subcategories
+: 
+Array(2)
+0
+: 
+categoryName
+: 
+"abc s"
+image
+: 
+null
+subcategories
+: 
+Array(1)
+0
+: 
+categoryName
+: 
+"abc s s"
+image
+: 
+null
+subcategories
+: 
+Array(1)
+0
+: 
+categoryName
+: 
+"s"
+image
+: 
+null
+subcategories
+: 
+Array(0)
+length
+: 
+0
+[[Prototype]]
+: 
+Array(0)
+_id
+: 
+"6881129c5387fa46bb139d81"
+[[Prototype]]
+: 
+Object
+length
+: 
+1
+[[Prototype]]
+: 
+Array(0)
+_id
+: 
+"6881129c5387fa46bb139d7f"
+[[Prototype]]
+: 
+Object
+length
+: 
+1
+[[Prototype]]
+: 
+Array(0)
+_id
+: 
+"6881129c5387fa46bb139d7d"
+[[Prototype]]
+: 
+Object
+1
+: 
+categoryName
+: 
+"x"
+image
+: 
+null
+subcategories
+: 
+Array(0)
+length
+: 
+0
+[[Prototype]]
+: 
+Array(0)
+_id
+: 
+"6881129c5387fa46bb139d83"
+[[Prototype]]
+: 
+Object
+length
+: 
+2
+[[Prototype]]
+: 
+Array(0)
+_id
+: 
+"6881129c5387fa46bb139d7b"
+[[Prototype]]
+: 
+Object
+length
+: 
+2
+[[Prototype]]
+: 
+Array(0)

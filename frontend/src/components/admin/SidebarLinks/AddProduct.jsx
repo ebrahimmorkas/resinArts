@@ -3,20 +3,22 @@ import { Trash2, Plus } from 'lucide-react';
 import axios from 'axios';
 
 const AddProduct = () => {
+  // Form state
   const [formData, setFormData] = useState({
     name: '',
     price: '',
     category: '',
-    subCategory: '',
-    categoryPath: [] // Store full category path
+    categoryPath: [],
   });
 
+  // Details state
   const [details, setDetails] = useState([
     { name: '', value: '' },
     { name: '', value: '' },
-    { name: '', value: '' }
+    { name: '', value: '' },
   ]);
 
+  // Color variants state
   const [colorVariants, setColorVariants] = useState([
     {
       color: '',
@@ -24,59 +26,39 @@ const AddProduct = () => {
       price: '',
       isDefault: false,
       optionalDetails: [],
-      priceRanges: [
-        { minQuantity: 1, maxQuantity: '', unitPrice: '' }
-      ]
-    }
+      priceRanges: [{ minQuantity: 1, maxQuantity: '', unitPrice: '' }],
+    },
   ]);
 
+  // Size variants state
   const [sizeVariants, setSizeVariants] = useState([
-    { 
-      size: '', 
-      price: '', 
-      optionalDetails: [],
-      priceRanges: []
-    },
-    { 
-      size: '', 
-      price: '', 
-      optionalDetails: [],
-      priceRanges: []
-    },
-    { 
-      size: '', 
-      price: '', 
-      optionalDetails: [],
-      priceRanges: []
-    },
-    { 
-      size: '', 
-      price: '', 
-      optionalDetails: [],
-      priceRanges: []
-    }
+    { size: '', price: '', optionalDetails: [], priceRanges: [] },
+    { size: '', price: '', optionalDetails: [], priceRanges: [] },
+    { size: '', price: '', optionalDetails: [], priceRanges: [] },
+    { size: '', price: '', optionalDetails: [], priceRanges: [] },
   ]);
 
+  // Pricing sections state
   const [pricingSections, setPricingSections] = useState([
     { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] },
     { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] },
     { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] },
-    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] }
+    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] },
   ]);
 
-  // Add base price ranges for the main product
+  // Base price ranges state
   const [basePriceRanges, setBasePriceRanges] = useState([
-    { minQuantity: 1, maxQuantity: '', unitPrice: '' }
+    { minQuantity: 1, maxQuantity: '', unitPrice: '' },
   ]);
 
   // Category-related states
   const [categories, setCategories] = useState([]);
-  const [categoryHierarchy, setCategoryHierarchy] = useState({});
+  const [mainCategories, setMainCategories] = useState([]);
   const [selectedPath, setSelectedPath] = useState([]);
-  const [dropdownLevels, setDropdownLevels] = useState([]);
+  const [subCategoryOptions, setSubCategoryOptions] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // Fetch categories from MongoDB
+  // Fetch categories
   useEffect(() => {
     fetchCategories();
   }, []);
@@ -86,10 +68,9 @@ const AddProduct = () => {
       setLoading(true);
       const response = await axios.get('http://localhost:3000/api/category/all');
       const categoriesData = response.data;
-      console.log(categoriesData)
-      
+      console.log('Fetched categories:', categoriesData);
       setCategories(categoriesData);
-      buildCategoryHierarchy(categoriesData);
+      setMainCategories(categoriesData.filter((cat) => !cat.parent_category_id));
       setLoading(false);
     } catch (error) {
       console.error('Error fetching categories:', error);
@@ -97,119 +78,164 @@ const AddProduct = () => {
     }
   };
 
-  // Build category hierarchy from flat array
-  const buildCategoryHierarchy = (categoriesData) => {
-    const hierarchy = {};
-    const categoryMap = {};
-    
-    // First, create a map of all categories by ID
-    categoriesData.forEach(category => {
-      categoryMap[category._id] = {
-        ...category,
-        children: []
-      };
-    });
-    
-    // Then, organize into hierarchy
-    categoriesData.forEach(category => {
-      if (category.parent_category_id === null) {
-        // Root category
-        hierarchy[category._id] = categoryMap[category._id];
-      } else {
-        // Find parent and add as child
-        const parentId = typeof category.parent_category_id === 'object' 
-          ? category.parent_category_id.$oid 
-          : category.parent_category_id;
-        
-        if (categoryMap[parentId]) {
-          categoryMap[parentId].children.push(categoryMap[category._id]);
-        }
-      }
-    });
-    
-    setCategoryHierarchy(hierarchy);
-    
-    // Initialize first level dropdown
-    const rootCategories = Object.values(hierarchy);
-    setDropdownLevels([rootCategories]);
-  };
+  // Handle main category selection
+  const handleMainCategorySelect = (e) => {
+    const selectedId = e.target.value;
+    console.log('Main category selected:', selectedId);
 
-  // Handle category selection at any level
-  const handleCategorySelect = (selectedCategory, level) => {
-    const newSelectedPath = selectedPath.slice(0, level);
-    newSelectedPath[level] = selectedCategory;
-    
-    setSelectedPath(newSelectedPath);
-    
-    // Update form data with the full category path
-    setFormData(prev => ({
-      ...prev,
-      category: selectedCategory._id,
-      subCategory: level > 0 ? selectedCategory._id : '',
-      categoryPath: newSelectedPath.map(cat => cat._id)
-    }));
-    
-    // Update dropdown levels
-    const newDropdownLevels = dropdownLevels.slice(0, level + 1);
-    
-    // If selected category has children, add next level dropdown
-    if (selectedCategory.children && selectedCategory.children.length > 0) {
-      newDropdownLevels[level + 1] = selectedCategory.children;
+    if (!selectedId) {
+      setSelectedPath([]);
+      setSubCategoryOptions([]);
+      setFormData((prev) => ({
+        ...prev,
+        category: '',
+        categoryPath: [],
+      }));
+      return;
     }
-    
-    setDropdownLevels(newDropdownLevels);
+
+    const selectedCategory = categories.find((cat) => cat._id === selectedId);
+    if (!selectedCategory) return;
+
+    setSelectedPath([selectedCategory]);
+    setFormData((prev) => ({
+      ...prev,
+      category: selectedId,
+      categoryPath: [selectedId],
+    }));
+    setSubCategoryOptions(selectedCategory.subcategories || []);
+    console.log('Subcategory options set to:', selectedCategory.subcategories || []);
   };
 
-  // Get category breadcrumb display
-  const getCategoryBreadcrumb = () => {
-    return selectedPath.map(cat => cat.categoryName).join(' > ');
+  // Handle subcategory selection
+  const handleSubCategorySelect = (e) => {
+    const selectedId = e.target.value;
+    console.log('Subcategory selected:', selectedId);
+
+    if (!selectedId) {
+      const mainCategory = selectedPath[0];
+      setSelectedPath([mainCategory]);
+      setSubCategoryOptions(mainCategory.subcategories || []);
+      setFormData((prev) => ({
+        ...prev,
+        category: mainCategory._id,
+        categoryPath: [mainCategory._id],
+      }));
+      console.log('Reset to main category subcategories:', mainCategory.subcategories || []);
+      return;
+    }
+
+    let selectedCategory = subCategoryOptions.find((cat) => cat._id === selectedId);
+    if (!selectedCategory) {
+      selectedCategory = categories.find((cat) => cat._id === selectedId);
+    }
+    if (!selectedCategory) {
+      console.error('Selected category not found:', selectedId);
+      return;
+    }
+
+    const newSelectedPath = [...selectedPath];
+    newSelectedPath.push(selectedCategory);
+    setSelectedPath(newSelectedPath);
+    setFormData((prev) => ({
+      ...prev,
+      category: selectedId,
+      categoryPath: newSelectedPath.map((cat) => cat._id),
+    }));
+    setSubCategoryOptions(selectedCategory.subcategories || []);
+    console.log('New subcategory options:', selectedCategory.subcategories || []);
   };
 
-  // Render dynamic category dropdowns
-  const renderCategoryDropdowns = () => {
-    return dropdownLevels.map((levelCategories, level) => (
-      <div key={level} className="mb-4">
-        <label className="block text-sm font-medium text-gray-700 mb-2">
-          {level === 0 ? 'Category' : `Sub Category Level ${level}`} *
-        </label>
-        <select
-          value={selectedPath[level]?._id || ''}
-          onChange={(e) => {
-            const selectedCategory = levelCategories.find(cat => cat._id === e.target.value);
-            if (selectedCategory) {
-              handleCategorySelect(selectedCategory, level);
-            }
-          }}
-          className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
-          required={level === 0}
+  // Handle breadcrumb click
+  const handleBreadcrumbClick = (index) => {
+    console.log('Breadcrumb clicked:', index);
+    const newSelectedPath = selectedPath.slice(0, index + 1);
+    setSelectedPath(newSelectedPath);
+    const lastCategory = newSelectedPath[newSelectedPath.length - 1];
+    setSubCategoryOptions(lastCategory.subcategories || []);
+    setFormData((prev) => ({
+      ...prev,
+      category: lastCategory._id,
+      categoryPath: newSelectedPath.map((cat) => cat._id),
+    }));
+    console.log('Breadcrumb path updated:', newSelectedPath);
+  };
+
+  // Render breadcrumb
+  const getCategoryBreadCrumb = () => {
+    return selectedPath.map((cat, index) => (
+      <span key={cat._id}>
+        <button
+          type="button"
+          onClick={() => handleBreadcrumbClick(index)}
+          className="text-blue-600 hover:underline"
         >
-          <option value="">
-            {level === 0 ? 'Select Category' : `Select Sub Category Level ${level}`}
-          </option>
-          {levelCategories.map((category) => (
-            <option key={category._id} value={category._id}>
-              {category.categoryName}
-            </option>
-          ))}
-        </select>
-      </div>
+          {cat.categoryName}
+        </button>
+        {index < selectedPath.length - 1 && ' > '}
+      </span>
     ));
   };
 
-  // Pricing validation logic
+  // Render category dropdowns
+  const renderCategoryDropdowns = () => {
+    const mainCategoryId = selectedPath[0] ? selectedPath[0]._id : '';
+    const subCategoryId = selectedPath.length > 1 ? selectedPath[selectedPath.length - 1]._id : '';
+
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Main Category *</label>
+          <select
+            value={mainCategoryId}
+            onChange={handleMainCategorySelect}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+            required
+          >
+            <option value="">Select Main Category</option>
+            {mainCategories.map((category) => (
+              <option key={category._id} value={category._id}>
+                {category.categoryName}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Subcategory</label>
+          <select
+            value={subCategoryId}
+            onChange={handleSubCategorySelect}
+            className={`w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200 ${
+              !mainCategoryId ? 'bg-gray-100 cursor-not-allowed' : ''
+            }`}
+            disabled={!mainCategoryId}
+          >
+            <option value="">Select Subcategory</option>
+            {subCategoryOptions.map((category) => (
+              <option key={category._id} value={category._id}>
+                {category.categoryName}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+    );
+  };
+
+  // Pricing validation
   const isBasePriceFilled = !!formData.price;
-  const isAnyColorPriceFilled = colorVariants.some(variant => variant.price);
-  const isAnySizePriceFilled = sizeVariants.some(variant => variant.price);
+  const isAnyColorPriceFilled = colorVariants.some((variant) => variant.price);
+  const isAnySizePriceFilled = sizeVariants.some((variant) => variant.price);
   const isPricingSectionEnabled = !isBasePriceFilled && !isAnyColorPriceFilled && !isAnySizePriceFilled;
 
+  // Form handlers
   const handleFormChange = (field, value) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
-  // Base Price Range handlers
   const handleBasePriceRangeChange = (index, field, value) => {
     const updatedRanges = [...basePriceRanges];
     updatedRanges[index][field] = value;
@@ -242,20 +268,18 @@ const AddProduct = () => {
     }
   };
 
+  // Color variant handlers
   const handleColorVariantChange = (variantIndex, field, value) => {
     const updatedVariants = [...colorVariants];
     updatedVariants[variantIndex][field] = value;
-    
     if (field === 'isDefault' && value) {
       updatedVariants.forEach((variant, index) => {
         variant.isDefault = index === variantIndex;
       });
     }
-    
     setColorVariants(updatedVariants);
   };
 
-  // Color variant price range handlers
   const handleColorPriceRangeChange = (variantIndex, rangeIndex, field, value) => {
     const updatedVariants = [...colorVariants];
     updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value;
@@ -303,8 +327,8 @@ const AddProduct = () => {
         price: '',
         isDefault: false,
         optionalDetails: [],
-        priceRanges: []
-      }
+        priceRanges: [],
+      },
     ]);
   };
 
@@ -323,13 +347,13 @@ const AddProduct = () => {
     }
   };
 
+  // Size variant handlers
   const handleSizeVariantChange = (variantIndex, field, value) => {
     const updatedVariants = [...sizeVariants];
     updatedVariants[variantIndex][field] = value;
     setSizeVariants(updatedVariants);
   };
 
-  // Size variant price range handlers
   const handleSizePriceRangeChange = (variantIndex, rangeIndex, field, value) => {
     const updatedVariants = [...sizeVariants];
     updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value;
@@ -371,7 +395,7 @@ const AddProduct = () => {
   const addSizeVariant = () => {
     setSizeVariants([
       ...sizeVariants,
-      { size: '', price: '', optionalDetails: [], priceRanges: [] }
+      { size: '', price: '', optionalDetails: [], priceRanges: [] },
     ]);
   };
 
@@ -381,13 +405,13 @@ const AddProduct = () => {
     }
   };
 
+  // Pricing section handlers
   const handlePricingSectionChange = (index, field, value) => {
     const updatedPricing = [...pricingSections];
     updatedPricing[index][field] = value;
     setPricingSections(updatedPricing);
   };
 
-  // Pricing section price range handlers
   const handlePricingSectionPriceRangeChange = (sectionIndex, rangeIndex, field, value) => {
     const updatedPricing = [...pricingSections];
     updatedPricing[sectionIndex].priceRanges[rangeIndex][field] = value;
@@ -409,7 +433,10 @@ const AddProduct = () => {
   };
 
   const addPricingSection = () => {
-    setPricingSections([...pricingSections, { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] }]);
+    setPricingSections([
+      ...pricingSections,
+      { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [] },
+    ]);
   };
 
   const removePricingSection = (index) => {
@@ -418,6 +445,7 @@ const AddProduct = () => {
     }
   };
 
+  // Submit handler
   const handleSubmit = async () => {
     if (!formData.category) {
       alert('Please select a category');
@@ -431,35 +459,27 @@ const AddProduct = () => {
         colorVariants,
         sizeVariants,
         pricingSections,
-        basePriceRanges
+        basePriceRanges,
       };
-
       console.log('Product Data:', productData);
-      
-      // Make API call to save product
       const response = await axios.post('http://localhost:3000/api/product/add', productData);
-      
       console.log('Product added successfully:', response.data);
       alert('Product added successfully!');
-      
-      // Reset form if needed
-      // resetForm();
-      
     } catch (error) {
       console.error('Error adding product:', error);
       alert('Failed to add product. Please try again.');
     }
   };
 
-  // Price Range Component
-  const PriceRangeSection = ({ 
-    ranges, 
-    onRangeChange, 
-    onAddRange, 
-    onRemoveRange, 
+  // Price range component
+  const PriceRangeSection = ({
+    ranges,
+    onRangeChange,
+    onAddRange,
+    onRemoveRange,
     title,
     isRequired = false,
-    disabled = false 
+    disabled = false,
   }) => (
     <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
       <div className="flex items-center justify-between mb-4">
@@ -470,17 +490,14 @@ const AddProduct = () => {
           type="button"
           onClick={onAddRange}
           disabled={disabled}
-          className={`flex items-center gap-1 px-3 py-1 text-xs rounded-md transition-colors duration-200 ${
-            disabled 
-              ? 'bg-gray-200 text-gray-400 cursor-not-allowed'
-              : 'bg-blue-600 text-white hover:bg-blue-700'
+          className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors duration-200 ${
+            disabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
           }`}
         >
           <Plus size={12} />
           Add Range
         </button>
       </div>
-      
       <div className="space-y-3">
         {ranges.map((range, index) => (
           <div key={index} className="bg-white p-3 rounded-md border border-blue-100">
@@ -493,29 +510,25 @@ const AddProduct = () => {
                   type="number"
                   value={range.minQuantity}
                   onChange={(e) => onRangeChange(index, 'minQuantity', e.target.value)}
-                  className="w-full px-2 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="1"
                   min="1"
                   required={index === 0 && isRequired}
                   disabled={disabled}
                 />
               </div>
-              
               <div>
-                <label className="block text-xs font-medium text-gray-600 mb-1">
-                  Max Qty
-                </label>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Max Qty</label>
                 <input
                   type="number"
                   value={range.maxQuantity}
                   onChange={(e) => onRangeChange(index, 'maxQuantity', e.target.value)}
-                  className="w-full px-2 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="∞"
                   min={range.minQuantity || 1}
                   disabled={disabled}
                 />
               </div>
-              
               <div>
                 <label className="block text-xs font-medium text-gray-600 mb-1">
                   Unit Price {index === 0 && isRequired ? '*' : ''}
@@ -524,7 +537,7 @@ const AddProduct = () => {
                   type="number"
                   value={range.unitPrice}
                   onChange={(e) => onRangeChange(index, 'unitPrice', e.target.value)}
-                  className="w-full px-2 py-2 text-sm border border-gray-200 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-transparent"
+                  className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   placeholder="0.00"
                   min="0"
                   step="0.01"
@@ -532,7 +545,6 @@ const AddProduct = () => {
                   disabled={disabled}
                 />
               </div>
-              
               <div className="flex justify-end">
                 {ranges.length > 1 && (
                   <button
@@ -540,9 +552,7 @@ const AddProduct = () => {
                     onClick={() => onRemoveRange(index)}
                     disabled={disabled}
                     className={`p-2 rounded-md transition-colors duration-200 ${
-                      disabled 
-                        ? 'text-gray-300 cursor-not-allowed'
-                        : 'text-red-500 hover:text-red-600 hover:bg-red-50'
+                      disabled ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-600 hover:bg-red-50'
                     }`}
                   >
                     <Trash2 size={14} />
@@ -553,7 +563,6 @@ const AddProduct = () => {
           </div>
         ))}
       </div>
-      
       {!disabled && (
         <p className="text-xs text-blue-600 mt-2">
           💡 Set different prices for different quantity ranges (e.g., 1-10 pieces: ₹10/piece, 11-50 pieces: ₹8/piece)
@@ -562,12 +571,13 @@ const AddProduct = () => {
     </div>
   );
 
+  // Loading state
   if (loading) {
     return (
-      <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-gray-50 to-white shadow-xl rounded-2xl">
+      <div className="max-w-7xl mx-auto p-6 bg-gradient-to-b from-gray-50 to-white shadow-xl rounded-2xl">
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto mb-4"></div>
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
             <p className="text-gray-600">Loading categories...</p>
           </div>
         </div>
@@ -575,42 +585,37 @@ const AddProduct = () => {
     );
   }
 
+  // Main render
   return (
-    <div className="max-w-7xl mx-auto p-4 sm:p-6 lg:p-8 bg-gradient-to-b from-gray-50 to-white shadow-xl rounded-2xl">
-      <div className="mb-8 lg:mb-10">
-        <h1 className="text-2xl sm:text-3xl lg:text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">Add New Product</h1>
-        <p className="text-gray-500 text-sm sm:text-base lg:text-lg">Complete the form below to add a new product to your inventory</p>
+    <div className="max-w-7xl mx-auto p-6 bg-gradient-to-b from-gray-50 to-white shadow-xl rounded-2xl">
+      <div className="mb-10">
+        <h1 className="text-3xl font-extrabold text-gray-900 mb-3 tracking-tight">Add New Product</h1>
+        <p className="text-gray-500 text-base">Complete the form below to add a new product to your inventory</p>
       </div>
 
-      <div className="space-y-8 lg:space-y-10">
+      <div className="space-y-10">
         {/* Basic Product Info */}
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">Basic Information</h2>
-          
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 lg:gap-6">
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Basic Information</h2>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Product Name *
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Product Name *</label>
               <input
                 type="text"
                 value={formData.name}
                 onChange={(e) => handleFormChange('name', e.target.value)}
-                className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                 placeholder="Enter product name"
                 required
               />
             </div>
-            
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Base Price *
-              </label>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">Base Price *</label>
               <input
                 type="number"
                 value={formData.price}
                 onChange={(e) => handleFormChange('price', e.target.value)}
-                className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                 placeholder="0.00"
                 min="0"
                 step="0.01"
@@ -619,8 +624,6 @@ const AddProduct = () => {
               />
             </div>
           </div>
-
-          {/* Base Price Ranges */}
           {formData.price && (
             <PriceRangeSection
               ranges={basePriceRanges}
@@ -633,19 +636,16 @@ const AddProduct = () => {
           )}
         </div>
 
-        {/* Dynamic Category Section */}
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">Category Selection</h2>
-          
-          {dropdownLevels.length > 0 ? (
+        {/* Category Selection */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Category Selection</h2>
+          {categories.length > 0 ? (
             <div className="space-y-4">
               {renderCategoryDropdowns()}
-              
-              {/* Category Breadcrumb */}
               {selectedPath.length > 0 && (
-                <div className="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg">
-                  <p className="text-sm font-medium text-indigo-800 mb-1">Selected Category Path:</p>
-                  <p className="text-indigo-600 font-semibold text-lg">{getCategoryBreadcrumb()}</p>
+                <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <p className="text-sm font-semibold text-blue-800 mb-1">Selected Category Path:</p>
+                  <p className="text-blue-600 font-semibold text-lg">{getCategoryBreadCrumb()}</p>
                 </div>
               )}
             </div>
@@ -656,19 +656,18 @@ const AddProduct = () => {
           )}
         </div>
 
-        {/* Details Section */}
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">Product Details</h2>
-          
+        {/* Product Details */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Product Details</h2>
           <div className="space-y-4">
             {details.map((detail, index) => (
-              <div key={index} className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-start">
+              <div key={index} className="flex flex-col sm:flex-row gap-4 items-start">
                 <div className="flex-1 w-full">
                   <input
                     type="text"
                     value={detail.name}
                     onChange={(e) => handleDetailChange(index, 'name', e.target.value)}
-                    className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                     placeholder="Detail name (e.g., Material)"
                   />
                 </div>
@@ -677,7 +676,7 @@ const AddProduct = () => {
                     type="text"
                     value={detail.value}
                     onChange={(e) => handleDetailChange(index, 'value', e.target.value)}
-                    className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                     placeholder="Detail value (e.g., Cotton)"
                   />
                 </div>
@@ -685,7 +684,7 @@ const AddProduct = () => {
                   <button
                     type="button"
                     onClick={() => removeDetail(index)}
-                    className="p-2 lg:p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
+                    className="p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
                   >
                     <Trash2 size={18} />
                   </button>
@@ -693,75 +692,62 @@ const AddProduct = () => {
               </div>
             ))}
           </div>
-          
           <button
             type="button"
             onClick={addMoreDetails}
-            className="mt-4 flex items-center gap-2 px-4 py-2 text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+            className="mt-4 flex items-center gap-2 px-4 py-2 text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200 text-sm"
           >
             <Plus size={16} />
             Add more details
           </button>
         </div>
 
-        {/* Color Variants Section */}
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">Color Variants</h2>
-          
+        {/* Color Variants */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Color Variants</h2>
           <div className="space-y-6">
             {colorVariants.map((variant, variantIndex) => (
-              <div key={variantIndex} className="bg-gray-50 p-4 lg:p-6 rounded-lg border border-gray-200">
+              <div key={variantIndex} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                  <h3 className="text-lg font-medium text-gray-800">
-                    Color Variant {variantIndex + 1}
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-800">Color Variant {variantIndex + 1}</h3>
                   {colorVariants.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeColorVariant(variantIndex)}
-                      className="p-2 lg:p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                      className="p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
                     >
                       <Trash2 size={18} />
                     </button>
                   )}
                 </div>
-                
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Color *
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Color *</label>
                     <input
                       type="text"
                       value={variant.color}
                       onChange={(e) => handleColorVariantChange(variantIndex, 'color', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       placeholder="e.g., Red, Blue, #FF5733"
                       required
                     />
                   </div>
-                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Image
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Image</label>
                     <input
                       type="file"
                       onChange={(e) => handleImageUpload(variantIndex, e)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       accept="image/*"
                     />
                   </div>
-                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Price (for all sizes)
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Price (for all sizes)</label>
                     <input
                       type="number"
                       value={variant.price}
                       onChange={(e) => handleColorVariantChange(variantIndex, 'price', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       placeholder="0.00"
                       min="0"
                       step="0.01"
@@ -769,22 +755,20 @@ const AddProduct = () => {
                     />
                   </div>
                 </div>
-
                 <div className="mb-4">
                   <label className="flex items-center">
                     <input
                       type="checkbox"
                       checked={variant.isDefault}
                       onChange={(e) => handleColorVariantChange(variantIndex, 'isDefault', e.target.checked)}
-                      className="w-4 h-4 text-indigo-600 bg-gray-100 border-gray-300 rounded focus:ring-indigo-500 focus:ring-2"
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 focus:ring-2"
                     />
-                    <span className="ml-2 text-sm font-medium text-gray-700">Set as default variant</span>
+                    <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
                   </label>
                 </div>
-
                 {variant.optionalDetails.length > 0 && (
                   <div className="mb-4 mt-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Optional Details for this Variant</h4>
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Optional Details</h4>
                     <div className="space-y-2">
                       {variant.optionalDetails.map((detail, detailIndex) => (
                         <div key={detailIndex} className="flex flex-col sm:flex-row gap-2 items-start">
@@ -792,20 +776,20 @@ const AddProduct = () => {
                             type="text"
                             value={detail.name}
                             onChange={(e) => handleColorOptionalDetailChange(variantIndex, detailIndex, 'name', e.target.value)}
-                            className="flex-1 px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                             placeholder="Detail name"
                           />
                           <input
                             type="text"
                             value={detail.value}
                             onChange={(e) => handleColorOptionalDetailChange(variantIndex, detailIndex, 'value', e.target.value)}
-                            className="flex-1 px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                             placeholder="Detail value"
                           />
                           <button
                             type="button"
                             onClick={() => removeColorOptionalDetail(variantIndex, detailIndex)}
-                            className="p-2 lg:p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
+                            className="p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -814,75 +798,64 @@ const AddProduct = () => {
                     </div>
                   </div>
                 )}
-
                 <button
                   type="button"
                   onClick={() => addColorOptionalDetail(variantIndex)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
                 >
                   <Plus size={14} />
-                  Add optional details for this variant
+                  Add optional details
                 </button>
               </div>
             ))}
           </div>
-          
           <button
             type="button"
             onClick={addColorVariant}
-            className="mt-6 flex items-center gap-2 px-4 py-2 lg:px-6 lg:py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors duration-200 font-medium"
+            className="mt-6 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors duration-200 text-sm"
           >
             <Plus size={16} />
             Add Color Variant
           </button>
         </div>
 
-        {/* Size Variants Section */}
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">Size Variants</h2>
-          
+        {/* Size Variants */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Size Variants</h2>
           <div className="space-y-6">
             {sizeVariants.map((variant, variantIndex) => (
-              <div key={variantIndex} className="bg-gray-50 p-4 lg:p-6 rounded-lg border border-gray-200">
+              <div key={variantIndex} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                  <h3 className="text-lg font-medium text-gray-800">
-                    Size Variant {variantIndex + 1}
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-800">Size Variant {variantIndex + 1}</h3>
                   {sizeVariants.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removeSizeVariant(variantIndex)}
-                      className="p-2 lg:p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                      className="p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
                     >
                       <Trash2 size={18} />
                     </button>
                   )}
                 </div>
-                
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Size *
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Size *</label>
                     <input
                       type="text"
                       value={variant.size}
                       onChange={(e) => handleSizeVariantChange(variantIndex, 'size', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       placeholder="e.g., S, M, L, XL"
                       required
                     />
                   </div>
-                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Price
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
                     <input
                       type="number"
                       value={variant.price}
                       onChange={(e) => handleSizeVariantChange(variantIndex, 'price', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       placeholder="0.00"
                       min="0"
                       step="0.01"
@@ -890,43 +863,46 @@ const AddProduct = () => {
                     />
                   </div>
                 </div>
-
-                {/* Size Variant Price Ranges */}
                 {variant.price && (
                   <PriceRangeSection
                     ranges={variant.priceRanges}
-                    onRangeChange={(rangeIndex, field, value) => handleSizePriceRangeChange(variantIndex, rangeIndex, field, value)}
+                    onRangeChange={(rangeIndex, field, value) =>
+                      handleSizePriceRangeChange(variantIndex, rangeIndex, field, value)
+                    }
                     onAddRange={() => addSizePriceRange(variantIndex)}
                     onRemoveRange={(rangeIndex) => removeSizePriceRange(variantIndex, rangeIndex)}
-                    title={`Bulk Pricing for ${variant.size || `Size ${variantIndex + 1}`}`}
-                    disabled={!variant.price}
+                    title={`Price Range for ${variant.size || 'Size ' + (variantIndex + 1)}`}
+                    isRequired
                   />
                 )}
-
                 {variant.optionalDetails.length > 0 && (
-                  <div className="mb-4 mt-6">
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Optional Details for this Variant</h4>
+                  <div className="mt-6">
+                    <h4 className="text-sm font-semibold text-gray-700 mb-2">Optional Details</h4>
                     <div className="space-y-2">
                       {variant.optionalDetails.map((detail, detailIndex) => (
                         <div key={detailIndex} className="flex flex-col sm:flex-row gap-2 items-start">
                           <input
                             type="text"
                             value={detail.name}
-                            onChange={(e) => handleSizeOptionalDetailChange(variantIndex, detailIndex, 'name', e.target.value)}
-                            className="flex-1 px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
-                            placeholder="Detail name"
+                            onChange={(e) =>
+                              handleSizeOptionalDetailChange(variantIndex, detailIndex, 'name', e.target.value)
+                            }
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            placeholder="Name"
                           />
                           <input
                             type="text"
                             value={detail.value}
-                            onChange={(e) => handleSizeOptionalDetailChange(variantIndex, detailIndex, 'value', e.target.value)}
-                            className="flex-1 px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
-                            placeholder="Detail value"
+                            onChange={(e) =>
+                              handleSizeOptionalDetailChange(variantIndex, detailIndex, 'value', e.target.value)
+                            }
+                            className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            placeholder="Value"
                           />
                           <button
                             type="button"
                             onClick={() => removeSizeOptionalDetail(variantIndex, detailIndex)}
-                            className="p-2 lg:p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
+                            className="p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
                           >
                             <Trash2 size={16} />
                           </button>
@@ -935,131 +911,111 @@ const AddProduct = () => {
                     </div>
                   </div>
                 )}
-
                 <button
                   type="button"
                   onClick={() => addSizeOptionalDetail(variantIndex)}
-                  className="flex items-center gap-2 px-4 py-2 text-sm text-indigo-600 hover:text-indigo-800 hover:bg-indigo-50 rounded-lg transition-colors duration-200"
+                  className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
                 >
                   <Plus size={14} />
-                  Add optional details for this variant
+                  Add optional details
                 </button>
               </div>
             ))}
           </div>
-          
           <button
             type="button"
             onClick={addSizeVariant}
-            className="mt-6 flex items-center gap-2 px-4 py-2 lg:px-6 lg:py-3 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors duration-200 font-medium"
+            className="mt-6 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white hover:bg-blue-700 rounded-lg transition-colors duration-200 text-sm"
           >
             <Plus size={16} />
             Add Size Variant
           </button>
         </div>
 
-        {/* Pricing Section */}
-        <div className="bg-white p-4 sm:p-6 lg:p-8 rounded-xl shadow-sm border border-gray-100">
-          <h2 className="text-xl lg:text-2xl font-semibold text-gray-800 mb-4 lg:mb-6">Pricing Combinations</h2>
-          
+        {/* Pricing Combinations */}
+        <div className="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+          <h2 className="text-2xl font-semibold text-gray-800 mb-6">Pricing Combinations</h2>
           <div className="space-y-6">
             {pricingSections.map((section, index) => (
-              <div key={index} className="bg-gray-50 p-4 lg:p-6 rounded-lg border border-gray-200">
+              <div key={index} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
                 <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                  <h3 className="text-lg font-medium text-gray-800">
-                    Pricing Combination {index + 1}
-                  </h3>
+                  <h3 className="text-lg font-semibold text-gray-800">Pricing Combination {index + 1}</h3>
                   {pricingSections.length > 1 && (
                     <button
                       type="button"
                       onClick={() => removePricingSection(index)}
-                      className="p-2 lg:p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                      className="p-3 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
                     >
                       <Trash2 size={18} />
                     </button>
                   )}
                 </div>
-                
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Color
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Color</label>
                     <select
                       value={section.color}
                       onChange={(e) => handlePricingSectionChange(index, 'color', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       disabled={!isPricingSectionEnabled}
                     >
-                      <option value="">Select color</option>
+                      <option value="">Select Color</option>
                       {colorVariants.map((variant, i) => (
                         <option key={i} value={variant.color}>
-                          {variant.color || `Color ${i + 1}`}
+                          {variant.color || 'Color ' + (i + 1)}
                         </option>
                       ))}
                     </select>
                   </div>
-                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Size
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Size</label>
                     <select
                       value={section.size}
                       onChange={(e) => handlePricingSectionChange(index, 'size', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       disabled={!isPricingSectionEnabled}
                     >
-                      <option value="">Select size</option>
+                      <option value="">Select Size</option>
                       {sizeVariants.map((variant, i) => (
                         <option key={i} value={variant.size}>
-                          {variant.size || `Size ${i + 1}`}
+                          {variant.size || 'Size ' + (i + 1)}
                         </option>
                       ))}
                     </select>
                   </div>
-                  
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Retail Price
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Retail Price</label>
                     <input
                       type="number"
                       value={section.price}
                       onChange={(e) => handlePricingSectionChange(index, 'price', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       placeholder="0.00"
                       min="0"
                       step="0.01"
                       disabled={!isPricingSectionEnabled}
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Wholesale Price
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Wholesale Price</label>
                     <input
                       type="number"
                       value={section.wholesalePrice || ''}
                       onChange={(e) => handlePricingSectionChange(index, 'wholesalePrice', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       placeholder="0.00"
                       min="0"
                       step="0.01"
                       disabled={!isPricingSectionEnabled}
                     />
                   </div>
-
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Threshold Quantity
-                    </label>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Threshold Quantity</label>
                     <input
                       type="number"
                       value={section.thresholdQuantity || ''}
                       onChange={(e) => handlePricingSectionChange(index, 'thresholdQuantity', e.target.value)}
-                      className="w-full px-3 py-2 lg:px-4 lg:py-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                      className="w-full px-4 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       placeholder="10"
                       min="1"
                       disabled={!isPricingSectionEnabled}
@@ -1067,37 +1023,47 @@ const AddProduct = () => {
                     <p className="text-xs text-gray-500 mt-1">This number will be included</p>
                   </div>
                 </div>
+                {section.price && (
+                  <PriceRangeSection
+                    ranges={section.priceRanges}
+                    onRangeChange={(rangeIndex, field, value) =>
+                      handlePricingSectionPriceRangeChange(index, rangeIndex, field, value)
+                    }
+                    onAddRange={() => addPricingSectionPriceRange(index)}
+                    onRemoveRange={(rangeIndex) => removePricingSectionPriceRange(index, rangeIndex)}
+                    title={`Price Range for Combination ${index + 1}`}
+                  />
+                )}
               </div>
             ))}
           </div>
-          
           <button
             type="button"
             onClick={addPricingSection}
-            className={`mt-6 flex items-center gap-2 px-4 py-2 lg:px-6 lg:py-3 rounded-lg transition-colors duration-200 font-medium ${
+            className={`mt-6 flex items-center gap-2 px-6 py-3 text-sm rounded-lg transition-colors duration-200 ${
               isPricingSectionEnabled
-                ? 'bg-indigo-600 text-white hover:bg-indigo-700'
+                ? 'bg-blue-600 text-white hover:bg-blue-700'
                 : 'bg-gray-300 text-gray-500 cursor-not-allowed'
             }`}
             disabled={!isPricingSectionEnabled}
           >
             <Plus size={16} />
-            Add More Pricing Section
+            Add Pricing Combination
           </button>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Buttons */}
         <div className="flex flex-col sm:flex-row justify-end gap-4 pt-6 border-t border-gray-200">
           <button
             type="button"
-            className="w-full sm:w-auto px-4 py-2 lg:px-6 lg:py-3 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium"
+            className="w-full sm:w-auto px-6 py-2 border border-gray-200 text-gray-800 rounded-lg hover:bg-gray-100 transition-colors duration-200 text-sm"
           >
             Cancel
           </button>
           <button
             type="button"
             onClick={handleSubmit}
-            className="w-full sm:w-auto px-6 py-2 lg:px-8 lg:py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium"
+            className="w-full sm:w-auto px-6 py-2 bg-green-600 text-white hover:bg-green-700 rounded-lg transition-colors duration-200 text-sm"
           >
             Add Product
           </button>
@@ -1105,6 +1071,6 @@ const AddProduct = () => {
       </div>
     </div>
   );
-}
+};
 
 export default AddProduct;
