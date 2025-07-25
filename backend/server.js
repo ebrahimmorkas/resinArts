@@ -7,6 +7,8 @@ const cookieParser = require('cookie-parser');
 require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const categoryRoutes = require('./routes/categoryRoutes');
+const productRoutes = require('./routes/productRoutes');
+const path = require('path');
 
 const app = express();
 
@@ -17,6 +19,9 @@ app.use(cors({
 }));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+
+// Serve static files for uploads
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 mongoose.connect(process.env.MONGO_URI, {
     useNewUrlParser: true,
@@ -57,5 +62,6 @@ app.post('/register', (req, res) => {
 app.use('/api/auth', authRoutes);
 // Categories routes
 app.use('/api/category', categoryRoutes);
+app.use('/api/product', productRoutes);
 
 app.listen(3000, () => console.log("Server running on port 3000"));
