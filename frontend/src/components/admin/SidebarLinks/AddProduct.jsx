@@ -9,9 +9,6 @@ const PriceRangeSection = React.memo(({
   onRemoveRange,
   title,
   isRequired = false,
-  disabled = false,
-  isBasePrice = false,
-  isSizeOrPricing = false
 }) => (
   <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
     <div className="flex items-center justify-between mb-4">
@@ -21,10 +18,7 @@ const PriceRangeSection = React.memo(({
       <button
         type="button"
         onClick={onAddRange}
-        disabled={disabled}
-        className={`flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors duration-200 ${
-          disabled ? 'bg-gray-200 text-gray-400 cursor-not-allowed' : 'bg-blue-600 text-white hover:bg-blue-700'
-        }`}
+        className="flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700"
       >
         <Plus size={12} />
         Add Range
@@ -40,14 +34,13 @@ const PriceRangeSection = React.memo(({
               </label>
               <input
                 type="number"
-                value={range.retailPrice}
+                value={range.retailPrice || ''}
                 onChange={(e) => onRangeChange(index, 'retailPrice', e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="0.00"
                 min="0"
                 step="0.01"
-                required={index === 0}
-                disabled={disabled}
+                required={index === 0 && isRequired}
               />
             </div>
             <div>
@@ -56,14 +49,13 @@ const PriceRangeSection = React.memo(({
               </label>
               <input
                 type="number"
-                value={range.wholesalePrice}
+                value={range.wholesalePrice || ''}
                 onChange={(e) => onRangeChange(index, 'wholesalePrice', e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="0.00"
                 min="0"
                 step="0.01"
                 required={index === 0 && isRequired}
-                disabled={disabled}
               />
             </div>
             <div>
@@ -72,13 +64,12 @@ const PriceRangeSection = React.memo(({
               </label>
               <input
                 type="number"
-                value={range.thresholdQuantity}
+                value={range.thresholdQuantity || ''}
                 onChange={(e) => onRangeChange(index, 'thresholdQuantity', e.target.value)}
                 className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 placeholder="10"
                 min="1"
                 required={index === 0 && isRequired}
-                disabled={disabled}
               />
               <p className="text-sm text-gray-500 mt-1">This number will be included</p>
             </div>
@@ -87,10 +78,7 @@ const PriceRangeSection = React.memo(({
                 <button
                   type="button"
                   onClick={() => onRemoveRange(index)}
-                  disabled={disabled}
-                  className={`p-2 rounded-md transition-colors duration-200 ${
-                    disabled ? 'text-gray-300 cursor-not-allowed' : 'text-red-500 hover:text-red-600 hover:bg-red-50'
-                  }`}
+                  className="p-2 rounded-md transition-colors duration-200 text-red-500 hover:text-red-600 hover:bg-red-50"
                 >
                   <Trash2 size={14} />
                 </button>
@@ -125,6 +113,7 @@ const AddProduct = () => {
       price: '',
       isDefault: true,
       optionalDetails: [],
+      priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
     },
   ]);
   const [sizeVariants, setSizeVariants] = useState([
@@ -159,6 +148,9 @@ const AddProduct = () => {
   const [fetchError, setFetchError] = useState('');
 
   const sizeOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
+
+  const isBasePriceFilled = !!formData.price;
+  const isColorPriceFilled = colorVariants.some((v) => v.price);
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -358,8 +350,6 @@ const AddProduct = () => {
     );
   };
 
-  const isBasePriceFilled = !!formData.price;
-
   const handleFormChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
@@ -435,6 +425,28 @@ const AddProduct = () => {
     setColorVariants(updatedVariants);
   };
 
+  const handleColorPriceRangeChange = useCallback((variantIndex, rangeIndex, field, value) => {
+    setColorVariants((prev) => {
+      const updatedVariants = [...prev];
+      updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value;
+      return updatedVariants;
+    });
+  }, []);
+
+  const addColorPriceRange = (variantIndex) => {
+    const updatedVariants = [...colorVariants];
+    updatedVariants[variantIndex].priceRanges.push({ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' });
+    setColorVariants(updatedVariants);
+  };
+
+  const removeColorPriceRange = (variantIndex, rangeIndex) => {
+    const updatedVariants = [...colorVariants];
+    if (updatedVariants[variantIndex].priceRanges.length > 1) {
+      updatedVariants[variantIndex].priceRanges = updatedVariants[variantIndex].priceRanges.filter((_, i) => i !== rangeIndex);
+      setColorVariants(updatedVariants);
+    }
+  };
+
   const addColorVariant = () => {
     setColorVariants([
       ...colorVariants,
@@ -444,6 +456,7 @@ const AddProduct = () => {
         price: '',
         isDefault: false,
         optionalDetails: [],
+        priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
       },
     ]);
   };
@@ -623,7 +636,8 @@ const AddProduct = () => {
         !variant.image &&
         !variant.price &&
         !variant.isDefault &&
-        variant.optionalDetails.every((detail) => !detail.name && !detail.value)
+        variant.optionalDetails.every((detail) => !detail.name && !detail.value) &&
+        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity)
       );
     } else if (type === 'size') {
       return (
@@ -691,6 +705,41 @@ const AddProduct = () => {
     }
     if (!colorVariants[0].color) newErrors.color_0 = 'At least one color variant is required';
 
+    // Validate price exclusivity
+    if (formData.price && colorVariants.some((v) => v.price)) {
+      newErrors.price = 'Base price and color variant prices cannot both be set.';
+    }
+    if (colorVariants.some((v) => v.price) && sizeVariants.some((v) => v.price)) {
+      newErrors.color_0 = 'Color variant prices and size variant prices cannot both be set.';
+    }
+    if (colorVariants.some((v) => v.price) && pricingSections.some((s) => !isVariantEmpty(s, 'pricingSection'))) {
+      newErrors.color_0 = 'Pricing combinations cannot be set when color variant prices are used.';
+    }
+
+    // Validate price ranges
+    if (formData.price && basePriceRanges.length > 0) {
+      const firstRange = basePriceRanges[0];
+      if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+        newErrors.base_price = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first base price range.';
+      }
+    }
+    colorVariants.forEach((variant, index) => {
+      if (variant.price && variant.priceRanges.length > 0) {
+        const firstRange = variant.priceRanges[0];
+        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+          newErrors[`color_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
+        }
+      }
+    });
+    sizeVariants.forEach((variant, index) => {
+      if (variant.price && variant.priceRanges.length > 0) {
+        const firstRange = variant.priceRanges[0];
+        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+          newErrors[`size_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
+        }
+      }
+    });
+
     const sizeErrors = validateSizeVariants();
     if (sizeErrors) {
       if (typeof sizeErrors === 'string') {
@@ -747,7 +796,7 @@ const AddProduct = () => {
 
       setFormData({ name: '', price: '', stock: '', category: '', categoryPath: [] });
       setDetails([{ name: '', value: '' }, { name: '', value: '' }, { name: '', value: '' }]);
-      setColorVariants([{ color: '', image: null, price: '', isDefault: true, optionalDetails: [] }]);
+      setColorVariants([{ color: '', image: null, price: '', isDefault: true, optionalDetails: [], priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }]);
       setSizeVariants([
         {
           size: '',
@@ -763,8 +812,8 @@ const AddProduct = () => {
           availableColors: [],
         },
       ]);
-      setPricingSections([]);
-      setBasePriceRanges([]);
+      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }]);
+      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
       setSelectedPath([]);
       setSubCategoryOptions([]);
     } catch (error) {
@@ -867,19 +916,21 @@ const AddProduct = () => {
                   />
                   {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                 </div>
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
-                  <input
-                    type="number"
-                    value={formData.price}
-                    onChange={(e) => handleFormChange('price', e.target.value === '0' ? '' : e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                  />
-                  {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
-                </div>
+                {!isColorPriceFilled && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
+                    <input
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => handleFormChange('price', e.target.value === '0' ? '' : e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                    {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+                  </div>
+                )}
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Stock *</label>
                   <input
@@ -902,7 +953,6 @@ const AddProduct = () => {
                   onRemoveRange={removeBasePriceRange}
                   title="Price Ranges"
                   isRequired={true}
-                  isBasePrice={true}
                 />
               )}
             </div>
@@ -1036,6 +1086,21 @@ const AddProduct = () => {
                         <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
                       </label>
                     </div>
+                    {variant.price && !isBasePriceFilled && (
+                      <PriceRangeSection
+                        ranges={variant.priceRanges}
+                        onRangeChange={(rangeIndex, field, value) =>
+                          handleColorPriceRangeChange(variantIndex, rangeIndex, field, value)
+                        }
+                        onAddRange={() => addColorPriceRange(variantIndex)}
+                        onRemoveRange={(rangeIndex) => removeColorPriceRange(variantIndex, rangeIndex)}
+                        title={`Price Range for ${variant.color || 'Color ' + (variantIndex + 1)}`}
+                        isRequired={true}
+                      />
+                    )}
+                    {errors[`color_price_${variantIndex}`] && (
+                      <p className="text-red-500 text-xs mt-1">{errors[`color_price_${variantIndex}`]}</p>
+                    )}
                     {variant.optionalDetails.length > 0 && (
                       <div className="mb-4 mt-6">
                         <h4 className="text-sm font-semibold text-gray-700 mb-2">Optional Details</h4>
@@ -1177,7 +1242,7 @@ const AddProduct = () => {
                           <p className="text-red-500 text-xs mt-1">{errors[`size_${variantIndex}`]}</p>
                         )}
                       </div>
-                      {!isBasePriceFilled && (
+                      {!isBasePriceFilled && !isColorPriceFilled && (
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
                           <input
@@ -1237,7 +1302,7 @@ const AddProduct = () => {
                         <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
                       </label>
                     </div>
-                    {!isBasePriceFilled && variant.price && (
+                    {variant.price && !isBasePriceFilled && !isColorPriceFilled && (
                       <PriceRangeSection
                         ranges={variant.priceRanges}
                         onRangeChange={(rangeIndex, field, value) =>
@@ -1247,8 +1312,10 @@ const AddProduct = () => {
                         onRemoveRange={(rangeIndex) => removeSizePriceRange(variantIndex, rangeIndex)}
                         title={`Price Range for ${variant.size || 'Size ' + (variantIndex + 1)}`}
                         isRequired={true}
-                        isSizeOrPricing={true}
                       />
+                    )}
+                    {errors[`size_price_${variantIndex}`] && (
+                      <p className="text-red-500 text-xs mt-1">{errors[`size_price_${variantIndex}`]}</p>
                     )}
                     {variant.optionalDetails.length > 0 && (
                       <div className="mt-6">
@@ -1303,7 +1370,7 @@ const AddProduct = () => {
               </button>
             </div>
 
-            {isBasePriceFilled && (
+            {!isBasePriceFilled && !isColorPriceFilled && (
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-semibold text-gray-800 mb-6">Pricing Combinations</h2>
                 <div className="space-y-6">
@@ -1399,7 +1466,6 @@ const AddProduct = () => {
                           onRemoveRange={(rangeIndex) => removePricingSectionPriceRange(index, rangeIndex)}
                           title={`Price Range for Combination ${index + 1}`}
                           isRequired={true}
-                          isSizeOrPricing={true}
                         />
                       )}
                     </div>
