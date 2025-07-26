@@ -5,6 +5,7 @@ import AddProduct from '../../components/admin/SidebarLinks/AddProduct';
 import axios from 'axios';
 import { useNavigate } from 'react-router-dom';
 import AddCategory from '../../components/admin/SidebarLinks/AddCategory';
+import OrdersPanel from '../../components/admin/SidebarLinks/orders/OrdersPanel';
 
 function AdminPanel() {
   // State to manage sidebar open/close
@@ -52,6 +53,7 @@ function AdminPanel() {
       <main className="w-screen my-8">
         <AddProduct></AddProduct>
         {/* <AddCategory></AddCategory> */}
+        {/* <OrdersPanel></OrdersPanel> */}
       </main>
     </div>
   )

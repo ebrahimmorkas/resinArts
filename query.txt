@@ -251,3 +251,8 @@ length
 [[Prototype]]
 : 
 Array(0)
+
+
+
+Add Product UI changes:
+Remove unit price from the bulk pricing section there's no need as we are already providing it. Add set as default option in size variants as well. This option should be by default selected for the first variant. There should some mechanism to store in mongodb that this variant is by default. When product is added show modal saying product added successfully and if there's some problem then show the error messages below the fields that were causing the problem but before that show modal saying product not added. In the size variants there should be dropdown for size, values should be : XS, S, M, L, XL, XXL, XXXl, XXXXl. Below it there should be link 'Enter dimensions'. And then there should be three textfields for length, breadth and height besides each other. Here's the validation even if one size variants has selected the dimensions then all the size variants should contain dimensions only and if any one contains the dropdwon then all size variants should contain dropdown only. There should not be any discrepancy. Add new product is touching the navbar see if you can fix it and test on the button as well are not visible please fix it.
