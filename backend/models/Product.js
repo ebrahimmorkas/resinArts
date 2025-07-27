@@ -33,14 +33,16 @@ const productSchema = new mongoose.Schema({
     image: { type: String, default: null },
     price: { type: String, default: '' },
     isDefault: { type: Boolean, default: false },
+    forAllSizes: { type: String, default: 'yes' },
+    availableSizes: [{ type: String, trim: true }],
     optionalDetails: [{
       name: { type: String, trim: true },
       value: { type: String, trim: true },
     }],
     priceRanges: [{
-      minQuantity: { type: Number, default: 1 },
-      maxQuantity: { type: String, default: '' },
-      unitPrice: { type: String, default: '' },
+      retailPrice: { type: String, default: '' },
+      wholesalePrice: { type: String, default: '' },
+      thresholdQuantity: { type: String, default: '' },
     }],
   }],
   sizeVariants: [{
@@ -50,7 +52,8 @@ const productSchema = new mongoose.Schema({
     length: { type: Number, default: null },
     breadth: { type: Number, default: null },
     height: { type: Number, default: null },
-    availableColors: [{ type: String, trim: true }], // New field for selected colors
+    forAllColors: { type: String, default: 'yes' },
+    availableColors: [{ type: String, trim: true }],
     optionalDetails: [{
       name: { type: String, trim: true },
       value: { type: String, trim: true },
@@ -67,11 +70,6 @@ const productSchema = new mongoose.Schema({
     price: { type: String, default: '' },
     wholesalePrice: { type: String, default: '' },
     thresholdQuantity: { type: String, default: '' },
-    priceRanges: [{
-      retailPrice: { type: String, default: '' },
-      wholesalePrice: { type: String, default: '' },
-      thresholdQuantity: { type: String, default: '' },
-    }],
   }],
   basePriceRanges: [{
     retailPrice: { type: String, default: '' },

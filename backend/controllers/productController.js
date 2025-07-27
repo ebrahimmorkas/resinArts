@@ -17,137 +17,205 @@ const addProduct = async (req, res) => {
       basePriceRanges,
     } = req.body;
 
-    // Validate required fields
-    if (!name || !category || !stock || isNaN(stock) || stock < 0) {
-      return res.status(400).json({
-        error: 'Product name, category, and valid stock are required',
-      });
-    }
-
-    if (!colorVariants || JSON.parse(colorVariants).length === 0) {
-      return res.status(400).json({
-        error: 'At least one color variant is required',
-      });
-    }
-
-    // Parse JSON strings
+    // Parse JSON fields
     const parsedDetails = details ? JSON.parse(details) : [];
-    const parsedColorVariants = JSON.parse(colorVariants);
+    const parsedColorVariants = colorVariants ? JSON.parse(colorVariants) : [];
     const parsedSizeVariants = sizeVariants ? JSON.parse(sizeVariants) : [];
     const parsedPricingSections = pricingSections ? JSON.parse(pricingSections) : [];
     const parsedBasePriceRanges = basePriceRanges ? JSON.parse(basePriceRanges) : [];
 
-    // Validate size variants
-    const useDimensions = parsedSizeVariants.some((v) => v.length && v.breadth && v.height);
+    // Validate required fields
+    if (!name) {
+      return res.status(400).json({ error: 'Product name is required' });
+    }
+    if (!stock || isNaN(stock) || stock < 0) {
+      return res.status(400).json({ error: 'Valid stock quantity is required' });
+    }
+    if (!category) {
+      return res.status(400).json({ error: 'Category is required' });
+    }
+    if (!parsedColorVariants.length || !parsedColorVariants[0].color) {
+      return res.status(400).json({ error: 'At least one color variant is required' });
+    }
+
+    // Validate price exclusivity
+    const hasBasePrice = price && price !== '';
+    const hasColorPrice = parsedColorVariants.some((v) => v.price && v.price !== '');
+    const hasSizePrice = parsedSizeVariants.some((v) => v.price && v.price !== '');
+    const hasPricingSections = parsedPricingSections.some(
+      (s) => (s.price && s.price !== '') || (s.wholesalePrice && s.wholesalePrice !== '') || (s.thresholdQuantity && s.thresholdQuantity !== '')
+    );
+
+    if (!hasBasePrice && !hasColorPrice && !hasSizePrice && !hasPricingSections) {
+      return res.status(400).json({ error: 'Base price, variant prices, or pricing combinations are required' });
+    }
+    if (hasBasePrice && hasColorPrice) {
+      return res.status(400).json({ error: 'Base price and color variant prices cannot both be set' });
+    }
+    if (hasColorPrice && hasSizePrice) {
+      return res.status(400).json({ error: 'Color variant prices and size variant prices cannot both be set' });
+    }
+
+    // Validate size variants (dimensions or dropdown consistency)
+    const useDimensions = parsedSizeVariants.some((v) => v.length || v.breadth || v.height);
     const useDropdown = parsedSizeVariants.some((v) => v.size && !v.length && !v.breadth && !v.height);
     if (useDimensions && useDropdown) {
       return res.status(400).json({
-        error: 'All size variants must use either dimensions or dropdown, not both',
+        error: 'All size variants must use either the size dropdown or dimensions, not both',
       });
     }
-    if (parsedSizeVariants.length === 0) {
-      return res.status(400).json({
-        error: 'At least one size variant is required',
-      });
-    }
-
-    // Process uploaded images
-    const colorImages = req.files ? req.files.map((file) => `/Uploads/${file.filename}`) : [];
-
-    // Assign images to color variants (match by index)
-    parsedColorVariants.forEach((variant, index) => {
-      if (colorImages[index]) {
-        variant.image = colorImages[index];
+    for (let i = 0; i < parsedSizeVariants.length; i++) {
+      const variant = parsedSizeVariants[i];
+      if (useDimensions) {
+        if (!variant.length || !variant.breadth || !variant.height) {
+          return res.status(400).json({
+            error: `Length, Breadth, and Height are required for size variant ${i + 1}`,
+          });
+        }
+      } else if (!variant.size) {
+        return res.status(400).json({ error: `Size is required for size variant ${i + 1}` });
       }
+      if (variant.forAllColors === 'no' && (!variant.availableColors || !variant.availableColors.length)) {
+        return res.status(400).json({
+          error: `At least one color must be selected for size variant ${i + 1} if not available for all colors`,
+        });
+      }
+    }
+
+    // Validate color variants
+    for (let i = 0; i < parsedColorVariants.length; i++) {
+      const variant = parsedColorVariants[i];
+      if (variant.forAllSizes === 'no' && (!variant.availableSizes || !variant.availableSizes.length)) {
+        return res.status(400).json({
+          error: `At least one size must be selected for color variant ${i + 1} if not available for all sizes`,
+        });
+      }
+    }
+
+    // Validate price ranges (retail price <= wholesale price)
+    for (let i = 0; i < parsedBasePriceRanges.length; i++) {
+      const range = parsedBasePriceRanges[i];
+      if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+        return res.status(400).json({
+          error: `Retail price cannot be greater than wholesale price in base price range ${i + 1}`,
+        });
+      }
+    }
+    for (let i = 0; i < parsedColorVariants.length; i++) {
+      const variant = parsedColorVariants[i];
+      for (let j = 0; j < variant.priceRanges.length; j++) {
+        const range = variant.priceRanges[j];
+        if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+          return res.status(400).json({
+            error: `Retail price cannot be greater than wholesale price in color variant ${i + 1}, price range ${j + 1}`,
+          });
+        }
+      }
+    }
+    for (let i = 0; i < parsedSizeVariants.length; i++) {
+      const variant = parsedSizeVariants[i];
+      for (let j = 0; j < variant.priceRanges.length; j++) {
+        const range = variant.priceRanges[j];
+        if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+          return res.status(400).json({
+            error: `Retail price cannot be greater than wholesale price in size variant ${i + 1}, price range ${j + 1}`,
+          });
+        }
+      }
+    }
+
+    // Ensure base price equals retail price in the first base price range
+    if (hasBasePrice && parsedBasePriceRanges.length > 0) {
+      if (!parsedBasePriceRanges[0].retailPrice || parseFloat(parsedBasePriceRanges[0].retailPrice) !== parseFloat(price)) {
+        return res.status(400).json({
+          error: 'Base price must equal the retail price in the first base price range',
+        });
+      }
+      if (!parsedBasePriceRanges[0].wholesalePrice || !parsedBasePriceRanges[0].thresholdQuantity) {
+        return res.status(400).json({
+          error: 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first base price range when base price is set',
+        });
+      }
+    }
+
+    // Validate price ranges for variants
+    for (let i = 0; i < parsedColorVariants.length; i++) {
+      const variant = parsedColorVariants[i];
+      if (variant.price && variant.priceRanges.length > 0) {
+        const firstRange = variant.priceRanges[0];
+        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+          return res.status(400).json({
+            error: `Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range in color variant ${i + 1} when price is set`,
+          });
+        }
+      }
+    }
+    for (let i = 0; i < parsedSizeVariants.length; i++) {
+      const variant = parsedSizeVariants[i];
+      if (variant.price && variant.priceRanges.length > 0) {
+        const firstRange = variant.priceRanges[0];
+        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+          return res.status(400).json({
+            error: `Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range in size variant ${i + 1} when price is set`,
+          });
+        }
+      }
+    }
+
+    // Handle image uploads for color variants
+    const colorImages = req.files && req.files['colorImages'] ? req.files['colorImages'] : [];
+    const colorVariantsWithImages = parsedColorVariants.map((variant, index) => {
+      const imageFile = Array.isArray(colorImages) ? colorImages[index] : colorImages;
+      return {
+        ...variant,
+        image: imageFile ? `/uploads/${imageFile.filename}` : null,
+      };
     });
 
-    // Create product
-    const product = new Product({
+    // Clean up parsed data
+    const cleanedDetails = parsedDetails.filter((detail) => detail.name && detail.value);
+    const cleanedColorVariants = colorVariantsWithImages.filter((variant) => variant.color);
+    const cleanedSizeVariants = parsedSizeVariants.filter((variant) => variant.size || (variant.length && variant.breadth && variant.height));
+    const cleanedPricingSections = parsedPricingSections.filter(
+      (section) => section.color || section.size || section.price || section.wholesalePrice || section.thresholdQuantity
+    );
+    const cleanedBasePriceRanges = parsedBasePriceRanges.filter(
+      (range) => range.retailPrice || range.wholesalePrice || range.thresholdQuantity
+    );
+
+    // Prepare product data
+    const productData = {
       name,
-      price: price ? parseFloat(price) : undefined,
-      stock: parseInt(stock),
+      price: price || '',
+      stock,
       category,
       categoryPath: categoryPath ? JSON.parse(categoryPath) : [],
-      details: parsedDetails.filter((d) => d.name && d.value),
-      colorVariants: parsedColorVariants.map((v) => ({
-        color: v.color,
-        image: v.image || '',
-        price: v.price ? parseFloat(v.price) : undefined,
-        isDefault: v.isDefault || false,
-        optionalDetails: v.optionalDetails ? v.optionalDetails.filter((d) => d.name && d.value) : [],
-        priceRanges: v.priceRanges
-          ? v.priceRanges
-              .filter((r) => r.minQuantity && r.unitPrice)
-              .map((r) => ({
-                minQuantity: parseInt(r.minQuantity),
-                maxQuantity: r.maxQuantity ? parseInt(r.maxQuantity) : undefined,
-                unitPrice: parseFloat(r.unitPrice),
-              }))
-          : [], // Default to empty array if priceRanges is undefined
-      })),
-      sizeVariants: parsedSizeVariants.map((v) => ({
-        size: v.size || '',
-        price: v.price ? parseFloat(v.price) : undefined,
-        isDefault: v.isDefault || false,
-        optionalDetails: v.optionalDetails.filter((d) => d.name && d.value),
-        priceRanges: v.priceRanges
-          .filter((r) => r.retailPrice && r.wholesalePrice && r.thresholdQuantity)
-          .map((r) => ({
-            retailPrice: parseFloat(r.retailPrice),
-            wholesalePrice: parseFloat(r.wholesalePrice),
-            thresholdQuantity: parseInt(r.thresholdQuantity),
-          })),
-        length: v.length ? parseFloat(v.length) : undefined,
-        breadth: v.breadth ? parseFloat(v.breadth) : undefined,
-        height: v.height ? parseFloat(v.height) : undefined,
-        forAllColors: v.forAllColors === 'yes',
-        availableColors: v.availableColors || [],
-      })),
-      pricingSections: parsedPricingSections
-        .filter((s) => s.color && (s.size || (s.length && s.breadth && s.height)))
-        .map((s) => ({
-          color: s.color,
-          size: s.size || '',
-          price: s.price ? parseFloat(s.price) : undefined,
-          wholesalePrice: s.wholesalePrice ? parseFloat(s.wholesalePrice) : undefined,
-          thresholdQuantity: s.thresholdQuantity ? parseInt(s.thresholdQuantity) : undefined,
-          priceRanges: s.priceRanges
-            .filter((r) => r.retailPrice && r.wholesalePrice && r.thresholdQuantity)
-            .map((r) => ({
-              retailPrice: parseFloat(r.retailPrice),
-              wholesalePrice: parseFloat(r.wholesalePrice),
-              thresholdQuantity: parseInt(r.thresholdQuantity),
-            })),
-        })),
-      basePriceRanges: parsedBasePriceRanges
-        .filter((r) => r.retailPrice && r.wholesalePrice && r.thresholdQuantity)
-        .map((r) => ({
-          retailPrice: parseFloat(r.retailPrice),
-          wholesalePrice: parseFloat(r.wholesalePrice),
-          thresholdQuantity: parseInt(r.thresholdQuantity),
-        })),
-    });
+      details: cleanedDetails,
+      colorVariants: cleanedColorVariants,
+      sizeVariants: cleanedSizeVariants,
+      pricingSections: cleanedPricingSections,
+      basePriceRanges: cleanedBasePriceRanges,
+    };
 
-    // Save to database
+    // Save product to database
+    const product = new Product(productData);
     await product.save();
 
-    return res.status(201).json({
-      message: 'Product added successfully',
-      product,
-    });
+    return res.status(201).json({ message: 'Product added successfully', product });
   } catch (error) {
     console.error('Error adding product:', error);
-    // Clean up uploaded files on error
-    if (req.files) {
-      req.files.forEach((file) => {
-        fs.unlink(path.join(__dirname, '../Uploads', file.filename), (err) => {
-          if (err) console.error('Error deleting file:', err);
-        });
+    if (req.files && req.files['colorImages']) {
+      const colorImages = Array.isArray(req.files['colorImages'])
+        ? req.files['colorImages']
+        : [req.files['colorImages']];
+      colorImages.forEach((file) => {
+        const filePath = path.join(__dirname, '..', 'uploads', file.filename);
+        if (fs.existsSync(filePath)) {
+          fs.unlinkSync(filePath);
+        }
       });
     }
-    return res.status(500).json({
-      error: error.message || 'Failed to add product',
-    });
+    return res.status(500).json({ error: 'Failed to add product' });
   }
 };
 

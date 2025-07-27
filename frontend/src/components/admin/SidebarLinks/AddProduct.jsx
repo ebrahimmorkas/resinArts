@@ -9,11 +9,12 @@ const PriceRangeSection = React.memo(({
   onRemoveRange,
   title,
   isRequired = false,
+  isRetailPriceDisabled = false,
 }) => (
   <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
     <div className="flex items-center justify-between mb-4">
       <h4 className="text-sm font-semibold text-blue-800">
-        {title} {isRequired && <span className="text-red-500">*</span>}
+        {title} {isRequired && <span className="text-red-500">*</span>} <span className="font-bold"> (The threshold quantity will be included in retail price)</span>
       </h4>
       <button
         type="button"
@@ -41,6 +42,7 @@ const PriceRangeSection = React.memo(({
                 min="0"
                 step="0.01"
                 required={index === 0 && isRequired}
+                disabled={index === 0 && isRetailPriceDisabled}
               />
             </div>
             <div>
@@ -71,7 +73,6 @@ const PriceRangeSection = React.memo(({
                 min="1"
                 required={index === 0 && isRequired}
               />
-              <p className="text-sm text-gray-500 mt-1">This number will be included</p>
             </div>
             <div className="flex justify-end">
               {ranges.length > 1 && (
@@ -114,6 +115,8 @@ const AddProduct = () => {
       isDefault: true,
       optionalDetails: [],
       priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+      forAllSizes: 'yes',
+      availableSizes: [],
     },
   ]);
   const [sizeVariants, setSizeVariants] = useState([
@@ -132,7 +135,7 @@ const AddProduct = () => {
     },
   ]);
   const [pricingSections, setPricingSections] = useState([
-    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] },
+    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' },
   ]);
   const [basePriceRanges, setBasePriceRanges] = useState([
     { retailPrice: '', wholesalePrice: '', thresholdQuantity: '' },
@@ -150,7 +153,11 @@ const AddProduct = () => {
   const sizeOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
 
   const isBasePriceFilled = !!formData.price;
-  const isColorPriceFilled = colorVariants.some((v) => v.price);
+  const isColorPriceFilled = colorVariants.some((v) => v.price && v.price !== '');
+  const isSizePriceFilled = sizeVariants.some((v) => v.price && v.price !== '');
+  const isPricingSectionFilled = pricingSections.some(
+    (s) => (s.price && s.price !== '') || (s.wholesalePrice && s.wholesalePrice !== '') || (s.thresholdQuantity && s.thresholdQuantity !== '')
+  );
 
   const fetchCategories = useCallback(async () => {
     try {
@@ -355,6 +362,23 @@ const AddProduct = () => {
       ...prev,
       [field]: value,
     }));
+    if (field === 'price') {
+      setBasePriceRanges((prev) => {
+        const updatedRanges = [...prev];
+        updatedRanges[0].retailPrice = value;
+        return updatedRanges;
+      });
+      if (value) {
+        // Clear other pricing fields
+        setColorVariants((prev) =>
+          prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+        );
+        setSizeVariants((prev) =>
+          prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+        );
+        setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      }
+    }
     setErrors((prev) => ({ ...prev, [field]: '' }));
   };
 
@@ -402,6 +426,31 @@ const AddProduct = () => {
     }
     if (field === 'price' && value === '0') {
       updatedVariants[variantIndex][field] = '';
+    }
+    if (field === 'forAllSizes' && value === 'yes') {
+      updatedVariants[variantIndex].availableSizes = [];
+    }
+    if (field === 'price' && value) {
+      updatedVariants[variantIndex].priceRanges[0].retailPrice = value;
+      // Clear other pricing fields
+      setFormData((prev) => ({ ...prev, price: '' }));
+      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setSizeVariants((prev) =>
+        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+      );
+      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
+    }
+    setColorVariants(updatedVariants);
+    setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: '' }));
+  };
+
+  const handleColorAvailableSizesChange = (variantIndex, size) => {
+    const updatedVariants = [...colorVariants];
+    const currentSizes = updatedVariants[variantIndex].availableSizes;
+    if (currentSizes.includes(size)) {
+      updatedVariants[variantIndex].availableSizes = currentSizes.filter((s) => s !== size);
+    } else {
+      updatedVariants[variantIndex].availableSizes = [...currentSizes, size];
     }
     setColorVariants(updatedVariants);
     setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: '' }));
@@ -457,6 +506,8 @@ const AddProduct = () => {
         isDefault: false,
         optionalDetails: [],
         priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+        forAllSizes: 'yes',
+        availableSizes: [],
       },
     ]);
   };
@@ -489,6 +540,16 @@ const AddProduct = () => {
     }
     if (field === 'forAllColors' && value === 'yes') {
       updatedVariants[variantIndex].availableColors = [];
+    }
+    if (field === 'price' && value) {
+      updatedVariants[variantIndex].priceRanges[0].retailPrice = value;
+      // Clear other pricing fields
+      setFormData((prev) => ({ ...prev, price: '' }));
+      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setColorVariants((prev) =>
+        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+      );
+      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
     }
     setSizeVariants(updatedVariants);
     setErrors((prev) => ({ ...prev, [`size_${variantIndex}`]: '' }));
@@ -591,35 +652,24 @@ const AddProduct = () => {
     if (field === 'price' && value === '0') {
       updatedPricing[index][field] = '';
     }
-    setPricingSections(updatedPricing);
-  };
-
-  const handlePricingSectionPriceRangeChange = useCallback((sectionIndex, rangeIndex, field, value) => {
-    setPricingSections((prev) => {
-      const updatedPricing = [...prev];
-      updatedPricing[sectionIndex].priceRanges[rangeIndex][field] = value;
-      return updatedPricing;
-    });
-  }, []);
-
-  const addPricingSectionPriceRange = (sectionIndex) => {
-    const updatedPricing = [...pricingSections];
-    updatedPricing[sectionIndex].priceRanges.push({ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' });
-    setPricingSections(updatedPricing);
-  };
-
-  const removePricingSectionPriceRange = (sectionIndex, rangeIndex) => {
-    const updatedPricing = [...pricingSections];
-    if (updatedPricing[sectionIndex].priceRanges.length > 1) {
-      updatedPricing[sectionIndex].priceRanges = updatedPricing[sectionIndex].priceRanges.filter((_, i) => i !== rangeIndex);
-      setPricingSections(updatedPricing);
+    if (['price', 'wholesalePrice', 'thresholdQuantity'].includes(field) && value) {
+      // Clear other pricing fields
+      setFormData((prev) => ({ ...prev, price: '' }));
+      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setColorVariants((prev) =>
+        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+      );
+      setSizeVariants((prev) =>
+        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+      );
     }
+    setPricingSections(updatedPricing);
   };
 
   const addPricingSection = () => {
     setPricingSections([
       ...pricingSections,
-      { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] },
+      { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' },
     ]);
   };
 
@@ -637,7 +687,9 @@ const AddProduct = () => {
         !variant.price &&
         !variant.isDefault &&
         variant.optionalDetails.every((detail) => !detail.name && !detail.value) &&
-        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity)
+        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity) &&
+        !variant.forAllSizes &&
+        !variant.availableSizes.length
       );
     } else if (type === 'size') {
       return (
@@ -657,8 +709,7 @@ const AddProduct = () => {
         !variant.size &&
         !variant.price &&
         !variant.wholesalePrice &&
-        !variant.thresholdQuantity &&
-        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity)
+        !variant.thresholdQuantity
       );
     } else if (type === 'basePriceRange') {
       return !variant.retailPrice && !variant.wholesalePrice && !variant.thresholdQuantity;
@@ -690,6 +741,63 @@ const AddProduct = () => {
       }
     });
 
+    colorVariants.forEach((variant, index) => {
+      if (variant.forAllSizes === 'no' && !variant.availableSizes.length) {
+        errors[`color_${index}`] = 'At least one size must be selected if not available for all sizes.';
+      }
+    });
+
+    return Object.keys(errors).length > 0 ? errors : null;
+  };
+
+  const validatePriceRanges = () => {
+    const errors = {};
+    if (isBasePriceFilled && basePriceRanges.length > 0) {
+      const firstRange = basePriceRanges[0];
+      if (parseFloat(firstRange.retailPrice) !== parseFloat(formData.price)) {
+        errors.base_price = 'Base price must equal the retail price in the first base price range.';
+      }
+      if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+        errors.base_price = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first base price range.';
+      }
+    }
+    basePriceRanges.forEach((range, index) => {
+      if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+        errors[`base_price_${index}`] = 'Retail price cannot be greater than wholesale price.';
+      }
+    });
+    colorVariants.forEach((variant, index) => {
+      if (variant.price && variant.priceRanges.length > 0) {
+        const firstRange = variant.priceRanges[0];
+        if (parseFloat(firstRange.retailPrice) !== parseFloat(variant.price)) {
+          errors[`color_price_${index}`] = 'Color variant price must equal the retail price in the first price range.';
+        }
+        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+          errors[`color_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
+        }
+      }
+      variant.priceRanges.forEach((range, rangeIndex) => {
+        if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+          errors[`color_price_${index}_${rangeIndex}`] = 'Retail price cannot be greater than wholesale price.';
+        }
+      });
+    });
+    sizeVariants.forEach((variant, index) => {
+      if (variant.price && variant.priceRanges.length > 0) {
+        const firstRange = variant.priceRanges[0];
+        if (parseFloat(firstRange.retailPrice) !== parseFloat(variant.price)) {
+          errors[`size_price_${index}`] = 'Size variant price must equal the retail price in the first price range.';
+        }
+        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+          errors[`size_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
+        }
+      }
+      variant.priceRanges.forEach((range, rangeIndex) => {
+        if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+          errors[`size_price_${index}_${rangeIndex}`] = 'Retail price cannot be greater than wholesale price.';
+        }
+      });
+    });
     return Object.keys(errors).length > 0 ? errors : null;
   };
 
@@ -700,45 +808,10 @@ const AddProduct = () => {
     if (!formData.name) newErrors.name = 'Product name is required';
     if (!formData.stock || isNaN(formData.stock) || formData.stock < 0) newErrors.stock = 'Valid stock quantity is required';
     if (!formData.category) newErrors.category = 'Category is required';
-    if (!formData.price && !colorVariants.some((v) => v.price) && !sizeVariants.some((v) => v.price)) {
-      newErrors.price = 'Base price or variant prices are required';
-    }
     if (!colorVariants[0].color) newErrors.color_0 = 'At least one color variant is required';
-
-    // Validate price exclusivity
-    if (formData.price && colorVariants.some((v) => v.price)) {
-      newErrors.price = 'Base price and color variant prices cannot both be set.';
+    if (!isBasePriceFilled && !isColorPriceFilled && !isSizePriceFilled && !isPricingSectionFilled) {
+      newErrors.price = 'Base price, variant prices, or pricing combinations are required';
     }
-    if (colorVariants.some((v) => v.price) && sizeVariants.some((v) => v.price)) {
-      newErrors.color_0 = 'Color variant prices and size variant prices cannot both be set.';
-    }
-    if (colorVariants.some((v) => v.price) && pricingSections.some((s) => !isVariantEmpty(s, 'pricingSection'))) {
-      newErrors.color_0 = 'Pricing combinations cannot be set when color variant prices are used.';
-    }
-
-    // Validate price ranges
-    if (formData.price && basePriceRanges.length > 0) {
-      const firstRange = basePriceRanges[0];
-      if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
-        newErrors.base_price = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first base price range.';
-      }
-    }
-    colorVariants.forEach((variant, index) => {
-      if (variant.price && variant.priceRanges.length > 0) {
-        const firstRange = variant.priceRanges[0];
-        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
-          newErrors[`color_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
-        }
-      }
-    });
-    sizeVariants.forEach((variant, index) => {
-      if (variant.price && variant.priceRanges.length > 0) {
-        const firstRange = variant.priceRanges[0];
-        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
-          newErrors[`size_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
-        }
-      }
-    });
 
     const sizeErrors = validateSizeVariants();
     if (sizeErrors) {
@@ -749,6 +822,11 @@ const AddProduct = () => {
       } else {
         Object.assign(newErrors, sizeErrors);
       }
+    }
+
+    const priceRangeErrors = validatePriceRanges();
+    if (priceRangeErrors) {
+      Object.assign(newErrors, priceRangeErrors);
     }
 
     if (Object.keys(newErrors).length > 0) {
@@ -796,7 +874,7 @@ const AddProduct = () => {
 
       setFormData({ name: '', price: '', stock: '', category: '', categoryPath: [] });
       setDetails([{ name: '', value: '' }, { name: '', value: '' }, { name: '', value: '' }]);
-      setColorVariants([{ color: '', image: null, price: '', isDefault: true, optionalDetails: [], priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }]);
+      setColorVariants([{ color: '', image: null, price: '', isDefault: true, optionalDetails: [], priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }], forAllSizes: 'yes', availableSizes: [] }]);
       setSizeVariants([
         {
           size: '',
@@ -812,7 +890,7 @@ const AddProduct = () => {
           availableColors: [],
         },
       ]);
-      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }]);
+      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
       setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
       setSelectedPath([]);
       setSubCategoryOptions([]);
@@ -916,7 +994,7 @@ const AddProduct = () => {
                   />
                   {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
                 </div>
-                {!isColorPriceFilled && (
+                {!isColorPriceFilled && !isSizePriceFilled && !isPricingSectionFilled && (
                   <div>
                     <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
                     <input
@@ -945,7 +1023,7 @@ const AddProduct = () => {
                   {errors.stock && <p className="text-red-500 text-xs mt-1">{errors.stock}</p>}
                 </div>
               </div>
-              {formData.price && (
+              {isBasePriceFilled && (
                 <PriceRangeSection
                   ranges={basePriceRanges}
                   onRangeChange={handleBasePriceRangeChange}
@@ -953,6 +1031,7 @@ const AddProduct = () => {
                   onRemoveRange={removeBasePriceRange}
                   title="Price Ranges"
                   isRequired={true}
+                  isRetailPriceDisabled={true}
                 />
               )}
             </div>
@@ -1060,7 +1139,7 @@ const AddProduct = () => {
                           accept="image/*"
                         />
                       </div>
-                      {!isBasePriceFilled && (
+                      {!isBasePriceFilled && !isSizePriceFilled && !isPricingSectionFilled && (
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
                           <input
@@ -1075,6 +1154,42 @@ const AddProduct = () => {
                         </div>
                       )}
                     </div>
+                    {!isSizePriceFilled && !isPricingSectionFilled && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">For All Sizes?</label>
+                        <select
+                          value={variant.forAllSizes}
+                          onChange={(e) => handleColorVariantChange(variantIndex, 'forAllSizes', e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </div>
+                    )}
+                    {variant.forAllSizes === 'no' && !isSizePriceFilled && !isPricingSectionFilled && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Select Sizes *</label>
+                        <div className="relative">
+                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white space-y-2">
+                            {sizeOptions.map((size, index) => (
+                              <div key={index} className="flex items-center">
+                                <label className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={variant.availableSizes.includes(size)}
+                                    onChange={() => handleColorAvailableSizesChange(variantIndex, size)}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                  />
+                                  <span>{size}</span>
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {errors[`color_${variantIndex}`] && <p className="text-red-500 text-xs mt-1">{errors[`color_${variantIndex}`]}</p>}
+                      </div>
+                    )}
                     <div className="mb-4">
                       <label className="flex items-center">
                         <input
@@ -1086,7 +1201,7 @@ const AddProduct = () => {
                         <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
                       </label>
                     </div>
-                    {variant.price && !isBasePriceFilled && (
+                    {variant.price && !isBasePriceFilled && !isSizePriceFilled && !isPricingSectionFilled && (
                       <PriceRangeSection
                         ranges={variant.priceRanges}
                         onRangeChange={(rangeIndex, field, value) =>
@@ -1096,6 +1211,7 @@ const AddProduct = () => {
                         onRemoveRange={(rangeIndex) => removeColorPriceRange(variantIndex, rangeIndex)}
                         title={`Price Range for ${variant.color || 'Color ' + (variantIndex + 1)}`}
                         isRequired={true}
+                        isRetailPriceDisabled={true}
                       />
                     )}
                     {errors[`color_price_${variantIndex}`] && (
@@ -1242,7 +1358,7 @@ const AddProduct = () => {
                           <p className="text-red-500 text-xs mt-1">{errors[`size_${variantIndex}`]}</p>
                         )}
                       </div>
-                      {!isBasePriceFilled && !isColorPriceFilled && (
+                      {!isBasePriceFilled && !isColorPriceFilled && !isPricingSectionFilled && (
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
                           <input
@@ -1257,18 +1373,20 @@ const AddProduct = () => {
                         </div>
                       )}
                     </div>
-                    <div className="mb-4">
-                      <label className="block text-sm font-semibold text-gray-700 mb-2">For All Colors?</label>
-                      <select
-                        value={variant.forAllColors}
-                        onChange={(e) => handleSizeVariantChange(variantIndex, 'forAllColors', e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                      >
-                        <option value="yes">Yes</option>
-                        <option value="no">No</option>
-                      </select>
-                    </div>
-                    {variant.forAllColors === 'no' && (
+                    {!isColorPriceFilled && !isPricingSectionFilled && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">For All Colors?</label>
+                        <select
+                          value={variant.forAllColors}
+                          onChange={(e) => handleSizeVariantChange(variantIndex, 'forAllColors', e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </div>
+                    )}
+                    {variant.forAllColors === 'no' && !isColorPriceFilled && !isPricingSectionFilled && (
                       <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Select Colors *</label>
                         <div className="relative">
@@ -1302,7 +1420,7 @@ const AddProduct = () => {
                         <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
                       </label>
                     </div>
-                    {variant.price && !isBasePriceFilled && !isColorPriceFilled && (
+                    {variant.price && !isBasePriceFilled && !isColorPriceFilled && !isPricingSectionFilled && (
                       <PriceRangeSection
                         ranges={variant.priceRanges}
                         onRangeChange={(rangeIndex, field, value) =>
@@ -1312,6 +1430,7 @@ const AddProduct = () => {
                         onRemoveRange={(rangeIndex) => removeSizePriceRange(variantIndex, rangeIndex)}
                         title={`Price Range for ${variant.size || 'Size ' + (variantIndex + 1)}`}
                         isRequired={true}
+                        isRetailPriceDisabled={true}
                       />
                     )}
                     {errors[`size_price_${variantIndex}`] && (
@@ -1370,7 +1489,7 @@ const AddProduct = () => {
               </button>
             </div>
 
-            {!isBasePriceFilled && !isColorPriceFilled && (
+            {!isBasePriceFilled && !isColorPriceFilled && !isSizePriceFilled && (
               <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
                 <h2 className="text-2xl font-semibold text-gray-800 mb-6">Pricing Combinations</h2>
                 <div className="space-y-6">
@@ -1453,21 +1572,8 @@ const AddProduct = () => {
                             placeholder="10"
                             min="1"
                           />
-                          <p className="text-xs text-gray-500 mt-1">This number will be included</p>
                         </div>
                       </div>
-                      {section.price && (
-                        <PriceRangeSection
-                          ranges={section.priceRanges}
-                          onRangeChange={(rangeIndex, field, value) =>
-                            handlePricingSectionPriceRangeChange(index, rangeIndex, field, value)
-                          }
-                          onAddRange={() => addPricingSectionPriceRange(index)}
-                          onRemoveRange={(rangeIndex) => removePricingSectionPriceRange(index, rangeIndex)}
-                          title={`Price Range for Combination ${index + 1}`}
-                          isRequired={true}
-                        />
-                      )}
                     </div>
                   ))}
                 </div>
