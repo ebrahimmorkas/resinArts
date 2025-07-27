@@ -4,11 +4,12 @@ const cors = require('cors');
 require('dotenv').config();
 const authRoutes = require('./routes/authRoutes');
 const cookieParser = require('cookie-parser');
-require('dotenv').config();
 const jwt = require('jsonwebtoken');
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
 const path = require('path');
+const authenticate = require('./middlewares/authenticate');
+const authorize = require('./middlewares/authorize');
 
 const app = express();
 
@@ -60,7 +61,10 @@ app.post('/register', (req, res) => {
 
 // Login and Signup routes
 app.use('/api/auth', authRoutes);
-// Categories routes
+
+// User routes
+
+// Admin routes
 app.use('/api/category', categoryRoutes);
 app.use('/api/product', productRoutes);
 

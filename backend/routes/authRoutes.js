@@ -8,7 +8,7 @@ require('dotenv').config();
 // Route for registering the new user
 router.post('/register', async (req, res) => {
     console.log("Request received")
-    const {first_name, middle_name, last_name, email, phone_number, state, city, address, password, confirm_password} = req.body;
+    const {first_name, middle_name, last_name, email, phone_number, whatsapp_number, state, city, zip_code, address, password, confirm_password} = req.body;
 try {
     const existingEmail = await User.findOne({email});
     if(existingEmail) {
@@ -24,13 +24,17 @@ try {
             return res.status(400).json({message: 'Phone number has already been taken'});
         }
         else{
+            const existingWhatsappNumber = await User.findOne({whatsapp_number});
+            if(existingWhatsappNumber) {
+                return res.status(400).json({message: 'Whatsapp number has already been taken'});
+            }
             // User does not exits create the new user
             console.log("Adding new user")
                 try {
                     const saltRounds = 10;
                     const hashedPassword = await bcrypt.hash(password, saltRounds);
                     
-                    const newUser = new User({first_name, middle_name, last_name, state, city, address, email, phone_number, password: hashedPassword});
+                    const newUser = new User({first_name, middle_name, last_name, state, city, address, email, phone_number, whatsapp_number, password: hashedPassword});
                     await newUser.save();
                     console.log("User added successfully")
                     return res.status(200).json({message: "User created successfully"});
@@ -50,7 +54,7 @@ router.post('/login', async (req, res) => {
     // console.log("Request received for login");
     const {email, password} = req.body;
     try{
-        const user = await User.findOne({email});
+        const user = await User.findOne({email}).select('+password');
 
         if(user && await bcrypt.compare(password, user.password)) {
             // email is present and password is correct

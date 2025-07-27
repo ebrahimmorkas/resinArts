@@ -9,7 +9,12 @@ const userSchema = mongoose.Schema({
     address: String,
     email: String,
     phone_number: String,
-    password: String,
+    whatsapp_number: String,
+    password: {
+        type: String,
+        required: true,
+        select: false,
+    },
     role: {
         type: String,
         default: 'user',

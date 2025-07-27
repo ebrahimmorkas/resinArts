@@ -220,12 +220,12 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed top-0 left-0 h-full w-80 bg-gradient-to-b from-slate-900 to-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 border-r border-slate-700 ${
+        className={`fixed top-0 left-0 h-full w-80 bg-gradient-to-b from-slate-900 to-slate-800 shadow-2xl transform transition-transform duration-300 ease-in-out z-50 border-r border-slate-700 flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-slate-700 bg-slate-800/50">
+        <div className="flex items-center justify-between p-6 border-b border-slate-700 bg-slate-800/50 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-lg flex items-center justify-center">
               <Store className="w-6 h-6 text-white" />
@@ -243,43 +243,26 @@ const Sidebar = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* User Info */}
-        <div className="p-4 border-b border-slate-700 bg-gradient-to-r from-emerald-500/10 to-emerald-600/10">
-          <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-br from-emerald-400 to-emerald-600 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-lg">JS</span>
-            </div>
-            <div className="flex-1">
-              <h3 className="font-semibold text-white">John Seller</h3>
-              <p className="text-sm text-emerald-400">Premium Seller</p>
-              <div className="flex items-center space-x-2 mt-1">
-                <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
-                <span className="text-xs text-slate-400">Online</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Navigation */}
+        {/* Navigation - Scrollable */}
         <div className="flex-1 overflow-y-auto scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
           <nav className="py-4">
             {menuItems.map((item) => (
               <MenuItem key={item.id} item={item} />
             ))}
-          </nav>
-        </div>
-
-        {/* Bottom Menu */}
-        <div className="border-t border-slate-700 bg-slate-800/50">
-          <nav className="py-2">
-            {bottomMenuItems.map((item) => (
-              <MenuItem key={item.id} item={item} />
-            ))}
+            
+            {/* Bottom Menu Items in scrollable area */}
+            <div className="border-t border-slate-700 bg-slate-800/50 mt-4">
+              <div className="py-2">
+                {bottomMenuItems.map((item) => (
+                  <MenuItem key={item.id} item={item} />
+                ))}
+              </div>
+            </div>
           </nav>
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-slate-700 bg-slate-800">
+        <div className="p-4 border-t border-slate-700 bg-slate-800 flex-shrink-0">
           <div className="text-center">
             <p className="text-xs text-slate-500">© 2024 SellerHub</p>
             <p className="text-xs text-slate-500 mt-1">v2.1.0</p>

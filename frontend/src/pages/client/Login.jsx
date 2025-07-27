@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../../../hooks/useAuth';
 
 const Login = () => {
@@ -116,12 +116,12 @@ const Login = () => {
         </form>
         <p className="mt-6 text-center text-sm text-gray-600">
           Don't have an account?{' '}
-          <a href="/signup" className="text-purple-600 hover:text-purple-800 font-medium">
+          <Link to="/auth/signup" className="text-purple-600 hover:text-purple-800 font-medium">
           {
             isLoading ? 'Signing in' : 'Sign up'
           }
             
-          </a>
+          </Link>
         </p>
       </div>
     </div>
