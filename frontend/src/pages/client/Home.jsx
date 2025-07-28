@@ -1,6 +1,7 @@
 "use client"
 
-import { useState, useEffect, useRef, useCallback } from "react"
+import { useState, useEffect, useRef, useCallback, useContext } from "react"
+import { useNavigate } from 'react-router-dom';
 import {
   Search,
   User,
@@ -21,6 +22,8 @@ import {
   Package,
   LogOut,
 } from "lucide-react"
+import { AuthContext } from "../../../Context/AuthContext";
+import axios from 'axios';
 
 // Mock data with real sample images and variants
 const mockProducts = [
@@ -480,7 +483,7 @@ const categories = [
   {
     id: 9,
     name: "Jewelry",
-    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7d3138?w=100&h=100&fit=crop",
+    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7c44d8?w=100&h=100&fit=crop",
   },
   { id: 10, name: "Kitchen", image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop" },
   {
@@ -496,7 +499,7 @@ const banners = [
   "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop",
 ]
 
-export default function HomePage() {
+export default function Home() {
   const [cartItems, setCartItems] = useState({})
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
@@ -510,6 +513,8 @@ export default function HomePage() {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
   const [quantityToAdd, setQuantityToAdd] = useState(1)
+  const { user } = useContext(AuthContext);
+  const navigate = useNavigate();
 
   // Store variant selections per product ID to prevent resets
   const [variantSelections, setVariantSelections] = useState({})
@@ -553,6 +558,17 @@ export default function HomePage() {
       productId: Number.parseInt(productId),
       color: color === "default" ? null : color,
       size: size === "default" ? null : size,
+    }
+  }
+
+  const handleLogout = async () => {
+    try {
+      const res = await axios.post('http://localhost:3000/api/auth/logout', {}, {
+        withCredentials: true
+      });
+      navigate('/auth/login');
+    } catch (err) {
+      console.log(err);
     }
   }
 
@@ -963,7 +979,6 @@ export default function HomePage() {
     )
   }
 
-  // Completely rewritten VariantModal with no auto-scroll and quantity controls always visible
   const VariantModal = ({ product, onClose }) => {
     if (!product) return null
 
@@ -1245,7 +1260,7 @@ export default function HomePage() {
                       My Orders
                     </a>
                     <a
-                      href="#"
+                      onClick={handleLogout}
                       className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />

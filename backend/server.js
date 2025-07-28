@@ -2,70 +2,92 @@ const express = require('express');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
-const authRoutes = require('./routes/authRoutes');
 const cookieParser = require('cookie-parser');
-const jwt = require('jsonwebtoken');
+const path = require('path');
+const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
-const path = require('path');
 const authenticate = require('./middlewares/authenticate');
 const authorize = require('./middlewares/authorize');
+const User = require('./models/User');
+const morgan = require('morgan');
 
 const app = express();
 
+// Middleware
+app.use(morgan('dev')); // Request logging for debugging
 app.use(express.json());
-app.use(cors({
-  origin: 'http://localhost:5173', // frontend origin
-  credentials: true               // required for cookies
-}));
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Configurable frontend origin
+    credentials: true, // Allow cookies
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
 
 // Serve static files for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
 
-mongoose.connect(process.env.MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true,
-})
-.then(() => console.log("Connected to database"))
-.catch(err => console.log("Problem in connection with database `${err}`"))
+// MongoDB Connection
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1); // Exit on connection failure
+  });
 
-app.get('/api/auth/me', (req, res) => {
-    console.log("Request received");
-    const token = req.cookies.token;
-    console.log(token)
-    if(!token) {
-        return res.status(401).json({
-            message: "User not logged in",
-        });
-    }
-    else {
-        try {
-            const decoded = jwt.verify(token, process.env.JWT_SECRET);
-            return res.status(200).json({
-                message: "User logged in",
-                user: decoded
-            });
-        } catch(err) {
-            return res.status(401).json({
-                message: "User not logged in",
-            });
-        }
-    }
-})
-
-app.post('/register', (req, res) => {
-    console.log("Debug success");
-})
-
-// Login and Signup routes
+// Routes
+// Authentication routes (login, signup, logout)
 app.use('/api/auth', authRoutes);
 
-// User routes
+// User routes (if any, e.g., profile management)
+app.get('/api/user/profile', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ message: 'User profile', user });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
 
-// Admin routes
-app.use('/api/category', categoryRoutes);
-app.use('/api/product', productRoutes);
+// Admin routes (protected by authenticate and authorize)
+app.use('/api/category', authenticate, authorize(['admin']), categoryRoutes);
+app.use('/api/product', authenticate, authorize(['admin']), productRoutes);
 
-app.listen(3000, () => console.log("Server running on port 3000"));
+// Authenticated user info
+app.get('/api/auth/me', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({
+      message: 'User logged in',
+      user: {
+        id: user._id,
+        name: user.name,
+        role: user.role,
+        email: user.email, // Include additional fields as needed
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Global error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));

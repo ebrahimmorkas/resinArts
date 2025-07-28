@@ -61,11 +61,12 @@ router.post('/login', async (req, res) => {
             console.log("Login");
             const token = jwt.sign({
                 id: user._id,
+                role: user.role,
                 iat: Math.floor(Date.now() / 1000),  // issued at
-                type: 'access',     
+                type: 'access',    
             },
             process.env.JWT_SECRET,
-            {expiresIn: '24h'}
+            {expiresIn: '8h'}
         );
 
         // Setting cookies:
