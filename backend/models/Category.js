@@ -13,7 +13,7 @@ const categorySchema = mongoose.Schema({
     ref: 'Category',
   },
   image: {
-    type: String, // Store image URL for main categories
+    type: String, // Store Cloudinary image URL for main categories
     required: false,
   },
 }, {

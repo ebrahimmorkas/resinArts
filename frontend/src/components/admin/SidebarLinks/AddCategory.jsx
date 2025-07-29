@@ -2,19 +2,22 @@
 
 import { useState } from "react"
 import { Trash2, Plus, Save, X, ChevronRight } from "lucide-react"
-import { produce } from "immer" // Named import for produce
-import axios from  'axios';
+import { produce } from "immer"
+import axios from 'axios'
 
 const AddCategory = () => {
   const [categoryData, setCategoryData] = useState({ name: "", image: null })
   const [subCategories, setSubCategories] = useState([])
   const [imagePreview, setImagePreview] = useState(null)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [error, setError] = useState('')
 
   const handleCategoryChange = (field, value) => {
     setCategoryData((prev) => ({
       ...prev,
       [field]: value,
     }))
+    setError('')
   }
 
   const handleImageChange = (e) => {
@@ -22,18 +25,16 @@ const AddCategory = () => {
     if (file) {
       const reader = new FileReader()
       reader.onloadend = () => {
-        const imageUrl = reader.result // Simulate cloud storage URL
+        setImagePreview(reader.result)
         setCategoryData((prev) => ({
           ...prev,
-          image: imageUrl,
+          image: file, // Store the file object for upload
         }))
-        setImagePreview(reader.result)
       }
       reader.readAsDataURL(file)
     }
   }
 
-  // Add subcategory at any level
   const addSubCategory = (path = []) => {
     setSubCategories(
       produce((draft) => {
@@ -56,7 +57,6 @@ const AddCategory = () => {
     )
   }
 
-  // Remove subcategory at any level
   const removeSubCategory = (path) => {
     setSubCategories(
       produce((draft) => {
@@ -73,7 +73,6 @@ const AddCategory = () => {
     )
   }
 
-  // Update subcategory name at any level
   const handleSubCategoryChange = (path, field, value) => {
     setSubCategories(
       produce((draft) => {
@@ -89,7 +88,6 @@ const AddCategory = () => {
     )
   }
 
-  // Generate name attribute for subcategory input based on path
   const getSubCategoryNameAttribute = (path) => {
     if (path.length === 0) return "subCategories"
     let name = "subCategories"
@@ -103,7 +101,6 @@ const AddCategory = () => {
     return name
   }
 
-  // Recursive component for rendering subcategories
   const SubCategoryItem = ({ subCategory, path, level = 0 }) => {
     return (
       <div className="space-y-3">
@@ -160,7 +157,6 @@ const AddCategory = () => {
     )
   }
 
-  // Recursive function to render preview
   const renderPreviewCategories = (categories, level = 0) => {
     return categories.map((category, index) => (
       <div key={`preview-${level}-${index}`} style={{ marginLeft: `${level * 20}px` }} className="mb-2">
@@ -187,29 +183,26 @@ const AddCategory = () => {
     ))
   }
 
-  // Convert category tree to flat array for backend - FIXED VERSION
   const flattenCategories = (mainCategory, subCategories) => {
     const categories = [
       {
         categoryName: mainCategory.name,
         parent_category_id: null,
         image: mainCategory.image || null,
-        current_path: null, // Main category doesn't need a path
+        current_path: null,
       },
     ]
 
     const addSubCategories = (subs, parentPath = null) => {
       subs.forEach((sub, index) => {
         if (sub.name.trim()) {
-          const currentPath = parentPath ? `${parentPath}.${index}` : `${index}`;
-          
+          const currentPath = parentPath ? `${parentPath}.${index}` : `${index}`
           categories.push({
             categoryName: sub.name,
             parent_category_id: parentPath === null ? "main" : parentPath,
             image: null,
-            current_path: currentPath, // This is the path other categories will use to reference this one
+            current_path: currentPath,
           })
-          
           if (sub.subCategories && sub.subCategories.length > 0) {
             addSubCategories(sub.subCategories, currentPath)
           }
@@ -223,47 +216,60 @@ const AddCategory = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
+    setError('')
+    setIsSubmitting(true)
+
     if (!categoryData.name.trim()) {
-      alert("Please enter a category name")
+      setError('Please enter a category name')
+      setIsSubmitting(false)
       return
     }
 
-    const validSubCategories = subCategories.filter((sub) => sub.name.trim())
-    const categories = flattenCategories(categoryData, validSubCategories)
-
-    console.log('Sending categories to backend:', categories);
-
     try {
-      const response = await fetch("http://localhost:3000/api/category/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ categories }),
-      })
+      const validSubCategories = subCategories.filter((sub) => sub.name.trim())
+      const categories = flattenCategories(
+        { ...categoryData, image: null }, // Image will be handled by backend
+        validSubCategories
+      )
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save category")
+      const formData = new FormData()
+      formData.append('categories', JSON.stringify(categories))
+      if (categoryData.image) {
+        formData.append('image', categoryData.image)
       }
 
-      const result = await response.json()
-      console.log("Category Data:", result)
-      alert("Category added successfully!")
+      console.log('Sending data to backend:', { categories })
 
-      setCategoryData({ name: "", image: null })
+      const response = await axios.post(
+        'http://localhost:3000/api/category/add',
+        formData,
+        {
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+          withCredentials: true,
+        }
+      )
+
+      console.log('Category Data:', response.data)
+      alert('Category added successfully!')
+
+      setCategoryData({ name: '', image: null })
       setSubCategories([])
       setImagePreview(null)
     } catch (error) {
-      console.error("Error saving category:", error)
-      alert(`Failed to save category: ${error.message}`)
+      console.error('Error saving category:', error)
+      setError(`Failed to save category: ${error.response?.data?.error || error.message}`)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
   const handleCancel = () => {
-    setCategoryData({ name: "", image: null })
+    setCategoryData({ name: '', image: null })
     setSubCategories([])
     setImagePreview(null)
+    setError('')
   }
 
   return (
@@ -273,6 +279,12 @@ const AddCategory = () => {
           <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Add New Category</h1>
           <p className="text-gray-500 text-base">Create a new category and organize your products better</p>
         </div>
+
+        {error && (
+          <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
+            <p className="text-red-600 text-sm">{error}</p>
+          </div>
+        )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
@@ -285,7 +297,7 @@ const AddCategory = () => {
                   type="text"
                   name="category.name"
                   value={categoryData.name}
-                  onChange={(e) => handleCategoryChange("name", e.target.value)}
+                  onChange={(e) => handleCategoryChange('name', e.target.value)}
                   className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
                   placeholder="Enter category name (e.g., Electronics, Clothing, Home & Garden)"
                   required
@@ -312,6 +324,7 @@ const AddCategory = () => {
                   type="button"
                   onClick={() => addSubCategory()}
                   className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all duration-200 font-bold border-2 border-indigo-800 hover:border-indigo-900 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-offset-2"
+                  disabled={isSubmitting}
                 >
                   <Plus size={16} className="text-yellow-300" />
                   <span className="text-yellow-300 font-bold">Add Sub Category</span>
@@ -366,6 +379,7 @@ const AddCategory = () => {
               type="button"
               onClick={handleCancel}
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium"
+              disabled={isSubmitting}
             >
               <X size={16} />
               <span>Cancel</span>
@@ -373,9 +387,10 @@ const AddCategory = () => {
             <button
               type="submit"
               className="inline-flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
+              disabled={isSubmitting}
             >
               <Save size={16} />
-              <span>Save Category</span>
+              <span>{isSubmitting ? 'Saving...' : 'Save Category'}</span>
             </button>
           </div>
         </form>
