@@ -14,7 +14,11 @@ function App() {
       <Routes>
         <Route path='/auth/signup' element={<Signup />} />
         <Route path='/auth/login' element={<Login />} />
-        <Route path='/admin/panel' element={<AdminPanel />} />
+        <Route path='/admin/panel' element={
+          <ProtectedRoute allowedRole="admin">
+            <AdminPanel />
+          </ProtectedRoute>
+          } />
         <Route path='/' element={
             <ProtectedRoute allowedRole="user">
               <Home />

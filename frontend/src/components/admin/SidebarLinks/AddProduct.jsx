@@ -1,320 +1,341 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { Trash2, Plus } from 'lucide-react';
-import axios from 'axios';
+"use client"
 
-const PriceRangeSection = React.memo(({
-  ranges,
-  onRangeChange,
-  onAddRange,
-  onRemoveRange,
-  title,
-  isRequired = false,
-  isRetailPriceDisabled = false,
-}) => (
-  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-    <div className="flex items-center justify-between mb-4">
-      <h4 className="text-sm font-semibold text-blue-800">
-        {title} {isRequired && <span className="text-red-500">*</span>} <span className="font-bold"> (The threshold quantity will be included in retail price)</span>
-      </h4>
-      <button
-        type="button"
-        onClick={onAddRange}
-        className="flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700"
-      >
-        <Plus size={12} />
-        Add Range
-      </button>
-    </div>
-    <div className="space-y-3">
-      {ranges.map((range, index) => (
-        <div key={range._id || `range-${index}`} className="bg-white p-3 rounded-md border border-blue-100">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
-                Retail Price {index === 0 && isRequired ? '*' : ''}
-              </label>
-              <input
-                type="number"
-                value={range.retailPrice || ''}
-                onChange={(e) => onRangeChange(index, 'retailPrice', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                required={index === 0 && isRequired}
-                disabled={index === 0 && isRetailPriceDisabled}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
-                Wholesale Price {index === 0 && isRequired ? '*' : ''}
-              </label>
-              <input
-                type="number"
-                value={range.wholesalePrice || ''}
-                onChange={(e) => onRangeChange(index, 'wholesalePrice', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="0.00"
-                min="0"
-                step="0.01"
-                required={index === 0 && isRequired}
-              />
-            </div>
-            <div>
-              <label className="block text-sm font-medium text-gray-600 mb-1">
-                Threshold Quantity {index === 0 && isRequired ? '*' : ''}
-              </label>
-              <input
-                type="number"
-                value={range.thresholdQuantity || ''}
-                onChange={(e) => onRangeChange(index, 'thresholdQuantity', e.target.value)}
-                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="10"
-                min="1"
-                required={index === 0 && isRequired}
-              />
-            </div>
-            <div className="flex justify-end">
-              {ranges.length > 1 && (
-                <button
-                  type="button"
-                  onClick={() => onRemoveRange(index)}
-                  className="p-2 rounded-md transition-colors duration-200 text-red-500 hover:text-red-600 hover:bg-red-50"
-                >
-                  <Trash2 size={14} />
-                </button>
-              )}
-            </div>
-          </div>
+import React, { useState, useEffect, useCallback } from "react"
+import { Trash2, Plus } from "lucide-react"
+import axios from "axios"
+
+const PriceRangeSection = React.memo(
+  ({
+    ranges,
+    onRangeChange,
+    onAddRange,
+    onRemoveRange,
+    title,
+    isRequired = false,
+    isRetailPriceDisabled = false,
+    errors = {}, // NEW: Pass errors prop
+    parentIndex, // NEW: For specific error keys
+    sectionType, // NEW: To differentiate error keys
+  }) => {
+    const getError = (field, index) => {
+      const key = `${sectionType}_${parentIndex}_${index}_${field}`
+      return errors[key]
+    }
+
+    return (
+      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+        <div className="flex items-center justify-between mb-4">
+          <h4 className="text-sm font-semibold text-blue-800">
+            {title} {isRequired && <span className="text-red-500">*</span>}{" "}
+            <span className="font-bold"> (The threshold quantity will be included in retail price)</span>
+          </h4>
+          <button
+            type="button"
+            onClick={onAddRange}
+            className="flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700"
+          >
+            <Plus size={12} />
+            Add Range
+          </button>
         </div>
-      ))}
-    </div>
-  </div>
-));
+        <div className="space-y-3">
+          {ranges.map((range, index) => (
+            <div key={range._id || `range-${index}`} className="bg-white p-3 rounded-md border border-blue-100">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Retail Price {index === 0 && isRequired ? "*" : ""}
+                  </label>
+                  <input
+                    type="number"
+                    value={range.retailPrice || ""}
+                    onChange={(e) => onRangeChange(index, "retailPrice", e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    required={index === 0 && isRequired}
+                    disabled={index > 0 || isRetailPriceDisabled} // Disable for subsequent ranges and if explicitly disabled
+                  />
+                  {getError("retailPrice", index) && (
+                    <p className="text-red-500 text-xs mt-1">{getError("retailPrice", index)}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Wholesale Price {index === 0 && isRequired ? "*" : ""}
+                  </label>
+                  <input
+                    type="number"
+                    value={range.wholesalePrice || ""}
+                    onChange={(e) => onRangeChange(index, "wholesalePrice", e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="0.00"
+                    min="0"
+                    step="0.01"
+                    required={index === 0 && isRequired}
+                  />
+                  {getError("wholesalePrice", index) && (
+                    <p className="text-red-500 text-xs mt-1">{getError("wholesalePrice", index)}</p>
+                  )}
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                    Threshold Quantity {index === 0 && isRequired ? "*" : ""}
+                  </label>
+                  <input
+                    type="number"
+                    value={range.thresholdQuantity || ""}
+                    onChange={(e) => onRangeChange(index, "thresholdQuantity", e.target.value)}
+                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    placeholder="10"
+                    min="1"
+                    required={index === 0 && isRequired}
+                  />
+                  {getError("thresholdQuantity", index) && (
+                    <p className="text-red-500 text-xs mt-1">{getError("thresholdQuantity", index)}</p>
+                  )}
+                </div>
+                <div className="flex justify-end">
+                  {ranges.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => onRemoveRange(index)}
+                      className="p-2 rounded-md transition-colors duration-200 text-red-500 hover:text-red-600 hover:bg-red-50"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    )
+  },
+)
 
 const AddProduct = () => {
   const [formData, setFormData] = useState({
-    name: '',
-    price: '',
-    stock: '',
-    category: '',
+    name: "",
+    price: "",
+    stock: "",
+    category: "",
     categoryPath: [],
-  });
-
-  const [errors, setErrors] = useState({});
+  })
+  const [errors, setErrors] = useState({})
   const [details, setDetails] = useState([
-    { name: '', value: '' },
-    { name: '', value: '' },
-    { name: '', value: '' },
-  ]);
+    { name: "", value: "" },
+    { name: "", value: "" },
+    { name: "", value: "" },
+  ])
   const [colorVariants, setColorVariants] = useState([
     {
-      color: '',
+      color: "",
       image: null,
-      price: '',
+      price: "",
       isDefault: true,
       optionalDetails: [],
-      priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
-      forAllSizes: 'yes',
+      priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+      forAllSizes: "yes",
       availableSizes: [],
     },
-  ]);
+  ])
   const [sizeVariants, setSizeVariants] = useState([
     {
-      size: '',
-      price: '',
+      size: "",
+      price: "",
       optionalDetails: [],
-      priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+      priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
       isDefault: true,
       useDimensions: false,
-      length: '',
-      breadth: '',
-      height: '',
-      forAllColors: 'yes',
+      length: "",
+      breadth: "",
+      height: "",
+      forAllColors: "yes",
       availableColors: [],
     },
-  ]);
+  ])
   const [pricingSections, setPricingSections] = useState([
-    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' },
-  ]);
+    {
+      color: "",
+      size: "",
+      priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }], // Moved here
+    },
+  ])
   const [basePriceRanges, setBasePriceRanges] = useState([
-    { retailPrice: '', wholesalePrice: '', thresholdQuantity: '' },
-  ]);
-  const [categories, setCategories] = useState([]);
-  const [mainCategories, setMainCategories] = useState([]);
-  const [selectedPath, setSelectedPath] = useState([]);
-  const [subCategoryOptions, setSubCategoryOptions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showSuccessModal, setShowSuccessModal] = useState(false);
-  const [showErrorModal, setShowErrorModal] = useState(false);
-  const [fetchError, setFetchError] = useState('');
+    { retailPrice: "", wholesalePrice: "", thresholdQuantity: "" },
+  ])
+  const [categories, setCategories] = useState([])
+  const [mainCategories, setMainCategories] = useState([])
+  const [selectedPath, setSelectedPath] = useState([])
+  const [subCategoryOptions, setSubCategoryOptions] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
+  const [showErrorModal, setShowErrorModal] = useState(false)
+  const [fetchError, setFetchError] = useState("")
 
-  const sizeOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
+  const sizeOptions = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "XXXXL"]
 
-  const isBasePriceFilled = !!formData.price;
-  const isColorPriceFilled = colorVariants.some((v) => v.price && v.price !== '');
-  const isSizePriceFilled = sizeVariants.some((v) => v.price && v.price !== '');
+  const isBasePriceFilled = !!formData.price
+  const isColorPriceFilled = colorVariants.some((v) => v.price && v.price !== "")
+  const isSizePriceFilled = sizeVariants.some((v) => v.price && v.price !== "")
   const isPricingSectionFilled = pricingSections.some(
-    (s) => (s.price && s.price !== '') || (s.wholesalePrice && s.wholesalePrice !== '') || (s.thresholdQuantity && s.thresholdQuantity !== '')
-  );
+    (s) =>
+      s.priceRanges &&
+      s.priceRanges.some(
+        (r) =>
+          (r.retailPrice && r.retailPrice !== "") ||
+          (r.wholesalePrice && r.wholesalePrice !== "") ||
+          (r.thresholdQuantity && r.thresholdQuantity !== ""),
+      ),
+  )
 
   const fetchCategories = useCallback(async () => {
     try {
-      setLoading(true);
-      console.log('Fetching categories from /api/category/all...');
-      const response = await axios.get('http://localhost:3000/api/category/all', { withCredentials: true });
-      const categoriesData = response.data;
-      console.log('Fetched categories:', JSON.stringify(categoriesData, null, 2));
-
+      setLoading(true)
+      console.log("Fetching categories from /api/category/all...")
+      const response = await axios.get("http://localhost:3000/api/category/all", { withCredentials: true })
+      const categoriesData = response.data
+      console.log("Fetched categories:", JSON.stringify(categoriesData, null, 2))
       if (!Array.isArray(categoriesData)) {
-        throw new Error('Invalid category data received');
+        throw new Error("Invalid category data received")
       }
-
-      setCategories(categoriesData);
-
-      const mainCats = categoriesData.filter((cat) => !cat.parentCategoryId && !cat.parent_category_id);
-      setMainCategories(mainCats);
-      console.log('Main categories set:', mainCats);
-
-      let allCategories = [...categoriesData];
+      setCategories(categoriesData)
+      const mainCats = categoriesData.filter((cat) => !cat.parentCategoryId && !cat.parent_category_id)
+      setMainCategories(mainCats)
+      console.log("Main categories set:", mainCats)
+      let allCategories = [...categoriesData]
       categoriesData.forEach((cat) => {
         if (cat.subcategories && Array.isArray(cat.subcategories)) {
-          allCategories = [...allCategories, ...cat.subcategories];
+          allCategories = [...allCategories, ...cat.subcategories]
         }
-      });
-      setCategories(allCategories);
-      console.log('All categories set:', allCategories);
-
-      setLoading(false);
+      })
+      setCategories(allCategories)
+      console.log("All categories set:", allCategories)
+      setLoading(false)
     } catch (error) {
-      console.error('Error fetching categories:', error.message);
-      setFetchError('Failed to load categories. Please try again.');
-      setLoading(false);
+      console.error("Error fetching categories:", error.message)
+      setFetchError("Failed to load categories. Please try again.")
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+    fetchCategories()
+  }, [fetchCategories])
 
-  const handleMainCategoryChange = useCallback((e) => {
-    const selectedId = e.target.value;
-    console.log('Main category selected:', selectedId);
-
-    if (!selectedId) {
-      setFormData((prev) => ({
-        ...prev,
-        category: '',
-        categoryPath: [],
-      }));
-      setSelectedPath([]);
-      setSubCategoryOptions([]);
-      setErrors((prev) => ({ ...prev, category: '' }));
-      console.log('Cleared category selection');
-      return;
-    }
-
-    const selectedCategory = categories.find((cat) => cat._id === selectedId);
-    if (!selectedCategory) {
-      console.error('Selected main category not found:', selectedId);
-      return;
-    }
-
-    setFormData((prev) => ({
-      ...prev,
-      category: selectedId,
-      categoryPath: [selectedId],
-    }));
-    setSelectedPath([selectedCategory]);
-
-    let subs = selectedCategory.subcategories || [];
-    if (subs.length === 0) {
-      subs = categories.filter((cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId);
-    }
-    setSubCategoryOptions(subs);
-    console.log('Subcategory options set:', subs);
-    setErrors((prev) => ({ ...prev, category: '' }));
-  }, [categories]);
-
-  const handleSubCategoryChange = useCallback((e) => {
-    const selectedId = e.target.value;
-    console.log('Subcategory selected:', selectedId);
-
-    if (!selectedId) {
-      const parentCategory = selectedPath[0];
-      setFormData((prev) => ({
-        ...prev,
-        category: parentCategory._id,
-        categoryPath: [parentCategory._id],
-      }));
-      setSelectedPath([parentCategory]);
-      let subs = parentCategory.subcategories || [];
-      if (subs.length === 0) {
-        subs = categories.filter((cat) => cat.parentCategoryId === parentCategory._id || cat.parent_category_id === parentCategory._id);
+  const handleMainCategoryChange = useCallback(
+    (e) => {
+      const selectedId = e.target.value
+      setErrors((prev) => ({ ...prev, category: "" })) // Clear category error
+      if (!selectedId) {
+        setFormData((prev) => ({
+          ...prev,
+          category: "",
+          categoryPath: [],
+        }))
+        setSelectedPath([])
+        setSubCategoryOptions([])
+        return
       }
-      setSubCategoryOptions(subs);
-      console.log('Reset to main category subcategories:', subs);
-      return;
-    }
+      const selectedCategory = categories.find((cat) => cat._id === selectedId)
+      if (!selectedCategory) {
+        console.error("Selected main category not found:", selectedId)
+        return
+      }
+      setFormData((prev) => ({
+        ...prev,
+        category: selectedId,
+        categoryPath: [selectedId],
+      }))
+      setSelectedPath([selectedCategory])
+      let subs = selectedCategory.subcategories || []
+      if (subs.length === 0) {
+        subs = categories.filter((cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId)
+      }
+      setSubCategoryOptions(subs)
+    },
+    [categories],
+  )
 
-    let selectedCategory = subCategoryOptions.find((cat) => cat._id === selectedId);
-    if (!selectedCategory) {
-      selectedCategory = categories.find((cat) => cat._id === selectedId);
-    }
-    if (!selectedCategory) {
-      console.error('Selected subcategory not found:', selectedId);
-      return;
-    }
+  const handleSubCategoryChange = useCallback(
+    (e) => {
+      const selectedId = e.target.value
+      if (!selectedId) {
+        const parentCategory = selectedPath[0]
+        setFormData((prev) => ({
+          ...prev,
+          category: parentCategory._id,
+          categoryPath: [parentCategory._id],
+        }))
+        setSelectedPath([parentCategory])
+        let subs = parentCategory.subcategories || []
+        if (subs.length === 0) {
+          subs = categories.filter(
+            (cat) => cat.parentCategoryId === parentCategory._id || cat.parent_category_id === parentCategory._id,
+          )
+        }
+        setSubCategoryOptions(subs)
+        return
+      }
+      let selectedCategory = subCategoryOptions.find((cat) => cat._id === selectedId)
+      if (!selectedCategory) {
+        selectedCategory = categories.find((cat) => cat._id === selectedId)
+      }
+      if (!selectedCategory) {
+        console.error("Selected subcategory not found:", selectedId)
+        return
+      }
+      const newSelectedPath = [...selectedPath, selectedCategory]
+      setFormData((prev) => ({
+        ...prev,
+        category: selectedId,
+        categoryPath: newSelectedPath.map((cat) => cat._id),
+      }))
+      setSelectedPath(newSelectedPath)
+      let subs = selectedCategory.subcategories || []
+      if (subs.length === 0) {
+        subs = categories.filter((cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId)
+      }
+      setSubCategoryOptions(subs)
+    },
+    [categories, selectedPath, subCategoryOptions],
+  )
 
-    const newSelectedPath = [...selectedPath, selectedCategory];
-    setFormData((prev) => ({
-      ...prev,
-      category: selectedId,
-      categoryPath: newSelectedPath.map((cat) => cat._id),
-    }));
-    setSelectedPath(newSelectedPath);
-
-    let subs = selectedCategory.subcategories || [];
-    if (subs.length === 0) {
-      subs = categories.filter((cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId);
-    }
-    setSubCategoryOptions(subs);
-    console.log('New subcategory options:', subs);
-  }, [categories, selectedPath, subCategoryOptions]);
-
-  const handleBreadcrumbClick = useCallback((index) => {
-    console.log('Breadcrumb clicked:', index);
-    const newSelectedPath = selectedPath.slice(0, index + 1);
-    setSelectedPath(newSelectedPath);
-    const lastCategory = newSelectedPath[newSelectedPath.length - 1];
-    let subs = lastCategory.subcategories || [];
-    if (subs.length === 0) {
-      subs = categories.filter((cat) => cat.parentCategoryId === lastCategory._id || cat.parent_category_id === lastCategory._id);
-    }
-    setSubCategoryOptions(subs);
-    setFormData((prev) => ({
-      ...prev,
-      category: lastCategory._id,
-      categoryPath: newSelectedPath.map((cat) => cat._id),
-    }));
-    console.log('Breadcrumb path updated:', newSelectedPath, 'Subcategories:', subs);
-  }, [categories, selectedPath]);
+  const handleBreadcrumbClick = useCallback(
+    (index) => {
+      const newSelectedPath = selectedPath.slice(0, index + 1)
+      setSelectedPath(newSelectedPath)
+      const lastCategory = newSelectedPath[newSelectedPath.length - 1]
+      let subs = lastCategory.subcategories || []
+      if (subs.length === 0) {
+        subs = categories.filter(
+          (cat) => cat.parentCategoryId === lastCategory._id || cat.parent_category_id === lastCategory._id,
+        )
+      }
+      setSubCategoryOptions(subs)
+      setFormData((prev) => ({
+        ...prev,
+        category: lastCategory._id,
+        categoryPath: newSelectedPath.map((cat) => cat._id),
+      }))
+    },
+    [categories, selectedPath],
+  )
 
   const getCategoryBreadCrumb = () => {
     return selectedPath.map((cat, index) => (
       <span key={cat._id}>
-        <button
-          type="button"
-          onClick={() => handleBreadcrumbClick(index)}
-          className="text-blue-600 hover:underline"
-        >
+        <button type="button" onClick={() => handleBreadcrumbClick(index)} className="text-blue-600 hover:underline">
           {cat.categoryName}
         </button>
         {index < selectedPath.length - 1 && <span className="mx-1">&gt;</span>}
       </span>
-    ));
-  };
+    ))
+  }
 
   const renderCategoryDropdowns = () => {
     return (
@@ -322,7 +343,7 @@ const AddProduct = () => {
         <div>
           <label className="block text-sm font-semibold text-gray-700 mb-2">Main Category *</label>
           <select
-            value={selectedPath[0]?._id || ''}
+            value={selectedPath[0]?._id || ""}
             onChange={handleMainCategoryChange}
             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
             required
@@ -340,7 +361,7 @@ const AddProduct = () => {
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">Subcategory</label>
             <select
-              value={selectedPath[selectedPath.length - 1]?._id || ''}
+              value={selectedPath[selectedPath.length - 1]?._id || ""}
               onChange={handleSubCategoryChange}
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
             >
@@ -354,333 +375,581 @@ const AddProduct = () => {
           </div>
         )}
       </div>
-    );
-  };
+    )
+  }
+
+  const validatePriceRangeField = useCallback(
+    (currentRanges, index, field, value, sectionType, parentIndex) => {
+      const newErrors = { ...errors }
+      const keyPrefix = `${sectionType}_${parentIndex}_${index}`
+
+      // Clear specific field error
+      delete newErrors[`${keyPrefix}_${field}`]
+
+      const updatedRanges = [...currentRanges]
+      updatedRanges[index] = { ...updatedRanges[index], [field]: value }
+
+      const retailPrice = Number.parseFloat(updatedRanges[index].retailPrice)
+      const wholesalePrice = Number.parseFloat(updatedRanges[index].wholesalePrice)
+      const thresholdQuantity = Number.parseInt(updatedRanges[index].thresholdQuantity)
+
+      // Wholesale price validation (Point 1)
+      if (field === "wholesalePrice" && !isNaN(retailPrice) && !isNaN(wholesalePrice) && wholesalePrice > retailPrice) {
+        newErrors[`${keyPrefix}_wholesalePrice`] = "Wholesale price cannot be greater than retail price."
+      } else if (
+        field === "retailPrice" &&
+        !isNaN(retailPrice) &&
+        !isNaN(wholesalePrice) &&
+        wholesalePrice > retailPrice
+      ) {
+        // Re-validate wholesale if retail changes
+        delete newErrors[`${keyPrefix}_wholesalePrice`]
+      }
+
+      // Threshold quantity validation (Point 4)
+      if (index > 0) {
+        const prevThreshold = Number.parseInt(currentRanges[index - 1].thresholdQuantity)
+        if (!isNaN(thresholdQuantity) && !isNaN(prevThreshold) && thresholdQuantity <= prevThreshold) {
+          newErrors[`${keyPrefix}_thresholdQuantity`] =
+            "Threshold quantity must be greater than the previous range's threshold."
+        } else if (
+          field === "thresholdQuantity" &&
+          !isNaN(thresholdQuantity) &&
+          !isNaN(prevThreshold) &&
+          thresholdQuantity > prevThreshold
+        ) {
+          // Clear error if valid
+          delete newErrors[`${keyPrefix}_thresholdQuantity`]
+        }
+      }
+
+      setErrors(newErrors)
+    },
+    [errors],
+  )
 
   const handleFormChange = (field, value) => {
     setFormData((prev) => ({
       ...prev,
       [field]: value,
-    }));
-    if (field === 'price') {
+    }))
+    setErrors((prev) => ({ ...prev, [field]: "" })) // Clear general field error
+
+    if (field === "price") {
       setBasePriceRanges((prev) => {
-        const updatedRanges = [...prev];
-        updatedRanges[0].retailPrice = value;
-        return updatedRanges;
-      });
+        const updatedRanges = [...prev]
+        if (updatedRanges[0]) {
+          updatedRanges[0].retailPrice = value
+        } else {
+          updatedRanges.push({ retailPrice: value, wholesalePrice: "", thresholdQuantity: "" })
+        }
+        return updatedRanges
+      })
       if (value) {
         // Clear other pricing fields
         setColorVariants((prev) =>
-          prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
-        );
+          prev.map((v) => ({
+            ...v,
+            price: "",
+            priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+            forAllSizes: "yes",
+            availableSizes: [],
+          })),
+        )
         setSizeVariants((prev) =>
-          prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
-        );
-        setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
+          prev.map((v) => ({
+            ...v,
+            price: "",
+            priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+          })),
+        )
+        setPricingSections([
+          { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
+        ])
       }
     }
-    setErrors((prev) => ({ ...prev, [field]: '' }));
-  };
+  }
 
-  const handleBasePriceRangeChange = useCallback((index, field, value) => {
-    setBasePriceRanges((prev) => {
-      const updatedRanges = [...prev];
-      updatedRanges[index][field] = value;
-      return updatedRanges;
-    });
-  }, []);
+  const handleBasePriceRangeChange = useCallback(
+    (index, field, value) => {
+      setBasePriceRanges((prev) => {
+        const updatedRanges = [...prev]
+        updatedRanges[index][field] = value
+        validatePriceRangeField(updatedRanges, index, field, value, "basePrice", 0)
+        return updatedRanges
+      })
+    },
+    [validatePriceRangeField],
+  )
 
   const addBasePriceRange = () => {
-    setBasePriceRanges([...basePriceRanges, { retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
-  };
+    const lastRange = basePriceRanges[basePriceRanges.length - 1]
+    const newRetailPrice = lastRange.wholesalePrice || ""
+    const newThresholdQuantity = lastRange.thresholdQuantity ? Number.parseInt(lastRange.thresholdQuantity) + 1 : "" // Increment threshold
+    setBasePriceRanges([
+      ...basePriceRanges,
+      { retailPrice: newRetailPrice, wholesalePrice: "", thresholdQuantity: newThresholdQuantity },
+    ])
+  }
 
   const removeBasePriceRange = (index) => {
     if (basePriceRanges.length > 1) {
-      setBasePriceRanges(basePriceRanges.filter((_, i) => i !== index));
+      setBasePriceRanges(basePriceRanges.filter((_, i) => i !== index))
+      // Clear errors related to removed range
+      const newErrors = { ...errors }
+      Object.keys(newErrors).forEach((key) => {
+        if (key.startsWith(`basePrice_0_${index}`)) {
+          delete newErrors[key]
+        }
+      })
+      setErrors(newErrors)
     }
-  };
+  }
 
   const handleDetailChange = (index, field, value) => {
-    const updatedDetails = [...details];
-    updatedDetails[index][field] = value;
-    setDetails(updatedDetails);
-  };
+    const updatedDetails = [...details]
+    updatedDetails[index][field] = value
+    setDetails(updatedDetails)
+  }
 
   const addMoreDetails = () => {
-    setDetails([...details, { name: '', value: '' }]);
-  };
+    setDetails([...details, { name: "", value: "" }])
+  }
 
   const removeDetail = (index) => {
     if (details.length > 1) {
-      setDetails(details.filter((_, i) => i !== index));
+      setDetails(details.filter((_, i) => i !== index))
     }
-  };
+  }
 
   const handleColorVariantChange = (variantIndex, field, value) => {
-    const updatedVariants = [...colorVariants];
-    updatedVariants[variantIndex][field] = value;
-    if (field === 'isDefault' && value) {
+    const updatedVariants = [...colorVariants]
+    updatedVariants[variantIndex][field] = value
+    setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: "" })) // Clear general color variant error
+
+    if (field === "isDefault" && value) {
       updatedVariants.forEach((variant, index) => {
-        variant.isDefault = index === variantIndex;
-      });
+        variant.isDefault = index === variantIndex
+      })
     }
-    if (field === 'price' && value === '0') {
-      updatedVariants[variantIndex][field] = '';
+    if (field === "price" && value === "0") {
+      updatedVariants[variantIndex][field] = ""
     }
-    if (field === 'forAllSizes' && value === 'yes') {
-      updatedVariants[variantIndex].availableSizes = [];
+    if (field === "forAllSizes" && value === "yes") {
+      updatedVariants[variantIndex].availableSizes = []
     }
-    if (field === 'price' && value) {
-      updatedVariants[variantIndex].priceRanges[0].retailPrice = value;
+    if (field === "price" && value) {
+      updatedVariants[variantIndex].priceRanges[0].retailPrice = value
       // Clear other pricing fields
-      setFormData((prev) => ({ ...prev, price: '' }));
-      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setFormData((prev) => ({ ...prev, price: "" }))
+      setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
       setSizeVariants((prev) =>
-        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
-      );
-      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
+        prev.map((v) => ({
+          ...v,
+          price: "",
+          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+        })),
+      )
+      setPricingSections([
+        { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
+      ])
     }
-    setColorVariants(updatedVariants);
-    setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: '' }));
-  };
+    setColorVariants(updatedVariants)
+  }
 
   const handleColorAvailableSizesChange = (variantIndex, size) => {
-    const updatedVariants = [...colorVariants];
-    const currentSizes = updatedVariants[variantIndex].availableSizes;
+    const updatedVariants = [...colorVariants]
+    const currentSizes = updatedVariants[variantIndex].availableSizes
     if (currentSizes.includes(size)) {
-      updatedVariants[variantIndex].availableSizes = currentSizes.filter((s) => s !== size);
+      updatedVariants[variantIndex].availableSizes = currentSizes.filter((s) => s !== size)
     } else {
-      updatedVariants[variantIndex].availableSizes = [...currentSizes, size];
+      updatedVariants[variantIndex].availableSizes = [...currentSizes, size]
     }
-    setColorVariants(updatedVariants);
-    setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: '' }));
-  };
+    setColorVariants(updatedVariants)
+    setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: "" })) // Clear general color variant error
+  }
 
   const handleColorOptionalDetailChange = (variantIndex, detailIndex, field, value) => {
-    const updatedVariants = [...colorVariants];
-    updatedVariants[variantIndex].optionalDetails[detailIndex][field] = value;
-    setColorVariants(updatedVariants);
-  };
+    const updatedVariants = [...colorVariants]
+    updatedVariants[variantIndex].optionalDetails[detailIndex][field] = value
+    setColorVariants(updatedVariants)
+  }
 
   const addColorOptionalDetail = (variantIndex) => {
-    const updatedVariants = [...colorVariants];
-    updatedVariants[variantIndex].optionalDetails.push({ name: '', value: '' });
-    setColorVariants(updatedVariants);
-  };
+    const updatedVariants = [...colorVariants]
+    updatedVariants[variantIndex].optionalDetails.push({ name: "", value: "" })
+    setColorVariants(updatedVariants)
+  }
 
   const removeColorOptionalDetail = (variantIndex, detailIndex) => {
-    const updatedVariants = [...colorVariants];
-    updatedVariants[variantIndex].optionalDetails = updatedVariants[variantIndex].optionalDetails.filter((_, i) => i !== detailIndex);
-    setColorVariants(updatedVariants);
-  };
+    const updatedVariants = [...colorVariants]
+    updatedVariants[variantIndex].optionalDetails = updatedVariants[variantIndex].optionalDetails.filter(
+      (_, i) => i !== detailIndex,
+    )
+    setColorVariants(updatedVariants)
+  }
 
-  const handleColorPriceRangeChange = useCallback((variantIndex, rangeIndex, field, value) => {
-    setColorVariants((prev) => {
-      const updatedVariants = [...prev];
-      updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value;
-      return updatedVariants;
-    });
-  }, []);
+  const handleColorPriceRangeChange = useCallback(
+    (variantIndex, rangeIndex, field, value) => {
+      setColorVariants((prev) => {
+        const updatedVariants = [...prev]
+        updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value
+        validatePriceRangeField(
+          updatedVariants[variantIndex].priceRanges,
+          rangeIndex,
+          field,
+          value,
+          "colorPrice",
+          variantIndex,
+        )
+        return updatedVariants
+      })
+    },
+    [validatePriceRangeField],
+  )
 
   const addColorPriceRange = (variantIndex) => {
-    const updatedVariants = [...colorVariants];
-    updatedVariants[variantIndex].priceRanges.push({ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' });
-    setColorVariants(updatedVariants);
-  };
+    const updatedVariants = [...colorVariants]
+    const lastRange = updatedVariants[variantIndex].priceRanges[updatedVariants[variantIndex].priceRanges.length - 1]
+    const newRetailPrice = lastRange.wholesalePrice || ""
+    const newThresholdQuantity = lastRange.thresholdQuantity ? Number.parseInt(lastRange.thresholdQuantity) + 1 : ""
+    updatedVariants[variantIndex].priceRanges.push({
+      retailPrice: newRetailPrice,
+      wholesalePrice: "",
+      thresholdQuantity: newThresholdQuantity,
+    })
+    setColorVariants(updatedVariants)
+  }
 
   const removeColorPriceRange = (variantIndex, rangeIndex) => {
-    const updatedVariants = [...colorVariants];
+    const updatedVariants = [...colorVariants]
     if (updatedVariants[variantIndex].priceRanges.length > 1) {
-      updatedVariants[variantIndex].priceRanges = updatedVariants[variantIndex].priceRanges.filter((_, i) => i !== rangeIndex);
-      setColorVariants(updatedVariants);
+      updatedVariants[variantIndex].priceRanges = updatedVariants[variantIndex].priceRanges.filter(
+        (_, i) => i !== rangeIndex,
+      )
+      setColorVariants(updatedVariants)
+      // Clear errors related to removed range
+      const newErrors = { ...errors }
+      Object.keys(newErrors).forEach((key) => {
+        if (key.startsWith(`colorPrice_${variantIndex}_${rangeIndex}`)) {
+          delete newErrors[key]
+        }
+      })
+      setErrors(newErrors)
     }
-  };
+  }
 
   const addColorVariant = () => {
     setColorVariants([
       ...colorVariants,
       {
-        color: '',
+        color: "",
         image: null,
-        price: '',
+        price: "",
         isDefault: false,
         optionalDetails: [],
-        priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
-        forAllSizes: 'yes',
+        priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+        forAllSizes: "yes",
         availableSizes: [],
       },
-    ]);
-  };
+    ])
+  }
 
   const removeColorVariant = (index) => {
     if (colorVariants.length > 1) {
-      setColorVariants(colorVariants.filter((_, i) => i !== index));
+      setColorVariants(colorVariants.filter((_, i) => i !== index))
+      // Clear errors related to removed variant
+      const newErrors = { ...errors }
+      Object.keys(newErrors).forEach((key) => {
+        if (key.startsWith(`color_${index}`) || key.startsWith(`colorPrice_${index}`)) {
+          delete newErrors[key]
+        }
+      })
+      setErrors(newErrors)
     }
-  };
+  }
 
   const handleImageUpload = (variantIndex, event) => {
-    const file = event.target.files[0];
+    const file = event.target.files[0]
     if (file) {
-      const updatedVariants = [...colorVariants];
-      updatedVariants[variantIndex].image = file;
-      setColorVariants(updatedVariants);
+      const updatedVariants = [...colorVariants]
+      updatedVariants[variantIndex].image = file
+      setColorVariants(updatedVariants)
     }
-  };
+  }
 
   const handleSizeVariantChange = (variantIndex, field, value) => {
-    const updatedVariants = [...sizeVariants];
-    updatedVariants[variantIndex][field] = value;
-    if (field === 'isDefault' && value) {
+    const updatedVariants = [...sizeVariants]
+    updatedVariants[variantIndex][field] = value
+    setErrors((prev) => ({ ...prev, [`size_${variantIndex}`]: "" })) // Clear general size variant error
+
+    if (field === "isDefault" && value) {
       updatedVariants.forEach((variant, index) => {
-        variant.isDefault = index === variantIndex;
-      });
+        variant.isDefault = index === variantIndex
+      })
     }
-    if (field === 'price' && value === '0') {
-      updatedVariants[variantIndex][field] = '';
+    if (field === "price" && value === "0") {
+      updatedVariants[variantIndex][field] = ""
     }
-    if (field === 'forAllColors' && value === 'yes') {
-      updatedVariants[variantIndex].availableColors = [];
+    if (field === "forAllColors" && value === "yes") {
+      updatedVariants[variantIndex].availableColors = []
     }
-    if (field === 'price' && value) {
-      updatedVariants[variantIndex].priceRanges[0].retailPrice = value;
+    if (field === "price" && value) {
+      updatedVariants[variantIndex].priceRanges[0].retailPrice = value
       // Clear other pricing fields
-      setFormData((prev) => ({ ...prev, price: '' }));
-      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setFormData((prev) => ({ ...prev, price: "" }))
+      setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
       setColorVariants((prev) =>
-        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
-      );
-      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
+        prev.map((v) => ({
+          ...v,
+          price: "",
+          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+          forAllSizes: "yes",
+          availableSizes: [],
+        })),
+      )
+      setPricingSections([
+        { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
+      ])
     }
-    setSizeVariants(updatedVariants);
-    setErrors((prev) => ({ ...prev, [`size_${variantIndex}`]: '' }));
-  };
+    setSizeVariants(updatedVariants)
+  }
 
   const handleSizeAvailableColorsChange = (variantIndex, color) => {
-    const updatedVariants = [...sizeVariants];
-    const currentColors = updatedVariants[variantIndex].availableColors;
+    const updatedVariants = [...sizeVariants]
+    const currentColors = updatedVariants[variantIndex].availableColors
     if (currentColors.includes(color)) {
-      updatedVariants[variantIndex].availableColors = currentColors.filter((c) => c !== color);
+      updatedVariants[variantIndex].availableColors = currentColors.filter((c) => c !== color)
     } else {
-      updatedVariants[variantIndex].availableColors = [...currentColors, color];
+      updatedVariants[variantIndex].availableColors = [...currentColors, color]
     }
-    setSizeVariants(updatedVariants);
-    setErrors((prev) => ({ ...prev, [`size_${variantIndex}`]: '' }));
-  };
+    setSizeVariants(updatedVariants)
+  }
 
   const toggleDimensions = (variantIndex) => {
-    const updatedVariants = [...sizeVariants];
-    updatedVariants[variantIndex].useDimensions = !updatedVariants[variantIndex].useDimensions;
+    const updatedVariants = [...sizeVariants]
+    updatedVariants[variantIndex].useDimensions = !updatedVariants[variantIndex].useDimensions
     if (!updatedVariants[variantIndex].useDimensions) {
-      updatedVariants[variantIndex].length = '';
-      updatedVariants[variantIndex].breadth = '';
-      updatedVariants[variantIndex].height = '';
-      updatedVariants[variantIndex].size = '';
+      updatedVariants[variantIndex].length = ""
+      updatedVariants[variantIndex].breadth = ""
+      updatedVariants[variantIndex].height = ""
+      updatedVariants[variantIndex].size = ""
     } else {
-      updatedVariants[variantIndex].size = '';
+      updatedVariants[variantIndex].size = ""
     }
-    setSizeVariants(updatedVariants);
-  };
+    setSizeVariants(updatedVariants)
+  }
 
-  const handleSizePriceRangeChange = useCallback((variantIndex, rangeIndex, field, value) => {
-    setSizeVariants((prev) => {
-      const updatedVariants = [...prev];
-      updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value;
-      return updatedVariants;
-    });
-  }, []);
+  const handleSizePriceRangeChange = useCallback(
+    (variantIndex, rangeIndex, field, value) => {
+      setSizeVariants((prev) => {
+        const updatedVariants = [...prev]
+        updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value
+        validatePriceRangeField(
+          updatedVariants[variantIndex].priceRanges,
+          rangeIndex,
+          field,
+          value,
+          "sizePrice",
+          variantIndex,
+        )
+        return updatedVariants
+      })
+    },
+    [validatePriceRangeField],
+  )
 
   const addSizePriceRange = (variantIndex) => {
-    const updatedVariants = [...sizeVariants];
-    updatedVariants[variantIndex].priceRanges.push({ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' });
-    setSizeVariants(updatedVariants);
-  };
+    const updatedVariants = [...sizeVariants]
+    const lastRange = updatedVariants[variantIndex].priceRanges[updatedVariants[variantIndex].priceRanges.length - 1]
+    const newRetailPrice = lastRange.wholesalePrice || ""
+    const newThresholdQuantity = lastRange.thresholdQuantity ? Number.parseInt(lastRange.thresholdQuantity) + 1 : ""
+    updatedVariants[variantIndex].priceRanges.push({
+      retailPrice: newRetailPrice,
+      wholesalePrice: "",
+      thresholdQuantity: newThresholdQuantity,
+    })
+    setSizeVariants(updatedVariants)
+  }
 
   const removeSizePriceRange = (variantIndex, rangeIndex) => {
-    const updatedVariants = [...sizeVariants];
+    const updatedVariants = [...sizeVariants]
     if (updatedVariants[variantIndex].priceRanges.length > 1) {
-      updatedVariants[variantIndex].priceRanges = updatedVariants[variantIndex].priceRanges.filter((_, i) => i !== rangeIndex);
-      setSizeVariants(updatedVariants);
+      updatedVariants[variantIndex].priceRanges = updatedVariants[variantIndex].priceRanges.filter(
+        (_, i) => i !== rangeIndex,
+      )
+      setSizeVariants(updatedVariants)
+      // Clear errors related to removed range
+      const newErrors = { ...errors }
+      Object.keys(newErrors).forEach((key) => {
+        if (key.startsWith(`sizePrice_${variantIndex}_${rangeIndex}`)) {
+          delete newErrors[key]
+        }
+      })
+      setErrors(newErrors)
     }
-  };
+  }
 
   const handleSizeOptionalDetailChange = (variantIndex, detailIndex, field, value) => {
-    const updatedVariants = [...sizeVariants];
-    updatedVariants[variantIndex].optionalDetails[detailIndex][field] = value;
-    setSizeVariants(updatedVariants);
-  };
+    const updatedVariants = [...sizeVariants]
+    updatedVariants[variantIndex].optionalDetails[detailIndex][field] = value
+    setSizeVariants(updatedVariants)
+  }
 
   const addSizeOptionalDetail = (variantIndex) => {
-    const updatedVariants = [...sizeVariants];
-    updatedVariants[variantIndex].optionalDetails.push({ name: '', value: '' });
-    setSizeVariants(updatedVariants);
-  };
+    const updatedVariants = [...sizeVariants]
+    updatedVariants[variantIndex].optionalDetails.push({ name: "", value: "" })
+    setSizeVariants(updatedVariants)
+  }
 
   const removeSizeOptionalDetail = (variantIndex, detailIndex) => {
-    const updatedVariants = [...sizeVariants];
-    updatedVariants[variantIndex].optionalDetails = updatedVariants[variantIndex].optionalDetails.filter((_, i) => i !== detailIndex);
-    setSizeVariants(updatedVariants);
-  };
+    const updatedVariants = [...sizeVariants]
+    updatedVariants[variantIndex].optionalDetails = updatedVariants[variantIndex].optionalDetails.filter(
+      (_, i) => i !== detailIndex,
+    )
+    setSizeVariants(updatedVariants)
+  }
 
   const addSizeVariant = () => {
     setSizeVariants([
       ...sizeVariants,
       {
-        size: '',
-        price: '',
+        size: "",
+        price: "",
         optionalDetails: [],
-        priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+        priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
         isDefault: false,
         useDimensions: false,
-        length: '',
-        breadth: '',
-        height: '',
-        forAllColors: 'yes',
+        length: "",
+        breadth: "",
+        height: "",
+        forAllColors: "yes",
         availableColors: [],
       },
-    ]);
-  };
+    ])
+  }
 
   const removeSizeVariant = (index) => {
     if (sizeVariants.length > 1) {
-      setSizeVariants(sizeVariants.filter((_, i) => i !== index));
+      setSizeVariants(sizeVariants.filter((_, i) => i !== index))
+      // Clear errors related to removed variant
+      const newErrors = { ...errors }
+      Object.keys(newErrors).forEach((key) => {
+        if (key.startsWith(`size_${index}`) || key.startsWith(`sizePrice_${index}`)) {
+          delete newErrors[key]
+        }
+      })
+      setErrors(newErrors)
     }
-  };
+  }
 
   const handlePricingSectionChange = (index, field, value) => {
-    const updatedPricing = [...pricingSections];
-    updatedPricing[index][field] = value;
-    if (field === 'price' && value === '0') {
-      updatedPricing[index][field] = '';
+    const updatedPricing = [...pricingSections]
+    updatedPricing[index][field] = value
+    setErrors((prev) => ({ ...prev, [`pricingSection_${index}_${field}`]: "" })) // Clear specific field error
+
+    if (field === "color" || field === "size") {
+      // If color or size changes, clear price ranges for that section
+      updatedPricing[index].priceRanges = [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }]
     }
-    if (['price', 'wholesalePrice', 'thresholdQuantity'].includes(field) && value) {
-      // Clear other pricing fields
-      setFormData((prev) => ({ ...prev, price: '' }));
-      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+
+    // Clear other pricing fields if this section becomes active
+    if (value && (field === "color" || field === "size")) {
+      setFormData((prev) => ({ ...prev, price: "" }))
+      setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
       setColorVariants((prev) =>
-        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
-      );
+        prev.map((v) => ({
+          ...v,
+          price: "",
+          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+          forAllSizes: "yes",
+          availableSizes: [],
+        })),
+      )
       setSizeVariants((prev) =>
-        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
-      );
+        prev.map((v) => ({
+          ...v,
+          price: "",
+          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+        })),
+      )
     }
-    setPricingSections(updatedPricing);
-  };
+    setPricingSections(updatedPricing)
+  }
+
+  const handlePricingSectionPriceRangeChange = useCallback(
+    (sectionIndex, rangeIndex, field, value) => {
+      setPricingSections((prev) => {
+        const updatedPricing = [...prev]
+        updatedPricing[sectionIndex].priceRanges[rangeIndex][field] = value
+        validatePriceRangeField(
+          updatedPricing[sectionIndex].priceRanges,
+          rangeIndex,
+          field,
+          value,
+          "pricingSection",
+          sectionIndex,
+        )
+        return updatedPricing
+      })
+    },
+    [validatePriceRangeField],
+  )
+
+  const addPricingSectionPriceRange = (sectionIndex) => {
+    const updatedPricing = [...pricingSections]
+    const lastRange = updatedPricing[sectionIndex].priceRanges[updatedPricing[sectionIndex].priceRanges.length - 1]
+    const newRetailPrice = lastRange.wholesalePrice || ""
+    const newThresholdQuantity = lastRange.thresholdQuantity ? Number.parseInt(lastRange.thresholdQuantity) + 1 : ""
+    updatedPricing[sectionIndex].priceRanges.push({
+      retailPrice: newRetailPrice,
+      wholesalePrice: "",
+      thresholdQuantity: newThresholdQuantity,
+    })
+    setPricingSections(updatedPricing)
+  }
+
+  const removePricingSectionPriceRange = (sectionIndex, rangeIndex) => {
+    const updatedPricing = [...pricingSections]
+    if (updatedPricing[sectionIndex].priceRanges.length > 1) {
+      updatedPricing[sectionIndex].priceRanges = updatedPricing[sectionIndex].priceRanges.filter(
+        (_, i) => i !== rangeIndex,
+      )
+      setPricingSections(updatedPricing)
+      // Clear errors related to removed range
+      const newErrors = { ...errors }
+      Object.keys(newErrors).forEach((key) => {
+        if (key.startsWith(`pricingSection_${sectionIndex}_${rangeIndex}`)) {
+          delete newErrors[key]
+        }
+      })
+      setErrors(newErrors)
+    }
+  }
 
   const addPricingSection = () => {
     setPricingSections([
       ...pricingSections,
-      { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' },
-    ]);
-  };
+      { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
+    ])
+  }
 
   const removePricingSection = (index) => {
     if (pricingSections.length > 1) {
-      setPricingSections(pricingSections.filter((_, i) => i !== index));
+      setPricingSections(pricingSections.filter((_, i) => i !== index))
+      // Clear errors related to removed section
+      const newErrors = { ...errors }
+      Object.keys(newErrors).forEach((key) => {
+        if (key.startsWith(`pricingSection_${index}`)) {
+          delete newErrors[key]
+        }
+      })
+      setErrors(newErrors)
     }
-  };
+  }
 
   const isVariantEmpty = (variant, type) => {
-    if (type === 'color') {
+    if (type === "color") {
       return (
         !variant.color &&
         !variant.image &&
@@ -688,10 +957,10 @@ const AddProduct = () => {
         !variant.isDefault &&
         variant.optionalDetails.every((detail) => !detail.name && !detail.value) &&
         variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity) &&
-        !variant.forAllSizes &&
+        variant.forAllSizes === "yes" &&
         !variant.availableSizes.length
-      );
-    } else if (type === 'size') {
+      )
+    } else if (type === "size") {
       return (
         !variant.size &&
         !variant.price &&
@@ -702,208 +971,341 @@ const AddProduct = () => {
         !variant.availableColors.length &&
         variant.optionalDetails.every((detail) => !detail.name && !detail.value) &&
         variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity)
-      );
-    } else if (type === 'pricingSection') {
+      )
+    } else if (type === "pricingSection") {
       return (
         !variant.color &&
         !variant.size &&
-        !variant.price &&
-        !variant.wholesalePrice &&
-        !variant.thresholdQuantity
-      );
-    } else if (type === 'basePriceRange') {
-      return !variant.retailPrice && !variant.wholesalePrice && !variant.thresholdQuantity;
-    } else if (type === 'detail') {
-      return !variant.name && !variant.value;
+        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity)
+      )
+    } else if (type === "basePriceRange") {
+      return !variant.retailPrice && !variant.wholesalePrice && !variant.thresholdQuantity
+    } else if (type === "detail") {
+      return !variant.name && !variant.value
     }
-    return true;
-  };
+    return true
+  }
 
-  const validateSizeVariants = () => {
-    const useDimensions = sizeVariants.some((variant) => variant.useDimensions);
-    const useDropdown = sizeVariants.some((variant) => !variant.useDimensions && variant.size);
+  const validateFormOnSubmit = useCallback(() => {
+    const newErrors = {}
+
+    if (!formData.name) newErrors.name = "Product name is required"
+    if (!formData.stock || isNaN(formData.stock) || Number.parseFloat(formData.stock) < 0)
+      newErrors.stock = "Valid stock quantity is required"
+    if (!formData.category) newErrors.category = "Category is required"
+    if (!colorVariants[0].color) newErrors.color_0 = "At least one color variant is required"
+
+    // Validate that at least one pricing method is filled
+    const activePriceMethods = [
+      isBasePriceFilled,
+      isColorPriceFilled,
+      isSizePriceFilled,
+      isPricingSectionFilled,
+    ].filter(Boolean).length
+
+    if (activePriceMethods === 0) {
+      newErrors.price = "At least one pricing method (base, color variant, size variant, or combination) is required."
+    } else if (activePriceMethods > 1) {
+      newErrors.price = "Only one pricing method (base, color variant, size variant, or combination) can be set."
+    }
+
+    // Base Price Ranges validation
+    if (isBasePriceFilled) {
+      if (basePriceRanges.length === 0) {
+        newErrors.base_price = "At least one price range is required for base price."
+      } else {
+        const firstRange = basePriceRanges[0]
+        if (Number.parseFloat(formData.price) !== Number.parseFloat(firstRange.retailPrice)) {
+          newErrors.base_price = "Base price must be same as Retail Price of the first range."
+        }
+        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+          newErrors.base_price =
+            "Retail Price, Wholesale Price, and Threshold Quantity are required for the first base price range."
+        }
+      }
+      basePriceRanges.forEach((range, index) => {
+        const retail = Number.parseFloat(range.retailPrice)
+        const wholesale = Number.parseFloat(range.wholesalePrice)
+        const threshold = Number.parseInt(range.thresholdQuantity)
+
+        if (isNaN(retail) || retail < 0) newErrors[`basePrice_0_${index}_retailPrice`] = "Invalid Retail Price."
+        if (isNaN(wholesale) || wholesale < 0)
+          newErrors[`basePrice_0_${index}_wholesalePrice`] = "Invalid Wholesale Price."
+        if (isNaN(threshold) || threshold < 1)
+          newErrors[`basePrice_0_${index}_thresholdQuantity`] = "Invalid Threshold Quantity."
+
+        if (!isNaN(retail) && !isNaN(wholesale) && wholesale > retail) {
+          newErrors[`basePrice_0_${index}_wholesalePrice`] = "Wholesale price cannot be greater than retail price."
+        }
+        if (index > 0) {
+          const prevThreshold = Number.parseInt(basePriceRanges[index - 1].thresholdQuantity)
+          if (!isNaN(threshold) && !isNaN(prevThreshold) && threshold <= prevThreshold) {
+            newErrors[`basePrice_0_${index}_thresholdQuantity`] =
+              "Threshold quantity must be greater than the previous range's threshold."
+          }
+        }
+      })
+    }
+
+    // Color Variants validation
+    colorVariants.forEach((variant, variantIndex) => {
+      if (!variant.color) {
+        newErrors[`color_${variantIndex}`] = "Color is required."
+      }
+      if (variant.price) {
+        if (variant.priceRanges.length === 0) {
+          newErrors[`color_price_${variantIndex}`] = "At least one price range is required for this color variant."
+        } else {
+          const firstRange = variant.priceRanges[0]
+          if (Number.parseFloat(variant.price) !== Number.parseFloat(firstRange.retailPrice)) {
+            newErrors[`color_price_${variantIndex}`] =
+              "Color variant price must be same as Retail Price of the first range."
+          }
+          if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+            newErrors[`color_price_${variantIndex}`] =
+              "Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set."
+          }
+        }
+        variant.priceRanges.forEach((range, rangeIndex) => {
+          const retail = Number.parseFloat(range.retailPrice)
+          const wholesale = Number.parseFloat(range.wholesalePrice)
+          const threshold = Number.parseInt(range.thresholdQuantity)
+
+          if (isNaN(retail) || retail < 0)
+            newErrors[`colorPrice_${variantIndex}_${rangeIndex}_retailPrice`] = "Invalid Retail Price."
+          if (isNaN(wholesale) || wholesale < 0)
+            newErrors[`colorPrice_${variantIndex}_${rangeIndex}_wholesalePrice`] = "Invalid Wholesale Price."
+          if (isNaN(threshold) || threshold < 1)
+            newErrors[`colorPrice_${variantIndex}_${rangeIndex}_thresholdQuantity`] = "Invalid Threshold Quantity."
+
+          if (!isNaN(retail) && !isNaN(wholesale) && wholesale > retail) {
+            newErrors[`colorPrice_${variantIndex}_${rangeIndex}_wholesalePrice`] =
+              "Wholesale price cannot be greater than retail price."
+          }
+          if (rangeIndex > 0) {
+            const prevThreshold = Number.parseInt(variant.priceRanges[rangeIndex - 1].thresholdQuantity)
+            if (!isNaN(threshold) && !isNaN(prevThreshold) && threshold <= prevThreshold) {
+              newErrors[`colorPrice_${variantIndex}_${rangeIndex}_thresholdQuantity`] =
+                "Threshold quantity must be greater than the previous range's threshold."
+            }
+          }
+        })
+      }
+      if (variant.forAllSizes === "no" && !variant.availableSizes.length) {
+        newErrors[`color_${variantIndex}`] = "At least one size must be selected if not available for all sizes."
+      }
+    })
+
+    // Size Variants validation
+    const useDimensions = sizeVariants.some((variant) => variant.useDimensions)
+    const useDropdown = sizeVariants.some((variant) => !variant.useDimensions && variant.size)
 
     if (useDimensions && useDropdown) {
-      return 'All size variants must use either the size dropdown or dimensions, not both.';
+      newErrors.size = "All size variants must use either the size dropdown or dimensions, not both."
     }
 
-    const errors = {};
-    sizeVariants.forEach((variant, index) => {
+    sizeVariants.forEach((variant, variantIndex) => {
       if (useDimensions) {
         if (!variant.length || !variant.breadth || !variant.height) {
-          errors[`size_${index}`] = 'Length, Breadth, and Height are required for all size variants.';
+          newErrors[`size_${variantIndex}`] = "Length, Breadth, and Height are required for all size variants."
         }
       } else if (!variant.size) {
-        errors[`size_${index}`] = 'Size is required for all size variants.';
+        newErrors[`size_${variantIndex}`] = "Size is required for all size variants."
       }
-      if (variant.forAllColors === 'no' && !variant.availableColors.length) {
-        errors[`size_${index}`] = 'At least one color must be selected if not available for all colors.';
+      if (variant.forAllColors === "no" && !variant.availableColors.length) {
+        newErrors[`size_${variantIndex}`] = "At least one color must be selected if not available for all colors."
       }
-    });
-
-    colorVariants.forEach((variant, index) => {
-      if (variant.forAllSizes === 'no' && !variant.availableSizes.length) {
-        errors[`color_${index}`] = 'At least one size must be selected if not available for all sizes.';
-      }
-    });
-
-    return Object.keys(errors).length > 0 ? errors : null;
-  };
-
-  const validatePriceRanges = () => {
-    const errors = {};
-    if (isBasePriceFilled && basePriceRanges.length > 0) {
-      const firstRange = basePriceRanges[0];
-      if (parseFloat(firstRange.retailPrice) !== parseFloat(formData.price)) {
-        errors.base_price = 'Base price must equal the retail price in the first base price range.';
-      }
-      if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
-        errors.base_price = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first base price range.';
-      }
-    }
-    basePriceRanges.forEach((range, index) => {
-      if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
-        errors[`base_price_${index}`] = 'Retail price cannot be greater than wholesale price.';
-      }
-    });
-    colorVariants.forEach((variant, index) => {
-      if (variant.price && variant.priceRanges.length > 0) {
-        const firstRange = variant.priceRanges[0];
-        if (parseFloat(firstRange.retailPrice) !== parseFloat(variant.price)) {
-          errors[`color_price_${index}`] = 'Color variant price must equal the retail price in the first price range.';
+      if (variant.price) {
+        if (variant.priceRanges.length === 0) {
+          newErrors[`size_price_${variantIndex}`] = "At least one price range is required for this size variant."
+        } else {
+          const firstRange = variant.priceRanges[0]
+          if (Number.parseFloat(variant.price) !== Number.parseFloat(firstRange.retailPrice)) {
+            newErrors[`size_price_${variantIndex}`] =
+              "Size variant price must be same as Retail Price of the first range."
+          }
+          if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+            newErrors[`size_price_${variantIndex}`] =
+              "Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set."
+          }
         }
-        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
-          errors[`color_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
-        }
-      }
-      variant.priceRanges.forEach((range, rangeIndex) => {
-        if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
-          errors[`color_price_${index}_${rangeIndex}`] = 'Retail price cannot be greater than wholesale price.';
-        }
-      });
-    });
-    sizeVariants.forEach((variant, index) => {
-      if (variant.price && variant.priceRanges.length > 0) {
-        const firstRange = variant.priceRanges[0];
-        if (parseFloat(firstRange.retailPrice) !== parseFloat(variant.price)) {
-          errors[`size_price_${index}`] = 'Size variant price must equal the retail price in the first price range.';
-        }
-        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
-          errors[`size_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
-        }
-      }
-      variant.priceRanges.forEach((range, rangeIndex) => {
-        if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
-          errors[`size_price_${index}_${rangeIndex}`] = 'Retail price cannot be greater than wholesale price.';
-        }
-      });
-    });
-    return Object.keys(errors).length > 0 ? errors : null;
-  };
+        variant.priceRanges.forEach((range, rangeIndex) => {
+          const retail = Number.parseFloat(range.retailPrice)
+          const wholesale = Number.parseFloat(range.wholesalePrice)
+          const threshold = Number.parseInt(range.thresholdQuantity)
 
-  const handleSubmit = async () => {
-    setErrors({});
+          if (isNaN(retail) || retail < 0)
+            newErrors[`sizePrice_${variantIndex}_${rangeIndex}_retailPrice`] = "Invalid Retail Price."
+          if (isNaN(wholesale) || wholesale < 0)
+            newErrors[`sizePrice_${variantIndex}_${rangeIndex}_wholesalePrice`] = "Invalid Wholesale Price."
+          if (isNaN(threshold) || threshold < 1)
+            newErrors[`sizePrice_${variantIndex}_${rangeIndex}_thresholdQuantity`] = "Invalid Threshold Quantity."
 
-    const newErrors = {};
-    if (!formData.name) newErrors.name = 'Product name is required';
-    if (!formData.stock || isNaN(formData.stock) || formData.stock < 0) newErrors.stock = 'Valid stock quantity is required';
-    if (!formData.category) newErrors.category = 'Category is required';
-    if (!colorVariants[0].color) newErrors.color_0 = 'At least one color variant is required';
-    if (!isBasePriceFilled && !isColorPriceFilled && !isSizePriceFilled && !isPricingSectionFilled) {
-      newErrors.price = 'Base price, variant prices, or pricing combinations are required';
-    }
-
-    const sizeErrors = validateSizeVariants();
-    if (sizeErrors) {
-      if (typeof sizeErrors === 'string') {
-        setErrors({ size: sizeErrors });
-        setShowErrorModal(true);
-        return;
-      } else {
-        Object.assign(newErrors, sizeErrors);
+          if (!isNaN(retail) && !isNaN(wholesale) && wholesale > retail) {
+            newErrors[`sizePrice_${variantIndex}_${rangeIndex}_wholesalePrice`] =
+              "Wholesale price cannot be greater than retail price."
+          }
+          if (rangeIndex > 0) {
+            const prevThreshold = Number.parseInt(variant.priceRanges[rangeIndex - 1].thresholdQuantity)
+            if (!isNaN(threshold) && !isNaN(prevThreshold) && threshold <= prevThreshold) {
+              newErrors[`sizePrice_${variantIndex}_${rangeIndex}_thresholdQuantity`] =
+                "Threshold quantity must be greater than the previous range's threshold."
+            }
+          }
+        })
       }
+    })
+
+    // Pricing Combinations validation
+    if (isPricingSectionFilled) {
+      pricingSections.forEach((section, sectionIndex) => {
+        if (!section.color || !section.size) {
+          newErrors[`pricingSection_${sectionIndex}_general`] = "Color and Size are required for each combination."
+        }
+        if (section.priceRanges.length === 0) {
+          newErrors[`pricingSection_${sectionIndex}_general`] =
+            "At least one price range is required for this combination."
+        } else {
+          section.priceRanges.forEach((range, rangeIndex) => {
+            const retail = Number.parseFloat(range.retailPrice)
+            const wholesale = Number.parseFloat(range.wholesalePrice)
+            const threshold = Number.parseInt(range.thresholdQuantity)
+
+            if (isNaN(retail) || retail < 0)
+              newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_retailPrice`] = "Invalid Retail Price."
+            if (isNaN(wholesale) || wholesale < 0)
+              newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_wholesalePrice`] = "Invalid Wholesale Price."
+            if (isNaN(threshold) || threshold < 1)
+              newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_thresholdQuantity`] =
+                "Invalid Threshold Quantity."
+
+            if (!isNaN(retail) && !isNaN(wholesale) && wholesale > retail) {
+              newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_wholesalePrice`] =
+                "Wholesale price cannot be greater than retail price."
+            }
+            if (rangeIndex > 0) {
+              const prevThreshold = Number.parseInt(section.priceRanges[rangeIndex - 1].thresholdQuantity)
+              if (!isNaN(threshold) && !isNaN(prevThreshold) && threshold <= prevThreshold) {
+                newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_thresholdQuantity`] =
+                  "Threshold quantity must be greater than the previous range's threshold."
+              }
+            }
+          })
+        }
+      })
     }
 
-    const priceRangeErrors = validatePriceRanges();
-    if (priceRangeErrors) {
-      Object.assign(newErrors, priceRangeErrors);
+    setErrors(newErrors)
+    return Object.keys(newErrors).length === 0
+  }, [
+    formData.name,
+    formData.stock,
+    formData.category,
+    formData.price,
+    colorVariants,
+    sizeVariants,
+    pricingSections,
+    basePriceRanges,
+    isBasePriceFilled,
+    isColorPriceFilled,
+    isSizePriceFilled,
+    isPricingSectionFilled,
+  ])
+
+  const handleSubmit = async (e) => {
+    e.preventDefault() // Prevent default form submission
+
+    const isValid = validateFormOnSubmit()
+    if (!isValid) {
+      setShowErrorModal(true)
+      return
     }
 
-    if (Object.keys(newErrors).length > 0) {
-      setErrors(newErrors);
-      setShowErrorModal(true);
-      return;
-    }
-
-    setIsSubmitting(true);
-
+    setIsSubmitting(true)
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('name', formData.name);
-      formDataToSend.append('price', formData.price);
-      formDataToSend.append('stock', formData.stock);
-      formDataToSend.append('category', formData.category);
-      formDataToSend.append('categoryPath', JSON.stringify(formData.categoryPath));
+      const formDataToSend = new FormData()
+      formDataToSend.append("name", formData.name)
+      formDataToSend.append("price", formData.price)
+      formDataToSend.append("stock", formData.stock)
+      formDataToSend.append("category", formData.category)
+      formDataToSend.append("categoryPath", JSON.stringify(formData.categoryPath))
 
-      const filteredDetails = details.filter((detail) => !isVariantEmpty(detail, 'detail'));
-      formDataToSend.append('details', JSON.stringify(filteredDetails));
+      const filteredDetails = details.filter((detail) => !isVariantEmpty(detail, "detail"))
+      formDataToSend.append("details", JSON.stringify(filteredDetails))
 
-      const filteredColorVariants = colorVariants.filter((variant) => !isVariantEmpty(variant, 'color'));
+      const filteredColorVariants = colorVariants.filter((variant) => !isVariantEmpty(variant, "color"))
       filteredColorVariants.forEach((variant, index) => {
         if (variant.image) {
-          formDataToSend.append('colorImages', variant.image);
+          formDataToSend.append("colorImages", variant.image)
         }
-      });
-      formDataToSend.append('colorVariants', JSON.stringify(filteredColorVariants.map(({ image, ...rest }) => rest)));
+      })
+      formDataToSend.append("colorVariants", JSON.stringify(filteredColorVariants.map(({ image, ...rest }) => rest)))
 
-      const filteredSizeVariants = sizeVariants.filter((variant) => !isVariantEmpty(variant, 'size'));
-      formDataToSend.append('sizeVariants', JSON.stringify(filteredSizeVariants));
+      const filteredSizeVariants = sizeVariants.filter((variant) => !isVariantEmpty(variant, "size"))
+      formDataToSend.append("sizeVariants", JSON.stringify(filteredSizeVariants))
 
-      const filteredPricingSections = pricingSections.filter((section) => !isVariantEmpty(section, 'pricingSection'));
-      formDataToSend.append('pricingSections', JSON.stringify(filteredPricingSections));
+      const filteredPricingSections = pricingSections.filter((section) => !isVariantEmpty(section, "pricingSection"))
+      formDataToSend.append("pricingSections", JSON.stringify(filteredPricingSections))
 
-      const filteredBasePriceRanges = basePriceRanges.filter((range) => !isVariantEmpty(range, 'basePriceRange'));
-      formDataToSend.append('basePriceRanges', JSON.stringify(filteredBasePriceRanges));
+      const filteredBasePriceRanges = basePriceRanges.filter((range) => !isVariantEmpty(range, "basePriceRange"))
+      formDataToSend.append("basePriceRanges", JSON.stringify(filteredBasePriceRanges))
 
-      await axios.post('http://localhost:3000/api/product/add', formDataToSend, {
-        headers: { 'Content-Type': 'multipart/form-data' },
+      await axios.post("http://localhost:3000/api/product/add", formDataToSend, {
+        headers: { "Content-Type": "multipart/form-data" },
         withCredentials: true,
-      });
-      setIsSubmitting(false);
-      setShowSuccessModal(true);
+      })
 
-      setFormData({ name: '', price: '', stock: '', category: '', categoryPath: [] });
-      setDetails([{ name: '', value: '' }, { name: '', value: '' }, { name: '', value: '' }]);
-      setColorVariants([{ color: '', image: null, price: '', isDefault: true, optionalDetails: [], priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }], forAllSizes: 'yes', availableSizes: [] }]);
+      setIsSubmitting(false)
+      setShowSuccessModal(true)
+      setFormData({ name: "", price: "", stock: "", category: "", categoryPath: [] })
+      setDetails([
+        { name: "", value: "" },
+        { name: "", value: "" },
+        { name: "", value: "" },
+      ])
+      setColorVariants([
+        {
+          color: "",
+          image: null,
+          price: "",
+          isDefault: true,
+          optionalDetails: [],
+          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+          forAllSizes: "yes",
+          availableSizes: [],
+        },
+      ])
       setSizeVariants([
         {
-          size: '',
-          price: '',
+          size: "",
+          price: "",
           optionalDetails: [],
-          priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
           isDefault: true,
           useDimensions: false,
-          length: '',
-          breadth: '',
-          height: '',
-          forAllColors: 'yes',
+          length: "",
+          breadth: "",
+          height: "",
+          forAllColors: "yes",
           availableColors: [],
         },
-      ]);
-      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
-      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
-      setSelectedPath([]);
-      setSubCategoryOptions([]);
+      ])
+      setPricingSections([
+        { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
+      ])
+      setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
+      setSelectedPath([])
+      setSubCategoryOptions([])
     } catch (error) {
-      console.error('Error adding product:', error);
-      setIsSubmitting(false);
-      setShowErrorModal(true);
+      console.error("Error adding product:", error)
+      setIsSubmitting(false)
+      setShowErrorModal(true)
       setErrors((prev) => ({
         ...prev,
-        server: error.response?.data?.error || 'Failed to add product. Please try again.',
-      }));
+        server: error.response?.data?.error || "Failed to add product. Please try again.",
+      }))
     }
-  };
+  }
 
   const SuccessModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -918,18 +1320,14 @@ const AddProduct = () => {
         </button>
       </div>
     </div>
-  );
+  )
 
   const ErrorModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div className="bg-white p-6 rounded-lg shadow-xl">
         <h3 className="text-lg font-semibold text-red-600 mb-4">Product Not Added</h3>
         <p className="text-gray-600 mb-6">Please check the errors below and try again.</p>
-        <ul className="text-gray-600 mb-6">
-          {Object.entries(errors).map(([key, value]) => (
-            <li key={key} className="text-sm">{value}</li>
-          ))}
-        </ul>
+        {errors.server && <p className="text-red-500 text-sm mb-4">{errors.server}</p>}
         <button
           onClick={() => setShowErrorModal(false)}
           className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
@@ -938,7 +1336,7 @@ const AddProduct = () => {
         </button>
       </div>
     </div>
-  );
+  )
 
   return (
     <div className="max-w-7xl mx-auto p-6">
@@ -977,8 +1375,7 @@ const AddProduct = () => {
             <h1 className="text-3xl font-extrabold text-gray-800 mb-3 tracking-tight">Add New Product</h1>
             <p className="text-gray-500 text-base">Complete the form below to add a new product to your inventory</p>
           </div>
-
-          <div className="space-y-10">
+          <form onSubmit={handleSubmit} className="space-y-10">
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
               <h2 className="text-2xl font-semibold text-gray-800 mb-6">Basic Information</h2>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -987,7 +1384,7 @@ const AddProduct = () => {
                   <input
                     type="text"
                     value={formData.name}
-                    onChange={(e) => handleFormChange('name', e.target.value)}
+                    onChange={(e) => handleFormChange("name", e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                     placeholder="Enter product name"
                     required
@@ -1000,7 +1397,7 @@ const AddProduct = () => {
                     <input
                       type="number"
                       value={formData.price}
-                      onChange={(e) => handleFormChange('price', e.target.value === '0' ? '' : e.target.value)}
+                      onChange={(e) => handleFormChange("price", e.target.value)}
                       className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                       placeholder="0.00"
                       min="0"
@@ -1014,7 +1411,7 @@ const AddProduct = () => {
                   <input
                     type="number"
                     value={formData.stock}
-                    onChange={(e) => handleFormChange('stock', e.target.value)}
+                    onChange={(e) => handleFormChange("stock", e.target.value)}
                     className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                     placeholder="0"
                     min="0"
@@ -1032,8 +1429,12 @@ const AddProduct = () => {
                   title="Price Ranges"
                   isRequired={true}
                   isRetailPriceDisabled={true}
+                  errors={errors}
+                  parentIndex={0}
+                  sectionType="basePrice"
                 />
               )}
+              {errors.base_price && <p className="text-red-500 text-xs mt-1">{errors.base_price}</p>}
             </div>
 
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
@@ -1064,7 +1465,7 @@ const AddProduct = () => {
                       <input
                         type="text"
                         value={detail.name}
-                        onChange={(e) => handleDetailChange(index, 'name', e.target.value)}
+                        onChange={(e) => handleDetailChange(index, "name", e.target.value)}
                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                         placeholder="Detail name (e.g., Material)"
                       />
@@ -1073,7 +1474,7 @@ const AddProduct = () => {
                       <input
                         type="text"
                         value={detail.value}
-                        onChange={(e) => handleDetailChange(index, 'value', e.target.value)}
+                        onChange={(e) => handleDetailChange(index, "value", e.target.value)}
                         className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                         placeholder="e.g., Cotton"
                       />
@@ -1123,12 +1524,14 @@ const AddProduct = () => {
                         <input
                           type="text"
                           value={variant.color}
-                          onChange={(e) => handleColorVariantChange(variantIndex, 'color', e.target.value)}
+                          onChange={(e) => handleColorVariantChange(variantIndex, "color", e.target.value)}
                           className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                           placeholder="e.g., Red, Blue, #FF5733"
                           required
                         />
-                        {errors.color_0 && <p className="text-red-500 text-xs mt-1">{errors.color_0}</p>}
+                        {errors[`color_${variantIndex}`] && (
+                          <p className="text-red-500 text-xs mt-1">{errors[`color_${variantIndex}`]}</p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Image</label>
@@ -1145,7 +1548,7 @@ const AddProduct = () => {
                           <input
                             type="number"
                             value={variant.price}
-                            onChange={(e) => handleColorVariantChange(variantIndex, 'price', e.target.value)}
+                            onChange={(e) => handleColorVariantChange(variantIndex, "price", e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                             placeholder="0.00"
                             min="0"
@@ -1154,12 +1557,24 @@ const AddProduct = () => {
                         </div>
                       )}
                     </div>
+                    <div className="mb-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={variant.isDefault}
+                          onChange={(e) => handleColorVariantChange(variantIndex, "isDefault", e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
+                      </label>
+                    </div>
+
                     {!isSizePriceFilled && !isPricingSectionFilled && (
                       <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 mb-2">For All Sizes?</label>
                         <select
                           value={variant.forAllSizes}
-                          onChange={(e) => handleColorVariantChange(variantIndex, 'forAllSizes', e.target.value)}
+                          onChange={(e) => handleColorVariantChange(variantIndex, "forAllSizes", e.target.value)}
                           className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                         >
                           <option value="yes">Yes</option>
@@ -1167,7 +1582,8 @@ const AddProduct = () => {
                         </select>
                       </div>
                     )}
-                    {variant.forAllSizes === 'no' && !isSizePriceFilled && !isPricingSectionFilled && (
+
+                    {variant.forAllSizes === "no" && !isSizePriceFilled && !isPricingSectionFilled && (
                       <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Select Sizes *</label>
                         <div className="relative">
@@ -1187,7 +1603,9 @@ const AddProduct = () => {
                             ))}
                           </div>
                         </div>
-                        {errors[`color_${variantIndex}`] && <p className="text-red-500 text-xs mt-1">{errors[`color_${variantIndex}`]}</p>}
+                        {errors[`color_${variantIndex}`] && (
+                          <p className="text-red-500 text-xs mt-1">{errors[`color_${variantIndex}`]}</p>
+                        )}
                       </div>
                     )}
                     <div className="mb-4">
@@ -1195,7 +1613,7 @@ const AddProduct = () => {
                         <input
                           type="checkbox"
                           checked={variant.isDefault}
-                          onChange={(e) => handleColorVariantChange(variantIndex, 'isDefault', e.target.checked)}
+                          onChange={(e) => handleColorVariantChange(variantIndex, "isDefault", e.target.checked)}
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                         />
                         <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
@@ -1209,9 +1627,12 @@ const AddProduct = () => {
                         }
                         onAddRange={() => addColorPriceRange(variantIndex)}
                         onRemoveRange={(rangeIndex) => removeColorPriceRange(variantIndex, rangeIndex)}
-                        title={`Price Range for ${variant.color || 'Color ' + (variantIndex + 1)}`}
+                        title={`Price Range for ${variant.color || "Color " + (variantIndex + 1)}`}
                         isRequired={true}
                         isRetailPriceDisabled={true}
+                        errors={errors}
+                        parentIndex={variantIndex}
+                        sectionType="colorPrice"
                       />
                     )}
                     {errors[`color_price_${variantIndex}`] && (
@@ -1226,14 +1647,18 @@ const AddProduct = () => {
                               <input
                                 type="text"
                                 value={detail.name}
-                                onChange={(e) => handleColorOptionalDetailChange(variantIndex, detailIndex, 'name', e.target.value)}
+                                onChange={(e) =>
+                                  handleColorOptionalDetailChange(variantIndex, detailIndex, "name", e.target.value)
+                                }
                                 className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                 placeholder="Name"
                               />
                               <input
                                 type="text"
                                 value={detail.value}
-                                onChange={(e) => handleColorOptionalDetailChange(variantIndex, detailIndex, 'value', e.target.value)}
+                                onChange={(e) =>
+                                  handleColorOptionalDetailChange(variantIndex, detailIndex, "value", e.target.value)
+                                }
                                 className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                 placeholder="Value"
                               />
@@ -1295,7 +1720,7 @@ const AddProduct = () => {
                           <div>
                             <select
                               value={variant.size}
-                              onChange={(e) => handleSizeVariantChange(variantIndex, 'size', e.target.value)}
+                              onChange={(e) => handleSizeVariantChange(variantIndex, "size", e.target.value)}
                               className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                               required
                             >
@@ -1320,7 +1745,7 @@ const AddProduct = () => {
                               <input
                                 type="number"
                                 value={variant.length}
-                                onChange={(e) => handleSizeVariantChange(variantIndex, 'length', e.target.value)}
+                                onChange={(e) => handleSizeVariantChange(variantIndex, "length", e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                 placeholder="Length"
                                 min="0"
@@ -1329,7 +1754,7 @@ const AddProduct = () => {
                               <input
                                 type="number"
                                 value={variant.breadth}
-                                onChange={(e) => handleSizeVariantChange(variantIndex, 'breadth', e.target.value)}
+                                onChange={(e) => handleSizeVariantChange(variantIndex, "breadth", e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                 placeholder="Breadth"
                                 min="0"
@@ -1338,7 +1763,7 @@ const AddProduct = () => {
                               <input
                                 type="number"
                                 value={variant.height}
-                                onChange={(e) => handleSizeVariantChange(variantIndex, 'height', e.target.value)}
+                                onChange={(e) => handleSizeVariantChange(variantIndex, "height", e.target.value)}
                                 className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                 placeholder="Height"
                                 min="0"
@@ -1364,7 +1789,7 @@ const AddProduct = () => {
                           <input
                             type="number"
                             value={variant.price}
-                            onChange={(e) => handleSizeVariantChange(variantIndex, 'price', e.target.value)}
+                            onChange={(e) => handleSizeVariantChange(variantIndex, "price", e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                             placeholder="0.00"
                             min="0"
@@ -1378,7 +1803,7 @@ const AddProduct = () => {
                         <label className="block text-sm font-semibold text-gray-700 mb-2">For All Colors?</label>
                         <select
                           value={variant.forAllColors}
-                          onChange={(e) => handleSizeVariantChange(variantIndex, 'forAllColors', e.target.value)}
+                          onChange={(e) => handleSizeVariantChange(variantIndex, "forAllColors", e.target.value)}
                           className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                         >
                           <option value="yes">Yes</option>
@@ -1386,7 +1811,7 @@ const AddProduct = () => {
                         </select>
                       </div>
                     )}
-                    {variant.forAllColors === 'no' && !isColorPriceFilled && !isPricingSectionFilled && (
+                    {variant.forAllColors === "no" && !isColorPriceFilled && !isPricingSectionFilled && (
                       <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Select Colors *</label>
                         <div className="relative">
@@ -1414,7 +1839,7 @@ const AddProduct = () => {
                         <input
                           type="checkbox"
                           checked={variant.isDefault}
-                          onChange={(e) => handleSizeVariantChange(variantIndex, 'isDefault', e.target.checked)}
+                          onChange={(e) => handleSizeVariantChange(variantIndex, "isDefault", e.target.checked)}
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
                         />
                         <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
@@ -1428,9 +1853,12 @@ const AddProduct = () => {
                         }
                         onAddRange={() => addSizePriceRange(variantIndex)}
                         onRemoveRange={(rangeIndex) => removeSizePriceRange(variantIndex, rangeIndex)}
-                        title={`Price Range for ${variant.size || 'Size ' + (variantIndex + 1)}`}
+                        title={`Price Range for ${variant.size || "Size " + (variantIndex + 1)}`}
                         isRequired={true}
                         isRetailPriceDisabled={true}
+                        errors={errors}
+                        parentIndex={variantIndex}
+                        sectionType="sizePrice"
                       />
                     )}
                     {errors[`size_price_${variantIndex}`] && (
@@ -1445,14 +1873,18 @@ const AddProduct = () => {
                               <input
                                 type="text"
                                 value={detail.name}
-                                onChange={(e) => handleSizeOptionalDetailChange(variantIndex, detailIndex, 'name', e.target.value)}
+                                onChange={(e) =>
+                                  handleSizeOptionalDetailChange(variantIndex, detailIndex, "name", e.target.value)
+                                }
                                 className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                 placeholder="Name"
                               />
                               <input
                                 type="text"
                                 value={detail.value}
-                                onChange={(e) => handleSizeOptionalDetailChange(variantIndex, detailIndex, 'value', e.target.value)}
+                                onChange={(e) =>
+                                  handleSizeOptionalDetailChange(variantIndex, detailIndex, "value", e.target.value)
+                                }
                                 className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                                 placeholder="Value"
                               />
@@ -1507,73 +1939,65 @@ const AddProduct = () => {
                           </button>
                         )}
                       </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">Color</label>
                           <select
                             value={section.color}
-                            onChange={(e) => handlePricingSectionChange(index, 'color', e.target.value)}
+                            onChange={(e) => handlePricingSectionChange(index, "color", e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                           >
                             <option value="">Select Color</option>
                             {colorVariants.map((variant, i) => (
                               <option key={i} value={variant.color}>
-                                {variant.color || 'Color ' + (i + 1)}
+                                {variant.color || "Color " + (i + 1)}
                               </option>
                             ))}
                           </select>
+                          {errors[`pricingSection_${index}_color`] && (
+                            <p className="text-red-500 text-xs mt-1">{errors[`pricingSection_${index}_color`]}</p>
+                          )}
                         </div>
                         <div>
                           <label className="block text-sm font-semibold text-gray-700 mb-2">Size</label>
                           <select
                             value={section.size}
-                            onChange={(e) => handlePricingSectionChange(index, 'size', e.target.value)}
+                            onChange={(e) => handlePricingSectionChange(index, "size", e.target.value)}
                             className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
                           >
                             <option value="">Select Size</option>
                             {sizeVariants.map((variant, i) => (
-                              <option key={i} value={variant.size || `${variant.length}x${variant.breadth}x${variant.height}`}>
-                                {variant.size || `${variant.length}x${variant.breadth}x${variant.height}` || 'Size ' + (i + 1)}
+                              <option
+                                key={i}
+                                value={variant.size || `${variant.length}x${variant.breadth}x${variant.height}`}
+                              >
+                                {variant.size ||
+                                  `${variant.length}x${variant.breadth}x${variant.height}` ||
+                                  "Size " + (i + 1)}
                               </option>
                             ))}
                           </select>
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">Retail Price</label>
-                          <input
-                            type="number"
-                            value={section.price}
-                            onChange={(e) => handlePricingSectionChange(index, 'price', e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">Wholesale Price</label>
-                          <input
-                            type="number"
-                            value={section.wholesalePrice || ''}
-                            onChange={(e) => handlePricingSectionChange(index, 'wholesalePrice', e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">Threshold Quantity</label>
-                          <input
-                            type="number"
-                            value={section.thresholdQuantity || ''}
-                            onChange={(e) => handlePricingSectionChange(index, 'thresholdQuantity', e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                            placeholder="10"
-                            min="1"
-                          />
+                          {errors[`pricingSection_${index}_size`] && (
+                            <p className="text-red-500 text-xs mt-1">{errors[`pricingSection_${index}_size`]}</p>
+                          )}
                         </div>
                       </div>
+                      {errors[`pricingSection_${index}_general`] && (
+                        <p className="text-red-500 text-xs mt-1">{errors[`pricingSection_${index}_general`]}</p>
+                      )}
+                      <PriceRangeSection
+                        ranges={section.priceRanges}
+                        onRangeChange={(rangeIndex, field, value) =>
+                          handlePricingSectionPriceRangeChange(index, rangeIndex, field, value)
+                        }
+                        onAddRange={() => addPricingSectionPriceRange(index)}
+                        onRemoveRange={(rangeIndex) => removePricingSectionPriceRange(index, rangeIndex)}
+                        title={`Price Range for Combination ${index + 1}`}
+                        isRequired={true}
+                        errors={errors}
+                        parentIndex={index}
+                        sectionType="pricingSection"
+                      />
                     </div>
                   ))}
                 </div>
@@ -1590,21 +2014,20 @@ const AddProduct = () => {
 
             <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
               <button
-                type="button"
-                onClick={handleSubmit}
+                type="submit"
                 disabled={isSubmitting}
                 className={`w-full py-3 px-6 text-white rounded-lg transition-colors duration-200 ${
-                  isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                  isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
                 }`}
               >
-                {isSubmitting ? 'Adding Product...' : 'Add Product'}
+                {isSubmitting ? "Adding Product..." : "Add Product"}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       )}
     </div>
-  );
-};
+  )
+}
 
-export default AddProduct;
+export default AddProduct

@@ -1,258 +1,1889 @@
-I am developing an e-commerce website using Mern stack and javascript and tailwind css. Make sure not to use type script I am using JavaScript. I want to create the Home page where user can see the products. Above the navbar I want to create the section for annoncement which will be made from the admin side. Then navbar. Navbar shoould only contain the Logo which I will provide you and it should take al the height of the navbar leving only 2 px from top and bottom, the search bar for searching the items, profile logo which hover should show links like:Edit profile, My Orders, Logout. Then cart icon. the cart should open from right.Below the navbar there should be Banner where admin can upload the picture for eg for some festivals the admin can upload banner for discounts. Then there should be shop by categories and it should be scrollable as we dont know the exact number of categories. Then there should be option for filters. The filters should include:All productsShop by categoryJust arrived itemsRevised ratesRestocked itemsLow to high User should be able to select the multiple filtersAfter this then display the section for 'Just arrived' Products below it display 'Restocked items' and below it show 'Reviseed rates' All of these sections should be scrollable When clicked on some filter it should tak me that particular section. For eg if just arrived is clicked take me to the just arrived section .Also create the section for out of stock items but their color should be little differnet type and all buttons which are mentioned below should be disabled. Now lets talk about the product card. The product should be displayed like this way:It should contain the image, Some badge that is new, -20%, etc and some buttons such as:'Details' which clicked some modal should open that displays the details of the product, 'Add to cart' button which clicked should be replaced by 'remove from cart' Display meachnism where user can increase and decrease the quantity. When the product is added into the cart the quantity which was there should also be added into the cart. The quantity can also e change form cart. Below product show the price chart that will addeed dynamically by the admin. It is like if user buys more than 5 piece than product will cost 100 per pirece instead of 150. Show the price of single piece on the product and also show the price which has strike on it.There should be dtails button i th product card whcih clicked the modal should be open which shows the detailed description and all of the products.The product card should have variants optio where user can select the different variant of the roduct. That is Speaker can be of differnet color and differnet sizes Ad the footer and ad the line such as design and developed by : abc .It should be very beautiful and eye catching. It should be very effective. It should be very responsive so that it can work on world's smallest device to the world's largest device without any problem.This is my logo:Logo should also be respnsive and should be seen very clearly.This are specifications according to me. You can add some more on your own and design it very effectively. Add some transitions as well wherever applicable. Take the all the available width. The user should be able to remove the item from the cart and shol;d be able to increase or decrease the quntity directly from te cart and also should be able to change between variants. Make sure that when user add the product to cart and the variannnt is black and user swucthes the variant that is red then user should se 'add to cart' button for red variant and not remove from cart for red variant because black variant is added into cart.
+Okay the code work it is also being saved into database but there are some changes:
+1. Wholesale price in the price range section should be less than the retail price. If user enters the wholesale price greater than the retail price then on the spot display the error below the field saying wholesale price cannot be greater than the retail price.
+2. I told you in the above chat when user adds the new pricing range section then the wholesale price of the old pricing section should become the value of the retail price field in the new section and then that field should become disable means the logic is the value of the 'wholesale price' field of the previous pricing range section must be same as the 'retail price' field of the new pricing section and user can't be able to edit it.
+3. I don't know why in my AddProduct.jsx where ever I enter the price for eg 50 it is changed to 49.99, etc please fix this.
+4. The 'threshold quantity' field in the new pricing range section must be greater than the 'threshold quantity' field in the new pricing range section.
+5. Display all the error messages on the spot below the fields. 
+6. In the pricing combination section currently you are displaying 5 fields:  color variant dropdown, size variant dropdown, retail price, wholesale price, threshold quantity. But I want to change this. Initially in pricing combination only show two dropdowns that is for color and size and put the other three fields that is retail price, wholesale price and threshold quantity fields in the 'pricing range' section as you are doing for the other three sections. The user then can also add the pricing range in the pricing combination section and can also also add the new new pricing combination section.
 
+Please implement these changes in the one go. Rest all is working fine and backend is also working fine.
+My current codes files:
+AddProduct.jsx:
+import React, { useState, useEffect, useCallback } from 'react';
+import { Trash2, Plus } from 'lucide-react';
+import axios from 'axios';
 
+const PriceRangeSection = React.memo(({
+  ranges,
+  onRangeChange,
+  onAddRange,
+  onRemoveRange,
+  title,
+  isRequired = false,
+  isRetailPriceDisabled = false,
+}) => (
+  <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
+    <div className="flex items-center justify-between mb-4">
+      <h4 className="text-sm font-semibold text-blue-800">
+        {title} {isRequired && <span className="text-red-500">*</span>} <span className="font-bold"> (The threshold quantity will be included in retail price)</span>
+      </h4>
+      <button
+        type="button"
+        onClick={onAddRange}
+        className="flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700"
+      >
+        <Plus size={12} />
+        Add Range
+      </button>
+    </div>
+    <div className="space-y-3">
+      {ranges.map((range, index) => (
+        <div key={range._id || `range-${index}`} className="bg-white p-3 rounded-md border border-blue-100">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">
+                Retail Price {index === 0 && isRequired ? '*' : ''}
+              </label>
+              <input
+                type="number"
+                value={range.retailPrice || ''}
+                onChange={(e) => onRangeChange(index, 'retailPrice', e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                required={index === 0 && isRequired}
+                disabled={index === 0 && isRetailPriceDisabled}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">
+                Wholesale Price {index === 0 && isRequired ? '*' : ''}
+              </label>
+              <input
+                type="number"
+                value={range.wholesalePrice || ''}
+                onChange={(e) => onRangeChange(index, 'wholesalePrice', e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="0.00"
+                min="0"
+                step="0.01"
+                required={index === 0 && isRequired}
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-600 mb-1">
+                Threshold Quantity {index === 0 && isRequired ? '*' : ''}
+              </label>
+              <input
+                type="number"
+                value={range.thresholdQuantity || ''}
+                onChange={(e) => onRangeChange(index, 'thresholdQuantity', e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                placeholder="10"
+                min="1"
+                required={index === 0 && isRequired}
+              />
+            </div>
+            <div className="flex justify-end">
+              {ranges.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() => onRemoveRange(index)}
+                  className="p-2 rounded-md transition-colors duration-200 text-red-500 hover:text-red-600 hover:bg-red-50"
+                >
+                  <Trash2 size={14} />
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+));
 
-Category dropdown on add product:
-I am developing ecommerce website with MERN stack and tailwind css.
-While adding the product the admin needs to select the category as well. 
-Now I have stored nested categories in the mongoDB. For example:
-main category: Electronics
-First Sub category electronics: Mobiles
-First Sub category of Sub category Mobiles : Vivo
-Sub category of sub category Vivo : V11
-Second Sub category of Sub category Mobiles : Oppo
-Sub category of sub category Oppo : O11
-Second Sub category electronics: TV's
+const AddProduct = () => {
+  const [formData, setFormData] = useState({
+    name: '',
+    price: '',
+    stock: '',
+    category: '',
+    categoryPath: [],
+  });
 
-Hoerarchy:
-Electronics
-      Mobiles
-              Vivo
-                   V11
-               Oppo
-                    O11
-      TV's
+  const [errors, setErrors] = useState({});
+  const [details, setDetails] = useState([
+    { name: '', value: '' },
+    { name: '', value: '' },
+    { name: '', value: '' },
+  ]);
+  const [colorVariants, setColorVariants] = useState([
+    {
+      color: '',
+      image: null,
+      price: '',
+      isDefault: true,
+      optionalDetails: [],
+      priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+      forAllSizes: 'yes',
+      availableSizes: [],
+    },
+  ]);
+  const [sizeVariants, setSizeVariants] = useState([
+    {
+      size: '',
+      price: '',
+      optionalDetails: [],
+      priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+      isDefault: true,
+      useDimensions: false,
+      length: '',
+      breadth: '',
+      height: '',
+      forAllColors: 'yes',
+      availableColors: [],
+    },
+  ]);
+  const [pricingSections, setPricingSections] = useState([
+    { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' },
+  ]);
+  const [basePriceRanges, setBasePriceRanges] = useState([
+    { retailPrice: '', wholesalePrice: '', thresholdQuantity: '' },
+  ]);
+  const [categories, setCategories] = useState([]);
+  const [mainCategories, setMainCategories] = useState([]);
+  const [selectedPath, setSelectedPath] = useState([]);
+  const [subCategoryOptions, setSubCategoryOptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showErrorModal, setShowErrorModal] = useState(false);
+  const [fetchError, setFetchError] = useState('');
 
-Now I created the model for storing the category that is nested categories into mongoDB and it is working fine.
-I have also fetched it on the frontend of AddProduct.jsx form with the help of axios.
+  const sizeOptions = ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 'XXXXL'];
 
-Now comes my main requirement:
-On the AddProduct.jsx form I have created the dropdown for selecting the main category. When user selects the main category then besides the another dropdown will be displayed that contains all the sub categories of the selected main category. Then user selects the subcategory and if that sub category of the main category again contains the sub categories then in the same dropdown the values of that sub category should be displayed and so on since it is nested categories.
+  const isBasePriceFilled = !!formData.price;
+  const isColorPriceFilled = colorVariants.some((v) => v.price && v.price !== '');
+  const isSizePriceFilled = sizeVariants.some((v) => v.price && v.price !== '');
+  const isPricingSectionFilled = pricingSections.some(
+    (s) => (s.price && s.price !== '') || (s.wholesalePrice && s.wholesalePrice !== '') || (s.thresholdQuantity && s.thresholdQuantity !== '')
+  );
 
-I will provide you:
-AddProduct.jsx  -- frontend for adding the product
-addcategoryController.js -- backend for fetching the categories from frontend that is AddProduct.jsx
-resinArts.categories.json -- I have previously added 2 categories in the mongoDB through AddCategory.jsx and its backend addCategoryController.js
-While fetching the categories from AddProduct.jsx I have consoled log the results which are returned from mongoDB and it is:
-Array(2)
-0
-: 
-categoryName
-: 
-"abc"
-image
-: 
-null
-subcategories
-: 
-Array(2)
-0
-: 
-categoryName
-: 
-"abc s"
-image
-: 
-null
-subcategories
-: 
-Array(1)
-0
-: 
-categoryName
-: 
-"abc s s"
-image
-: 
-null
-subcategories
-: 
-Array(1)
-0
-: 
-{_id: '688110bc5387fa46bb139d77', categoryName: 's', image: null, subcategories: Array(0)}
-length
-: 
-1
-[[Prototype]]
-: 
-Array(0)
-_id
-: 
-"688110bc5387fa46bb139d75"
-[[Prototype]]
-: 
-Object
-length
-: 
-1
-[[Prototype]]
-: 
-Array(0)
-_id
-: 
-"688110bc5387fa46bb139d73"
-[[Prototype]]
-: 
-Object
-1
-: 
-categoryName
-: 
-"x"
-image
-: 
-null
-subcategories
-: 
-Array(0)
-length
-: 
-0
-[[Prototype]]
-: 
-Array(0)
-_id
-: 
-"688110bc5387fa46bb139d79"
-[[Prototype]]
-: 
-Object
-length
-: 
-2
-[[Prototype]]
-: 
-Array(0)
-_id
-: 
-"688110bc5387fa46bb139d71"
-[[Prototype]]
-: 
-Object
-1
-: 
-categoryName
-: 
-"abcd"
-image
-: 
-"data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAPMAAADrCAIAAAAzETeeAAAAAXNSR0IArs4c6QAAAARnQU1BAACxjwv8YQUAAAAJcEhZcwAADsMAAA7DAcdvqGQAAAtjSURBVHhe7Zy7dhs3F0alPIvkwstPQD2BnCZV2nRUaTfpXKZLI5VWlzaVm196AusJvFKYfBf9kAakBpgL54LLwcHejWfNcEQQ2PzmADP0+fPz8xmAOn6x/wLoArNBJ5gNOsFs0Almg04wG3SC2aATzAadYDboBLNBJ5gNOsFs0Almg04wG3SC2aATzAad8MuDWJyfn9utmTAiQcDsACyWeBaM1CwwezZpPJ4CYzcCZk9Cjs1DMI4emD2IfJuHYEwNmO0TSug1HSuhDaWD2ZY1MqXpQ/ktFEXtZi/TRUKnldvyNNRr9lwzJHeUps8SihrNnu5BiZ2j+9NNpy6zJ466jj6p6sN2qcXsKcOsdoyrVFy52TUL3aWq3tBs9smBrMfpNpV0i06zcfok6rtIm9k4PQvF3aXK7PFxwukhVPabErNxej3K+lCD2SNDgtNzUdOZZZuN05FQ0LEF/8IXreMx0oEj3S6KIjMbp5NRbleXl9lonZJyw7uwzB7qTZyOTXE9X5LZaJ2Xsq6WZZiN03IoZSwKqLPRWhRD3T6S6FmQbjZaC6QIuUVXI2gtnN4BEjI6cs2W3GtwROwwCa1G0LoUegdl6GKbEolmo3VZyJRbnNloXSIC5ZZlNlqXizS5BZmN1qUjSm4pZqO1DuTILcJstNaEELnzm43W+pAgd2az0Vor2eUWNINsQGs15B3KnGZ3v8ForYzugCaL7Wxmo3Ul5JI7j9kp6y0QSAIBpNTZBLZisgxuBrOpQyokfU2S2my0rpbEckupRqBO4smd1GwCu3JSDnc6s9EaDMlqkmzVCFpXS5qhT2R21LkClE4MPVKYTR0CHglqkmzVCEBUoptNYEMvsWM7dWajNRyJKkNcs2PMDEAxAYVJmtkENnjEUyKi2QQ2LCCUNukym8CGXiKJEctsAhsWE0SeRJlNYMMIMfSIYjaBDStZr1CKzCaw4STBJQlvNoENQVgpUvTMJrBhImFVCWw2gQ0BWaNT3MwmsGEWAYVJMYMESE9IsylFIDiLpYqY2ZQisIBQ2gQzm8CGSCxTK1ZmE9iwmCDyMIMEnYQxm1IEorJAsCiZTSkCK1mvENUI6ASzQScBzKbIhgTM1Sx8ZlNkQxBWikQ1AjrBbNDJWrMpsiEZs2QLnNkU2RCQNTpRjYBOMBt0gtmgE8yGkpg+iVxltvc2TB8hOIulIrNBJ5gNOsFs0Almg04wG3SC2SCdZcsjwcxmyU8q+7ur8wNXN492b7mYj2G3Rllu9sQ3gMzs//fvk908O3vbUg/VyELaSXh+dbe3u8Xx+Pfnls7b367tltP+m0ex7V8MZi9k919LmKf/dnZLGo/f7u2WYXP750Fst/0/ftoNRZRq9n7/eHdzddXOzaurm7sp2dM5c/qpxeGK/fuvF3azBszMbxn2/AN2b3x2D9uNfc9eNtvbnX1phxPnbrYPg6f6PGztSa9sH+xuWTiN3Dj9MnJIILadB+zeUQrLbFMdXn68H50HPd1/vuxdATh97tP9x/5TC6XmxC6sGnHm+SPcf+wIur/7oz2VGqTn1FKpWuxS6+yXuuFwAd3tbp3K4JX7b66f7hJBu+7YPdy6FYp/aqHs7/6qWezS6mxTHfYWwzvPTjOUw1Vlt6x0D0+qmt1T5NXZbo9020edLYvrr8/fv1530+fi3Qe71YtzXT7bfvnk/YXrPx0PVqe2s1jcXi1+fDtw2Nss1didL+s07jLNfv84dngIt257W8Ye5bUp9o2mv5VUrOHzsecfsHtz4aWum1JufvUG1IlQ7zKS2X5bWgdbh8x7DC/VNA0wZVb/cXPdav7eEKcS22vk5vbhRFMyY9tywO4dRYnZnWrEGY8RCw9MkN9l6G/6LXH/VPuszYBKls348VG3T4vttX8UAW7blhywe0cp9U6NS2fNxCk49j9/2K0XNu8v7dYwi+8pPt5ctmeqxonvfuVz5Gl8qeZp/Pj9X8N39IfuqC/k6fPfBc6pVZjtLXwYod7uIk/kRKE+jcebj+3liDGtj2y2t82MuLNG03CcMJvSxe5qGP72ebOKyWK33sprSpHLRa8fZQn2/AN2bwb862rn4jmp0hiqLobovN4rQ/r/gtdWr172Kxm/re7ZAx/EfdXQi/yWmPY6L5z0adJhm3HA7h2l9Mze3121c/JlKP85HZTh+eaUIUaEr6eT0jTVfdXFr7+3fdo+eJl/+d4zv48l92eM/96Kk9eUHz+LWyRZbrb5WtitbLzcL/dvwEwoAPpwa/HZ3N+3v15TSvklTCmZ6r7x2CJYZp+n/iFCR+uXjJuQlFNmh7PVdBcynj7/keuB7QrEnhiphVYjfVoPFgBe1PVeWZ3Hlc8+vJtpxIcv353CNZPbOu+oLwvNEs3uK0JG61q3Pu0L7fkLgx2uv2Z32138rLkUMRRndm9tfaII8UK7u4blLhsuVSK3294d9c4zBHVRmNnenZCXSf2U2vr6N2eN6/7j1duzHC/PZTjLKyuyLqvbix4V0UtRZrtl5AtPny9fn97po/2zW++Rp9ffGNiX+b9GWJd1+dxGbJeizHaneadw6umLT//4t0H6MKXNhEvAKJncRmyPVWZ76y8mAO2WRC4+fe/c43OZWNqcJIfbgR8VkcNiqYrKbFMuT8jdA90VDiP38273cLt1H6PbvD67sXuedZPHWW/x3+rF7dZhc/U4qN0+68M7u/FGe6q7eW83WgydvuBRkRMtMbPutxdsel6Qh+n3B89X3kr0vlICbkzWyOPNeWsSPO3efiEsFqywtRHow73xOP9BR5VgdvnwqEgfgc2WPYnUCWL3stZsCuvctB8M2Gy/qBJ7zSxu7QzSwCQSIrFGLeps0El4sym1IQgrRQpgNuUHJGCuZlQjoBPMBp1EMZtSG1ayXqEwZlNqQ1QWCEY1AjqJZTYFCSwmiDzBzKYggUgsUytiNUJsQ0ZCmk1sw3q8QFwsFTNI0ElcsylIYBYBhQlsNgUJBGSNTtGrEWIbJhJWlfBmE9sggRQzSGIbTtKVZGVERjGb2IbspMhsA7ENIwQPbEMss4ltyEuizDYQ29BLjMA2RDSb2IaMpMtsA7ENHpEC2xDXbGIbcpE0sw3ENhyJF9iG6GZ324rc0EvYK3zqzAZoiB1wKcwmtsEjah3SkCizg7cbNBFDj2zVCLFdLWmGPp3Z1CRgSFCHNGSeQSI3RCKp2VTblZMssA2pM5uapFpSam3IUI0gd4Uk1tqQuc4+gtyKyTK4ecyO/X0F4SQQIFtmU5NUQvo6pCFnNYLc6smltUFKnX0EudWQdygzm937DUZuBfQOYrLANuTPbOTWR3atDSKqEeTWhAStDVLqbOTWgRCtDYJmkMhdOnK0Nggy24Dc5SJKa4Mssw3IXSLStDaIM9uA3GUhUGuDRLMNyF0KMrU2CDXbgNzyEau14VxIO4YYUll4s2tAstYG6WYbkFsaRYyI3GrkyFB/DfUvRKWUoCkgsxtGPCa801DWEBRjdkMpgaGP4nq+gGqkzVA/jsQJrKfEQCkssxvKuiwWTbldXaTZDfgdmxKj+kjBZhuQOxIKOrZssw0jY2DA77mo6c/izW7A7/Uo60MlZhvGB8aA3yPoiwY9Zjfg9ywUd5c2sxvw+yTqu0in2Q343Usl3aLZbMPJUTTU43dVvaHc7IYpI2rQ2hV1fvwqzD5S1RhP/LAGlQ7UZXaD+iGv/BrVUKPZDdP9NsjvJWUfZz31mt0wS4gGOT1WdONjU7vZRxZYciRNH8pvoSgw22eNQEfW96qQZpQLZg8SxK0sMKYGzJ6EfMsZRw/Mno0cyxm7ETA7AGlcZ6RmgdlRWO8647ISzAadFPb/jQBMBLNBJ5gNOsFs0Almg04wG3SC2aATzAadYDboBLNBJ5gNGjk7+z/YpArjo6bt5wAAAABJRU5ErkJggg=="
-subcategories
-: 
-Array(2)
-0
-: 
-categoryName
-: 
-"abc s"
-image
-: 
-null
-subcategories
-: 
-Array(1)
-0
-: 
-categoryName
-: 
-"abc s s"
-image
-: 
-null
-subcategories
-: 
-Array(1)
-0
-: 
-categoryName
-: 
-"s"
-image
-: 
-null
-subcategories
-: 
-Array(0)
-length
-: 
-0
-[[Prototype]]
-: 
-Array(0)
-_id
-: 
-"6881129c5387fa46bb139d81"
-[[Prototype]]
-: 
-Object
-length
-: 
-1
-[[Prototype]]
-: 
-Array(0)
-_id
-: 
-"6881129c5387fa46bb139d7f"
-[[Prototype]]
-: 
-Object
-length
-: 
-1
-[[Prototype]]
-: 
-Array(0)
-_id
-: 
-"6881129c5387fa46bb139d7d"
-[[Prototype]]
-: 
-Object
-1
-: 
-categoryName
-: 
-"x"
-image
-: 
-null
-subcategories
-: 
-Array(0)
-length
-: 
-0
-[[Prototype]]
-: 
-Array(0)
-_id
-: 
-"6881129c5387fa46bb139d83"
-[[Prototype]]
-: 
-Object
-length
-: 
-2
-[[Prototype]]
-: 
-Array(0)
-_id
-: 
-"6881129c5387fa46bb139d7b"
-[[Prototype]]
-: 
-Object
-length
-: 
-2
-[[Prototype]]
-: 
-Array(0)
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      console.log('Fetching categories from /api/category/all...');
+      const response = await axios.get('http://localhost:3000/api/category/all', { withCredentials: true });
+      const categoriesData = response.data;
+      console.log('Fetched categories:', JSON.stringify(categoriesData, null, 2));
 
+      if (!Array.isArray(categoriesData)) {
+        throw new Error('Invalid category data received');
+      }
 
+      setCategories(categoriesData);
 
-Add Product UI changes:
-Remove unit price from the bulk pricing section there's no need as we are already providing it. Add set as default option in size variants as well. This option should be by default selected for the first variant. There should some mechanism to store in mongodb that this variant is by default. When product is added show modal saying product added successfully and if there's some problem then show the error messages below the fields that were causing the problem but before that show modal saying product not added. In the size variants there should be dropdown for size, values should be : XS, S, M, L, XL, XXL, XXXl, XXXXl. Below it there should be link 'Enter dimensions'. And then there should be three textfields for length, breadth and height besides each other. Here's the validation even if one size variants has selected the dimensions then all the size variants should contain dimensions only and if any one contains the dropdwon then all size variants should contain dropdown only. There should not be any discrepancy. Add new product is touching the navbar see if you can fix it and test on the button as well are not visible please fix it.
+      const mainCats = categoriesData.filter((cat) => !cat.parentCategoryId && !cat.parent_category_id);
+      setMainCategories(mainCats);
+      console.log('Main categories set:', mainCats);
+
+      let allCategories = [...categoriesData];
+      categoriesData.forEach((cat) => {
+        if (cat.subcategories && Array.isArray(cat.subcategories)) {
+          allCategories = [...allCategories, ...cat.subcategories];
+        }
+      });
+      setCategories(allCategories);
+      console.log('All categories set:', allCategories);
+
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching categories:', error.message);
+      setFetchError('Failed to load categories. Please try again.');
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
+
+  const handleMainCategoryChange = useCallback((e) => {
+    const selectedId = e.target.value;
+    console.log('Main category selected:', selectedId);
+
+    if (!selectedId) {
+      setFormData((prev) => ({
+        ...prev,
+        category: '',
+        categoryPath: [],
+      }));
+      setSelectedPath([]);
+      setSubCategoryOptions([]);
+      setErrors((prev) => ({ ...prev, category: '' }));
+      console.log('Cleared category selection');
+      return;
+    }
+
+    const selectedCategory = categories.find((cat) => cat._id === selectedId);
+    if (!selectedCategory) {
+      console.error('Selected main category not found:', selectedId);
+      return;
+    }
+
+    setFormData((prev) => ({
+      ...prev,
+      category: selectedId,
+      categoryPath: [selectedId],
+    }));
+    setSelectedPath([selectedCategory]);
+
+    let subs = selectedCategory.subcategories || [];
+    if (subs.length === 0) {
+      subs = categories.filter((cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId);
+    }
+    setSubCategoryOptions(subs);
+    console.log('Subcategory options set:', subs);
+    setErrors((prev) => ({ ...prev, category: '' }));
+  }, [categories]);
+
+  const handleSubCategoryChange = useCallback((e) => {
+    const selectedId = e.target.value;
+    console.log('Subcategory selected:', selectedId);
+
+    if (!selectedId) {
+      const parentCategory = selectedPath[0];
+      setFormData((prev) => ({
+        ...prev,
+        category: parentCategory._id,
+        categoryPath: [parentCategory._id],
+      }));
+      setSelectedPath([parentCategory]);
+      let subs = parentCategory.subcategories || [];
+      if (subs.length === 0) {
+        subs = categories.filter((cat) => cat.parentCategoryId === parentCategory._id || cat.parent_category_id === parentCategory._id);
+      }
+      setSubCategoryOptions(subs);
+      console.log('Reset to main category subcategories:', subs);
+      return;
+    }
+
+    let selectedCategory = subCategoryOptions.find((cat) => cat._id === selectedId);
+    if (!selectedCategory) {
+      selectedCategory = categories.find((cat) => cat._id === selectedId);
+    }
+    if (!selectedCategory) {
+      console.error('Selected subcategory not found:', selectedId);
+      return;
+    }
+
+    const newSelectedPath = [...selectedPath, selectedCategory];
+    setFormData((prev) => ({
+      ...prev,
+      category: selectedId,
+      categoryPath: newSelectedPath.map((cat) => cat._id),
+    }));
+    setSelectedPath(newSelectedPath);
+
+    let subs = selectedCategory.subcategories || [];
+    if (subs.length === 0) {
+      subs = categories.filter((cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId);
+    }
+    setSubCategoryOptions(subs);
+    console.log('New subcategory options:', subs);
+  }, [categories, selectedPath, subCategoryOptions]);
+
+  const handleBreadcrumbClick = useCallback((index) => {
+    console.log('Breadcrumb clicked:', index);
+    const newSelectedPath = selectedPath.slice(0, index + 1);
+    setSelectedPath(newSelectedPath);
+    const lastCategory = newSelectedPath[newSelectedPath.length - 1];
+    let subs = lastCategory.subcategories || [];
+    if (subs.length === 0) {
+      subs = categories.filter((cat) => cat.parentCategoryId === lastCategory._id || cat.parent_category_id === lastCategory._id);
+    }
+    setSubCategoryOptions(subs);
+    setFormData((prev) => ({
+      ...prev,
+      category: lastCategory._id,
+      categoryPath: newSelectedPath.map((cat) => cat._id),
+    }));
+    console.log('Breadcrumb path updated:', newSelectedPath, 'Subcategories:', subs);
+  }, [categories, selectedPath]);
+
+  const getCategoryBreadCrumb = () => {
+    return selectedPath.map((cat, index) => (
+      <span key={cat._id}>
+        <button
+          type="button"
+          onClick={() => handleBreadcrumbClick(index)}
+          className="text-blue-600 hover:underline"
+        >
+          {cat.categoryName}
+        </button>
+        {index < selectedPath.length - 1 && <span className="mx-1">&gt;</span>}
+      </span>
+    ));
+  };
+
+  const renderCategoryDropdowns = () => {
+    return (
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div>
+          <label className="block text-sm font-semibold text-gray-700 mb-2">Main Category *</label>
+          <select
+            value={selectedPath[0]?._id || ''}
+            onChange={handleMainCategoryChange}
+            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+            required
+          >
+            <option value="">Select Main Category</option>
+            {mainCategories.map((category) => (
+              <option key={category._id} value={category._id}>
+                {category.categoryName}
+              </option>
+            ))}
+          </select>
+          {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
+        </div>
+        {subCategoryOptions.length > 0 && (
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-2">Subcategory</label>
+            <select
+              value={selectedPath[selectedPath.length - 1]?._id || ''}
+              onChange={handleSubCategoryChange}
+              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+            >
+              <option value="">Select Subcategory</option>
+              {subCategoryOptions.map((category) => (
+                <option key={category._id} value={category._id}>
+                  {category.categoryName}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+      </div>
+    );
+  };
+
+  const handleFormChange = (field, value) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+    }));
+    if (field === 'price') {
+      setBasePriceRanges((prev) => {
+        const updatedRanges = [...prev];
+        updatedRanges[0].retailPrice = value;
+        return updatedRanges;
+      });
+      if (value) {
+        // Clear other pricing fields
+        setColorVariants((prev) =>
+          prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+        );
+        setSizeVariants((prev) =>
+          prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+        );
+        setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      }
+    }
+    setErrors((prev) => ({ ...prev, [field]: '' }));
+  };
+
+  const handleBasePriceRangeChange = useCallback((index, field, value) => {
+    setBasePriceRanges((prev) => {
+      const updatedRanges = [...prev];
+      updatedRanges[index][field] = value;
+      return updatedRanges;
+    });
+  }, []);
+
+  const addBasePriceRange = () => {
+    setBasePriceRanges([...basePriceRanges, { retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+  };
+
+  const removeBasePriceRange = (index) => {
+    if (basePriceRanges.length > 1) {
+      setBasePriceRanges(basePriceRanges.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleDetailChange = (index, field, value) => {
+    const updatedDetails = [...details];
+    updatedDetails[index][field] = value;
+    setDetails(updatedDetails);
+  };
+
+  const addMoreDetails = () => {
+    setDetails([...details, { name: '', value: '' }]);
+  };
+
+  const removeDetail = (index) => {
+    if (details.length > 1) {
+      setDetails(details.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleColorVariantChange = (variantIndex, field, value) => {
+    const updatedVariants = [...colorVariants];
+    updatedVariants[variantIndex][field] = value;
+    if (field === 'isDefault' && value) {
+      updatedVariants.forEach((variant, index) => {
+        variant.isDefault = index === variantIndex;
+      });
+    }
+    if (field === 'price' && value === '0') {
+      updatedVariants[variantIndex][field] = '';
+    }
+    if (field === 'forAllSizes' && value === 'yes') {
+      updatedVariants[variantIndex].availableSizes = [];
+    }
+    if (field === 'price' && value) {
+      updatedVariants[variantIndex].priceRanges[0].retailPrice = value;
+      // Clear other pricing fields
+      setFormData((prev) => ({ ...prev, price: '' }));
+      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setSizeVariants((prev) =>
+        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+      );
+      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
+    }
+    setColorVariants(updatedVariants);
+    setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: '' }));
+  };
+
+  const handleColorAvailableSizesChange = (variantIndex, size) => {
+    const updatedVariants = [...colorVariants];
+    const currentSizes = updatedVariants[variantIndex].availableSizes;
+    if (currentSizes.includes(size)) {
+      updatedVariants[variantIndex].availableSizes = currentSizes.filter((s) => s !== size);
+    } else {
+      updatedVariants[variantIndex].availableSizes = [...currentSizes, size];
+    }
+    setColorVariants(updatedVariants);
+    setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: '' }));
+  };
+
+  const handleColorOptionalDetailChange = (variantIndex, detailIndex, field, value) => {
+    const updatedVariants = [...colorVariants];
+    updatedVariants[variantIndex].optionalDetails[detailIndex][field] = value;
+    setColorVariants(updatedVariants);
+  };
+
+  const addColorOptionalDetail = (variantIndex) => {
+    const updatedVariants = [...colorVariants];
+    updatedVariants[variantIndex].optionalDetails.push({ name: '', value: '' });
+    setColorVariants(updatedVariants);
+  };
+
+  const removeColorOptionalDetail = (variantIndex, detailIndex) => {
+    const updatedVariants = [...colorVariants];
+    updatedVariants[variantIndex].optionalDetails = updatedVariants[variantIndex].optionalDetails.filter((_, i) => i !== detailIndex);
+    setColorVariants(updatedVariants);
+  };
+
+  const handleColorPriceRangeChange = useCallback((variantIndex, rangeIndex, field, value) => {
+    setColorVariants((prev) => {
+      const updatedVariants = [...prev];
+      updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value;
+      return updatedVariants;
+    });
+  }, []);
+
+  const addColorPriceRange = (variantIndex) => {
+    const updatedVariants = [...colorVariants];
+    updatedVariants[variantIndex].priceRanges.push({ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' });
+    setColorVariants(updatedVariants);
+  };
+
+  const removeColorPriceRange = (variantIndex, rangeIndex) => {
+    const updatedVariants = [...colorVariants];
+    if (updatedVariants[variantIndex].priceRanges.length > 1) {
+      updatedVariants[variantIndex].priceRanges = updatedVariants[variantIndex].priceRanges.filter((_, i) => i !== rangeIndex);
+      setColorVariants(updatedVariants);
+    }
+  };
+
+  const addColorVariant = () => {
+    setColorVariants([
+      ...colorVariants,
+      {
+        color: '',
+        image: null,
+        price: '',
+        isDefault: false,
+        optionalDetails: [],
+        priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+        forAllSizes: 'yes',
+        availableSizes: [],
+      },
+    ]);
+  };
+
+  const removeColorVariant = (index) => {
+    if (colorVariants.length > 1) {
+      setColorVariants(colorVariants.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleImageUpload = (variantIndex, event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const updatedVariants = [...colorVariants];
+      updatedVariants[variantIndex].image = file;
+      setColorVariants(updatedVariants);
+    }
+  };
+
+  const handleSizeVariantChange = (variantIndex, field, value) => {
+    const updatedVariants = [...sizeVariants];
+    updatedVariants[variantIndex][field] = value;
+    if (field === 'isDefault' && value) {
+      updatedVariants.forEach((variant, index) => {
+        variant.isDefault = index === variantIndex;
+      });
+    }
+    if (field === 'price' && value === '0') {
+      updatedVariants[variantIndex][field] = '';
+    }
+    if (field === 'forAllColors' && value === 'yes') {
+      updatedVariants[variantIndex].availableColors = [];
+    }
+    if (field === 'price' && value) {
+      updatedVariants[variantIndex].priceRanges[0].retailPrice = value;
+      // Clear other pricing fields
+      setFormData((prev) => ({ ...prev, price: '' }));
+      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setColorVariants((prev) =>
+        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+      );
+      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
+    }
+    setSizeVariants(updatedVariants);
+    setErrors((prev) => ({ ...prev, [`size_${variantIndex}`]: '' }));
+  };
+
+  const handleSizeAvailableColorsChange = (variantIndex, color) => {
+    const updatedVariants = [...sizeVariants];
+    const currentColors = updatedVariants[variantIndex].availableColors;
+    if (currentColors.includes(color)) {
+      updatedVariants[variantIndex].availableColors = currentColors.filter((c) => c !== color);
+    } else {
+      updatedVariants[variantIndex].availableColors = [...currentColors, color];
+    }
+    setSizeVariants(updatedVariants);
+    setErrors((prev) => ({ ...prev, [`size_${variantIndex}`]: '' }));
+  };
+
+  const toggleDimensions = (variantIndex) => {
+    const updatedVariants = [...sizeVariants];
+    updatedVariants[variantIndex].useDimensions = !updatedVariants[variantIndex].useDimensions;
+    if (!updatedVariants[variantIndex].useDimensions) {
+      updatedVariants[variantIndex].length = '';
+      updatedVariants[variantIndex].breadth = '';
+      updatedVariants[variantIndex].height = '';
+      updatedVariants[variantIndex].size = '';
+    } else {
+      updatedVariants[variantIndex].size = '';
+    }
+    setSizeVariants(updatedVariants);
+  };
+
+  const handleSizePriceRangeChange = useCallback((variantIndex, rangeIndex, field, value) => {
+    setSizeVariants((prev) => {
+      const updatedVariants = [...prev];
+      updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value;
+      return updatedVariants;
+    });
+  }, []);
+
+  const addSizePriceRange = (variantIndex) => {
+    const updatedVariants = [...sizeVariants];
+    updatedVariants[variantIndex].priceRanges.push({ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' });
+    setSizeVariants(updatedVariants);
+  };
+
+  const removeSizePriceRange = (variantIndex, rangeIndex) => {
+    const updatedVariants = [...sizeVariants];
+    if (updatedVariants[variantIndex].priceRanges.length > 1) {
+      updatedVariants[variantIndex].priceRanges = updatedVariants[variantIndex].priceRanges.filter((_, i) => i !== rangeIndex);
+      setSizeVariants(updatedVariants);
+    }
+  };
+
+  const handleSizeOptionalDetailChange = (variantIndex, detailIndex, field, value) => {
+    const updatedVariants = [...sizeVariants];
+    updatedVariants[variantIndex].optionalDetails[detailIndex][field] = value;
+    setSizeVariants(updatedVariants);
+  };
+
+  const addSizeOptionalDetail = (variantIndex) => {
+    const updatedVariants = [...sizeVariants];
+    updatedVariants[variantIndex].optionalDetails.push({ name: '', value: '' });
+    setSizeVariants(updatedVariants);
+  };
+
+  const removeSizeOptionalDetail = (variantIndex, detailIndex) => {
+    const updatedVariants = [...sizeVariants];
+    updatedVariants[variantIndex].optionalDetails = updatedVariants[variantIndex].optionalDetails.filter((_, i) => i !== detailIndex);
+    setSizeVariants(updatedVariants);
+  };
+
+  const addSizeVariant = () => {
+    setSizeVariants([
+      ...sizeVariants,
+      {
+        size: '',
+        price: '',
+        optionalDetails: [],
+        priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+        isDefault: false,
+        useDimensions: false,
+        length: '',
+        breadth: '',
+        height: '',
+        forAllColors: 'yes',
+        availableColors: [],
+      },
+    ]);
+  };
+
+  const removeSizeVariant = (index) => {
+    if (sizeVariants.length > 1) {
+      setSizeVariants(sizeVariants.filter((_, i) => i !== index));
+    }
+  };
+
+  const handlePricingSectionChange = (index, field, value) => {
+    const updatedPricing = [...pricingSections];
+    updatedPricing[index][field] = value;
+    if (field === 'price' && value === '0') {
+      updatedPricing[index][field] = '';
+    }
+    if (['price', 'wholesalePrice', 'thresholdQuantity'].includes(field) && value) {
+      // Clear other pricing fields
+      setFormData((prev) => ({ ...prev, price: '' }));
+      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setColorVariants((prev) =>
+        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+      );
+      setSizeVariants((prev) =>
+        prev.map((v) => ({ ...v, price: '', priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }] }))
+      );
+    }
+    setPricingSections(updatedPricing);
+  };
+
+  const addPricingSection = () => {
+    setPricingSections([
+      ...pricingSections,
+      { color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' },
+    ]);
+  };
+
+  const removePricingSection = (index) => {
+    if (pricingSections.length > 1) {
+      setPricingSections(pricingSections.filter((_, i) => i !== index));
+    }
+  };
+
+  const isVariantEmpty = (variant, type) => {
+    if (type === 'color') {
+      return (
+        !variant.color &&
+        !variant.image &&
+        !variant.price &&
+        !variant.isDefault &&
+        variant.optionalDetails.every((detail) => !detail.name && !detail.value) &&
+        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity) &&
+        !variant.forAllSizes &&
+        !variant.availableSizes.length
+      );
+    } else if (type === 'size') {
+      return (
+        !variant.size &&
+        !variant.price &&
+        !variant.isDefault &&
+        !variant.length &&
+        !variant.breadth &&
+        !variant.height &&
+        !variant.availableColors.length &&
+        variant.optionalDetails.every((detail) => !detail.name && !detail.value) &&
+        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity)
+      );
+    } else if (type === 'pricingSection') {
+      return (
+        !variant.color &&
+        !variant.size &&
+        !variant.price &&
+        !variant.wholesalePrice &&
+        !variant.thresholdQuantity
+      );
+    } else if (type === 'basePriceRange') {
+      return !variant.retailPrice && !variant.wholesalePrice && !variant.thresholdQuantity;
+    } else if (type === 'detail') {
+      return !variant.name && !variant.value;
+    }
+    return true;
+  };
+
+  const validateSizeVariants = () => {
+    const useDimensions = sizeVariants.some((variant) => variant.useDimensions);
+    const useDropdown = sizeVariants.some((variant) => !variant.useDimensions && variant.size);
+
+    if (useDimensions && useDropdown) {
+      return 'All size variants must use either the size dropdown or dimensions, not both.';
+    }
+
+    const errors = {};
+    sizeVariants.forEach((variant, index) => {
+      if (useDimensions) {
+        if (!variant.length || !variant.breadth || !variant.height) {
+          errors[`size_${index}`] = 'Length, Breadth, and Height are required for all size variants.';
+        }
+      } else if (!variant.size) {
+        errors[`size_${index}`] = 'Size is required for all size variants.';
+      }
+      if (variant.forAllColors === 'no' && !variant.availableColors.length) {
+        errors[`size_${index}`] = 'At least one color must be selected if not available for all colors.';
+      }
+    });
+
+    colorVariants.forEach((variant, index) => {
+      if (variant.forAllSizes === 'no' && !variant.availableSizes.length) {
+        errors[`color_${index}`] = 'At least one size must be selected if not available for all sizes.';
+      }
+    });
+
+    return Object.keys(errors).length > 0 ? errors : null;
+  };
+
+  const validatePriceRanges = () => {
+    const errors = {};
+    if (isBasePriceFilled && basePriceRanges.length > 0) {
+      const firstRange = basePriceRanges[0];
+      if (parseFloat(firstRange.retailPrice) !== parseFloat(formData.price)) {
+        errors.base_price = 'Base price must equal the retail price in the first base price range.';
+      }
+      if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+        errors.base_price = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first base price range.';
+      }
+    }
+    basePriceRanges.forEach((range, index) => {
+      if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+        errors[`base_price_${index}`] = 'Retail price cannot be greater than wholesale price.';
+      }
+    });
+    colorVariants.forEach((variant, index) => {
+      if (variant.price && variant.priceRanges.length > 0) {
+        const firstRange = variant.priceRanges[0];
+        if (parseFloat(firstRange.retailPrice) !== parseFloat(variant.price)) {
+          errors[`color_price_${index}`] = 'Color variant price must equal the retail price in the first price range.';
+        }
+        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+          errors[`color_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
+        }
+      }
+      variant.priceRanges.forEach((range, rangeIndex) => {
+        if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+          errors[`color_price_${index}_${rangeIndex}`] = 'Retail price cannot be greater than wholesale price.';
+        }
+      });
+    });
+    sizeVariants.forEach((variant, index) => {
+      if (variant.price && variant.priceRanges.length > 0) {
+        const firstRange = variant.priceRanges[0];
+        if (parseFloat(firstRange.retailPrice) !== parseFloat(variant.price)) {
+          errors[`size_price_${index}`] = 'Size variant price must equal the retail price in the first price range.';
+        }
+        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
+          errors[`size_price_${index}`] = 'Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set.';
+        }
+      }
+      variant.priceRanges.forEach((range, rangeIndex) => {
+        if (range.retailPrice && range.wholesalePrice && parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+          errors[`size_price_${index}_${rangeIndex}`] = 'Retail price cannot be greater than wholesale price.';
+        }
+      });
+    });
+    return Object.keys(errors).length > 0 ? errors : null;
+  };
+
+  const handleSubmit = async () => {
+    setErrors({});
+
+    const newErrors = {};
+    if (!formData.name) newErrors.name = 'Product name is required';
+    if (!formData.stock || isNaN(formData.stock) || formData.stock < 0) newErrors.stock = 'Valid stock quantity is required';
+    if (!formData.category) newErrors.category = 'Category is required';
+    if (!colorVariants[0].color) newErrors.color_0 = 'At least one color variant is required';
+    if (!isBasePriceFilled && !isColorPriceFilled && !isSizePriceFilled && !isPricingSectionFilled) {
+      newErrors.price = 'Base price, variant prices, or pricing combinations are required';
+    }
+
+    const sizeErrors = validateSizeVariants();
+    if (sizeErrors) {
+      if (typeof sizeErrors === 'string') {
+        setErrors({ size: sizeErrors });
+        setShowErrorModal(true);
+        return;
+      } else {
+        Object.assign(newErrors, sizeErrors);
+      }
+    }
+
+    const priceRangeErrors = validatePriceRanges();
+    if (priceRangeErrors) {
+      Object.assign(newErrors, priceRangeErrors);
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
+      setShowErrorModal(true);
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const formDataToSend = new FormData();
+      formDataToSend.append('name', formData.name);
+      formDataToSend.append('price', formData.price);
+      formDataToSend.append('stock', formData.stock);
+      formDataToSend.append('category', formData.category);
+      formDataToSend.append('categoryPath', JSON.stringify(formData.categoryPath));
+
+      const filteredDetails = details.filter((detail) => !isVariantEmpty(detail, 'detail'));
+      formDataToSend.append('details', JSON.stringify(filteredDetails));
+
+      const filteredColorVariants = colorVariants.filter((variant) => !isVariantEmpty(variant, 'color'));
+      filteredColorVariants.forEach((variant, index) => {
+        if (variant.image) {
+          formDataToSend.append('colorImages', variant.image);
+        }
+      });
+      formDataToSend.append('colorVariants', JSON.stringify(filteredColorVariants.map(({ image, ...rest }) => rest)));
+
+      const filteredSizeVariants = sizeVariants.filter((variant) => !isVariantEmpty(variant, 'size'));
+      formDataToSend.append('sizeVariants', JSON.stringify(filteredSizeVariants));
+
+      const filteredPricingSections = pricingSections.filter((section) => !isVariantEmpty(section, 'pricingSection'));
+      formDataToSend.append('pricingSections', JSON.stringify(filteredPricingSections));
+
+      const filteredBasePriceRanges = basePriceRanges.filter((range) => !isVariantEmpty(range, 'basePriceRange'));
+      formDataToSend.append('basePriceRanges', JSON.stringify(filteredBasePriceRanges));
+
+      await axios.post('http://localhost:3000/api/product/add', formDataToSend, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true,
+      });
+      setIsSubmitting(false);
+      setShowSuccessModal(true);
+
+      setFormData({ name: '', price: '', stock: '', category: '', categoryPath: [] });
+      setDetails([{ name: '', value: '' }, { name: '', value: '' }, { name: '', value: '' }]);
+      setColorVariants([{ color: '', image: null, price: '', isDefault: true, optionalDetails: [], priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }], forAllSizes: 'yes', availableSizes: [] }]);
+      setSizeVariants([
+        {
+          size: '',
+          price: '',
+          optionalDetails: [],
+          priceRanges: [{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }],
+          isDefault: true,
+          useDimensions: false,
+          length: '',
+          breadth: '',
+          height: '',
+          forAllColors: 'yes',
+          availableColors: [],
+        },
+      ]);
+      setPricingSections([{ color: '', size: '', price: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setBasePriceRanges([{ retailPrice: '', wholesalePrice: '', thresholdQuantity: '' }]);
+      setSelectedPath([]);
+      setSubCategoryOptions([]);
+    } catch (error) {
+      console.error('Error adding product:', error);
+      setIsSubmitting(false);
+      setShowErrorModal(true);
+      setErrors((prev) => ({
+        ...prev,
+        server: error.response?.data?.error || 'Failed to add product. Please try again.',
+      }));
+    }
+  };
+
+  const SuccessModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-xl">
+        <h3 className="text-lg font-semibold text-green-600 mb-4">Product Added Successfully!</h3>
+        <p className="text-gray-600 mb-6">Your product has been added to the inventory.</p>
+        <button
+          onClick={() => setShowSuccessModal(false)}
+          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+
+  const ErrorModal = () => (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-6 rounded-lg shadow-xl">
+        <h3 className="text-lg font-semibold text-red-600 mb-4">Product Not Added</h3>
+        <p className="text-gray-600 mb-6">Please check the errors below and try again.</p>
+        <ul className="text-gray-600 mb-6">
+          {Object.entries(errors).map(([key, value]) => (
+            <li key={key} className="text-sm">{value}</li>
+          ))}
+        </ul>
+        <button
+          onClick={() => setShowErrorModal(false)}
+          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
+        >
+          Close
+        </button>
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="max-w-7xl mx-auto p-6">
+      {loading && (
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+            <p className="text-gray-600">Loading...</p>
+          </div>
+        </div>
+      )}
+      {fetchError && (
+        <div className="text-center py-8">
+          <p className="text-red-500">{fetchError}</p>
+          <button
+            onClick={fetchCategories}
+            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+          >
+            Retry
+          </button>
+        </div>
+      )}
+      {!loading && !fetchError && (
+        <div>
+          {isSubmitting && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="text-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+                <p className="text-white text-lg">Adding your product...</p>
+              </div>
+            </div>
+          )}
+          {showSuccessModal && <SuccessModal />}
+          {showErrorModal && <ErrorModal />}
+          <div className="mb-10">
+            <h1 className="text-3xl font-extrabold text-gray-800 mb-3 tracking-tight">Add New Product</h1>
+            <p className="text-gray-500 text-base">Complete the form below to add a new product to your inventory</p>
+          </div>
+
+          <div className="space-y-10">
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Basic Information</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Product Name *</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => handleFormChange('name', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                    placeholder="Enter product name"
+                    required
+                  />
+                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+                </div>
+                {!isColorPriceFilled && !isSizePriceFilled && !isPricingSectionFilled && (
+                  <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
+                    <input
+                      type="number"
+                      value={formData.price}
+                      onChange={(e) => handleFormChange('price', e.target.value === '0' ? '' : e.target.value)}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                      placeholder="0.00"
+                      min="0"
+                      step="0.01"
+                    />
+                    {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
+                  </div>
+                )}
+                <div>
+                  <label className="block text-sm font-semibold text-gray-700 mb-2">Stock *</label>
+                  <input
+                    type="number"
+                    value={formData.stock}
+                    onChange={(e) => handleFormChange('stock', e.target.value)}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                    placeholder="0"
+                    min="0"
+                    required
+                  />
+                  {errors.stock && <p className="text-red-500 text-xs mt-1">{errors.stock}</p>}
+                </div>
+              </div>
+              {isBasePriceFilled && (
+                <PriceRangeSection
+                  ranges={basePriceRanges}
+                  onRangeChange={handleBasePriceRangeChange}
+                  onAddRange={addBasePriceRange}
+                  onRemoveRange={removeBasePriceRange}
+                  title="Price Ranges"
+                  isRequired={true}
+                  isRetailPriceDisabled={true}
+                />
+              )}
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Category Selection</h2>
+              {categories.length > 0 ? (
+                <div className="space-y-4">
+                  {renderCategoryDropdowns()}
+                  {selectedPath.length > 0 && (
+                    <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
+                      <p className="text-sm font-semibold text-blue-800 mb-1">Selected Category Path:</p>
+                      <p className="text-blue-600 font-semibold text-lg">{getCategoryBreadCrumb()}</p>
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-gray-500">
+                  <p>No categories available. Please add categories first.</p>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Product Details</h2>
+              <div className="space-y-4">
+                {details.map((detail, index) => (
+                  <div key={index} className="flex flex-col sm:flex-row gap-4 items-start">
+                    <div className="flex-1 w-full">
+                      <input
+                        type="text"
+                        value={detail.name}
+                        onChange={(e) => handleDetailChange(index, 'name', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        placeholder="Detail name (e.g., Material)"
+                      />
+                    </div>
+                    <div className="flex-1 w-full">
+                      <input
+                        type="text"
+                        value={detail.value}
+                        onChange={(e) => handleDetailChange(index, 'value', e.target.value)}
+                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        placeholder="e.g., Cotton"
+                      />
+                    </div>
+                    {details.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={() => removeDetail(index)}
+                        className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addMoreDetails}
+                className="mt-4 flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
+              >
+                <Plus size={16} />
+                Add more details
+              </button>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Color Variants</h2>
+              <div className="space-y-6">
+                {colorVariants.map((variant, variantIndex) => (
+                  <div key={variantIndex} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                      <h3 className="text-lg font-semibold text-gray-800">Color Variant {variantIndex + 1}</h3>
+                      {colorVariants.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeColorVariant(variantIndex)}
+                          className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Color *</label>
+                        <input
+                          type="text"
+                          value={variant.color}
+                          onChange={(e) => handleColorVariantChange(variantIndex, 'color', e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                          placeholder="e.g., Red, Blue, #FF5733"
+                          required
+                        />
+                        {errors.color_0 && <p className="text-red-500 text-xs mt-1">{errors.color_0}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Image</label>
+                        <input
+                          type="file"
+                          onChange={(e) => handleImageUpload(variantIndex, e)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                          accept="image/*"
+                        />
+                      </div>
+                      {!isBasePriceFilled && !isSizePriceFilled && !isPricingSectionFilled && (
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
+                          <input
+                            type="number"
+                            value={variant.price}
+                            onChange={(e) => handleColorVariantChange(variantIndex, 'price', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {!isSizePriceFilled && !isPricingSectionFilled && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">For All Sizes?</label>
+                        <select
+                          value={variant.forAllSizes}
+                          onChange={(e) => handleColorVariantChange(variantIndex, 'forAllSizes', e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </div>
+                    )}
+                    {variant.forAllSizes === 'no' && !isSizePriceFilled && !isPricingSectionFilled && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Select Sizes *</label>
+                        <div className="relative">
+                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white space-y-2">
+                            {sizeOptions.map((size, index) => (
+                              <div key={index} className="flex items-center">
+                                <label className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={variant.availableSizes.includes(size)}
+                                    onChange={() => handleColorAvailableSizesChange(variantIndex, size)}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                  />
+                                  <span>{size}</span>
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        {errors[`color_${variantIndex}`] && <p className="text-red-500 text-xs mt-1">{errors[`color_${variantIndex}`]}</p>}
+                      </div>
+                    )}
+                    <div className="mb-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={variant.isDefault}
+                          onChange={(e) => handleColorVariantChange(variantIndex, 'isDefault', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
+                      </label>
+                    </div>
+                    {variant.price && !isBasePriceFilled && !isSizePriceFilled && !isPricingSectionFilled && (
+                      <PriceRangeSection
+                        ranges={variant.priceRanges}
+                        onRangeChange={(rangeIndex, field, value) =>
+                          handleColorPriceRangeChange(variantIndex, rangeIndex, field, value)
+                        }
+                        onAddRange={() => addColorPriceRange(variantIndex)}
+                        onRemoveRange={(rangeIndex) => removeColorPriceRange(variantIndex, rangeIndex)}
+                        title={`Price Range for ${variant.color || 'Color ' + (variantIndex + 1)}`}
+                        isRequired={true}
+                        isRetailPriceDisabled={true}
+                      />
+                    )}
+                    {errors[`color_price_${variantIndex}`] && (
+                      <p className="text-red-500 text-xs mt-1">{errors[`color_price_${variantIndex}`]}</p>
+                    )}
+                    {variant.optionalDetails.length > 0 && (
+                      <div className="mb-4 mt-6">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Optional Details</h4>
+                        <div className="space-y-2">
+                          {variant.optionalDetails.map((detail, detailIndex) => (
+                            <div key={detailIndex} className="flex flex-col sm:flex-row gap-2 items-start">
+                              <input
+                                type="text"
+                                value={detail.name}
+                                onChange={(e) => handleColorOptionalDetailChange(variantIndex, detailIndex, 'name', e.target.value)}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                placeholder="Name"
+                              />
+                              <input
+                                type="text"
+                                value={detail.value}
+                                onChange={(e) => handleColorOptionalDetailChange(variantIndex, detailIndex, 'value', e.target.value)}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                placeholder="Value"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeColorOptionalDetail(variantIndex, detailIndex)}
+                                className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => addColorOptionalDetail(variantIndex)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors duration-200"
+                    >
+                      <Plus size={14} />
+                      Add optional details
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addColorVariant}
+                className="mt-6 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                <Plus size={16} />
+                Add Color Variant
+              </button>
+            </div>
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Size Variants</h2>
+              {errors.size && <p className="text-red-500 text-xs mt-1">{errors.size}</p>}
+              <div className="space-y-6">
+                {sizeVariants.map((variant, variantIndex) => (
+                  <div key={variantIndex} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                      <h3 className="text-lg font-semibold text-gray-800">Size Variant {variantIndex + 1}</h3>
+                      {sizeVariants.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeSizeVariant(variantIndex)}
+                          className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Size *</label>
+                        {!variant.useDimensions ? (
+                          <div>
+                            <select
+                              value={variant.size}
+                              onChange={(e) => handleSizeVariantChange(variantIndex, 'size', e.target.value)}
+                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                              required
+                            >
+                              <option value="">Select Size</option>
+                              {sizeOptions.map((size) => (
+                                <option key={size} value={size}>
+                                  {size}
+                                </option>
+                              ))}
+                            </select>
+                            <button
+                              type="button"
+                              onClick={() => toggleDimensions(variantIndex)}
+                              className="text-blue-600 hover:text-blue-800 text-sm mt-2"
+                            >
+                              Enter dimensions
+                            </button>
+                          </div>
+                        ) : (
+                          <div>
+                            <div className="grid grid-cols-3 gap-2">
+                              <input
+                                type="number"
+                                value={variant.length}
+                                onChange={(e) => handleSizeVariantChange(variantIndex, 'length', e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                placeholder="Length"
+                                min="0"
+                                step="0.01"
+                              />
+                              <input
+                                type="number"
+                                value={variant.breadth}
+                                onChange={(e) => handleSizeVariantChange(variantIndex, 'breadth', e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                placeholder="Breadth"
+                                min="0"
+                                step="0.01"
+                              />
+                              <input
+                                type="number"
+                                value={variant.height}
+                                onChange={(e) => handleSizeVariantChange(variantIndex, 'height', e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                placeholder="Height"
+                                min="0"
+                                step="0.01"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() => toggleDimensions(variantIndex)}
+                              className="text-blue-600 hover:text-blue-800 text-sm mt-2"
+                            >
+                              Use size dropdown
+                            </button>
+                          </div>
+                        )}
+                        {errors[`size_${variantIndex}`] && (
+                          <p className="text-red-500 text-xs mt-1">{errors[`size_${variantIndex}`]}</p>
+                        )}
+                      </div>
+                      {!isBasePriceFilled && !isColorPriceFilled && !isPricingSectionFilled && (
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
+                          <input
+                            type="number"
+                            value={variant.price}
+                            onChange={(e) => handleSizeVariantChange(variantIndex, 'price', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                      )}
+                    </div>
+                    {!isColorPriceFilled && !isPricingSectionFilled && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">For All Colors?</label>
+                        <select
+                          value={variant.forAllColors}
+                          onChange={(e) => handleSizeVariantChange(variantIndex, 'forAllColors', e.target.value)}
+                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        >
+                          <option value="yes">Yes</option>
+                          <option value="no">No</option>
+                        </select>
+                      </div>
+                    )}
+                    {variant.forAllColors === 'no' && !isColorPriceFilled && !isPricingSectionFilled && (
+                      <div className="mb-4">
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">Select Colors *</label>
+                        <div className="relative">
+                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white space-y-2">
+                            {colorVariants.map((colorVariant, index) => (
+                              <div key={index} className="flex items-center">
+                                <label className="flex items-center space-x-2">
+                                  <input
+                                    type="checkbox"
+                                    checked={variant.availableColors.includes(colorVariant.color)}
+                                    onChange={() => handleSizeAvailableColorsChange(variantIndex, colorVariant.color)}
+                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                                    disabled={!colorVariant.color}
+                                  />
+                                  <span>{colorVariant.color || `Color ${index + 1}`}</span>
+                                </label>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    <div className="mb-4">
+                      <label className="flex items-center">
+                        <input
+                          type="checkbox"
+                          checked={variant.isDefault}
+                          onChange={(e) => handleSizeVariantChange(variantIndex, 'isDefault', e.target.checked)}
+                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
+                        />
+                        <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
+                      </label>
+                    </div>
+                    {variant.price && !isBasePriceFilled && !isColorPriceFilled && !isPricingSectionFilled && (
+                      <PriceRangeSection
+                        ranges={variant.priceRanges}
+                        onRangeChange={(rangeIndex, field, value) =>
+                          handleSizePriceRangeChange(variantIndex, rangeIndex, field, value)
+                        }
+                        onAddRange={() => addSizePriceRange(variantIndex)}
+                        onRemoveRange={(rangeIndex) => removeSizePriceRange(variantIndex, rangeIndex)}
+                        title={`Price Range for ${variant.size || 'Size ' + (variantIndex + 1)}`}
+                        isRequired={true}
+                        isRetailPriceDisabled={true}
+                      />
+                    )}
+                    {errors[`size_price_${variantIndex}`] && (
+                      <p className="text-red-500 text-xs mt-1">{errors[`size_price_${variantIndex}`]}</p>
+                    )}
+                    {variant.optionalDetails.length > 0 && (
+                      <div className="mt-6">
+                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Optional Details</h4>
+                        <div className="space-y-2">
+                          {variant.optionalDetails.map((detail, detailIndex) => (
+                            <div key={detailIndex} className="flex flex-col sm:flex-row gap-2 items-start">
+                              <input
+                                type="text"
+                                value={detail.name}
+                                onChange={(e) => handleSizeOptionalDetailChange(variantIndex, detailIndex, 'name', e.target.value)}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                placeholder="Name"
+                              />
+                              <input
+                                type="text"
+                                value={detail.value}
+                                onChange={(e) => handleSizeOptionalDetailChange(variantIndex, detailIndex, 'value', e.target.value)}
+                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                                placeholder="Value"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeSizeOptionalDetail(variantIndex, detailIndex)}
+                                className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => addSizeOptionalDetail(variantIndex)}
+                      className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors duration-200"
+                    >
+                      <Plus size={16} />
+                      Add optional details
+                    </button>
+                  </div>
+                ))}
+              </div>
+              <button
+                type="button"
+                onClick={addSizeVariant}
+                className="mt-6 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+              >
+                <Plus size={16} />
+                Add Size Variant
+              </button>
+            </div>
+
+            {!isBasePriceFilled && !isColorPriceFilled && !isSizePriceFilled && (
+              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+                <h2 className="text-2xl font-semibold text-gray-800 mb-6">Pricing Combinations</h2>
+                <div className="space-y-6">
+                  {pricingSections.map((section, index) => (
+                    <div key={index} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
+                        <h3 className="text-lg font-semibold text-gray-800">Pricing Combination {index + 1}</h3>
+                        {pricingSections.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => removePricingSection(index)}
+                            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                          >
+                            <Trash2 size={16} />
+                          </button>
+                        )}
+                      </div>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4 mb-4">
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Color</label>
+                          <select
+                            value={section.color}
+                            onChange={(e) => handlePricingSectionChange(index, 'color', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                          >
+                            <option value="">Select Color</option>
+                            {colorVariants.map((variant, i) => (
+                              <option key={i} value={variant.color}>
+                                {variant.color || 'Color ' + (i + 1)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Size</label>
+                          <select
+                            value={section.size}
+                            onChange={(e) => handlePricingSectionChange(index, 'size', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                          >
+                            <option value="">Select Size</option>
+                            {sizeVariants.map((variant, i) => (
+                              <option key={i} value={variant.size || `${variant.length}x${variant.breadth}x${variant.height}`}>
+                                {variant.size || `${variant.length}x${variant.breadth}x${variant.height}` || 'Size ' + (i + 1)}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Retail Price</label>
+                          <input
+                            type="number"
+                            value={section.price}
+                            onChange={(e) => handlePricingSectionChange(index, 'price', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Wholesale Price</label>
+                          <input
+                            type="number"
+                            value={section.wholesalePrice || ''}
+                            onChange={(e) => handlePricingSectionChange(index, 'wholesalePrice', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            placeholder="0.00"
+                            min="0"
+                            step="0.01"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-semibold text-gray-700 mb-2">Threshold Quantity</label>
+                          <input
+                            type="number"
+                            value={section.thresholdQuantity || ''}
+                            onChange={(e) => handlePricingSectionChange(index, 'thresholdQuantity', e.target.value)}
+                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                            placeholder="10"
+                            min="1"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <button
+                  type="button"
+                  onClick={addPricingSection}
+                  className="mt-6 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+                >
+                  <Plus size={16} />
+                  Add Pricing Combination
+                </button>
+              </div>
+            )}
+
+            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+              <button
+                type="button"
+                onClick={handleSubmit}
+                disabled={isSubmitting}
+                className={`w-full py-3 px-6 text-white rounded-lg transition-colors duration-200 ${
+                  isSubmitting ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-600 hover:bg-blue-700'
+                }`}
+              >
+                {isSubmitting ? 'Adding Product...' : 'Add Product'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default AddProduct;
+
+productController.js:
+const Product = require('../models/Product');
+const fs = require('fs');
+const path = require('path');
+
+const addProduct = async (req, res) => {
+  try {
+    const {
+      name,
+      price,
+      stock,
+      category,
+      categoryPath,
+      details,
+      colorVariants,
+      sizeVariants,
+      pricingSections,
+      basePriceRanges,
+    } = req.body;
+
+    // Parse JSON fields
+    const parsedDetails = details ? JSON.parse(details) : [];
+    const parsedColorVariants = colorVariants ? JSON.parse(colorVariants) : [];
+    const parsedSizeVariants = sizeVariants ? JSON.parse(sizeVariants) : [];
+    const parsedPricingSections = pricingSections ? JSON.parse(pricingSections) : [];
+    const parsedBasePriceRanges = basePriceRanges ? JSON.parse(basePriceRanges) : [];
+
+    // Validate required fields
+    if (!name || !stock || !category) {
+      return res.status(400).json({ error: 'Product name, stock, and category are required' });
+    }
+
+    if (isNaN(stock) || stock < 0) {
+      return res.status(400).json({ error: 'Stock must be a valid non-negative number' });
+    }
+
+    // Validate price inputs
+    const hasBasePrice = price && price !== '' && !isNaN(price) && price >= 0;
+    const hasColorPrices = parsedColorVariants.some(v => v.price && v.price !== '' && !isNaN(v.price) && v.price >= 0);
+    const hasSizePrices = parsedSizeVariants.some(v => v.price && v.price !== '' && !isNaN(v.price) && v.price >= 0);
+    const hasPricingSections = parsedPricingSections.some(s =>
+      s.priceRanges && s.priceRanges.some(r => r.retailPrice && r.retailPrice !== '' && !isNaN(r.retailPrice) && r.retailPrice >= 0)
+    );
+
+    if (!hasBasePrice && !hasColorPrices && !hasSizePrices && !hasPricingSections) {
+      return res.status(400).json({ error: 'At least one price (base, color variant, size variant, or pricing combination) is required' });
+    }
+
+    // Validate price ranges
+    const validatePriceRanges = (ranges, context) => {
+      if (!ranges || ranges.length === 0) return;
+      ranges.forEach((range, index) => {
+        if (range.retailPrice || range.wholesalePrice || range.thresholdQuantity) {
+          if (!range.retailPrice || !range.wholesalePrice || !range.thresholdQuantity) {
+            throw new Error(`All fields (retailPrice, wholesalePrice, thresholdQuantity) are required for price range ${index + 1} in ${context}`);
+          }
+          if (isNaN(range.retailPrice) || range.retailPrice < 0) {
+            throw new Error(`Invalid retail price in price range ${index + 1} in ${context}`);
+          }
+          if (isNaN(range.wholesalePrice) || range.wholesalePrice < 0) {
+            throw new Error(`Invalid wholesale price in price range ${index + 1} in ${context}`);
+          }
+          if (isNaN(range.thresholdQuantity) || range.thresholdQuantity < 1) {
+            throw new Error(`Invalid threshold quantity in price range ${index + 1} in ${context}`);
+          }
+          if (parseFloat(range.retailPrice) > parseFloat(range.wholesalePrice)) {
+            throw new Error(`Retail price cannot be greater than wholesale price in price range ${index + 1} in ${context}`);
+          }
+        }
+      });
+    };
+
+    if (hasBasePrice && parsedBasePriceRanges.length > 0) {
+      if (parseFloat(parsedBasePriceRanges[0].retailPrice) !== parseFloat(price)) {
+        return res.status(400).json({ error: 'Base price must equal the retail price in the first base price range' });
+      }
+    }
+    validatePriceRanges(parsedBasePriceRanges, 'base price ranges');
+
+    parsedColorVariants.forEach((variant, index) => {
+      if (variant.price && variant.priceRanges && variant.priceRanges.length > 0) {
+        if (parseFloat(variant.priceRanges[0].retailPrice) !== parseFloat(variant.price)) {
+          throw new Error(`Color variant ${index + 1} price must equal the retail price in its first price range`);
+        }
+      }
+      validatePriceRanges(variant.priceRanges, `color variant ${index + 1}`);
+    });
+
+    parsedSizeVariants.forEach((variant, index) => {
+      if (variant.price && variant.priceRanges && variant.priceRanges.length > 0) {
+        if (parseFloat(variant.priceRanges[0].retailPrice) !== parseFloat(variant.price)) {
+          throw new Error(`Size variant ${index + 1} price must equal the retail price in its first price range`);
+        }
+      }
+      validatePriceRanges(variant.priceRanges, `size variant ${index + 1}`);
+    });
+
+    parsedPricingSections.forEach((section, index) => {
+      validatePriceRanges(section.priceRanges, `pricing combination ${index + 1}`);
+    });
+
+    // Handle file uploads for color variants
+    const imageUrls = [];
+    if (req.files && req.files.colorImages) {
+      const files = Array.isArray(req.files.colorImages) ? req.files.colorImages : [req.files.colorImages];
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const uploadDir = path.join(__dirname, '../uploads/ProductImages');
+        if (!fs.existsSync(uploadDir)) {
+          fs.mkdirSync(uploadDir, { recursive: true });
+        }
+        const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+        const fileExtension = path.extname(file.name);
+        const fileName = `product-${uniqueSuffix}${fileExtension}`;
+        const filePath = path.join(uploadDir, fileName);
+        await file.mv(filePath);
+        imageUrls.push(`/Uploads/ProductImages/${fileName}`);
+      }
+    }
+
+    // Assign image URLs to color variants
+    parsedColorVariants.forEach((variant, index) => {
+      if (imageUrls[index]) {
+        variant.imageUrl = imageUrls[index];
+      }
+    });
+
+    // Validate size variants
+    const useDimensions = parsedSizeVariants.some(v => v.useDimensions);
+    const useDropdown = parsedSizeVariants.some(v => !v.useDimensions && v.size);
+    if (useDimensions && useDropdown) {
+      return res.status(400).json({ error: 'All size variants must use either dimensions or dropdown sizes, not both' });
+    }
+
+    parsedSizeVariants.forEach((variant, index) => {
+      if (useDimensions) {
+        if (!variant.length || !variant.breadth || !variant.height) {
+          throw new Error(`Length, Breadth, and Height are required for size variant ${index + 1}`);
+        }
+      } else if (!variant.size) {
+        throw new Error(`Size is required for size variant ${index + 1}`);
+      }
+      if (variant.forAllColors === 'no' && (!variant.availableColors || variant.availableColors.length === 0)) {
+        throw new Error(`At least one color must be selected for size variant ${index + 1} if not available for all colors`);
+      }
+    });
+
+    parsedColorVariants.forEach((variant, index) => {
+      if (!variant.color) {
+        throw new Error(`Color is required for color variant ${index + 1}`);
+      }
+      if (variant.forAllSizes === 'no' && (!variant.availableSizes || variant.availableSizes.length === 0)) {
+        throw new Error(`At least one size must be selected for color variant ${index + 1} if not available for all sizes`);
+      }
+    });
+
+    // Prepare product data
+    const productData = {
+      name,
+      price: hasBasePrice ? parseFloat(price) : undefined,
+      stock: parseInt(stock),
+      category,
+      categoryPath: categoryPath ? JSON.parse(categoryPath) : [],
+      details: parsedDetails,
+      colorVariants: parsedColorVariants,
+      sizeVariants: parsedSizeVariants,
+      pricingSections: parsedPricingSections,
+      basePriceRanges: parsedBasePriceRanges,
+    };
+
+    // Save product to database
+    const newProduct = new Product(productData);
+    await newProduct.save();
+
+    res.status(201).json({ message: 'Product added successfully', product: newProduct });
+  } catch (error) {
+    console.error('Error adding product:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
+  }
+};
+
+module.exports = { addProduct };
+
+Product.js:
+const mongoose = require('mongoose');
+
+const productSchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    trim: true,
+  },
+  price: {
+    type: String,
+    default: '',
+  },
+  stock: {
+    type: Number,
+    required: true,
+    min: 0,
+  },
+  category: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+    required: true,
+  },
+  categoryPath: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Category',
+  }],
+  details: [{
+    name: { type: String, trim: true },
+    value: { type: String, trim: true },
+  }],
+  colorVariants: [{
+    color: { type: String, trim: true, required: true },
+    image: { type: String, default: null },
+    price: { type: String, default: '' },
+    isDefault: { type: Boolean, default: false },
+    forAllSizes: { type: String, default: 'yes' },
+    availableSizes: [{ type: String, trim: true }],
+    optionalDetails: [{
+      name: { type: String, trim: true },
+      value: { type: String, trim: true },
+    }],
+    priceRanges: [{
+      retailPrice: { type: String, default: '' },
+      wholesalePrice: { type: String, default: '' },
+      thresholdQuantity: { type: String, default: '' },
+    }],
+  }],
+  sizeVariants: [{
+    size: { type: String, trim: true },
+    price: { type: String, default: '' },
+    isDefault: { type: Boolean, default: false },
+    length: { type: Number, default: null },
+    breadth: { type: Number, default: null },
+    height: { type: Number, default: null },
+    forAllColors: { type: String, default: 'yes' },
+    availableColors: [{ type: String, trim: true }],
+    optionalDetails: [{
+      name: { type: String, trim: true },
+      value: { type: String, trim: true },
+    }],
+    priceRanges: [{
+      retailPrice: { type: String, default: '' },
+      wholesalePrice: { type: String, default: '' },
+      thresholdQuantity: { type: String, default: '' },
+    }],
+  }],
+  pricingSections: [{
+    color: { type: String, trim: true },
+    size: { type: String, trim: true },
+    price: { type: String, default: '' },
+    wholesalePrice: { type: String, default: '' },
+    thresholdQuantity: { type: String, default: '' },
+  }],
+  basePriceRanges: [{
+    retailPrice: { type: String, default: '' },
+    wholesalePrice: { type: String, default: '' },
+    thresholdQuantity: { type: String, default: '' },
+  }],
+}, { timestamps: true });
+
+module.exports = mongoose.model('Product', productSchema);
+
+Please do the needful
