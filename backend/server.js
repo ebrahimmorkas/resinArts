@@ -29,7 +29,7 @@ app.use(
 );
 
 // Serve static files for uploads
-app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
+// app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
 
 // MongoDB Connection
 mongoose

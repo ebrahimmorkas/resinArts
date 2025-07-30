@@ -1,23 +1,25 @@
 "use client"
 
 import { useState } from "react"
-import { Trash2, Plus, Save, X, ChevronRight } from "lucide-react"
+import { Trash2, Plus, Save, X, ChevronRight, Loader2 } from "lucide-react"
 import { produce } from "immer"
 import axios from 'axios'
+import { ToastContainer, toast } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
 
 const AddCategory = () => {
   const [categoryData, setCategoryData] = useState({ name: "", image: null })
   const [subCategories, setSubCategories] = useState([])
   const [imagePreview, setImagePreview] = useState(null)
   const [isSubmitting, setIsSubmitting] = useState(false)
-  const [error, setError] = useState('')
+  const [errors, setErrors] = useState({ name: '', image: '', general: '' })
 
   const handleCategoryChange = (field, value) => {
     setCategoryData((prev) => ({
       ...prev,
       [field]: value,
     }))
-    setError('')
+    setErrors((prev) => ({ ...prev, [field]: '', general: '' }))
   }
 
   const handleImageChange = (e) => {
@@ -28,8 +30,9 @@ const AddCategory = () => {
         setImagePreview(reader.result)
         setCategoryData((prev) => ({
           ...prev,
-          image: file, // Store the file object for upload
+          image: file,
         }))
+        setErrors((prev) => ({ ...prev, image: '', general: '' }))
       }
       reader.readAsDataURL(file)
     }
@@ -102,8 +105,9 @@ const AddCategory = () => {
   }
 
   const SubCategoryItem = ({ subCategory, path, level = 0 }) => {
+    const uniqueKey = path.join('-') // Use path as a stable key
     return (
-      <div className="space-y-3">
+      <div className="space-y-3" key={uniqueKey}>
         <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
           <div className="flex justify-between items-center mb-3">
             <h3 className="text-base font-medium text-gray-800">
@@ -149,7 +153,7 @@ const AddCategory = () => {
         {subCategory.subCategories && subCategory.subCategories.length > 0 && (
           <div className="ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
             {subCategory.subCategories.map((nestedSub, index) => (
-              <SubCategoryItem key={index} subCategory={nestedSub} path={[...path, index]} level={level + 1} />
+              <SubCategoryItem key={`${uniqueKey}-${index}`} subCategory={nestedSub} path={[...path, index]} level={level + 1} />
             ))}
           </div>
         )}
@@ -214,16 +218,34 @@ const AddCategory = () => {
     return categories
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setError('')
-    setIsSubmitting(true)
+  const validateForm = () => {
+    const newErrors = { name: '', image: '', general: '' }
+    let isValid = true
 
     if (!categoryData.name.trim()) {
-      setError('Please enter a category name')
-      setIsSubmitting(false)
+      newErrors.name = 'Category name is required'
+      isValid = false
+    }
+
+    // Add image validation if required
+    if (!categoryData.image) {
+      newErrors.image = 'Category image is required'
+      isValid = false
+    }
+
+    setErrors(newErrors)
+    return isValid
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+    setErrors({ name: '', image: '', general: '' })
+
+    if (!validateForm()) {
       return
     }
+
+    setIsSubmitting(true)
 
     try {
       const validSubCategories = subCategories.filter((sub) => sub.name.trim())
@@ -252,14 +274,30 @@ const AddCategory = () => {
       )
 
       console.log('Category Data:', response.data)
-      alert('Category added successfully!')
+      toast.success('Category added successfully!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
 
       setCategoryData({ name: '', image: null })
       setSubCategories([])
       setImagePreview(null)
     } catch (error) {
       console.error('Error saving category:', error)
-      setError(`Failed to save category: ${error.response?.data?.error || error.message}`)
+      const errorMessage = error.response?.data?.error || error.message
+      toast.error(`Failed to save category: ${errorMessage}`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
+      setErrors((prev) => ({ ...prev, general: errorMessage }))
     } finally {
       setIsSubmitting(false)
     }
@@ -269,20 +307,29 @@ const AddCategory = () => {
     setCategoryData({ name: '', image: null })
     setSubCategories([])
     setImagePreview(null)
-    setError('')
+    setErrors({ name: '', image: '', general: '' })
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-20 pb-8">
+    <div className="min-h-screen bg-slate-50 pt-20 pb-8 relative">
+      <ToastContainer />
+      {isSubmitting && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="flex flex-col items-center">
+            <Loader2 className="h-12 w-12 text-indigo-600 animate-spin" />
+            <p className="mt-2 text-white text-lg font-medium">Saving Category...</p>
+          </div>
+        </div>
+      )}
       <div className="max-w-4xl mx-auto p-6 bg-gradient-to-b from-gray-50 to-white shadow-xl hover:shadow-2xl transition-shadow duration-300 rounded-xl border border-gray-200">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Add New Category</h1>
           <p className="text-gray-500 text-base">Create a new category and organize your products better</p>
         </div>
 
-        {error && (
+        {errors.general && (
           <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg">
-            <p className="text-red-600 text-sm">{error}</p>
+            <p className="text-red-600 text-sm">{errors.general}</p>
           </div>
         )}
 
@@ -298,20 +345,26 @@ const AddCategory = () => {
                   name="category.name"
                   value={categoryData.name}
                   onChange={(e) => handleCategoryChange('name', e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                  className={`w-full px-3 py-2.5 border ${errors.name ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200`}
                   placeholder="Enter category name (e.g., Electronics, Clothing, Home & Garden)"
                   required
                 />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600">{errors.name}</p>
+                )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category Image</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Category Image *</label>
                 <input
                   type="file"
                   name="category.image"
                   accept="image/*"
                   onChange={handleImageChange}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
+                  className={`w-full px-3 py-2.5 border ${errors.image ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200`}
                 />
+                {errors.image && (
+                  <p className="mt-1 text-sm text-red-600">{errors.image}</p>
+                )}
                 {imagePreview && (
                   <div className="mt-2">
                     <img src={imagePreview} alt="Category Preview" className="h-32 w-32 object-cover rounded-lg" />
@@ -344,7 +397,7 @@ const AddCategory = () => {
 
               <div className="space-y-4">
                 {subCategories.map((subCategory, index) => (
-                  <SubCategoryItem key={index} subCategory={subCategory} path={[index]} level={0} />
+                  <SubCategoryItem key={`sub-${index}`} subCategory={subCategory} path={[index]} level={0} />
                 ))}
               </div>
             </div>

@@ -1,4 +1,4 @@
-const mongoose = require("mongoose")
+const mongoose = require("mongoose");
 
 const productSchema = new mongoose.Schema(
   {
@@ -36,7 +36,7 @@ const productSchema = new mongoose.Schema(
     colorVariants: [
       {
         color: { type: String, trim: true, required: true },
-        image: { type: String, default: null },
+        imageUrl: { type: String, default: null }, // Changed from `image` to `imageUrl`
         price: { type: Number, default: null },
         isDefault: { type: Boolean, default: false },
         forAllSizes: { type: String, default: "yes" },
@@ -103,6 +103,6 @@ const productSchema = new mongoose.Schema(
     ],
   },
   { timestamps: true },
-)
+);
 
-module.exports = mongoose.model("Product", productSchema)
+module.exports = mongoose.model("Product", productSchema);

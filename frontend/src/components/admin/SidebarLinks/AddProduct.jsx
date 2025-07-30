@@ -130,18 +130,19 @@ const AddProduct = () => {
     { name: "", value: "" },
     { name: "", value: "" },
   ])
-  const [colorVariants, setColorVariants] = useState([
-    {
-      color: "",
-      image: null,
-      price: "",
-      isDefault: true,
-      optionalDetails: [],
-      priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-      forAllSizes: "yes",
-      availableSizes: [],
-    },
-  ])
+ const [colorVariants, setColorVariants] = useState([
+  {
+    color: "",
+    image: null, // This will be sent as a file and converted to imageUrl on the backend
+    imageUrl: "", // Optional: Add to store the URL if you fetch it back
+    price: "",
+    isDefault: true,
+    optionalDetails: [],
+    priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+    forAllSizes: "yes",
+    availableSizes: [],
+  },
+]);
   const [sizeVariants, setSizeVariants] = useState([
     {
       size: "",
@@ -670,13 +671,14 @@ const AddProduct = () => {
   }
 
   const handleImageUpload = (variantIndex, event) => {
-    const file = event.target.files[0]
-    if (file) {
-      const updatedVariants = [...colorVariants]
-      updatedVariants[variantIndex].image = file
-      setColorVariants(updatedVariants)
-    }
+  const file = event.target.files[0];
+  if (file) {
+    const updatedVariants = [...colorVariants];
+    updatedVariants[variantIndex].image = file;
+    updatedVariants[variantIndex].imageUrl = ""; // Clear imageUrl if a new file is uploaded
+    setColorVariants(updatedVariants);
   }
+};
 
   const handleSizeVariantChange = (variantIndex, field, value) => {
     const updatedVariants = [...sizeVariants]
@@ -1212,100 +1214,123 @@ const AddProduct = () => {
     isPricingSectionFilled,
   ])
 
-  const handleSubmit = async (e) => {
-    e.preventDefault() // Prevent default form submission
+ const handleSubmit = async (e) => {
+  e.preventDefault() // Prevent default form submission
 
-    const isValid = validateFormOnSubmit()
-    if (!isValid) {
-      setShowErrorModal(true)
-      return
-    }
-
-    setIsSubmitting(true)
-    try {
-      const formDataToSend = new FormData()
-      formDataToSend.append("name", formData.name)
-      formDataToSend.append("price", formData.price)
-      formDataToSend.append("stock", formData.stock)
-      formDataToSend.append("category", formData.category)
-      formDataToSend.append("categoryPath", JSON.stringify(formData.categoryPath))
-
-      const filteredDetails = details.filter((detail) => !isVariantEmpty(detail, "detail"))
-      formDataToSend.append("details", JSON.stringify(filteredDetails))
-
-      const filteredColorVariants = colorVariants.filter((variant) => !isVariantEmpty(variant, "color"))
-      filteredColorVariants.forEach((variant, index) => {
-        if (variant.image) {
-          formDataToSend.append("colorImages", variant.image)
-        }
-      })
-      formDataToSend.append("colorVariants", JSON.stringify(filteredColorVariants.map(({ image, ...rest }) => rest)))
-
-      const filteredSizeVariants = sizeVariants.filter((variant) => !isVariantEmpty(variant, "size"))
-      formDataToSend.append("sizeVariants", JSON.stringify(filteredSizeVariants))
-
-      const filteredPricingSections = pricingSections.filter((section) => !isVariantEmpty(section, "pricingSection"))
-      formDataToSend.append("pricingSections", JSON.stringify(filteredPricingSections))
-
-      const filteredBasePriceRanges = basePriceRanges.filter((range) => !isVariantEmpty(range, "basePriceRange"))
-      formDataToSend.append("basePriceRanges", JSON.stringify(filteredBasePriceRanges))
-
-      await axios.post("http://localhost:3000/api/product/add", formDataToSend, {
-        headers: { "Content-Type": "multipart/form-data" },
-        withCredentials: true,
-      })
-
-      setIsSubmitting(false)
-      setShowSuccessModal(true)
-      setFormData({ name: "", price: "", stock: "", category: "", categoryPath: [] })
-      setDetails([
-        { name: "", value: "" },
-        { name: "", value: "" },
-        { name: "", value: "" },
-      ])
-      setColorVariants([
-        {
-          color: "",
-          image: null,
-          price: "",
-          isDefault: true,
-          optionalDetails: [],
-          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-          forAllSizes: "yes",
-          availableSizes: [],
-        },
-      ])
-      setSizeVariants([
-        {
-          size: "",
-          price: "",
-          optionalDetails: [],
-          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-          isDefault: true,
-          useDimensions: false,
-          length: "",
-          breadth: "",
-          height: "",
-          forAllColors: "yes",
-          availableColors: [],
-        },
-      ])
-      setPricingSections([
-        { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
-      ])
-      setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
-      setSelectedPath([])
-      setSubCategoryOptions([])
-    } catch (error) {
-      console.error("Error adding product:", error)
-      setIsSubmitting(false)
-      setShowErrorModal(true)
-      setErrors((prev) => ({
-        ...prev,
-        server: error.response?.data?.error || "Failed to add product. Please try again.",
-      }))
-    }
+  const isValid = validateFormOnSubmit()
+  if (!isValid) {
+    setShowErrorModal(true)
+    return
   }
+
+  setIsSubmitting(true)
+  try {
+    const formDataToSend = new FormData()
+    formDataToSend.append("name", formData.name)
+    formDataToSend.append("price", formData.price)
+    formDataToSend.append("stock", formData.stock)
+    formDataToSend.append("category", formData.category)
+    formDataToSend.append("categoryPath", JSON.stringify(formData.categoryPath))
+
+    const filteredDetails = details.filter((detail) => !isVariantEmpty(detail, "detail"))
+    formDataToSend.append("details", JSON.stringify(filteredDetails))
+
+    // Filter and process color variants
+    const filteredColorVariants = colorVariants.filter((variant) => !isVariantEmpty(variant, "color"))
+    
+    // Append images for color variants in the same order as the variants
+    filteredColorVariants.forEach((variant, index) => {
+      if (variant.image) {
+        // Append each image with the field name 'colorImages'
+        formDataToSend.append("colorImages", variant.image)
+        console.log(`Appending image for color variant ${index}: ${variant.color}`)
+      } else {
+        console.log(`No image for color variant ${index}: ${variant.color}`)
+      }
+    })
+
+    // Send color variants data without the image file objects
+    const colorVariantsData = filteredColorVariants.map(({ image, ...rest }) => rest)
+    formDataToSend.append("colorVariants", JSON.stringify(colorVariantsData))
+
+    const filteredSizeVariants = sizeVariants.filter((variant) => !isVariantEmpty(variant, "size"))
+    formDataToSend.append("sizeVariants", JSON.stringify(filteredSizeVariants))
+
+    const filteredPricingSections = pricingSections.filter((section) => !isVariantEmpty(section, "pricingSection"))
+    formDataToSend.append("pricingSections", JSON.stringify(filteredPricingSections))
+
+    const filteredBasePriceRanges = basePriceRanges.filter((range) => !isVariantEmpty(range, "basePriceRange"))
+    formDataToSend.append("basePriceRanges", JSON.stringify(filteredBasePriceRanges))
+
+    // Log FormData contents for debugging
+    console.log("FormData contents:")
+    for (let [key, value] of formDataToSend.entries()) {
+      if (value instanceof File) {
+        console.log(`${key}: File - ${value.name} (${value.size} bytes)`)
+      } else {
+        console.log(`${key}: ${value}`)
+      }
+    }
+
+    const response = await axios.post("http://localhost:3000/api/product/add", formDataToSend, {
+      headers: { "Content-Type": "multipart/form-data" },
+      withCredentials: true,
+    })
+
+    console.log("Product added successfully:", response.data)
+    setIsSubmitting(false)
+    setShowSuccessModal(true)
+    
+    // Reset form state
+    setFormData({ name: "", price: "", stock: "", category: "", categoryPath: [] })
+    setDetails([
+      { name: "", value: "" },
+      { name: "", value: "" },
+      { name: "", value: "" },
+    ])
+    setColorVariants([
+      {
+        color: "",
+        image: null,
+        price: "",
+        isDefault: true,
+        optionalDetails: [],
+        priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+        forAllSizes: "yes",
+        availableSizes: [],
+      },
+    ])
+    setSizeVariants([
+      {
+        size: "",
+        price: "",
+        optionalDetails: [],
+        priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
+        isDefault: true,
+        useDimensions: false,
+        length: "",
+        breadth: "",
+        height: "",
+        forAllColors: "yes",
+        availableColors: [],
+      },
+    ])
+    setPricingSections([
+      { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
+    ])
+    setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
+    setSelectedPath([])
+    setSubCategoryOptions([])
+  } catch (error) {
+    console.error("Error adding product:", error)
+    setIsSubmitting(false)
+    setShowErrorModal(true)
+    setErrors((prev) => ({
+      ...prev,
+      server: error.response?.data?.error || "Failed to add product. Please try again.",
+    }))
+  }
+}
 
   const SuccessModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">

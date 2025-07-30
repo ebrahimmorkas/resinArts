@@ -35,8 +35,8 @@ function AdminPanel() {
       
       {/* Your main content goes here */}
       <main className="w-screen my-8">
-        {/* <AddProduct></AddProduct> */}
-        <AddCategory></AddCategory>
+        <AddProduct></AddProduct>
+        {/* <AddCategory></AddCategory> */}
         {/* <OrdersPanel></OrdersPanel> */}
         {/* <OrdersAccepted></OrdersAccepted> */}
         {/* <RestockPanel></RestockPanel> */}
