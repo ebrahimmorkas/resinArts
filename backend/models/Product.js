@@ -36,7 +36,7 @@ const productSchema = new mongoose.Schema(
     colorVariants: [
       {
         color: { type: String, trim: true, required: true },
-        imageUrl: { type: String, default: null }, // Changed from `image` to `imageUrl`
+        imageUrl: { type: String, default: null },
         price: { type: Number, default: null },
         isDefault: { type: Boolean, default: false },
         forAllSizes: { type: String, default: "yes" },
@@ -101,6 +101,22 @@ const productSchema = new mongoose.Schema(
         thresholdQuantity: { type: Number, default: null },
       },
     ],
+    restockedAt: {
+      type: Date,
+      default: null,
+    },
+    discountedPrice: {
+      type: Number,
+      default: null,
+    },
+    discountStartDate: {
+      type: Date,
+      default: null,
+    },
+    discountEndDate: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true },
 );

@@ -1,513 +1,473 @@
-This is my AddCategory.jsx:
-"use client"
+Okay now its time to fetch the products from database and render over here.
 
-import { useState } from "react"
-import { Trash2, Plus, Save, X, ChevronRight } from "lucide-react"
-import { produce } from "immer" // Named import for produce
-import axios from  'axios';
+For now just 1 product and add in revised rates 1 in restocked and 1 in just arrived sections and put all the products in All products section.
 
-const AddCategory = () => {
-  const [categoryData, setCategoryData] = useState({ name: "", image: null })
-  const [subCategories, setSubCategories] = useState([])
-  const [imagePreview, setImagePreview] = useState(null)
+This is my product document from mongoDB:
+{
 
-  const handleCategoryChange = (field, value) => {
-    setCategoryData((prev) => ({
-      ...prev,
-      [field]: value,
-    }))
-  }
+  "_id": {
 
-  const handleImageChange = (e) => {
-    const file = e.target.files[0]
-    if (file) {
-      const reader = new FileReader()
-      reader.onloadend = () => {
-        const imageUrl = reader.result // Simulate cloud storage URL
-        setCategoryData((prev) => ({
-          ...prev,
-          image: imageUrl,
-        }))
-        setImagePreview(reader.result)
+    "$oid": "688a418cdd24e9375386529b"
+
+  },
+
+  "name": "test agai a",
+
+  "price": null,
+
+  "stock": 9,
+
+  "category": {
+
+    "$oid": "688110bc5387fa46bb139d77"
+
+  },
+
+  "categoryPath": [
+
+    {
+
+      "$oid": "688110bc5387fa46bb139d71"
+
+    },
+
+    {
+
+      "$oid": "688110bc5387fa46bb139d73"
+
+    },
+
+    {
+
+      "$oid": "688110bc5387fa46bb139d75"
+
+    },
+
+    {
+
+      "$oid": "688110bc5387fa46bb139d77"
+
+    }
+
+  ],
+
+  "details": [
+
+    {
+
+      "name": "erjk",
+
+      "value": "jdhfjk",
+
+      "_id": {
+
+        "$oid": "688a418cdd24e9375386529c"
+
       }
-      reader.readAsDataURL(file)
-    }
-  }
 
-  // Add subcategory at any level
-  const addSubCategory = (path = []) => {
-    setSubCategories(
-      produce((draft) => {
-        if (path.length === 0) {
-          draft.push({ name: "", subCategories: [] })
-        } else {
-          let current = draft
-          for (let i = 0; i < path.length; i++) {
-            if (i === path.length - 1) {
-              if (!current[path[i]].subCategories) {
-                current[path[i]].subCategories = []
-              }
-              current[path[i]].subCategories.push({ name: "", subCategories: [] })
-            } else {
-              current = current[path[i]].subCategories
-            }
-          }
-        }
-      })
-    )
-  }
+    },
 
-  // Remove subcategory at any level
-  const removeSubCategory = (path) => {
-    setSubCategories(
-      produce((draft) => {
-        if (path.length === 1) {
-          draft.splice(path[0], 1)
-        } else {
-          let current = draft
-          for (let i = 0; i < path.length - 1; i++) {
-            current = current[path[i]].subCategories
-          }
-          current.splice(path[path.length - 1], 1)
-        }
-      })
-    )
-  }
+    {
 
-  // Update subcategory name at any level
-  const handleSubCategoryChange = (path, field, value) => {
-    setSubCategories(
-      produce((draft) => {
-        let current = draft
-        for (let i = 0; i < path.length; i++) {
-          if (i === path.length - 1) {
-            current[path[i]][field] = value
-          } else {
-            current = current[path[i]].subCategories
-          }
-        }
-      })
-    )
-  }
+      "name": "fjsdhfik",
 
-  // Generate name attribute for subcategory input based on path
-  const getSubCategoryNameAttribute = (path) => {
-    if (path.length === 0) return "subCategories"
-    let name = "subCategories"
-    for (let i = 0; i < path.length; i++) {
-      name += `[${path[i]}]`
-      if (i < path.length - 1 || path.length === 1) {
-        name += ".subCategories"
+      "value": "shfiu",
+
+      "_id": {
+
+        "$oid": "688a418cdd24e9375386529d"
+
       }
+
+    },
+
+    {
+
+      "name": "fudhfi",
+
+      "value": "idsfiu",
+
+      "_id": {
+
+        "$oid": "688a418cdd24e9375386529e"
+
+      }
+
+    },
+
+    {
+
+      "name": "jsbf",
+
+      "value": "dsjkfbjskfb",
+
+      "_id": {
+
+        "$oid": "688a418cdd24e9375386529f"
+
+      }
+
     }
-    name += ".name"
-    return name
-  }
 
-  // Recursive component for rendering subcategories
-  const SubCategoryItem = ({ subCategory, path, level = 0 }) => {
-    return (
-      <div className="space-y-3">
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-base font-medium text-gray-800">
-              {level === 0 ? "Sub Category" : `Level ${level + 1} Category`} {path[path.length - 1] + 1}
-            </h3>
-            <button
-              type="button"
-              onClick={() => removeSubCategory(path)}
-              className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-              title="Remove sub category"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
+  ],
 
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sub Category Name *</label>
-              <input
-                type="text"
-                name={getSubCategoryNameAttribute(path)}
-                value={subCategory.name}
-                onChange={(e) => handleSubCategoryChange(path, "name", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200 text-sm"
-                placeholder={`Enter ${level === 0 ? "sub category" : `level ${level + 1} category`} name`}
-                required
-              />
-            </div>
+  "colorVariants": [
 
-            <div className="pt-3 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => addSubCategory(path)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors duration-200 font-medium shadow-sm hover:shadow-md text-sm"
-              >
-                <Plus size={14} />
-                <span>Add Sub Category</span>
-              </button>
-            </div>
-          </div>
-        </div>
+    {
 
-        {subCategory.subCategories && subCategory.subCategories.length > 0 && (
-          <div className="ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
-            {subCategory.subCategories.map((nestedSub, index) => (
-              <SubCategoryItem key={index} subCategory={nestedSub} path={[...path, index]} level={level + 1} />
-            ))}
-          </div>
-        )}
-      </div>
-    )
-  }
+      "color": "red",
 
-  // Recursive function to render preview
-  const renderPreviewCategories = (categories, level = 0) => {
-    return categories.map((category, index) => (
-      <div key={`preview-${level}-${index}`} style={{ marginLeft: `${level * 20}px` }} className="mb-2">
-        <div className="flex items-center gap-2">
-          {level > 0 && <ChevronRight size={12} className="text-gray-400" />}
-          <span
-            className={`px-2 py-1 rounded-full text-xs font-medium ${
-              level === 0
-                ? "bg-indigo-100 text-indigo-800"
-                : level === 1
-                  ? "bg-green-100 text-green-800"
-                  : level === 2
-                    ? "bg-purple-100 text-purple-800"
-                    : "bg-orange-100 text-orange-800"
-            }`}
-          >
-            {category.name}
-          </span>
-        </div>
-        {category.subCategories && category.subCategories.length > 0 && (
-          <div className="mt-1">{renderPreviewCategories(category.subCategories, level + 1)}</div>
-        )}
-      </div>
-    ))
-  }
+      "imageUrl": "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891208/ProductImages/gqh4o36gntmqqkp7h7ks.jpg",
 
-  // Convert category tree to flat array for backend - FIXED VERSION
-  const flattenCategories = (mainCategory, subCategories) => {
-    const categories = [
-      {
-        categoryName: mainCategory.name,
-        parent_category_id: null,
-        image: mainCategory.image || null,
-        current_path: null, // Main category doesn't need a path
-      },
-    ]
+      "price": 9,
 
-    const addSubCategories = (subs, parentPath = null) => {
-      subs.forEach((sub, index) => {
-        if (sub.name.trim()) {
-          const currentPath = parentPath ? `${parentPath}.${index}` : `${index}`;
-          
-          categories.push({
-            categoryName: sub.name,
-            parent_category_id: parentPath === null ? "main" : parentPath,
-            image: null,
-            current_path: currentPath, // This is the path other categories will use to reference this one
-          })
-          
-          if (sub.subCategories && sub.subCategories.length > 0) {
-            addSubCategories(sub.subCategories, currentPath)
+      "isDefault": false,
+
+      "forAllSizes": "no",
+
+      "availableSizes": [
+
+        "S",
+
+        "XS"
+
+      ],
+
+      "optionalDetails": [
+
+        {
+
+          "name": "red",
+
+          "value": "red",
+
+          "_id": {
+
+            "$oid": "688a418cdd24e937538652a1"
+
           }
+
         }
-      })
-    }
 
-    addSubCategories(subCategories)
-    return categories
-  }
+      ],
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    if (!categoryData.name.trim()) {
-      alert("Please enter a category name")
-      return
-    }
+      "priceRanges": [
 
-    const validSubCategories = subCategories.filter((sub) => sub.name.trim())
-    const categories = flattenCategories(categoryData, validSubCategories)
+        {
 
-    console.log('Sending categories to backend:', categories);
+          "retailPrice": 9,
 
-    try {
-      // const response = await axios.post('http://localhost:3000/api/category/add', categories, {
-      //   headers: { "Content-Type": "multipart/form-data" },
-      //           withCredentials: true,
-      // })
-      const response = await fetch("http://localhost:3000/api/category/add", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
+          "wholesalePrice": 8,
+
+          "thresholdQuantity": 9,
+
+          "_id": {
+
+            "$oid": "688a418cdd24e937538652a2"
+
+          }
+
+        }
+
+      ],
+
+      "_id": {
+
+        "$oid": "688a418cdd24e937538652a0"
+
+      }
+
+    },
+
+    {
+
+      "color": "green",
+
+      "imageUrl": "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891209/ProductImages/yl48luxaynw6dypznaox.png",
+
+      "price": 10,
+
+      "isDefault": true,
+
+      "forAllSizes": "yes",
+
+      "availableSizes": [],
+
+      "optionalDetails": [
+
+        {
+
+          "name": "green",
+
+          "value": "green",
+
+          "_id": {
+
+            "$oid": "688a418cdd24e937538652a4"
+
+          }
+
+        }
+
+      ],
+
+      "priceRanges": [
+
+        {
+
+          "retailPrice": 10,
+
+          "wholesalePrice": 9,
+
+          "thresholdQuantity": 11,
+
+          "_id": {
+
+            "$oid": "688a418cdd24e937538652a5"
+
+          }
+
+        }
+
+      ],
+
+      "_id": {
+
+        "$oid": "688a418cdd24e937538652a3"
+
+      }
+
+    },
+
+    {
+
+      "color": "blue",
+
+      "imageUrl": "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891211/ProductImages/s5xbxzqxsaoncer6vbof.png",
+
+      "price": 8,
+
+      "isDefault": false,
+
+      "forAllSizes": "yes",
+
+      "availableSizes": [],
+
+      "optionalDetails": [],
+
+      "priceRanges": [
+
+        {
+
+          "retailPrice": 8,
+
+          "wholesalePrice": 7,
+
+          "thresholdQuantity": 78,
+
+          "_id": {
+
+            "$oid": "688a418cdd24e937538652a7"
+
+          }
+
         },
-        body: JSON.stringify({ categories }),
-      })
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || "Failed to save category")
+        {
+
+          "retailPrice": 7,
+
+          "wholesalePrice": 6,
+
+          "thresholdQuantity": 79,
+
+          "_id": {
+
+            "$oid": "688a418cdd24e937538652a8"
+
+          }
+
+        }
+
+      ],
+
+      "_id": {
+
+        "$oid": "688a418cdd24e937538652a6"
+
       }
 
-      const result = await response.json()
-      console.log("Category Data:", result)
-      alert("Category added successfully!")
-
-      setCategoryData({ name: "", image: null })
-      setSubCategories([])
-      setImagePreview(null)
-    } catch (error) {
-      console.error("Error saving category:", error)
-      alert(`Failed to save category: ${error.message}`)
     }
-  }
 
-  const handleCancel = () => {
-    setCategoryData({ name: "", image: null })
-    setSubCategories([])
-    setImagePreview(null)
-  }
+  ],
 
-  return (
-    <div className="min-h-screen bg-slate-50 pt-20 pb-8">
-      <div className="max-w-4xl mx-auto p-6 bg-gradient-to-b from-gray-50 to-white shadow-xl hover:shadow-2xl transition-shadow duration-300 rounded-xl border border-gray-200">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Add New Category</h1>
-          <p className="text-gray-500 text-base">Create a new category and organize your products better</p>
-        </div>
+  "sizeVariants": [
 
-        <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Category Information</h2>
+    {
 
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category Name *</label>
-                <input
-                  type="text"
-                  name="category.name"
-                  value={categoryData.name}
-                  onChange={(e) => handleCategoryChange("name", e.target.value)}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
-                  placeholder="Enter category name (e.g., Electronics, Clothing, Home & Garden)"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category Image</label>
-                <input
-                  type="file"
-                  name="category.image"
-                  accept="image/*"
-                  onChange={handleImageChange}
-                  className="w-full px-3 py-2.5 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200"
-                />
-                {imagePreview && (
-                  <div className="mt-2">
-                    <img src={imagePreview} alt="Category Preview" className="h-32 w-32 object-cover rounded-lg" />
-                  </div>
-                )}
-              </div>
+      "size": "XS",
 
-              <div className="pt-4 border-t border-gray-200">
-                <button
-                  type="button"
-                  onClick={() => addSubCategory()}
-                  className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 hover:bg-indigo-700 rounded-lg transition-all duration-200 font-bold border-2 border-indigo-800 hover:border-indigo-900 focus:outline-none focus:ring-4 focus:ring-indigo-500 focus:ring-offset-2"
-                >
-                  <Plus size={16} className="text-yellow-300" />
-                  <span className="text-yellow-300 font-bold">Add Sub Category</span>
-                </button>
-              </div>
-            </div>
-          </div>
+      "price": null,
 
-          {subCategories.length > 0 && (
-            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-              <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Sub Categories</h2>
-                <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
-                  {subCategories.length} sub {subCategories.length === 1 ? "category" : "categories"}
-                </span>
-              </div>
+      "isDefault": true,
 
-              <div className="space-y-4">
-                {subCategories.map((subCategory, index) => (
-                  <SubCategoryItem key={index} subCategory={subCategory} path={[index]} level={0} />
-                ))}
-              </div>
-            </div>
-          )}
+      "length": null,
 
-          {(categoryData.name || subCategories.length > 0 || imagePreview) && (
-            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100 shadow-md">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Category Structure Preview</h2>
+      "breadth": null,
 
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <div className="mb-3 flex items-center gap-4">
-                  <h3 className="text-lg font-semibold text-gray-800">{categoryData.name || "Category Name"}</h3>
-                  {imagePreview && (
-                    <img src={imagePreview} alt="Category Preview" className="h-16 w-16 object-cover rounded-lg" />
-                  )}
-                </div>
+      "height": null,
 
-                {subCategories.filter((sub) => sub.name.trim()).length > 0 && (
-                  <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Sub Categories:</h4>
-                    <div className="space-y-1">
-                      {renderPreviewCategories(subCategories.filter((sub) => sub.name.trim()))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
+      "forAllColors": "yes",
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
-            <button
-              type="button"
-              onClick={handleCancel}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium"
-            >
-              <X size={16} />
-              <span>Cancel</span>
-            </button>
-            <button
-              type="submit"
-              className="inline-flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
-            >
-              <Save size={16} />
-              <span>Save Category</span>
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
-  )
+      "availableColors": [],
+
+      "optionalDetails": [
+
+        {
+
+          "name": "er",
+
+          "value": "re",
+
+          "_id": {
+
+            "$oid": "688a418cdd24e937538652aa"
+
+          }
+
+        }
+
+      ],
+
+      "priceRanges": [
+
+        {
+
+          "retailPrice": null,
+
+          "wholesalePrice": null,
+
+          "thresholdQuantity": null,
+
+          "_id": {
+
+            "$oid": "688a418cdd24e937538652ab"
+
+          }
+
+        }
+
+      ],
+
+      "_id": {
+
+        "$oid": "688a418cdd24e937538652a9"
+
+      }
+
+    },
+
+    {
+
+      "size": "XXXL",
+
+      "price": null,
+
+      "isDefault": false,
+
+      "length": null,
+
+      "breadth": null,
+
+      "height": null,
+
+      "forAllColors": "yes",
+
+      "availableColors": [],
+
+      "optionalDetails": [],
+
+      "priceRanges": [
+
+        {
+
+          "retailPrice": null,
+
+          "wholesalePrice": null,
+
+          "thresholdQuantity": null,
+
+          "_id": {
+
+            "$oid": "688a418cdd24e937538652ad"
+
+          }
+
+        }
+
+      ],
+
+      "_id": {
+
+        "$oid": "688a418cdd24e937538652ac"
+
+      }
+
+    }
+
+  ],
+
+  "pricingSections": [],
+
+  "basePriceRanges": [],
+
+  "createdAt": {
+
+    "$date": "2025-07-30T16:00:12.504Z"
+
+  },
+
+  "updatedAt": {
+
+    "$date": "2025-07-30T16:00:12.504Z"
+
+  },
+
+  "__v": 0
+
 }
 
-export default AddCategory
+Let me first explain you:
+The name will be displayed.
 
-In this code the API call to add the product is written in fetch API. Convert it to Axios. Also I want to store the image which was uploaded in the form by the user. I want to use cloudinary to store the image. I will also need to fetch the image on Home page (To be implemented later not now. Make adjustments in the way that later just need to fetch).
+Pricing Logic:
+If the price field is filled then the same price will be displayed all over the product means the product variants will also contain the same price as 'price' field. There is a array named 'basePriceRanges'. In this the bulk pricing are declared. In Bulk pricing section start with 1 and then fetch 'thresholdQuantity' Field and in place of price display the value of 'wholesale price' fileld
 
-this is my addCategoryController:
-const Category = require('../models/Category');
+If it is null then possibilities:- 
+Color Variants:-
+This means that different price for different colors but price will be same for any size in that color. 'optionalDetails' is a key value pair display that as well in key value pair
 
-const addCategory = async (req, res) => {
-  console.log('Adding category request received:', JSON.stringify(req.body, null, 2));
-  try {
-    const { categories } = req.body;
+Under the color variants Array then can several objects. In object there will be price field and thats the price for that color. Under this object there is array avialable sizes. If this array is empty that means this color is available for all the prices and if it contains some data means that color is available for that size only. Then display only taht sizes not all the sizes. For each color there is priceRanges array there will be atleast one value in it. In Bulk pricing section start with 1 and then fetch 'thresholdQuantity' Field and in place of price display the value of 'wholesale price' fileld. Each color variant contains the 'optionalDetails' field which is specific to that variant only and it is optional it can contain or not contain the data. If Data is there then display it when variants modal is open and that specific color is selected. Each color image is stored in cloudinary and its URL is stored in field 'imageURL' fetch it and display. Images in all the products and all the variants must be same size. Each color variant has its own image, instead of showing normal colors show these variants images.
 
-    if (!categories || !Array.isArray(categories) || categories.length === 0) {
-      console.log('Categories array is required');
-      return res.status(400).json({ error: 'Categories array is required' });
-    }
 
-    if (!categories[0].categoryName) {
-      console.log('Main category name is required');
-      return res.status(400).json({ error: 'Main category name is required' });
-    }
 
-    // Validate that only main category has an image
-    for (const category of categories) {
-      if (category.parent_category_id !== null && category.image) {
-        console.log('Only main categories can have images');
-        return res.status(400).json({ error: 'Only main categories can have images' });
-      }
-    }
+Now for size variants.
+Size variants:- 
+This means that different price for different sizes but the price will be same for any color means tale Small pants in red 500 but take that in L costs 800.
 
-    const savedCategoryIds = {};
-    const savedCategories = [];
+If the main price field is not filled, then price in colorVariants is also not filled, then there is possbility that price field is filled in 'sizeVariants' array. Each object in sizeVariants array will contain the different size. We can add multiple Size variants. 'sizeVariants' contain the array named 'availableColors'. If this array is empty that means the size is available for all the colors and if it contains some data that means the size is available for that colors only. If this is the case that size is available for only some colors then display only that colors and its images. Each sizeVariants will contain the 'priceRanges' array and if price there is value in 'price' field inside sizeVariants array then this array will alays contains some value. Display the pricing chart accoring to it. Displaying logic of price chart is same as color variants logic. 'optionalDetails' logic is also same for the 'sizeVariants' Array. Some size variants also contain the value of 'length', 'breadth' and 'height' instead of 'S', 'XS', etc. 
 
-    for (const category of categories) {
-      let parentId = null;
-      
-      if (category.parent_category_id) {
-        console.log(`Processing parent_category_id: ${category.parent_category_id}`);
-        
-        if (category.parent_category_id === 'main') {
-          // This is a direct child of main category
-          parentId = savedCategoryIds['main'];
-        } else {
-          // This is a nested subcategory - find the parent using the path
-          const pathKey = category.parent_category_id;
-          if (!savedCategoryIds[pathKey]) {
-            console.log(`Invalid parent_category_id: ${category.parent_category_id} (path: ${pathKey})`);
-            return res.status(400).json({ error: `Invalid parent_category_id: ${category.parent_category_id}` });
-          }
-          parentId = savedCategoryIds[pathKey];
-        }
-      }
+Now if the price is not filled inside the 'SizeVariants' array as well then price will be filled inside 'pricingSections' Array.
 
-      console.log(`Saving category: ${category.categoryName}, parentId: ${parentId || 'null'}`);
+PricingSections: 
+This means that for different color and different size there will be different price. 
+Leave this for now first implement the above
 
-      const newCategory = new Category({
-        categoryName: category.categoryName,
-        parent_category_id: parentId,
-        image: category.image || null,
-      });
+Now lets talk about common things to display:
 
-      const saved = await newCategory.save();
-      savedCategories.push(saved);
+'details' field. This contain the details of the product in key value pair. Display it also in key value pair. The key should be bold. Display 'stock' and its value in the details section. Display name.
 
-      // Store the saved category ID with its path for future reference
-      if (category.parent_category_id === null) {
-        // This is the main category
-        savedCategoryIds['main'] = saved._id;
-        console.log(`Saved main category: ${category.categoryName}, _id: ${saved._id}`);
-      } else {
-        // This is a subcategory - store it with the current path for nested children
-        const currentPath = category.current_path;
-        if (currentPath) {
-          savedCategoryIds[currentPath] = saved._id;
-          console.log(`Saved subcategory: ${category.categoryName}, path: ${currentPath}, _id: ${saved._id}`);
-        }
-      }
-    }
+For now I will provide you data if you followed my instructions properly then we will fetch data from database.
+data:
 
-    res.status(201).json({
-      message: 'Categories created successfully',
-      categories: savedCategories,
-    });
-  } catch (error) {
-    console.error('Error creating categories:', error.message);
-    res.status(500).json({ error: 'Internal server error' });
-  }
-};
 
-module.exports = addCategory;
-
-This is my Category.js:
-const mongoose = require('mongoose');
-
-const categorySchema = mongoose.Schema({
-  categoryName: {
-    type: String,
-    required: true,
-    trim: true,
-  },
-  parent_category_id: {
-    type: mongoose.Schema.Types.ObjectId,
-    default: null,
-    required: false,
-    ref: 'Category',
-  },
-  image: {
-    type: String, // Store image URL for main categories
-    required: false,
-  },
-}, {
-  timestamps: true,
-});
-
-// Index for faster queries on parent_category_id
-categorySchema.index({ parent_category_id: 1 });
-
-module.exports = mongoose.model('Category', categorySchema);
-
-Please do the needful changes so that I can add the category then nested category and thene su categiry of the nested category. Okay listen the code is working with fetch API as well but now need to convert to axios for consistency and new is to implement image upload in cloudinary.
-
-Please do the needful chanegs and return me all the updated files

@@ -15,7 +15,7 @@ const morgan = require('morgan');
 const app = express();
 
 // Middleware
-app.use(morgan('dev')); // Request logging for debugging
+// app.use(morgan('dev')); // Request logging for debugging
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 app.use(cookieParser());
@@ -59,7 +59,7 @@ app.get('/api/user/profile', authenticate, async (req, res) => {
 
 // Admin routes (protected by authenticate and authorize)
 app.use('/api/category', authenticate, authorize(['admin']), categoryRoutes);
-app.use('/api/product', authenticate, authorize(['admin']), productRoutes);
+app.use('/api/product', authenticate, productRoutes);
 
 // Authenticated user info
 app.get('/api/auth/me', authenticate, async (req, res) => {

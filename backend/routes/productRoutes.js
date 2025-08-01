@@ -3,6 +3,7 @@ const router = express.Router();
 const productController = require('../controllers/productController');
 const multer = require('multer');
 const path = require('path');
+const authorize = require('../middlewares/authorize');
 
 // Multer storage configuration
 // const storage = multer.diskStorage({
@@ -18,6 +19,7 @@ const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
 // POST /api/product/add
-router.post('/add', upload.array('colorImages'), productController.addProduct);
+router.post('/add', authorize(['admin']), upload.array('colorImages'), productController.addProduct);
+router.get('/all', authorize(['admin', 'user']), productController.fetchProducts);
 
 module.exports = router;

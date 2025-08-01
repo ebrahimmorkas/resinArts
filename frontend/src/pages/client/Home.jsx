@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useRef, useCallback, useContext } from "react"
-import { useNavigate } from 'react-router-dom';
+import { ProductContext } from '../../../Context/ProductContext';
 import {
   Search,
   User,
@@ -22,190 +22,266 @@ import {
   Package,
   LogOut,
 } from "lucide-react"
-import { AuthContext } from "../../../Context/AuthContext";
-import axios from 'axios';
 
-// Mock data with real sample images and variants
-const mockProducts = [
+// Database products - 3 different pricing scenarios
+const databaseProducts = [
+  // Scenario 1: Base price with basePriceRanges
   {
-    id: 1,
-    name: "Premium Wireless Headphones",
-    image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-    price: 150,
-    originalPrice: 200,
-    badge: "NEW",
-    category: "Electronics",
-    type: "just-arrived",
-    rating: 4.5,
-    description:
-      "Experience premium sound quality with these wireless headphones featuring noise cancellation, 30-hour battery life, and comfortable over-ear design. Perfect for music lovers and professionals.",
-    variants: {
-      colors: [
-        {
-          name: "Black",
-          value: "#000000",
-          image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop",
-          price: 150,
-          priceChart: [
-            { quantity: "1-4", price: 150 },
-            { quantity: "5-9", price: 140 },
-            { quantity: "10+", price: 130 },
-          ],
-        },
-        {
-          name: "White",
-          value: "#FFFFFF",
-          image: "https://images.unsplash.com/photo-1484704849700-f032a568e944?w=300&h=300&fit=crop",
-          price: 160,
-          priceChart: [
-            { quantity: "1-4", price: 160 },
-            { quantity: "5-9", price: 150 },
-            { quantity: "10+", price: 140 },
-          ],
-        },
-        {
-          name: "Blue",
-          value: "#3B82F6",
-          image: "https://images.unsplash.com/photo-1546435770-a3e426bf472b?w=300&h=300&fit=crop",
-          price: 155,
-          priceChart: [
-            { quantity: "1-4", price: 155 },
-            { quantity: "5-9", price: 145 },
-            { quantity: "10+", price: 135 },
-          ],
-        },
-      ],
-      sizes: ["One Size"],
-    },
-    priceChart: [
-      { quantity: "1-4", price: 150 },
-      { quantity: "5-9", price: 140 },
-      { quantity: "10+", price: 130 },
+    _id: "688a36fddd24e93753865284",
+    name: "test image claude",
+    price: 10,
+    stock: 12,
+    details: [
+      {
+        name: "w",
+        value: "e",
+      },
     ],
-  },
-  {
-    id: 2,
-    name: "Smart Fitness Watch",
-    image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-    price: 100,
-    originalPrice: 150,
-    badge: "-33%",
-    category: "Electronics",
+    colorVariants: [
+      {
+        color: "red",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753888507/ProductImages/izlm97cj0yfqyddgdbeb.png",
+        price: null,
+        isDefault: true,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+      },
+      {
+        color: "blue",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753888508/ProductImages/qmkjpn1svscdxrji77jw.png",
+        price: null,
+        isDefault: false,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+      },
+    ],
+    sizeVariants: [
+      {
+        size: "XXL",
+        price: null,
+        isDefault: true,
+        forAllColors: "yes",
+        availableColors: [],
+        optionalDetails: [],
+      },
+    ],
+    basePriceRanges: [
+      {
+        retailPrice: 10,
+        wholesalePrice: 9,
+        thresholdQuantity: 1,
+      },
+    ],
     type: "revised-rates",
-    rating: 4.8,
-    description:
-      "Track your fitness goals with this advanced smartwatch featuring heart rate monitoring, GPS tracking, water resistance, and 7-day battery life. Compatible with iOS and Android.",
-    variants: {
-      colors: [
-        {
-          name: "Black",
-          value: "#000000",
-          image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop",
-          price: 100,
-          priceChart: [
-            { quantity: "1-2", price: 100 },
-            { quantity: "3-5", price: 95 },
-            { quantity: "6+", price: 90 },
-          ],
-        },
-        {
-          name: "Silver",
-          value: "#C0C0C0",
-          image: "https://images.unsplash.com/photo-1579586337278-3f436f25d4d6?w=300&h=300&fit=crop",
-          price: 110,
-          priceChart: [
-            { quantity: "1-2", price: 110 },
-            { quantity: "3-5", price: 105 },
-            { quantity: "6+", price: 100 },
-          ],
-        },
-        {
-          name: "Rose Gold",
-          value: "#E8B4B8",
-          image: "https://images.unsplash.com/photo-1434493789847-2f02dc6ca35d?w=300&h=300&fit=crop",
-          price: 120,
-          priceChart: [
-            { quantity: "1-2", price: 120 },
-            { quantity: "3-5", price: 115 },
-            { quantity: "6+", price: 110 },
-          ],
-        },
-      ],
-      sizes: ["38mm", "42mm", "44mm"],
-    },
-    priceChart: [
-      { quantity: "1-2", price: 100 },
-      { quantity: "3-5", price: 95 },
-      { quantity: "6+", price: 90 },
-    ],
+    category: "Electronics",
   },
+  // Scenario 2: Color-based pricing
   {
-    id: 3,
-    name: "Organic Cotton T-Shirt",
-    image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-    price: 25,
-    originalPrice: 35,
-    badge: "RESTOCKED",
-    category: "Clothing",
-    type: "restocked",
-    rating: 4.3,
-    description:
-      "Comfortable and sustainable organic cotton t-shirt with a relaxed fit. Made from 100% certified organic cotton, perfect for everyday wear with eco-friendly materials.",
-    variants: {
-      colors: [
-        {
-          name: "White",
-          value: "#FFFFFF",
-          image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=300&h=300&fit=crop",
-          price: 25,
-          priceChart: [
-            { quantity: "1-4", price: 25 },
-            { quantity: "5-9", price: 22 },
-            { quantity: "10+", price: 20 },
-          ],
-        },
-        {
-          name: "Black",
-          value: "#000000",
-          image: "https://images.unsplash.com/photo-1583743814966-8936f37f4678?w=300&h=300&fit=crop",
-          price: 25,
-          priceChart: [
-            { quantity: "1-4", price: 25 },
-            { quantity: "5-9", price: 22 },
-            { quantity: "10+", price: 20 },
-          ],
-        },
-        {
-          name: "Navy",
-          value: "#1E3A8A",
-          image: "https://images.unsplash.com/photo-1586790170083-2f9ceadc732d?w=300&h=300&fit=crop",
-          price: 27,
-          priceChart: [
-            { quantity: "1-4", price: 27 },
-            { quantity: "5-9", price: 24 },
-            { quantity: "10+", price: 22 },
-          ],
-        },
-        {
-          name: "Gray",
-          value: "#6B7280",
-          image: "https://images.unsplash.com/photo-1618354691373-d851c5c3a990?w=300&h=300&fit=crop",
-          price: 26,
-          priceChart: [
-            { quantity: "1-4", price: 26 },
-            { quantity: "5-9", price: 23 },
-            { quantity: "10+", price: 21 },
-          ],
-        },
-      ],
-      sizes: ["XS", "S", "M", "L", "XL", "XXL"],
-    },
-    priceChart: [
-      { quantity: "1-4", price: 25 },
-      { quantity: "5-9", price: 22 },
-      { quantity: "10+", price: 20 },
+    _id: "688a418cdd24e9375386529b",
+    name: "test agai a",
+    price: null,
+    stock: 9,
+    details: [
+      {
+        name: "erjk",
+        value: "jdhfjk",
+      },
+      {
+        name: "fjsdhfik",
+        value: "shfiu",
+      },
+      {
+        name: "fudhfi",
+        value: "idsfiu",
+      },
+      {
+        name: "jsbf",
+        value: "dsjkfbjskfb",
+      },
     ],
+    colorVariants: [
+      {
+        color: "red",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891208/ProductImages/gqh4o36gntmqqkp7h7ks.jpg",
+        price: 9,
+        isDefault: false,
+        forAllSizes: "no",
+        availableSizes: ["S", "XS"],
+        optionalDetails: [
+          {
+            name: "red",
+            value: "red",
+          },
+        ],
+        priceRanges: [
+          {
+            retailPrice: 9,
+            wholesalePrice: 8,
+            thresholdQuantity: 9,
+          },
+        ],
+      },
+      {
+        color: "green",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891209/ProductImages/yl48luxaynw6dypznaox.png",
+        price: 10,
+        isDefault: true,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [
+          {
+            name: "green",
+            value: "green",
+          },
+        ],
+        priceRanges: [
+          {
+            retailPrice: 10,
+            wholesalePrice: 9,
+            thresholdQuantity: 11,
+          },
+        ],
+      },
+      {
+        color: "blue",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891211/ProductImages/s5xbxzqxsaoncer6vbof.png",
+        price: 8,
+        isDefault: false,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+        priceRanges: [
+          {
+            retailPrice: 8,
+            wholesalePrice: 7,
+            thresholdQuantity: 78,
+          },
+          {
+            retailPrice: 7,
+            wholesalePrice: 6,
+            thresholdQuantity: 79,
+          },
+        ],
+      },
+    ],
+    sizeVariants: [
+      {
+        size: "XS",
+        price: null,
+        isDefault: true,
+        forAllColors: "yes",
+        availableColors: [],
+        optionalDetails: [
+          {
+            name: "er",
+            value: "re",
+          },
+        ],
+      },
+      {
+        size: "XXXL",
+        price: null,
+        isDefault: false,
+        forAllColors: "yes",
+        availableColors: [],
+        optionalDetails: [],
+      },
+    ],
+    basePriceRanges: [],
+    type: "restocked",
+    category: "Clothing",
   },
+  // Scenario 3: Size-based pricing
+  {
+    _id: "688b5bd7b8f57fcbe72a50d3",
+    name: "test",
+    price: null,
+    stock: 9,
+    details: [
+      {
+        name: "rew",
+        value: "dfsdf",
+      },
+    ],
+    colorVariants: [
+      {
+        color: "yellow",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753963477/ProductImages/lgl7gvm7fab0a8bjeqer.jpg",
+        price: null,
+        isDefault: true,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [
+          {
+            name: "gr",
+            value: "gb",
+          },
+        ],
+      },
+      {
+        color: "pink",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753963478/ProductImages/xmyvc8z34drawkf1ix0v.jpg",
+        price: null,
+        isDefault: false,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+      },
+    ],
+    sizeVariants: [
+      {
+        size: "XS",
+        price: 45,
+        isDefault: true,
+        forAllColors: "no",
+        availableColors: ["yellow"],
+        optionalDetails: [],
+        priceRanges: [
+          {
+            retailPrice: 45,
+            wholesalePrice: 30,
+            thresholdQuantity: 5,
+          },
+          {
+            retailPrice: 30,
+            wholesalePrice: 15,
+            thresholdQuantity: 6,
+          },
+        ],
+      },
+      {
+        size: "S",
+        price: 56,
+        isDefault: false,
+        forAllColors: "yes",
+        availableColors: [],
+        optionalDetails: [],
+        priceRanges: [
+          {
+            retailPrice: 56,
+            wholesalePrice: 45,
+            thresholdQuantity: 6,
+          },
+        ],
+      },
+    ],
+    basePriceRanges: [],
+    type: "just-arrived",
+    category: "Accessories",
+  },
+]
+
+// Mock data with real sample images and variants (keeping existing for other sections)
+const mockProducts = [
   {
     id: 4,
     name: "Professional Camera Lens",
@@ -455,6 +531,118 @@ const mockProducts = [
   },
 ]
 
+// Transform database products to match our component structure
+const transformDatabaseProduct = (dbProduct) => {
+  const defaultColorVariant = dbProduct.colorVariants.find((c) => c.isDefault) || dbProduct.colorVariants[0]
+  const defaultSizeVariant = dbProduct.sizeVariants.find((s) => s.isDefault) || dbProduct.sizeVariants[0]
+
+  // Determine pricing logic
+  let basePrice = 0
+  let priceChart = []
+
+  if (dbProduct.price) {
+    // Base price scenario
+    basePrice = dbProduct.price
+    if (dbProduct.basePriceRanges && dbProduct.basePriceRanges.length > 0) {
+      priceChart = dbProduct.basePriceRanges.map((range) => ({
+        quantity: `${range.thresholdQuantity}+`,
+        price: range.wholesalePrice,
+      }))
+    }
+  } else if (dbProduct.colorVariants.some((c) => c.price)) {
+    // Color-based pricing
+    const colorWithPrice = dbProduct.colorVariants.find((c) => c.price)
+    basePrice = colorWithPrice.price
+    if (colorWithPrice.priceRanges && colorWithPrice.priceRanges.length > 0) {
+      priceChart = colorWithPrice.priceRanges.map((range) => ({
+        quantity: `${range.thresholdQuantity}+`,
+        price: range.wholesalePrice,
+      }))
+    }
+  } else if (dbProduct.sizeVariants.some((s) => s.price)) {
+    // Size-based pricing
+    const sizeWithPrice = dbProduct.sizeVariants.find((s) => s.price)
+    basePrice = sizeWithPrice.price
+    if (sizeWithPrice.priceRanges && sizeWithPrice.priceRanges.length > 0) {
+      priceChart = sizeWithPrice.priceRanges.map((range) => ({
+        quantity: `${range.thresholdQuantity}+`,
+        price: range.wholesalePrice,
+      }))
+    }
+  }
+
+  // Transform color variants
+  const colors = dbProduct.colorVariants.map((colorVariant) => {
+    const colorPrice = dbProduct.price || colorVariant.price || basePrice
+    let colorPriceChart = []
+
+    if (dbProduct.price && dbProduct.basePriceRanges.length > 0) {
+      colorPriceChart = dbProduct.basePriceRanges.map((range) => ({
+        quantity: `${range.thresholdQuantity}+`,
+        price: range.wholesalePrice,
+      }))
+    } else if (colorVariant.priceRanges && colorVariant.priceRanges.length > 0) {
+      colorPriceChart = colorVariant.priceRanges.map((range) => ({
+        quantity: `${range.thresholdQuantity}+`,
+        price: range.wholesalePrice,
+      }))
+    }
+
+    return {
+      name: colorVariant.color,
+      value: colorVariant.color,
+      image: colorVariant.imageUrl,
+      price: colorPrice,
+      priceChart: colorPriceChart,
+      optionalDetails: colorVariant.optionalDetails || [],
+      availableSizes: colorVariant.forAllSizes === "yes" ? [] : colorVariant.availableSizes,
+    }
+  })
+
+  // Transform size variants
+  const sizes = dbProduct.sizeVariants.map((sizeVariant) => {
+    return {
+      name: sizeVariant.size,
+      price: sizeVariant.price,
+      availableColors: sizeVariant.forAllColors === "yes" ? [] : sizeVariant.availableColors,
+      optionalDetails: sizeVariant.optionalDetails || [],
+      priceChart: sizeVariant.priceRanges
+        ? sizeVariant.priceRanges.map((range) => ({
+            quantity: `${range.thresholdQuantity}+`,
+            price: range.wholesalePrice,
+          }))
+        : [],
+    }
+  })
+
+  return {
+    id: dbProduct._id,
+    name: dbProduct.name,
+    image: defaultColorVariant.imageUrl,
+    price: basePrice,
+    originalPrice: Math.round(basePrice * 1.3), // Assuming 30% markup for original price
+    badge: "NEW",
+    category: dbProduct.category,
+    type: dbProduct.type,
+    rating: 4.5,
+    stock: dbProduct.stock,
+    description: `${dbProduct.name} - Premium quality product with multiple variants available.`,
+    details: dbProduct.details || [],
+    variants: {
+      colors: colors,
+      sizes: sizes.map((s) => s.name),
+    },
+    priceChart: priceChart,
+    dbProduct: dbProduct, // Keep original for detailed logic
+  }
+}
+
+// Transform all database products
+const transformedDbProducts = databaseProducts.map(transformDatabaseProduct)
+
+// Combine all products
+const allProducts = [...transformedDbProducts, ...mockProducts]
+
 const categories = [
   {
     id: 1,
@@ -483,7 +671,7 @@ const categories = [
   {
     id: 9,
     name: "Jewelry",
-    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7c44d8?w=100&h=100&fit=crop",
+    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7d3138?w=100&h=100&fit=crop",
   },
   { id: 10, name: "Kitchen", image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop" },
   {
@@ -499,7 +687,7 @@ const banners = [
   "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop",
 ]
 
-export default function Home() {
+export default function HomePage() {
   const [cartItems, setCartItems] = useState({})
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
@@ -513,8 +701,9 @@ export default function Home() {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
   const [quantityToAdd, setQuantityToAdd] = useState(1)
-  const { user } = useContext(AuthContext);
-  const navigate = useNavigate();
+  const [selectedImage, setSelectedImage] = useState(null)
+  const products = useContext(ProductContext);
+  console.log(products);
 
   // Store variant selections per product ID to prevent resets
   const [variantSelections, setVariantSelections] = useState({})
@@ -555,20 +744,9 @@ export default function Home() {
   const parseCartKey = (cartKey) => {
     const [productId, color, size] = cartKey.split("-")
     return {
-      productId: Number.parseInt(productId),
+      productId: productId,
       color: color === "default" ? null : color,
       size: size === "default" ? null : size,
-    }
-  }
-
-  const handleLogout = async () => {
-    try {
-      const res = await axios.post('http://localhost:3000/api/auth/logout', {}, {
-        withCredentials: true
-      });
-      navigate('/auth/login');
-    } catch (err) {
-      console.log(err);
     }
   }
 
@@ -661,7 +839,7 @@ export default function Home() {
   }
 
   const getFilteredProducts = () => {
-    let filtered = mockProducts
+    let filtered = allProducts
     // Filter by category if selected
     if (selectedCategory) {
       filtered = filtered.filter((product) => product.category === selectedCategory)
@@ -697,11 +875,11 @@ export default function Home() {
     return Object.keys(cartItems).length
   }
 
-  // Get or initialize variant selection for a product
+  // Update the getVariantSelection function to handle color objects properly
   const getVariantSelection = useCallback(
     (productId) => {
       if (!variantSelections[productId]) {
-        const product = mockProducts.find((p) => p.id === productId)
+        const product = allProducts.find((p) => p.id === productId)
         if (product) {
           const defaultSelection = {
             color: product.variants.colors[0],
@@ -716,19 +894,125 @@ export default function Home() {
       }
       return variantSelections[productId]
     },
-    [variantSelections],
+    [variantSelections, allProducts],
   )
 
   // Update variant selection for a specific product
-  const updateVariantSelection = useCallback((productId, type, value) => {
-    setVariantSelections((prev) => ({
-      ...prev,
-      [productId]: {
-        ...prev[productId],
-        [type]: value,
-      },
-    }))
-  }, [])
+  const updateVariantSelection = useCallback(
+    (productId, type, value) => {
+      setVariantSelections((prev) => ({
+        ...prev,
+        [productId]: {
+          ...prev[productId],
+          [type]: value,
+        },
+      }))
+    },
+    [setVariantSelections],
+  )
+
+  // Get pricing info for database products
+  const getProductPricing = (product, selectedColor = null, selectedSize = null) => {
+    if (!product.dbProduct) {
+      // Regular mock product
+      return {
+        price: product.price,
+        priceChart: product.priceChart || [],
+      }
+    }
+
+    const dbProduct = product.dbProduct
+
+    // Helper function to format price ranges correctly
+    const formatPriceRanges = (priceRanges) => {
+      if (!priceRanges || priceRanges.length === 0) return []
+
+      // Filter out invalid ranges
+      const validRanges = priceRanges.filter((range) => range.thresholdQuantity != null && range.wholesalePrice != null)
+
+      if (validRanges.length === 0) return []
+
+      // Sort by threshold quantity
+      const sortedRanges = validRanges.sort((a, b) => a.thresholdQuantity - b.thresholdQuantity)
+
+      if (sortedRanges.length === 1) {
+        // Single range case: "12+ pieces - $8"
+        return [
+          {
+            quantity: `${sortedRanges[0].thresholdQuantity}+ pieces`,
+            price: sortedRanges[0].wholesalePrice,
+          },
+        ]
+      } else {
+        // Multiple ranges case
+        const formattedRanges = []
+
+        for (let i = 0; i < sortedRanges.length; i++) {
+          const current = sortedRanges[i]
+          const next = sortedRanges[i + 1]
+
+          if (i === 0) {
+            // First range: "1 - 12 pieces - $8"
+            formattedRanges.push({
+              quantity: `1 - ${current.thresholdQuantity} pieces`,
+              price: current.wholesalePrice,
+            })
+          }
+
+          if (next) {
+            // Middle ranges: "13 - 24 pieces - $6"
+            formattedRanges.push({
+              quantity: `${current.thresholdQuantity + 1} - ${next.thresholdQuantity} pieces`,
+              price: next.wholesalePrice,
+            })
+          } else if (i > 0) {
+            // Last range: "25+ pieces - $6"
+            formattedRanges.push({
+              quantity: `${current.thresholdQuantity + 1}+ pieces`,
+              price: current.wholesalePrice,
+            })
+          }
+        }
+
+        return formattedRanges
+      }
+    }
+
+    // Base price scenario
+    if (dbProduct.price) {
+      return {
+        price: dbProduct.price,
+        priceChart: formatPriceRanges(dbProduct.basePriceRanges),
+      }
+    }
+
+    // Color-based pricing
+    if (selectedColor && dbProduct.colorVariants.some((c) => c.price)) {
+      const colorVariant = dbProduct.colorVariants.find((c) => c.color === selectedColor)
+      if (colorVariant && colorVariant.price) {
+        return {
+          price: colorVariant.price,
+          priceChart: formatPriceRanges(colorVariant.priceRanges),
+        }
+      }
+    }
+
+    // Size-based pricing
+    if (selectedSize && dbProduct.sizeVariants.some((s) => s.price)) {
+      const sizeVariant = dbProduct.sizeVariants.find((s) => s.size === selectedSize)
+      if (sizeVariant && sizeVariant.price) {
+        return {
+          price: sizeVariant.price,
+          priceChart: formatPriceRanges(sizeVariant.priceRanges),
+        }
+      }
+    }
+
+    return {
+      price: product.price,
+      priceChart: product.priceChart || [],
+    }
+  }
 
   const ProductCard = ({ product }) => {
     const totalQuantity = getProductCartQuantity(product.id)
@@ -739,6 +1023,9 @@ export default function Home() {
     const defaultSize = product.variants.sizes[0]
     const defaultCartKey = generateCartKey(product.id, defaultColor, defaultSize)
     const defaultVariantQuantity = cartItems[defaultCartKey] || 0
+
+    // Get pricing info
+    const pricingInfo = getProductPricing(product, defaultColor, defaultSize)
 
     // Get all cart keys for this product
     const getProductCartKeys = (productId) => {
@@ -762,7 +1049,8 @@ export default function Home() {
           <img
             src={product.image || "/placeholder.svg"}
             alt={product.name}
-            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
+            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+            onClick={() => setSelectedImage(product.image)}
           />
           <div className="absolute top-2 left-2">
             <span
@@ -797,36 +1085,58 @@ export default function Home() {
         <div className="p-4">
           <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg font-bold text-gray-900">${product.price}</span>
+            <span className="text-lg font-bold text-gray-900">${pricingInfo.price}</span>
             <span className="text-sm text-gray-500 line-through">${product.originalPrice}</span>
           </div>
+
+          {/* Stock Info for Database Products */}
+          {product.stock && (
+            <div className="mb-2">
+              <span className="text-xs text-gray-600">Stock: {product.stock} available</span>
+            </div>
+          )}
+
           {/* Variants Preview */}
           <div className="mb-3">
             <div className="flex items-center gap-1 mb-1">
               <span className="text-xs text-gray-600">Colors:</span>
               <div className="flex gap-1">
                 {product.variants.colors.slice(0, 3).map((color, index) => (
-                  <div
-                    key={index}
-                    className="w-3 h-3 rounded-full border border-gray-300"
-                    style={{ backgroundColor: color.value }}
-                  />
+                  <div key={index} className="relative">
+                    {color.image ? (
+                      <img
+                        src={color.image || "/placeholder.svg"}
+                        alt={color.name}
+                        className="w-3 h-3 rounded-full border border-gray-300 object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="w-3 h-3 rounded-full border border-gray-300"
+                        style={{ backgroundColor: color.value }}
+                      />
+                    )}
+                  </div>
                 ))}
                 {product.variants.colors.length > 3 && (
                   <span className="text-xs text-gray-500">+{product.variants.colors.length - 3}</span>
                 )}
               </div>
             </div>
+            <div className="flex items-center gap-1 mb-1">
+              <span className="text-xs text-gray-600">Default Size:</span>
+              <span className="text-xs font-medium text-gray-800">{defaultSize}</span>
+            </div>
             <div className="text-xs text-gray-600">
-              Sizes: {product.variants.sizes.slice(0, 3).join(", ")}
+              All Sizes: {product.variants.sizes.slice(0, 3).join(", ")}
               {product.variants.sizes.length > 3 && ` +${product.variants.sizes.length - 3} more`}
             </div>
           </div>
+
           {/* Price Chart */}
           <div className="mb-3 p-2 bg-gray-50 rounded-lg">
             <p className="text-xs font-semibold text-gray-600 mb-1">Bulk Pricing:</p>
             <div className="space-y-1">
-              {product.priceChart.map((tier, index) => (
+              {pricingInfo.priceChart.map((tier, index) => (
                 <div key={index} className="flex justify-between text-xs">
                   <span>{tier.quantity} pcs</span>
                   <span className="font-semibold">${tier.price} each</span>
@@ -834,6 +1144,7 @@ export default function Home() {
               ))}
             </div>
           </div>
+
           <div className="space-y-2">
             {/* First Row - Details and Select Variant */}
             <div className="flex gap-2">
@@ -914,9 +1225,11 @@ export default function Home() {
   const ProductModal = ({ product, onClose }) => {
     if (!product) return null
 
+    const pricingInfo = getProductPricing(product)
+
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+        <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
           <div className="flex justify-between items-start p-6 pb-4 flex-shrink-0">
             <h2 className="text-2xl font-bold text-gray-800">{product.name}</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -934,7 +1247,7 @@ export default function Home() {
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-4">
-                  <span className="text-2xl font-bold text-gray-900">${product.price}</span>
+                  <span className="text-2xl font-bold text-gray-900">${pricingInfo.price}</span>
                   <span className="text-lg text-gray-500 line-through">${product.originalPrice}</span>
                 </div>
                 <div className="flex items-center gap-2 mb-4">
@@ -950,10 +1263,33 @@ export default function Home() {
                   </div>
                   <span className="text-sm text-gray-600">({product.rating})</span>
                 </div>
+
+                {/* Product Details */}
+                {product.details && product.details.length > 0 && (
+                  <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                    <h3 className="font-semibold text-gray-800 mb-2">Product Details</h3>
+                    <div className="space-y-2">
+                      {product.details.map((detail, index) => (
+                        <div key={index} className="flex justify-between text-sm">
+                          <span className="font-medium">{detail.name}:</span>
+                          <span>{detail.value}</span>
+                        </div>
+                      ))}
+                      {product.stock && (
+                        <div className="flex justify-between text-sm">
+                          <span className="font-medium">Stock:</span>
+                          <span>{product.stock} available</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {/* Bulk Pricing */}
                 <div className="mb-6 p-4 bg-gray-50 rounded-lg">
                   <h3 className="font-semibold text-gray-800 mb-2">Bulk Pricing</h3>
                   <div className="space-y-2">
-                    {product.priceChart.map((tier, index) => (
+                    {pricingInfo.priceChart.map((tier, index) => (
                       <div key={index} className="flex justify-between">
                         <span>{tier.quantity} pieces</span>
                         <span className="font-semibold">${tier.price} each</span>
@@ -961,6 +1297,7 @@ export default function Home() {
                     ))}
                   </div>
                 </div>
+
                 <p className="text-gray-600 mb-6">{product.description}</p>
                 <button
                   onClick={() => {
@@ -979,6 +1316,7 @@ export default function Home() {
     )
   }
 
+  // Enhanced VariantModal with database product support
   const VariantModal = ({ product, onClose }) => {
     if (!product) return null
 
@@ -987,13 +1325,16 @@ export default function Home() {
 
     if (!currentSelection) return null
 
-    const cartKey = generateCartKey(product.id, currentSelection.color?.name, currentSelection.size)
+    const cartKey = generateCartKey(
+      product.id,
+      currentSelection.color?.name || currentSelection.color?.color,
+      currentSelection.size,
+    )
     const currentVariantQuantity = cartItems[cartKey] || 0
 
-    // Get variant-specific price and price chart
-    const selectedColorData = currentSelection.color
-    const variantPrice = selectedColorData?.price || product.price
-    const variantPriceChart = selectedColorData?.priceChart || product.priceChart
+    // Get variant-specific pricing - use the selected color name properly
+    const selectedColorName = currentSelection.color?.name || currentSelection.color?.color || currentSelection.color
+    const pricingInfo = getProductPricing(product, selectedColorName, currentSelection.size)
 
     // Update quantityToAdd when variant changes and it exists in cart
     const [localQuantityToAdd, setLocalQuantityToAdd] = useState(1)
@@ -1007,7 +1348,10 @@ export default function Home() {
     }, [currentVariantQuantity])
 
     const handleColorSelect = (color) => {
-      updateVariantSelection(product.id, "color", color)
+      // Handle both database and mock product color structures
+      const colorToSelect = color.color || color.name || color
+      const colorObject = availableColors.find((c) => (c.color || c.name) === colorToSelect) || color
+      updateVariantSelection(product.id, "color", colorObject)
     }
 
     const handleSizeSelect = (size) => {
@@ -1025,7 +1369,7 @@ export default function Home() {
         handleRemoveFromCart(cartKey)
       }
       for (let i = 0; i < localQuantityToAdd; i++) {
-        handleAddToCart(product.id, currentSelection.color?.name, currentSelection.size)
+        handleAddToCart(product.id, selectedColorName, currentSelection.size)
       }
       onClose()
     }
@@ -1034,6 +1378,76 @@ export default function Home() {
       handleRemoveFromCart(cartKey)
       setLocalQuantityToAdd(1)
     }
+
+    // Get available sizes for selected color (database products)
+    const getAvailableSizes = () => {
+      if (!product.dbProduct) return product.variants.sizes
+
+      const dbProduct = product.dbProduct
+      const selectedColorVariant = dbProduct.colorVariants.find((c) => c.color === selectedColorName)
+
+      if (selectedColorVariant && selectedColorVariant.forAllSizes === "no") {
+        return selectedColorVariant.availableSizes
+      }
+
+      return dbProduct.sizeVariants.map((s) => s.size)
+    }
+
+    // Get available colors for selected size (database products)
+    const getAvailableColors = () => {
+      if (!product.dbProduct) return product.variants.colors
+
+      const dbProduct = product.dbProduct
+      const selectedSizeVariant = dbProduct.sizeVariants.find((s) => s.size === currentSelection.size)
+
+      if (selectedSizeVariant && selectedSizeVariant.forAllColors === "no") {
+        return dbProduct.colorVariants.filter((c) => selectedSizeVariant.availableColors.includes(c.color))
+      }
+
+      return dbProduct.colorVariants
+    }
+
+    // Get optional details for current selection
+    const getOptionalDetails = () => {
+      if (!product.dbProduct) return []
+
+      const dbProduct = product.dbProduct
+      let details = []
+
+      // Color-specific details
+      const selectedColorVariant = dbProduct.colorVariants.find((c) => c.color === selectedColorName)
+      if (selectedColorVariant && selectedColorVariant.optionalDetails) {
+        details = [...details, ...selectedColorVariant.optionalDetails]
+      }
+
+      // Size-specific details
+      const selectedSizeVariant = dbProduct.sizeVariants.find((s) => s.size === currentSelection.size)
+      if (selectedSizeVariant && selectedSizeVariant.optionalDetails) {
+        details = [...details, ...selectedSizeVariant.optionalDetails]
+      }
+
+      return details.filter((detail) => detail.name && detail.value)
+    }
+
+    const availableSizes = getAvailableSizes()
+    const availableColors = getAvailableColors()
+    const optionalDetails = getOptionalDetails()
+
+    // Get the current selected color's image
+    const getCurrentColorImage = () => {
+      if (!currentSelection.color) return product.image
+
+      // For database products
+      if (product.dbProduct) {
+        const selectedColorVariant = availableColors.find((c) => c.color === selectedColorName)
+        return selectedColorVariant?.imageUrl || product.image
+      }
+
+      // For mock products
+      return currentSelection.color.image || product.image
+    }
+
+    const currentImage = getCurrentColorImage()
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -1046,13 +1460,15 @@ export default function Home() {
           </div>
           <div className="px-6 pb-6 overflow-y-auto flex-1">
             <div className="mb-4">
+              {/* Main Image - Only this should open image modal */}
               <img
-                src={currentSelection.color?.image || product.image}
-                alt={`${product.name} - ${currentSelection.color?.name || "default"} variant`}
-                className="w-full h-48 object-cover rounded-lg mb-4"
+                src={currentImage || "/placeholder.svg"}
+                alt={`${product.name} - ${selectedColorName || "default"} variant`}
+                className="w-full h-48 object-cover rounded-lg mb-4 cursor-pointer hover:opacity-90 transition-opacity"
+                onClick={() => setSelectedImage(currentImage)}
               />
               <h3 className="font-semibold text-lg">{product.name}</h3>
-              <p className="text-2xl font-bold text-blue-600">${variantPrice}</p>
+              <p className="text-2xl font-bold text-blue-600">${pricingInfo.price}</p>
             </div>
 
             {/* Variant Description */}
@@ -1062,23 +1478,43 @@ export default function Home() {
 
             {/* Color Selection */}
             <div className="mb-6">
-              <h4 className="font-semibold mb-3">Color: {currentSelection.color?.name || "Select Color"}</h4>
+              <h4 className="font-semibold mb-3">Color: {selectedColorName || "Select Color"}</h4>
               <div className="flex gap-3 flex-wrap">
-                {product.variants.colors.map((color, index) => (
-                  <button
-                    key={`color-${product.id}-${index}`}
-                    onClick={() => handleColorSelect(color)}
-                    className={`relative w-12 h-12 sm:w-20 sm:h-20 bg-white rounded-lg border-2 transition-all ${
-                      currentSelection.color?.name === color.name ? "border-blue-500 scale-110" : "border-gray-300"
-                    }`}
-                    style={{ backgroundColor: color.value }}
-                    title={color.name}
-                  >
-                    {currentSelection.color?.name === color.name && (
-                      <Check className="absolute inset-0 m-auto w-6 h-6 text-white drop-shadow-lg" />
-                    )}
-                  </button>
-                ))}
+                {availableColors.map((color, index) => {
+                  const colorName = color.color || color.name
+                  const isSelected = selectedColorName === colorName
+
+                  return (
+                    <button
+                      key={`color-${product.id}-${index}`}
+                      onClick={() => handleColorSelect(color)}
+                      className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg border-2 transition-all overflow-hidden ${
+                        isSelected ? "border-blue-500 scale-105 shadow-lg" : "border-gray-300 hover:border-gray-400"
+                      }`}
+                      title={colorName}
+                    >
+                      {color.imageUrl || color.image ? (
+                        <img
+                          src={color.imageUrl || color.image}
+                          alt={colorName}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-full rounded-lg"
+                          style={{ backgroundColor: color.value || colorName }}
+                        />
+                      )}
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                          <div className="bg-white rounded-full p-1 shadow-md">
+                            <Check className="w-4 h-4 text-blue-600" />
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
@@ -1086,7 +1522,7 @@ export default function Home() {
             <div className="mb-6">
               <h4 className="font-semibold mb-3">Size: {currentSelection.size || "Select Size"}</h4>
               <div className="flex gap-2 flex-wrap">
-                {product.variants.sizes.map((size, index) => (
+                {availableSizes.map((size, index) => (
                   <button
                     key={`size-${product.id}-${index}`}
                     onClick={() => handleSizeSelect(size)}
@@ -1102,15 +1538,28 @@ export default function Home() {
               </div>
             </div>
 
+            {/* Optional Details */}
+            {optionalDetails.length > 0 && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-gray-800 mb-2">Variant Details</h4>
+                <div className="space-y-2">
+                  {optionalDetails.map((detail, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span className="font-medium">{detail.name}:</span>
+                      <span>{detail.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
             {/* Variant-specific Price Chart */}
             <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-              <h4 className="font-semibold text-gray-800 mb-2">
-                Bulk Pricing for {currentSelection.color?.name || "Default"}
-              </h4>
+              <h4 className="font-semibold text-gray-800 mb-2">Bulk Pricing for {selectedColorName || "Default"}</h4>
               <div className="space-y-2">
-                {variantPriceChart.map((tier, index) => (
+                {pricingInfo.priceChart.map((tier, index) => (
                   <div key={index} className="flex justify-between text-sm">
-                    <span>{tier.quantity} pieces</span>
+                    <span>{tier.quantity}</span>
                     <span className="font-semibold">${tier.price} each</span>
                   </div>
                 ))}
@@ -1121,8 +1570,8 @@ export default function Home() {
             {currentVariantQuantity > 0 && currentSelection.color && currentSelection.size && (
               <div className="mb-4 p-3 bg-green-50 border border-green-200 rounded-lg">
                 <p className="text-green-800 text-sm">
-                  This variant ({currentSelection.color?.name}, {currentSelection.size}) is in your cart:{" "}
-                  {currentVariantQuantity} items
+                  This variant ({selectedColorName}, {currentSelection.size}) is in your cart: {currentVariantQuantity}{" "}
+                  items
                 </p>
               </div>
             )}
@@ -1187,12 +1636,36 @@ export default function Home() {
                     onClick={handleAddToCartFromModal}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
                   >
-                    Add {localQuantityToAdd} to Cart - {currentSelection.color?.name}, {currentSelection.size}
+                    Add {localQuantityToAdd} to Cart - {selectedColorName}, {currentSelection.size}
                   </button>
                 )}
               </div>
             )}
           </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Image Modal Component
+  const ImageModal = ({ imageUrl, onClose }) => {
+    if (!imageUrl) return null
+
+    return (
+      <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
+        <div className="relative bg-white rounded-lg p-4 max-w-[85vw] max-h-[85vh] shadow-2xl">
+          <button
+            onClick={onClose}
+            className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors z-10"
+          >
+            <X className="w-5 h-5" />
+          </button>
+          <img
+            src={imageUrl || "/placeholder.svg"}
+            alt="Full size product image"
+            className="max-w-full max-h-full object-contain rounded-lg"
+            onClick={(e) => e.stopPropagation()}
+          />
         </div>
       </div>
     )
@@ -1260,7 +1733,7 @@ export default function Home() {
                       My Orders
                     </a>
                     <a
-                      onClick={handleLogout}
+                      href="#"
                       className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                     >
                       <LogOut className="w-4 h-4" />
@@ -1304,9 +1777,10 @@ export default function Home() {
                 <div className="space-y-4">
                   {Object.entries(cartItems).map(([cartKey, quantity]) => {
                     const { productId, color, size } = parseCartKey(cartKey)
-                    const product = mockProducts.find((p) => p.id === productId)
+                    const product = allProducts.find((p) => p.id === productId)
                     const colorInfo = product.variants.colors.find((c) => c.name === color)
-                    const itemPrice = colorInfo?.price || product.price
+                    const pricingInfo = getProductPricing(product, color, size)
+                    const itemPrice = pricingInfo.price
                     return (
                       <div key={cartKey} className="flex items-center space-x-4 p-4 border rounded-lg">
                         <img
@@ -1339,7 +1813,7 @@ export default function Home() {
                           </div>
                           <button
                             onClick={() => handleRemoveFromCart(cartKey)}
-                            className="p-1 text-red-500 hover:bg-red-500 rounded transition-colors"
+                            className="p-1 text-red-500 hover:bg-red-50 rounded transition-colors"
                             title="Remove from cart"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -1355,10 +1829,10 @@ export default function Home() {
                         $
                         {Object.entries(cartItems)
                           .reduce((total, [cartKey, quantity]) => {
-                            const { productId, color } = parseCartKey(cartKey)
-                            const product = mockProducts.find((p) => p.id === productId)
-                            const colorInfo = product.variants.colors.find((c) => c.name === color)
-                            const itemPrice = colorInfo?.price || product.price
+                            const { productId, color, size } = parseCartKey(cartKey)
+                            const product = allProducts.find((p) => p.id === productId)
+                            const pricingInfo = getProductPricing(product, color, size)
+                            const itemPrice = pricingInfo.price
                             return total + itemPrice * quantity
                           }, 0)
                           .toFixed(2)}
@@ -1497,7 +1971,7 @@ export default function Home() {
           <section className="mb-12">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">{selectedCategory}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-              {mockProducts
+              {allProducts
                 .filter((product) => product.category === selectedCategory)
                 .map((product) => (
                   <ProductCard key={product.id} product={product} />
@@ -1511,7 +1985,7 @@ export default function Home() {
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Just Arrived</h2>
           <div className="overflow-x-auto">
             <div className="flex space-x-6 pb-4 min-w-max">
-              {mockProducts
+              {allProducts
                 .filter((p) => p.type === "just-arrived")
                 .map((product) => (
                   <div key={product.id} className="flex-shrink-0 w-72">
@@ -1527,7 +2001,7 @@ export default function Home() {
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Restocked Items</h2>
           <div className="overflow-x-auto">
             <div className="flex space-x-6 pb-4 min-w-max">
-              {mockProducts
+              {allProducts
                 .filter((p) => p.type === "restocked")
                 .map((product) => (
                   <div key={product.id} className="flex-shrink-0 w-72">
@@ -1543,7 +2017,7 @@ export default function Home() {
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Revised Rates</h2>
           <div className="overflow-x-auto">
             <div className="flex space-x-6 pb-4 min-w-max">
-              {mockProducts
+              {allProducts
                 .filter((p) => p.type === "revised-rates")
                 .map((product) => (
                   <div key={product.id} className="flex-shrink-0 w-72">
@@ -1652,6 +2126,8 @@ export default function Home() {
 
       {/* Variant Selection Modal */}
       <VariantModal product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} />
+      {/* Image Modal */}
+      <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />
     </div>
   )
 }
