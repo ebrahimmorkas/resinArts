@@ -1,225 +1,106 @@
 "use client"
 
 import React, { useState, useEffect, useCallback } from "react"
-import { Trash2, Plus } from "lucide-react"
+import { Plus, Trash2, Upload, X, ChevronDown, AlertCircle, Info } from "lucide-react"
 import axios from "axios"
 
-const PriceRangeSection = React.memo(
-  ({
-    ranges,
-    onRangeChange,
-    onAddRange,
-    onRemoveRange,
-    title,
-    isRequired = false,
-    isRetailPriceDisabled = false,
-    errors = {}, // NEW: Pass errors prop
-    parentIndex, // NEW: For specific error keys
-    sectionType, // NEW: To differentiate error keys
-  }) => {
-    const getError = (field, index) => {
-      const key = `${sectionType}_${parentIndex}_${index}_${field}`
-      return errors[key]
-    }
+// Dimension units
+const dimensionUnits = ["cm", "m", "inch"]
 
-    return (
-      <div className="mt-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
-        <div className="flex items-center justify-between mb-4">
-          <h4 className="text-sm font-semibold text-blue-800">
-            {title} {isRequired && <span className="text-red-500">*</span>}{" "}
-            <span className="font-bold"> (The threshold quantity will be included in retail price)</span>
-          </h4>
-          <button
-            type="button"
-            onClick={onAddRange}
-            className="flex items-center gap-1 px-3 py-1 text-sm rounded-md transition-colors duration-200 bg-blue-600 text-white hover:bg-blue-700"
-          >
-            <Plus size={12} />
-            Add Range
-          </button>
-        </div>
-        <div className="space-y-3">
-          {ranges.map((range, index) => (
-            <div key={range._id || `range-${index}`} className="bg-white p-3 rounded-md border border-blue-100">
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Retail Price {index === 0 && isRequired ? "*" : ""}
-                  </label>
-                  <input
-                    type="number"
-                    value={range.retailPrice || ""}
-                    onChange={(e) => onRangeChange(index, "retailPrice", e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    required={index === 0 && isRequired}
-                    disabled={index > 0 || isRetailPriceDisabled} // Disable for subsequent ranges and if explicitly disabled
-                  />
-                  {getError("retailPrice", index) && (
-                    <p className="text-red-500 text-xs mt-1">{getError("retailPrice", index)}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Wholesale Price {index === 0 && isRequired ? "*" : ""}
-                  </label>
-                  <input
-                    type="number"
-                    value={range.wholesalePrice || ""}
-                    onChange={(e) => onRangeChange(index, "wholesalePrice", e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="0.00"
-                    min="0"
-                    step="0.01"
-                    required={index === 0 && isRequired}
-                  />
-                  {getError("wholesalePrice", index) && (
-                    <p className="text-red-500 text-xs mt-1">{getError("wholesalePrice", index)}</p>
-                  )}
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
-                    Threshold Quantity {index === 0 && isRequired ? "*" : ""}
-                  </label>
-                  <input
-                    type="number"
-                    value={range.thresholdQuantity || ""}
-                    onChange={(e) => onRangeChange(index, "thresholdQuantity", e.target.value)}
-                    className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="10"
-                    min="1"
-                    required={index === 0 && isRequired}
-                  />
-                  {getError("thresholdQuantity", index) && (
-                    <p className="text-red-500 text-xs mt-1">{getError("thresholdQuantity", index)}</p>
-                  )}
-                </div>
-                <div className="flex justify-end">
-                  {ranges.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => onRemoveRange(index)}
-                      className="p-2 rounded-md transition-colors duration-200 text-red-500 hover:text-red-600 hover:bg-red-50"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  )}
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-    )
-  },
-)
-
-const AddProduct = () => {
-  const [formData, setFormData] = useState({
+export default function AddProduct() {
+  // Main product fields
+  const [productData, setProductData] = useState({
     name: "",
-    price: "",
     stock: "",
-    category: "",
-    categoryPath: [],
-  })
-  const [errors, setErrors] = useState({})
-  const [details, setDetails] = useState([
-    { name: "", value: "" },
-    { name: "", value: "" },
-    { name: "", value: "" },
-  ])
- const [colorVariants, setColorVariants] = useState([
-  {
-    color: "",
-    image: null, // This will be sent as a file and converted to imageUrl on the backend
-    imageUrl: "", // Optional: Add to store the URL if you fetch it back
     price: "",
-    isDefault: true,
-    optionalDetails: [],
-    priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-    forAllSizes: "yes",
-    availableSizes: [],
-  },
-]);
-  const [sizeVariants, setSizeVariants] = useState([
+    image: null,
+    selectedCategories: [], // Array to store selected category IDs
+  })
+
+  // Product details (key-value pairs)
+  const [productDetails, setProductDetails] = useState([
+    { id: Date.now(), key: "", value: "" },
+    { id: Date.now() + 1, key: "", value: "" },
+  ])
+
+  // Main product bulk pricing (when main price is filled)
+  const [mainBulkPricing, setMainBulkPricing] = useState([])
+
+  // Variants data
+  const [variants, setVariants] = useState([
     {
-      size: "",
+      id: Date.now(),
+      colorName: "",
+      image: null,
+      sizes: [
+        {
+          id: Date.now(),
+          length: "",
+          breadth: "",
+          height: "",
+          unit: "cm",
+        },
+      ],
       price: "",
-      optionalDetails: [],
-      priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-      isDefault: true,
-      useDimensions: false,
-      length: "",
-      breadth: "",
-      height: "",
-      forAllColors: "yes",
-      availableColors: [],
+      isPriceCommon: "yes",
+      stock: "",
+      isStockCommon: "yes",
+      variantPrices: {},
+      variantStocks: {},
+      bulkPricing: {},
+      optionalDetails: {},
     },
   ])
-  const [pricingSections, setPricingSections] = useState([
-    {
-      color: "",
-      size: "",
-      priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }], // Moved here
-    },
-  ])
-  const [basePriceRanges, setBasePriceRanges] = useState([
-    { retailPrice: "", wholesalePrice: "", thresholdQuantity: "" },
-  ])
+
+  // Form validation states
+  const [errors, setErrors] = useState({})
+  const [imagePreview, setImagePreview] = useState(null)
+  const [variantImagePreviews, setVariantImagePreviews] = useState({})
   const [categories, setCategories] = useState([])
   const [mainCategories, setMainCategories] = useState([])
-  const [selectedPath, setSelectedPath] = useState([])
   const [subCategoryOptions, setSubCategoryOptions] = useState([])
+  const [selectedPath, setSelectedPath] = useState([])
   const [loading, setLoading] = useState(true)
-  const [isSubmitting, setIsSubmitting] = useState(false)
-  const [showSuccessModal, setShowSuccessModal] = useState(false)
-  const [showErrorModal, setShowErrorModal] = useState(false)
-  const [fetchError, setFetchError] = useState("")
+  const [fetchError, setFetchError] = useState(null)
 
-  const sizeOptions = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "XXXXL"]
-
-  const isBasePriceFilled = !!formData.price
-  const isColorPriceFilled = colorVariants.some((v) => v.price && v.price !== "")
-  const isSizePriceFilled = sizeVariants.some((v) => v.price && v.price !== "")
-  const isPricingSectionFilled = pricingSections.some(
-    (s) =>
-      s.priceRanges &&
-      s.priceRanges.some(
-        (r) =>
-          (r.retailPrice && r.retailPrice !== "") ||
-          (r.wholesalePrice && r.wholesalePrice !== "") ||
-          (r.thresholdQuantity && r.thresholdQuantity !== ""),
-      ),
-  )
-
+  // Fetch categories
   const fetchCategories = useCallback(async () => {
     try {
       setLoading(true)
-      console.log("Fetching categories from /api/category/all...")
-      const response = await axios.get("http://localhost:3000/api/category/all", { withCredentials: true })
-      const categoriesData = response.data
-      console.log("Fetched categories:", JSON.stringify(categoriesData, null, 2))
-      if (!Array.isArray(categoriesData)) {
+      setFetchError(null)
+      const apiUrl = 'http://localhost:3000'
+      console.log("Fetching categories from:", `${apiUrl}/api/category/all`)
+      const response = await axios.get(`${apiUrl}/api/category/all`, {
+        withCredentials: true,
+      })
+      console.log("Categories fetched:", response.data)
+      if (!Array.isArray(response.data)) {
         throw new Error("Invalid category data received")
       }
-      setCategories(categoriesData)
-      const mainCats = categoriesData.filter((cat) => !cat.parentCategoryId && !cat.parent_category_id)
-      setMainCategories(mainCats)
+      setCategories(response.data)
+      const mainCats = response.data.filter(
+        (cat) => !cat.parentCategoryId && !cat.parent_category_id
+      )
       console.log("Main categories set:", mainCats)
-      let allCategories = [...categoriesData]
-      categoriesData.forEach((cat) => {
+      setMainCategories(mainCats)
+      let allCategories = [...response.data]
+      response.data.forEach((cat) => {
         if (cat.subcategories && Array.isArray(cat.subcategories)) {
           allCategories = [...allCategories, ...cat.subcategories]
         }
       })
       setCategories(allCategories)
       console.log("All categories set:", allCategories)
-      setLoading(false)
     } catch (error) {
-      console.error("Error fetching categories:", error.message)
-      setFetchError("Failed to load categories. Please try again.")
+      console.error("Error fetching categories:", error.response?.data || error.message)
+      const errorMessage =
+        error.response?.status === 401
+          ? "Unauthorized: Please log in as an admin."
+          : error.response?.status === 403
+          ? "Forbidden: Admin access required."
+          : error.response?.data?.error || "Failed to load categories. Please check your connection or server status."
+      setFetchError(errorMessage)
+    } finally {
       setLoading(false)
     }
   }, [])
@@ -228,15 +109,15 @@ const AddProduct = () => {
     fetchCategories()
   }, [fetchCategories])
 
+  // Handle main category change
   const handleMainCategoryChange = useCallback(
     (e) => {
       const selectedId = e.target.value
-      setErrors((prev) => ({ ...prev, category: "" })) // Clear category error
+      setErrors((prev) => ({ ...prev, category_0: "" }))
       if (!selectedId) {
-        setFormData((prev) => ({
+        setProductData((prev) => ({
           ...prev,
-          category: "",
-          categoryPath: [],
+          selectedCategories: [],
         }))
         setSelectedPath([])
         setSubCategoryOptions([])
@@ -247,36 +128,37 @@ const AddProduct = () => {
         console.error("Selected main category not found:", selectedId)
         return
       }
-      setFormData((prev) => ({
+      setProductData((prev) => ({
         ...prev,
-        category: selectedId,
-        categoryPath: [selectedId],
+        selectedCategories: [selectedId],
       }))
       setSelectedPath([selectedCategory])
       let subs = selectedCategory.subcategories || []
       if (subs.length === 0) {
-        subs = categories.filter((cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId)
+        subs = categories.filter(
+          (cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId
+        )
       }
       setSubCategoryOptions(subs)
     },
-    [categories],
+    [categories]
   )
 
+  // Handle subcategory change
   const handleSubCategoryChange = useCallback(
     (e) => {
       const selectedId = e.target.value
       if (!selectedId) {
         const parentCategory = selectedPath[0]
-        setFormData((prev) => ({
+        setProductData((prev) => ({
           ...prev,
-          category: parentCategory._id,
-          categoryPath: [parentCategory._id],
+          selectedCategories: [parentCategory._id],
         }))
         setSelectedPath([parentCategory])
         let subs = parentCategory.subcategories || []
         if (subs.length === 0) {
           subs = categories.filter(
-            (cat) => cat.parentCategoryId === parentCategory._id || cat.parent_category_id === parentCategory._id,
+            (cat) => cat.parentCategoryId === parentCategory._id || cat.parent_category_id === parentCategory._id
           )
         }
         setSubCategoryOptions(subs)
@@ -291,21 +173,23 @@ const AddProduct = () => {
         return
       }
       const newSelectedPath = [...selectedPath, selectedCategory]
-      setFormData((prev) => ({
+      setProductData((prev) => ({
         ...prev,
-        category: selectedId,
-        categoryPath: newSelectedPath.map((cat) => cat._id),
+        selectedCategories: newSelectedPath.map((cat) => cat._id),
       }))
       setSelectedPath(newSelectedPath)
       let subs = selectedCategory.subcategories || []
       if (subs.length === 0) {
-        subs = categories.filter((cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId)
+        subs = categories.filter(
+          (cat) => cat.parentCategoryId === selectedId || cat.parent_category_id === selectedId
+        )
       }
       setSubCategoryOptions(subs)
     },
-    [categories, selectedPath, subCategoryOptions],
+    [categories, selectedPath, subCategoryOptions]
   )
 
+  // Handle breadcrumb click
   const handleBreadcrumbClick = useCallback(
     (index) => {
       const newSelectedPath = selectedPath.slice(0, index + 1)
@@ -314,23 +198,27 @@ const AddProduct = () => {
       let subs = lastCategory.subcategories || []
       if (subs.length === 0) {
         subs = categories.filter(
-          (cat) => cat.parentCategoryId === lastCategory._id || cat.parent_category_id === lastCategory._id,
+          (cat) => cat.parentCategoryId === lastCategory._id || cat.parent_category_id === lastCategory._id
         )
       }
       setSubCategoryOptions(subs)
-      setFormData((prev) => ({
+      setProductData((prev) => ({
         ...prev,
-        category: lastCategory._id,
-        categoryPath: newSelectedPath.map((cat) => cat._id),
+        selectedCategories: newSelectedPath.map((cat) => cat._id),
       }))
     },
-    [categories, selectedPath],
+    [categories, selectedPath]
   )
 
-  const getCategoryBreadCrumb = () => {
+  // Generate category path for display
+  const getCategoryPath = () => {
     return selectedPath.map((cat, index) => (
       <span key={cat._id}>
-        <button type="button" onClick={() => handleBreadcrumbClick(index)} className="text-blue-600 hover:underline">
+        <button
+          type="button"
+          onClick={() => handleBreadcrumbClick(index)}
+          className="text-blue-600 hover:underline"
+        >
           {cat.categoryName}
         </button>
         {index < selectedPath.length - 1 && <span className="mx-1">&gt;</span>}
@@ -338,1721 +226,1472 @@ const AddProduct = () => {
     ))
   }
 
+  // Render category dropdowns
   const renderCategoryDropdowns = () => {
     return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <>
         <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Main Category *</label>
-          <select
-            value={selectedPath[0]?._id || ""}
-            onChange={handleMainCategoryChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-            required
-          >
-            <option value="">Select Main Category</option>
-            {mainCategories.map((category) => (
-              <option key={category._id} value={category._id}>
-                {category.categoryName}
-              </option>
-            ))}
-          </select>
-          {errors.category && <p className="text-red-500 text-xs mt-1">{errors.category}</p>}
-        </div>
-        {subCategoryOptions.length > 0 && (
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Subcategory</label>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Main Category <span className="text-red-500">*</span>
+          </label>
+          <div className="relative">
             <select
-              value={selectedPath[selectedPath.length - 1]?._id || ""}
-              onChange={handleSubCategoryChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+              value={selectedPath[0]?._id || ""}
+              onChange={handleMainCategoryChange}
+              className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-colors ${
+                errors.category_0 ? "border-red-500" : "border-gray-300"
+              }`}
             >
-              <option value="">Select Subcategory</option>
-              {subCategoryOptions.map((category) => (
+              <option value="">Select main category</option>
+              {mainCategories.map((category) => (
                 <option key={category._id} value={category._id}>
                   {category.categoryName}
                 </option>
               ))}
             </select>
+            <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+          </div>
+          {errors.category_0 && (
+            <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+              <AlertCircle className="w-4 h-4" />
+              {errors.category_0}
+            </p>
+          )}
+        </div>
+        {subCategoryOptions.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Sub Category
+            </label>
+            <div className="relative">
+              <select
+                value={selectedPath[selectedPath.length - 1]?._id || ""}
+                onChange={handleSubCategoryChange}
+                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent appearance-none transition-colors"
+              >
+                <option value="">Select sub category</option>
+                {subCategoryOptions.map((category) => (
+                  <option key={category._id} value={category._id}>
+                    {category.categoryName}
+                  </option>
+                ))}
+              </select>
+              <ChevronDown className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" />
+            </div>
           </div>
         )}
-      </div>
+      </>
     )
   }
 
-  const validatePriceRangeField = useCallback(
-    (currentRanges, index, field, value, sectionType, parentIndex) => {
-      const newErrors = { ...errors }
-      const keyPrefix = `${sectionType}_${parentIndex}_${index}`
+  // Check if any main field is filled
+  const isAnyMainFieldFilled = () => {
+    return productData.stock || productData.price || productData.image
+  }
 
-      // Clear specific field error
-      delete newErrors[`${keyPrefix}_${field}`]
+  // Check if main fields are completely filled
+  const areMainFieldsFilled = () => {
+    return productData.name && productData.stock && productData.price && productData.image
+  }
 
-      const updatedRanges = [...currentRanges]
-      updatedRanges[index] = { ...updatedRanges[index], [field]: value }
-
-      const retailPrice = Number.parseFloat(updatedRanges[index].retailPrice)
-      const wholesalePrice = Number.parseFloat(updatedRanges[index].wholesalePrice)
-      const thresholdQuantity = Number.parseInt(updatedRanges[index].thresholdQuantity)
-
-      // Wholesale price validation (Point 1)
-      if (field === "wholesalePrice" && !isNaN(retailPrice) && !isNaN(wholesalePrice) && wholesalePrice > retailPrice) {
-        newErrors[`${keyPrefix}_wholesalePrice`] = "Wholesale price cannot be greater than retail price."
-      } else if (
-        field === "retailPrice" &&
-        !isNaN(retailPrice) &&
-        !isNaN(wholesalePrice) &&
-        wholesalePrice > retailPrice
-      ) {
-        // Re-validate wholesale if retail changes
-        delete newErrors[`${keyPrefix}_wholesalePrice`]
-      }
-
-      // Threshold quantity validation (Point 4)
-      if (index > 0) {
-        const prevThreshold = Number.parseInt(currentRanges[index - 1].thresholdQuantity)
-        if (!isNaN(thresholdQuantity) && !isNaN(prevThreshold) && thresholdQuantity <= prevThreshold) {
-          newErrors[`${keyPrefix}_thresholdQuantity`] =
-            "Threshold quantity must be greater than the previous range's threshold."
-        } else if (
-          field === "thresholdQuantity" &&
-          !isNaN(thresholdQuantity) &&
-          !isNaN(prevThreshold) &&
-          thresholdQuantity > prevThreshold
-        ) {
-          // Clear error if valid
-          delete newErrors[`${keyPrefix}_thresholdQuantity`]
-        }
-      }
-
-      setErrors(newErrors)
-    },
-    [errors],
-  )
-
-  const handleFormChange = (field, value) => {
-    setFormData((prev) => ({
+  // Handle main product data changes
+  const handleProductDataChange = (field, value) => {
+    setProductData((prev) => ({
       ...prev,
       [field]: value,
     }))
-    setErrors((prev) => ({ ...prev, [field]: "" })) // Clear general field error
+    if (errors[field]) {
+      setErrors((prev) => ({ ...prev, [field]: "" }))
+    }
+  }
 
-    if (field === "price") {
-      setBasePriceRanges((prev) => {
-        const updatedRanges = [...prev]
-        if (updatedRanges[0]) {
-          updatedRanges[0].retailPrice = value
-        } else {
-          updatedRanges.push({ retailPrice: value, wholesalePrice: "", thresholdQuantity: "" })
+  // Handle image upload
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setProductData((prev) => ({
+        ...prev,
+        image: file,
+      }))
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setImagePreview(e.target.result)
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Handle variant image upload
+  const handleVariantImageUpload = (variantId, e) => {
+    const file = e.target.files[0]
+    if (file) {
+      setVariants((prev) =>
+        prev.map((variant) => {
+          if (variant.id === variantId) {
+            return { ...variant, image: file }
+          }
+          return variant
+        }),
+      )
+      const reader = new FileReader()
+      reader.onload = (e) => {
+        setVariantImagePreviews((prev) => ({
+          ...prev,
+          [variantId]: e.target.result,
+        }))
+      }
+      reader.readAsDataURL(file)
+    }
+  }
+
+  // Product details functions
+  const addProductDetail = () => {
+    setProductDetails((prev) => [...prev, { id: Date.now(), key: "", value: "" }])
+  }
+
+  const removeProductDetail = (detailId) => {
+    if (productDetails.length > 1) {
+      setProductDetails((prev) => prev.filter((detail) => detail.id !== detailId))
+    }
+  }
+
+  const updateProductDetail = (detailId, field, value) => {
+    setProductDetails((prev) =>
+      prev.map((detail) => {
+        if (detail.id === detailId) {
+          return { ...detail, [field]: value }
         }
-        return updatedRanges
-      })
-      if (value) {
-        // Clear other pricing fields
-        setColorVariants((prev) =>
-          prev.map((v) => ({
-            ...v,
-            price: "",
-            priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-            forAllSizes: "yes",
-            availableSizes: [],
-          })),
-        )
-        setSizeVariants((prev) =>
-          prev.map((v) => ({
-            ...v,
-            price: "",
-            priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-          })),
-        )
-        setPricingSections([
-          { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
-        ])
+        return detail
+      }),
+    )
+  }
+
+  // Main bulk pricing functions
+  const addMainBulkPricing = () => {
+    setMainBulkPricing((prev) => [
+      ...prev,
+      {
+        id: Date.now(),
+        wholesalePrice: "",
+        quantity: "",
+      },
+    ])
+  }
+
+  const removeMainBulkPricing = (bulkId) => {
+    setMainBulkPricing((prev) => prev.filter((bulk) => bulk.id !== bulkId))
+  }
+
+  const updateMainBulkPricing = (bulkId, field, value) => {
+    setMainBulkPricing((prev) =>
+      prev.map((bulk) => {
+        if (bulk.id === bulkId) {
+          return { ...bulk, [field]: value }
+        }
+        return bulk
+      }),
+    )
+  }
+
+  // Validate main bulk pricing
+  const validateMainBulkPricing = (newBulk, index) => {
+    const basePrice = Number.parseFloat(productData.price)
+    const wholesalePrice = Number.parseFloat(newBulk.wholesalePrice)
+    const quantity = Number.parseInt(newBulk.quantity)
+
+    if (wholesalePrice >= basePrice) {
+      return "Wholesale price must be less than the retail price"
+    }
+
+    for (let i = 0; i < index; i++) {
+      const prevBulk = mainBulkPricing[i]
+      const prevWholesalePrice = Number.parseFloat(prevBulk.wholesalePrice)
+      const prevQuantity = Number.parseInt(prevBulk.quantity)
+
+      if (wholesalePrice >= prevWholesalePrice) {
+        return "Wholesale price must be less than the previous wholesale price"
+      }
+
+      if (quantity <= prevQuantity) {
+        return "Quantity must be greater than the previous quantity"
       }
     }
+
+    return null
   }
 
-  const handleBasePriceRangeChange = useCallback(
-    (index, field, value) => {
-      setBasePriceRanges((prev) => {
-        const updatedRanges = [...prev]
-        updatedRanges[index][field] = value
-        validatePriceRangeField(updatedRanges, index, field, value, "basePrice", 0)
-        return updatedRanges
-      })
-    },
-    [validatePriceRangeField],
-  )
-
-  const addBasePriceRange = () => {
-    const lastRange = basePriceRanges[basePriceRanges.length - 1]
-    const newRetailPrice = lastRange.wholesalePrice || ""
-    const newThresholdQuantity = lastRange.thresholdQuantity ? Number.parseInt(lastRange.thresholdQuantity) + 1 : "" // Increment threshold
-    setBasePriceRanges([
-      ...basePriceRanges,
-      { retailPrice: newRetailPrice, wholesalePrice: "", thresholdQuantity: newThresholdQuantity },
-    ])
+  // Add new variant
+  const addVariant = () => {
+    const newVariant = {
+      id: Date.now(),
+      colorName: "",
+      image: null,
+      sizes: [
+        {
+          id: Date.now(),
+          length: "",
+          breadth: "",
+          height: "",
+          unit: "cm",
+        },
+      ],
+      price: "",
+      isPriceCommon: "yes",
+      stock: "",
+      isStockCommon: "yes",
+      variantPrices: {},
+      variantStocks: {},
+      bulkPricing: {},
+      optionalDetails: {},
+    }
+    setVariants((prev) => [...prev, newVariant])
   }
 
-  const removeBasePriceRange = (index) => {
-    if (basePriceRanges.length > 1) {
-      setBasePriceRanges(basePriceRanges.filter((_, i) => i !== index))
-      // Clear errors related to removed range
-      const newErrors = { ...errors }
-      Object.keys(newErrors).forEach((key) => {
-        if (key.startsWith(`basePrice_0_${index}`)) {
-          delete newErrors[key]
+  // Remove variant
+  const removeVariant = (variantId) => {
+    setVariants((prev) => prev.filter((variant) => variant.id !== variantId))
+    setVariantImagePreviews((prev) => {
+      const { [variantId]: removed, ...rest } = prev
+      return rest
+    })
+  }
+
+  // Update variant data
+  const updateVariant = (variantId, field, value) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          const updatedVariant = { ...variant, [field]: value }
+          if (field === "isPriceCommon") {
+            updatedVariant.variantPrices = {}
+            updatedVariant.bulkPricing = {}
+          }
+          if (field === "isStockCommon") {
+            updatedVariant.variantStocks = {}
+          }
+          return updatedVariant
         }
-      })
-      setErrors(newErrors)
-    }
-  }
-
-  const handleDetailChange = (index, field, value) => {
-    const updatedDetails = [...details]
-    updatedDetails[index][field] = value
-    setDetails(updatedDetails)
-  }
-
-  const addMoreDetails = () => {
-    setDetails([...details, { name: "", value: "" }])
-  }
-
-  const removeDetail = (index) => {
-    if (details.length > 1) {
-      setDetails(details.filter((_, i) => i !== index))
-    }
-  }
-
-  const handleColorVariantChange = (variantIndex, field, value) => {
-    const updatedVariants = [...colorVariants]
-    updatedVariants[variantIndex][field] = value
-    setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: "" })) // Clear general color variant error
-
-    if (field === "isDefault" && value) {
-      updatedVariants.forEach((variant, index) => {
-        variant.isDefault = index === variantIndex
-      })
-    }
-    if (field === "price" && value === "0") {
-      updatedVariants[variantIndex][field] = ""
-    }
-    if (field === "forAllSizes" && value === "yes") {
-      updatedVariants[variantIndex].availableSizes = []
-    }
-    if (field === "price" && value) {
-      updatedVariants[variantIndex].priceRanges[0].retailPrice = value
-      // Clear other pricing fields
-      setFormData((prev) => ({ ...prev, price: "" }))
-      setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
-      setSizeVariants((prev) =>
-        prev.map((v) => ({
-          ...v,
-          price: "",
-          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-        })),
-      )
-      setPricingSections([
-        { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
-      ])
-    }
-    setColorVariants(updatedVariants)
-  }
-
-  const handleColorAvailableSizesChange = (variantIndex, size) => {
-    const updatedVariants = [...colorVariants]
-    const currentSizes = updatedVariants[variantIndex].availableSizes
-    if (currentSizes.includes(size)) {
-      updatedVariants[variantIndex].availableSizes = currentSizes.filter((s) => s !== size)
-    } else {
-      updatedVariants[variantIndex].availableSizes = [...currentSizes, size]
-    }
-    setColorVariants(updatedVariants)
-    setErrors((prev) => ({ ...prev, [`color_${variantIndex}`]: "" })) // Clear general color variant error
-  }
-
-  const handleColorOptionalDetailChange = (variantIndex, detailIndex, field, value) => {
-    const updatedVariants = [...colorVariants]
-    updatedVariants[variantIndex].optionalDetails[detailIndex][field] = value
-    setColorVariants(updatedVariants)
-  }
-
-  const addColorOptionalDetail = (variantIndex) => {
-    const updatedVariants = [...colorVariants]
-    updatedVariants[variantIndex].optionalDetails.push({ name: "", value: "" })
-    setColorVariants(updatedVariants)
-  }
-
-  const removeColorOptionalDetail = (variantIndex, detailIndex) => {
-    const updatedVariants = [...colorVariants]
-    updatedVariants[variantIndex].optionalDetails = updatedVariants[variantIndex].optionalDetails.filter(
-      (_, i) => i !== detailIndex,
+        return variant
+      }),
     )
-    setColorVariants(updatedVariants)
   }
 
-  const handleColorPriceRangeChange = useCallback(
-    (variantIndex, rangeIndex, field, value) => {
-      setColorVariants((prev) => {
-        const updatedVariants = [...prev]
-        updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value
-        validatePriceRangeField(
-          updatedVariants[variantIndex].priceRanges,
-          rangeIndex,
-          field,
-          value,
-          "colorPrice",
-          variantIndex,
-        )
-        return updatedVariants
-      })
-    },
-    [validatePriceRangeField],
-  )
-
-  const addColorPriceRange = (variantIndex) => {
-    const updatedVariants = [...colorVariants]
-    const lastRange = updatedVariants[variantIndex].priceRanges[updatedVariants[variantIndex].priceRanges.length - 1]
-    const newRetailPrice = lastRange.wholesalePrice || ""
-    const newThresholdQuantity = lastRange.thresholdQuantity ? Number.parseInt(lastRange.thresholdQuantity) + 1 : ""
-    updatedVariants[variantIndex].priceRanges.push({
-      retailPrice: newRetailPrice,
-      wholesalePrice: "",
-      thresholdQuantity: newThresholdQuantity,
-    })
-    setColorVariants(updatedVariants)
-  }
-
-  const removeColorPriceRange = (variantIndex, rangeIndex) => {
-    const updatedVariants = [...colorVariants]
-    if (updatedVariants[variantIndex].priceRanges.length > 1) {
-      updatedVariants[variantIndex].priceRanges = updatedVariants[variantIndex].priceRanges.filter(
-        (_, i) => i !== rangeIndex,
-      )
-      setColorVariants(updatedVariants)
-      // Clear errors related to removed range
-      const newErrors = { ...errors }
-      Object.keys(newErrors).forEach((key) => {
-        if (key.startsWith(`colorPrice_${variantIndex}_${rangeIndex}`)) {
-          delete newErrors[key]
+  // Add size to variant
+  const addSizeToVariant = (variantId) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          const newSize = {
+            id: Date.now(),
+            length: "",
+            breadth: "",
+            height: "",
+            unit: "cm",
+          }
+          return {
+            ...variant,
+            sizes: [...variant.sizes, newSize],
+          }
         }
-      })
-      setErrors(newErrors)
-    }
-  }
-
-  const addColorVariant = () => {
-    setColorVariants([
-      ...colorVariants,
-      {
-        color: "",
-        image: null,
-        price: "",
-        isDefault: false,
-        optionalDetails: [],
-        priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-        forAllSizes: "yes",
-        availableSizes: [],
-      },
-    ])
-  }
-
-  const removeColorVariant = (index) => {
-    if (colorVariants.length > 1) {
-      setColorVariants(colorVariants.filter((_, i) => i !== index))
-      // Clear errors related to removed variant
-      const newErrors = { ...errors }
-      Object.keys(newErrors).forEach((key) => {
-        if (key.startsWith(`color_${index}`) || key.startsWith(`colorPrice_${index}`)) {
-          delete newErrors[key]
-        }
-      })
-      setErrors(newErrors)
-    }
-  }
-
-  const handleImageUpload = (variantIndex, event) => {
-  const file = event.target.files[0];
-  if (file) {
-    const updatedVariants = [...colorVariants];
-    updatedVariants[variantIndex].image = file;
-    updatedVariants[variantIndex].imageUrl = ""; // Clear imageUrl if a new file is uploaded
-    setColorVariants(updatedVariants);
-  }
-};
-
-  const handleSizeVariantChange = (variantIndex, field, value) => {
-    const updatedVariants = [...sizeVariants]
-    updatedVariants[variantIndex][field] = value
-    setErrors((prev) => ({ ...prev, [`size_${variantIndex}`]: "" })) // Clear general size variant error
-
-    if (field === "isDefault" && value) {
-      updatedVariants.forEach((variant, index) => {
-        variant.isDefault = index === variantIndex
-      })
-    }
-    if (field === "price" && value === "0") {
-      updatedVariants[variantIndex][field] = ""
-    }
-    if (field === "forAllColors" && value === "yes") {
-      updatedVariants[variantIndex].availableColors = []
-    }
-    if (field === "price" && value) {
-      updatedVariants[variantIndex].priceRanges[0].retailPrice = value
-      // Clear other pricing fields
-      setFormData((prev) => ({ ...prev, price: "" }))
-      setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
-      setColorVariants((prev) =>
-        prev.map((v) => ({
-          ...v,
-          price: "",
-          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-          forAllSizes: "yes",
-          availableSizes: [],
-        })),
-      )
-      setPricingSections([
-        { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
-      ])
-    }
-    setSizeVariants(updatedVariants)
-  }
-
-  const handleSizeAvailableColorsChange = (variantIndex, color) => {
-    const updatedVariants = [...sizeVariants]
-    const currentColors = updatedVariants[variantIndex].availableColors
-    if (currentColors.includes(color)) {
-      updatedVariants[variantIndex].availableColors = currentColors.filter((c) => c !== color)
-    } else {
-      updatedVariants[variantIndex].availableColors = [...currentColors, color]
-    }
-    setSizeVariants(updatedVariants)
-  }
-
-  const toggleDimensions = (variantIndex) => {
-    const updatedVariants = [...sizeVariants]
-    updatedVariants[variantIndex].useDimensions = !updatedVariants[variantIndex].useDimensions
-    if (!updatedVariants[variantIndex].useDimensions) {
-      updatedVariants[variantIndex].length = ""
-      updatedVariants[variantIndex].breadth = ""
-      updatedVariants[variantIndex].height = ""
-      updatedVariants[variantIndex].size = ""
-    } else {
-      updatedVariants[variantIndex].size = ""
-    }
-    setSizeVariants(updatedVariants)
-  }
-
-  const handleSizePriceRangeChange = useCallback(
-    (variantIndex, rangeIndex, field, value) => {
-      setSizeVariants((prev) => {
-        const updatedVariants = [...prev]
-        updatedVariants[variantIndex].priceRanges[rangeIndex][field] = value
-        validatePriceRangeField(
-          updatedVariants[variantIndex].priceRanges,
-          rangeIndex,
-          field,
-          value,
-          "sizePrice",
-          variantIndex,
-        )
-        return updatedVariants
-      })
-    },
-    [validatePriceRangeField],
-  )
-
-  const addSizePriceRange = (variantIndex) => {
-    const updatedVariants = [...sizeVariants]
-    const lastRange = updatedVariants[variantIndex].priceRanges[updatedVariants[variantIndex].priceRanges.length - 1]
-    const newRetailPrice = lastRange.wholesalePrice || ""
-    const newThresholdQuantity = lastRange.thresholdQuantity ? Number.parseInt(lastRange.thresholdQuantity) + 1 : ""
-    updatedVariants[variantIndex].priceRanges.push({
-      retailPrice: newRetailPrice,
-      wholesalePrice: "",
-      thresholdQuantity: newThresholdQuantity,
-    })
-    setSizeVariants(updatedVariants)
-  }
-
-  const removeSizePriceRange = (variantIndex, rangeIndex) => {
-    const updatedVariants = [...sizeVariants]
-    if (updatedVariants[variantIndex].priceRanges.length > 1) {
-      updatedVariants[variantIndex].priceRanges = updatedVariants[variantIndex].priceRanges.filter(
-        (_, i) => i !== rangeIndex,
-      )
-      setSizeVariants(updatedVariants)
-      // Clear errors related to removed range
-      const newErrors = { ...errors }
-      Object.keys(newErrors).forEach((key) => {
-        if (key.startsWith(`sizePrice_${variantIndex}_${rangeIndex}`)) {
-          delete newErrors[key]
-        }
-      })
-      setErrors(newErrors)
-    }
-  }
-
-  const handleSizeOptionalDetailChange = (variantIndex, detailIndex, field, value) => {
-    const updatedVariants = [...sizeVariants]
-    updatedVariants[variantIndex].optionalDetails[detailIndex][field] = value
-    setSizeVariants(updatedVariants)
-  }
-
-  const addSizeOptionalDetail = (variantIndex) => {
-    const updatedVariants = [...sizeVariants]
-    updatedVariants[variantIndex].optionalDetails.push({ name: "", value: "" })
-    setSizeVariants(updatedVariants)
-  }
-
-  const removeSizeOptionalDetail = (variantIndex, detailIndex) => {
-    const updatedVariants = [...sizeVariants]
-    updatedVariants[variantIndex].optionalDetails = updatedVariants[variantIndex].optionalDetails.filter(
-      (_, i) => i !== detailIndex,
+        return variant
+      }),
     )
-    setSizeVariants(updatedVariants)
   }
 
-  const addSizeVariant = () => {
-    setSizeVariants([
-      ...sizeVariants,
-      {
-        size: "",
-        price: "",
-        optionalDetails: [],
-        priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-        isDefault: false,
-        useDimensions: false,
-        length: "",
-        breadth: "",
-        height: "",
-        forAllColors: "yes",
-        availableColors: [],
-      },
-    ])
+  // Remove size from variant
+  const removeSizeFromVariant = (variantId, sizeId) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          return {
+            ...variant,
+            sizes: variant.sizes.filter((size) => size.id !== sizeId),
+          }
+        }
+        return variant
+      }),
+    )
   }
 
-  const removeSizeVariant = (index) => {
-    if (sizeVariants.length > 1) {
-      setSizeVariants(sizeVariants.filter((_, i) => i !== index))
-      // Clear errors related to removed variant
-      const newErrors = { ...errors }
-      Object.keys(newErrors).forEach((key) => {
-        if (key.startsWith(`size_${index}`) || key.startsWith(`sizePrice_${index}`)) {
-          delete newErrors[key]
+  // Update size in variant
+  const updateSizeInVariant = (variantId, sizeId, field, value) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          return {
+            ...variant,
+            sizes: variant.sizes.map((size) => {
+              if (size.id === sizeId) {
+                return { ...size, [field]: value }
+              }
+              return size
+            }),
+          }
+        }
+        return variant
+      }),
+    )
+  }
+
+  // Generate variant combinations
+  const generateVariantCombinations = (variant) => {
+    if (!variant.colorName) return []
+
+    return variant.sizes
+      .filter((size) => {
+        const filledDimensions = [size.length, size.breadth, size.height].filter((dim) => dim.trim() !== "").length
+        return filledDimensions >= 2
+      })
+      .map((size) => {
+        const dimensions = [size.length, size.breadth, size.height].filter((dim) => dim.trim() !== "").join(" X ")
+        return {
+          key: `${variant.colorName}-${size.id}`,
+          display: `${variant.colorName}, ${dimensions} ${size.unit}`,
+          sizeId: size.id,
         }
       })
-      setErrors(newErrors)
-    }
   }
 
-  const handlePricingSectionChange = (index, field, value) => {
-    const updatedPricing = [...pricingSections]
-    updatedPricing[index][field] = value
-    setErrors((prev) => ({ ...prev, [`pricingSection_${index}_${field}`]: "" })) // Clear specific field error
-
-    if (field === "color" || field === "size") {
-      // If color or size changes, clear price ranges for that section
-      updatedPricing[index].priceRanges = [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }]
-    }
-
-    // Clear other pricing fields if this section becomes active
-    if (value && (field === "color" || field === "size")) {
-      setFormData((prev) => ({ ...prev, price: "" }))
-      setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
-      setColorVariants((prev) =>
-        prev.map((v) => ({
-          ...v,
-          price: "",
-          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-          forAllSizes: "yes",
-          availableSizes: [],
-        })),
-      )
-      setSizeVariants((prev) =>
-        prev.map((v) => ({
-          ...v,
-          price: "",
-          priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-        })),
-      )
-    }
-    setPricingSections(updatedPricing)
-  }
-
-  const handlePricingSectionPriceRangeChange = useCallback(
-    (sectionIndex, rangeIndex, field, value) => {
-      setPricingSections((prev) => {
-        const updatedPricing = [...prev]
-        updatedPricing[sectionIndex].priceRanges[rangeIndex][field] = value
-        validatePriceRangeField(
-          updatedPricing[sectionIndex].priceRanges,
-          rangeIndex,
-          field,
-          value,
-          "pricingSection",
-          sectionIndex,
-        )
-        return updatedPricing
-      })
-    },
-    [validatePriceRangeField],
-  )
-
-  const addPricingSectionPriceRange = (sectionIndex) => {
-    const updatedPricing = [...pricingSections]
-    const lastRange = updatedPricing[sectionIndex].priceRanges[updatedPricing[sectionIndex].priceRanges.length - 1]
-    const newRetailPrice = lastRange.wholesalePrice || ""
-    const newThresholdQuantity = lastRange.thresholdQuantity ? Number.parseInt(lastRange.thresholdQuantity) + 1 : ""
-    updatedPricing[sectionIndex].priceRanges.push({
-      retailPrice: newRetailPrice,
-      wholesalePrice: "",
-      thresholdQuantity: newThresholdQuantity,
-    })
-    setPricingSections(updatedPricing)
-  }
-
-  const removePricingSectionPriceRange = (sectionIndex, rangeIndex) => {
-    const updatedPricing = [...pricingSections]
-    if (updatedPricing[sectionIndex].priceRanges.length > 1) {
-      updatedPricing[sectionIndex].priceRanges = updatedPricing[sectionIndex].priceRanges.filter(
-        (_, i) => i !== rangeIndex,
-      )
-      setPricingSections(updatedPricing)
-      // Clear errors related to removed range
-      const newErrors = { ...errors }
-      Object.keys(newErrors).forEach((key) => {
-        if (key.startsWith(`pricingSection_${sectionIndex}_${rangeIndex}`)) {
-          delete newErrors[key]
+  // Update variant price for specific combination
+  const updateVariantPrice = (variantId, combinationKey, price) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          return {
+            ...variant,
+            variantPrices: {
+              ...variant.variantPrices,
+              [combinationKey]: price,
+            },
+          }
         }
-      })
-      setErrors(newErrors)
-    }
+        return variant
+      }),
+    )
   }
 
-  const addPricingSection = () => {
-    setPricingSections([
-      ...pricingSections,
-      { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
-    ])
-  }
-
-  const removePricingSection = (index) => {
-    if (pricingSections.length > 1) {
-      setPricingSections(pricingSections.filter((_, i) => i !== index))
-      // Clear errors related to removed section
-      const newErrors = { ...errors }
-      Object.keys(newErrors).forEach((key) => {
-        if (key.startsWith(`pricingSection_${index}`)) {
-          delete newErrors[key]
+  // Update variant stock for specific combination
+  const updateVariantStock = (variantId, combinationKey, stock) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          return {
+            ...variant,
+            variantStocks: {
+              ...variant.variantStocks,
+              [combinationKey]: stock,
+            },
+          }
         }
-      })
-      setErrors(newErrors)
-    }
+        return variant
+      }),
+    )
   }
 
-  const isVariantEmpty = (variant, type) => {
-    if (type === "color") {
-      return (
-        !variant.color &&
-        !variant.image &&
-        !variant.price &&
-        !variant.isDefault &&
-        variant.optionalDetails.every((detail) => !detail.name && !detail.value) &&
-        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity) &&
-        variant.forAllSizes === "yes" &&
-        !variant.availableSizes.length
-      )
-    } else if (type === "size") {
-      return (
-        !variant.size &&
-        !variant.price &&
-        !variant.isDefault &&
-        !variant.length &&
-        !variant.breadth &&
-        !variant.height &&
-        !variant.availableColors.length &&
-        variant.optionalDetails.every((detail) => !detail.name && !detail.value) &&
-        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity)
-      )
-    } else if (type === "pricingSection") {
-      return (
-        !variant.color &&
-        !variant.size &&
-        variant.priceRanges.every((range) => !range.retailPrice && !range.wholesalePrice && !range.thresholdQuantity)
-      )
-    } else if (type === "basePriceRange") {
-      return !variant.retailPrice && !variant.wholesalePrice && !variant.thresholdQuantity
-    } else if (type === "detail") {
-      return !variant.name && !variant.value
-    }
-    return true
+  // Optional details functions for variants
+  const addOptionalDetail = (variantId, combinationKey) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          const existingDetails = variant.optionalDetails[combinationKey] || []
+          return {
+            ...variant,
+            optionalDetails: {
+              ...variant.optionalDetails,
+              [combinationKey]: [
+                ...existingDetails,
+                {
+                  id: Date.now(),
+                  key: "",
+                  value: "",
+                },
+              ],
+            },
+          }
+        }
+        return variant
+      }),
+    )
   }
 
-  const validateFormOnSubmit = useCallback(() => {
+  const removeOptionalDetail = (variantId, combinationKey, detailId) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          const updatedDetails = variant.optionalDetails[combinationKey].filter((detail) => detail.id !== detailId)
+          return {
+            ...variant,
+            optionalDetails: {
+              ...variant.optionalDetails,
+              [combinationKey]: updatedDetails,
+            },
+          }
+        }
+        return variant
+      }),
+    )
+  }
+
+  const updateOptionalDetail = (variantId, combinationKey, detailId, field, value) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          const updatedDetails = variant.optionalDetails[combinationKey].map((detail) => {
+            if (detail.id === detailId) {
+              return { ...detail, [field]: value }
+            }
+            return detail
+          })
+          return {
+            ...variant,
+            optionalDetails: {
+              ...variant.optionalDetails,
+              [combinationKey]: updatedDetails,
+            },
+          }
+        }
+        return variant
+      }),
+    )
+  }
+
+  // Add bulk pricing for variant combination
+  const addBulkPricing = (variantId, combinationKey) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          const existingBulkPricing = variant.bulkPricing[combinationKey] || []
+          const newBulkPricing = {
+            id: Date.now(),
+            wholesalePrice: "",
+            quantity: "",
+          }
+          return {
+            ...variant,
+            bulkPricing: {
+              ...variant.bulkPricing,
+              [combinationKey]: [...existingBulkPricing, newBulkPricing],
+            },
+          }
+        }
+        return variant
+      }),
+    )
+  }
+
+  // Update bulk pricing
+  const updateBulkPricing = (variantId, combinationKey, bulkPricingId, field, value) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          const updatedBulkPricing = variant.bulkPricing[combinationKey].map((bulk) => {
+            if (bulk.id === bulkPricingId) {
+              return { ...bulk, [field]: value }
+            }
+            return bulk
+          })
+          return {
+            ...variant,
+            bulkPricing: {
+              ...variant.bulkPricing,
+              [combinationKey]: updatedBulkPricing,
+            },
+          }
+        }
+        return variant
+      }),
+    )
+  }
+
+  // Remove bulk pricing
+  const removeBulkPricing = (variantId, combinationKey, bulkPricingId) => {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          const updatedBulkPricing = variant.bulkPricing[combinationKey].filter((bulk) => bulk.id !== bulkPricingId)
+          return {
+            ...variant,
+            bulkPricing: {
+              ...variant.bulkPricing,
+              [combinationKey]: updatedBulkPricing,
+            },
+          }
+        }
+        return variant
+      }),
+    )
+  }
+
+  // Validate bulk pricing
+  const validateBulkPricing = (variant, combinationKey, newBulkPricing, currentIndex) => {
+    const basePrice = variant.isPriceCommon === "yes" ? variant.price : variant.variantPrices[combinationKey]
+    const existingBulkPricing = variant.bulkPricing[combinationKey] || []
+    const wholesalePrice = Number.parseFloat(newBulkPricing.wholesalePrice)
+    const quantity = Number.parseInt(newBulkPricing.quantity)
+
+    if (wholesalePrice >= Number.parseFloat(basePrice)) {
+      return "Wholesale price must be less than the retail price"
+    }
+
+    for (let i = 0; i < currentIndex; i++) {
+      const existing = existingBulkPricing[i]
+      const existingWholesalePrice = Number.parseFloat(existing.wholesalePrice)
+      const existingQuantity = Number.parseInt(existing.quantity)
+
+      if (wholesalePrice >= existingWholesalePrice) {
+        return "Wholesale price must be less than the previous wholesale price"
+      }
+
+      if (quantity <= existingQuantity) {
+        return "Quantity must be greater than the previous quantity"
+      }
+    }
+
+    return null
+  }
+
+  // Handle form submission
+  const handleSubmit = async (e) => {
+    e.preventDefault()
     const newErrors = {}
 
-    if (!formData.name) newErrors.name = "Product name is required"
-    if (!formData.stock || isNaN(formData.stock) || Number.parseFloat(formData.stock) < 0)
-      newErrors.stock = "Valid stock quantity is required"
-    if (!formData.category) newErrors.category = "Category is required"
-    if (!colorVariants[0].color) newErrors.color_0 = "At least one color variant is required"
+    if (!productData.name) newErrors.name = "Product name is required"
+    if (!productData.selectedCategories.length) newErrors.category_0 = "Main category is required"
 
-    // Validate that at least one pricing method is filled
-    const activePriceMethods = [
-      isBasePriceFilled,
-      isColorPriceFilled,
-      isSizePriceFilled,
-      isPricingSectionFilled,
-    ].filter(Boolean).length
-
-    if (activePriceMethods === 0) {
-      newErrors.price = "At least one pricing method (base, color variant, size variant, or combination) is required."
-    } else if (activePriceMethods > 1) {
-      newErrors.price = "Only one pricing method (base, color variant, size variant, or combination) can be set."
-    }
-
-    // Base Price Ranges validation
-    if (isBasePriceFilled) {
-      if (basePriceRanges.length === 0) {
-        newErrors.base_price = "At least one price range is required for base price."
-      } else {
-        const firstRange = basePriceRanges[0]
-        if (Number.parseFloat(formData.price) !== Number.parseFloat(firstRange.retailPrice)) {
-          newErrors.base_price = "Base price must be same as Retail Price of the first range."
+    if (!isAnyMainFieldFilled()) {
+      variants.forEach((variant, index) => {
+        if (!variant.colorName) {
+          newErrors[`variant_${index}_color`] = "Color name is required"
         }
-        if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
-          newErrors.base_price =
-            "Retail Price, Wholesale Price, and Threshold Quantity are required for the first base price range."
-        }
-      }
-      basePriceRanges.forEach((range, index) => {
-        const retail = Number.parseFloat(range.retailPrice)
-        const wholesale = Number.parseFloat(range.wholesalePrice)
-        const threshold = Number.parseInt(range.thresholdQuantity)
-
-        if (isNaN(retail) || retail < 0) newErrors[`basePrice_0_${index}_retailPrice`] = "Invalid Retail Price."
-        if (isNaN(wholesale) || wholesale < 0)
-          newErrors[`basePrice_0_${index}_wholesalePrice`] = "Invalid Wholesale Price."
-        if (isNaN(threshold) || threshold < 1)
-          newErrors[`basePrice_0_${index}_thresholdQuantity`] = "Invalid Threshold Quantity."
-
-        if (!isNaN(retail) && !isNaN(wholesale) && wholesale > retail) {
-          newErrors[`basePrice_0_${index}_wholesalePrice`] = "Wholesale price cannot be greater than retail price."
-        }
-        if (index > 0) {
-          const prevThreshold = Number.parseInt(basePriceRanges[index - 1].thresholdQuantity)
-          if (!isNaN(threshold) && !isNaN(prevThreshold) && threshold <= prevThreshold) {
-            newErrors[`basePrice_0_${index}_thresholdQuantity`] =
-              "Threshold quantity must be greater than the previous range's threshold."
-          }
-        }
-      })
-    }
-
-    // Color Variants validation
-    colorVariants.forEach((variant, variantIndex) => {
-      if (!variant.color) {
-        newErrors[`color_${variantIndex}`] = "Color is required."
-      }
-      if (variant.price) {
-        if (variant.priceRanges.length === 0) {
-          newErrors[`color_price_${variantIndex}`] = "At least one price range is required for this color variant."
-        } else {
-          const firstRange = variant.priceRanges[0]
-          if (Number.parseFloat(variant.price) !== Number.parseFloat(firstRange.retailPrice)) {
-            newErrors[`color_price_${variantIndex}`] =
-              "Color variant price must be same as Retail Price of the first range."
-          }
-          if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
-            newErrors[`color_price_${variantIndex}`] =
-              "Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set."
-          }
-        }
-        variant.priceRanges.forEach((range, rangeIndex) => {
-          const retail = Number.parseFloat(range.retailPrice)
-          const wholesale = Number.parseFloat(range.wholesalePrice)
-          const threshold = Number.parseInt(range.thresholdQuantity)
-
-          if (isNaN(retail) || retail < 0)
-            newErrors[`colorPrice_${variantIndex}_${rangeIndex}_retailPrice`] = "Invalid Retail Price."
-          if (isNaN(wholesale) || wholesale < 0)
-            newErrors[`colorPrice_${variantIndex}_${rangeIndex}_wholesalePrice`] = "Invalid Wholesale Price."
-          if (isNaN(threshold) || threshold < 1)
-            newErrors[`colorPrice_${variantIndex}_${rangeIndex}_thresholdQuantity`] = "Invalid Threshold Quantity."
-
-          if (!isNaN(retail) && !isNaN(wholesale) && wholesale > retail) {
-            newErrors[`colorPrice_${variantIndex}_${rangeIndex}_wholesalePrice`] =
-              "Wholesale price cannot be greater than retail price."
-          }
-          if (rangeIndex > 0) {
-            const prevThreshold = Number.parseInt(variant.priceRanges[rangeIndex - 1].thresholdQuantity)
-            if (!isNaN(threshold) && !isNaN(prevThreshold) && threshold <= prevThreshold) {
-              newErrors[`colorPrice_${variantIndex}_${rangeIndex}_thresholdQuantity`] =
-                "Threshold quantity must be greater than the previous range's threshold."
-            }
+        variant.sizes.forEach((size, sizeIndex) => {
+          const filledDimensions = [size.length, size.breadth, size.height].filter((dim) => dim.trim() !== "").length
+          if (filledDimensions < 2) {
+            newErrors[`variant_${index}_size_${sizeIndex}`] = "At least 2 dimensions are required"
           }
         })
-      }
-      if (variant.forAllSizes === "no" && !variant.availableSizes.length) {
-        newErrors[`color_${variantIndex}`] = "At least one size must be selected if not available for all sizes."
-      }
-    })
-
-    // Size Variants validation
-    const useDimensions = sizeVariants.some((variant) => variant.useDimensions)
-    const useDropdown = sizeVariants.some((variant) => !variant.useDimensions && variant.size)
-
-    if (useDimensions && useDropdown) {
-      newErrors.size = "All size variants must use either the size dropdown or dimensions, not both."
-    }
-
-    sizeVariants.forEach((variant, variantIndex) => {
-      if (useDimensions) {
-        if (!variant.length || !variant.breadth || !variant.height) {
-          newErrors[`size_${variantIndex}`] = "Length, Breadth, and Height are required for all size variants."
-        }
-      } else if (!variant.size) {
-        newErrors[`size_${variantIndex}`] = "Size is required for all size variants."
-      }
-      if (variant.forAllColors === "no" && !variant.availableColors.length) {
-        newErrors[`size_${variantIndex}`] = "At least one color must be selected if not available for all colors."
-      }
-      if (variant.price) {
-        if (variant.priceRanges.length === 0) {
-          newErrors[`size_price_${variantIndex}`] = "At least one price range is required for this size variant."
-        } else {
-          const firstRange = variant.priceRanges[0]
-          if (Number.parseFloat(variant.price) !== Number.parseFloat(firstRange.retailPrice)) {
-            newErrors[`size_price_${variantIndex}`] =
-              "Size variant price must be same as Retail Price of the first range."
-          }
-          if (!firstRange.retailPrice || !firstRange.wholesalePrice || !firstRange.thresholdQuantity) {
-            newErrors[`size_price_${variantIndex}`] =
-              "Retail Price, Wholesale Price, and Threshold Quantity are required for the first price range when price is set."
-          }
-        }
-        variant.priceRanges.forEach((range, rangeIndex) => {
-          const retail = Number.parseFloat(range.retailPrice)
-          const wholesale = Number.parseFloat(range.wholesalePrice)
-          const threshold = Number.parseInt(range.thresholdQuantity)
-
-          if (isNaN(retail) || retail < 0)
-            newErrors[`sizePrice_${variantIndex}_${rangeIndex}_retailPrice`] = "Invalid Retail Price."
-          if (isNaN(wholesale) || wholesale < 0)
-            newErrors[`sizePrice_${variantIndex}_${rangeIndex}_wholesalePrice`] = "Invalid Wholesale Price."
-          if (isNaN(threshold) || threshold < 1)
-            newErrors[`sizePrice_${variantIndex}_${rangeIndex}_thresholdQuantity`] = "Invalid Threshold Quantity."
-
-          if (!isNaN(retail) && !isNaN(wholesale) && wholesale > retail) {
-            newErrors[`sizePrice_${variantIndex}_${rangeIndex}_wholesalePrice`] =
-              "Wholesale price cannot be greater than retail price."
-          }
-          if (rangeIndex > 0) {
-            const prevThreshold = Number.parseInt(variant.priceRanges[rangeIndex - 1].thresholdQuantity)
-            if (!isNaN(threshold) && !isNaN(prevThreshold) && threshold <= prevThreshold) {
-              newErrors[`sizePrice_${variantIndex}_${rangeIndex}_thresholdQuantity`] =
-                "Threshold quantity must be greater than the previous range's threshold."
-            }
-          }
-        })
-      }
-    })
-
-    // Pricing Combinations validation
-    if (isPricingSectionFilled) {
-      pricingSections.forEach((section, sectionIndex) => {
-        if (!section.color || !section.size) {
-          newErrors[`pricingSection_${sectionIndex}_general`] = "Color and Size are required for each combination."
-        }
-        if (section.priceRanges.length === 0) {
-          newErrors[`pricingSection_${sectionIndex}_general`] =
-            "At least one price range is required for this combination."
-        } else {
-          section.priceRanges.forEach((range, rangeIndex) => {
-            const retail = Number.parseFloat(range.retailPrice)
-            const wholesale = Number.parseFloat(range.wholesalePrice)
-            const threshold = Number.parseInt(range.thresholdQuantity)
-
-            if (isNaN(retail) || retail < 0)
-              newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_retailPrice`] = "Invalid Retail Price."
-            if (isNaN(wholesale) || wholesale < 0)
-              newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_wholesalePrice`] = "Invalid Wholesale Price."
-            if (isNaN(threshold) || threshold < 1)
-              newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_thresholdQuantity`] =
-                "Invalid Threshold Quantity."
-
-            if (!isNaN(retail) && !isNaN(wholesale) && wholesale > retail) {
-              newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_wholesalePrice`] =
-                "Wholesale price cannot be greater than retail price."
-            }
-            if (rangeIndex > 0) {
-              const prevThreshold = Number.parseInt(section.priceRanges[rangeIndex - 1].thresholdQuantity)
-              if (!isNaN(threshold) && !isNaN(prevThreshold) && threshold <= prevThreshold) {
-                newErrors[`pricingSection_${sectionIndex}_${rangeIndex}_thresholdQuantity`] =
-                  "Threshold quantity must be greater than the previous range's threshold."
-              }
-            }
-          })
-        }
       })
+    } else {
+      if (!productData.stock) newErrors.stock = "Stock is required"
+      if (!productData.price) newErrors.price = "Price is required"
+      if (!productData.image) newErrors.image = "Image is required"
     }
 
-    setErrors(newErrors)
-    return Object.keys(newErrors).length === 0
-  }, [
-    formData.name,
-    formData.stock,
-    formData.category,
-    formData.price,
-    colorVariants,
-    sizeVariants,
-    pricingSections,
-    basePriceRanges,
-    isBasePriceFilled,
-    isColorPriceFilled,
-    isSizePriceFilled,
-    isPricingSectionFilled,
-  ])
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors)
+      return
+    }
 
- const handleSubmit = async (e) => {
-  e.preventDefault() // Prevent default form submission
-
-  const isValid = validateFormOnSubmit()
-  if (!isValid) {
-    setShowErrorModal(true)
-    return
-  }
-
-  setIsSubmitting(true)
-  try {
     const formDataToSend = new FormData()
-    formDataToSend.append("name", formData.name)
-    formDataToSend.append("price", formData.price)
-    formDataToSend.append("stock", formData.stock)
-    formDataToSend.append("category", formData.category)
-    formDataToSend.append("categoryPath", JSON.stringify(formData.categoryPath))
+    formDataToSend.append("name", productData.name)
+    formDataToSend.append("stock", productData.stock)
+    formDataToSend.append("price", productData.price)
+    if (productData.image) formDataToSend.append("image", productData.image)
+    formDataToSend.append("details", JSON.stringify(productDetails.filter((detail) => detail.key && detail.value)))
+    formDataToSend.append("categoryId", productData.selectedCategories[productData.selectedCategories.length - 1] || "")
+    formDataToSend.append("categoryPath", JSON.stringify(productData.selectedCategories))
+    formDataToSend.append("mainBulkPricing", JSON.stringify(isAnyMainFieldFilled() ? mainBulkPricing : []))
+    formDataToSend.append("variants", JSON.stringify(isAnyMainFieldFilled() ? [] : variants))
 
-    const filteredDetails = details.filter((detail) => !isVariantEmpty(detail, "detail"))
-    formDataToSend.append("details", JSON.stringify(filteredDetails))
-
-    // Filter and process color variants
-    const filteredColorVariants = colorVariants.filter((variant) => !isVariantEmpty(variant, "color"))
-    
-    // Append images for color variants in the same order as the variants
-    filteredColorVariants.forEach((variant, index) => {
-      if (variant.image) {
-        // Append each image with the field name 'colorImages'
-        formDataToSend.append("colorImages", variant.image)
-        console.log(`Appending image for color variant ${index}: ${variant.color}`)
-      } else {
-        console.log(`No image for color variant ${index}: ${variant.color}`)
-      }
-    })
-
-    // Send color variants data without the image file objects
-    const colorVariantsData = filteredColorVariants.map(({ image, ...rest }) => rest)
-    formDataToSend.append("colorVariants", JSON.stringify(colorVariantsData))
-
-    const filteredSizeVariants = sizeVariants.filter((variant) => !isVariantEmpty(variant, "size"))
-    formDataToSend.append("sizeVariants", JSON.stringify(filteredSizeVariants))
-
-    const filteredPricingSections = pricingSections.filter((section) => !isVariantEmpty(section, "pricingSection"))
-    formDataToSend.append("pricingSections", JSON.stringify(filteredPricingSections))
-
-    const filteredBasePriceRanges = basePriceRanges.filter((range) => !isVariantEmpty(range, "basePriceRange"))
-    formDataToSend.append("basePriceRanges", JSON.stringify(filteredBasePriceRanges))
-
-    // Log FormData contents for debugging
-    console.log("FormData contents:")
-    for (let [key, value] of formDataToSend.entries()) {
-      if (value instanceof File) {
-        console.log(`${key}: File - ${value.name} (${value.size} bytes)`)
-      } else {
-        console.log(`${key}: ${value}`)
-      }
+    try {
+      const response = await axios.post("http://localhost:3000/api/product/add", formDataToSend, {
+        headers: { "Content-Type": "multipart/form-data" },
+        withCredentials: true,
+      })
+      console.log("Product added successfully:", response.data)
+      alert("Product added successfully!")
+      setProductData({ name: "", stock: "", price: "", image: null, selectedCategories: [] })
+      setSelectedPath([])
+      setSubCategoryOptions([])
+      setImagePreview(null)
+      setProductDetails([
+        { id: Date.now(), key: "", value: "" },
+        { id: Date.now() + 1, key: "", value: "" },
+      ])
+      setMainBulkPricing([])
+      setVariants([
+        {
+          id: Date.now(),
+          colorName: "",
+          image: null,
+          sizes: [
+            {
+              id: Date.now(),
+              length: "",
+              breadth: "",
+              height: "",
+              unit: "cm",
+            },
+          ],
+          price: "",
+          isPriceCommon: "yes",
+          stock: "",
+          isStockCommon: "yes",
+          variantPrices: {},
+          variantStocks: {},
+          bulkPricing: {},
+          optionalDetails: {},
+        },
+      ])
+      setVariantImagePreviews({})
+    } catch (error) {
+      console.error("Error adding product:", error)
+      alert("Failed to add product. Please try again.")
     }
-
-    const response = await axios.post("http://localhost:3000/api/product/add", formDataToSend, {
-      headers: { "Content-Type": "multipart/form-data" },
-      withCredentials: true,
-    })
-
-    console.log("Product added successfully:", response.data)
-    setIsSubmitting(false)
-    setShowSuccessModal(true)
-    
-    // Reset form state
-    setFormData({ name: "", price: "", stock: "", category: "", categoryPath: [] })
-    setDetails([
-      { name: "", value: "" },
-      { name: "", value: "" },
-      { name: "", value: "" },
-    ])
-    setColorVariants([
-      {
-        color: "",
-        image: null,
-        price: "",
-        isDefault: true,
-        optionalDetails: [],
-        priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-        forAllSizes: "yes",
-        availableSizes: [],
-      },
-    ])
-    setSizeVariants([
-      {
-        size: "",
-        price: "",
-        optionalDetails: [],
-        priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }],
-        isDefault: true,
-        useDimensions: false,
-        length: "",
-        breadth: "",
-        height: "",
-        forAllColors: "yes",
-        availableColors: [],
-      },
-    ])
-    setPricingSections([
-      { color: "", size: "", priceRanges: [{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }] },
-    ])
-    setBasePriceRanges([{ retailPrice: "", wholesalePrice: "", thresholdQuantity: "" }])
-    setSelectedPath([])
-    setSubCategoryOptions([])
-  } catch (error) {
-    console.error("Error adding product:", error)
-    setIsSubmitting(false)
-    setShowErrorModal(true)
-    setErrors((prev) => ({
-      ...prev,
-      server: error.response?.data?.error || "Failed to add product. Please try again.",
-    }))
   }
-}
-
-  const SuccessModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl">
-        <h3 className="text-lg font-semibold text-green-600 mb-4">Product Added Successfully!</h3>
-        <p className="text-gray-600 mb-6">Your product has been added to the inventory.</p>
-        <button
-          onClick={() => setShowSuccessModal(false)}
-          className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  )
-
-  const ErrorModal = () => (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl">
-        <h3 className="text-lg font-semibold text-red-600 mb-4">Product Not Added</h3>
-        <p className="text-gray-600 mb-6">Please check the errors below and try again.</p>
-        {errors.server && <p className="text-red-500 text-sm mb-4">{errors.server}</p>}
-        <button
-          onClick={() => setShowErrorModal(false)}
-          className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-200"
-        >
-          Close
-        </button>
-      </div>
-    </div>
-  )
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      {loading && (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
+    <div className="min-h-screen bg-gray-50 py-8 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-4xl mx-auto">
+        <div className="bg-white rounded-xl shadow-lg overflow-hidden">
+          {/* Header */}
+          <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-6 py-4">
+            <h1 className="text-2xl font-bold text-white">Add New Product</h1>
+            <p className="text-blue-100 mt-1">Fill in the details to add a new product to your inventory</p>
           </div>
-        </div>
-      )}
-      {fetchError && (
-        <div className="text-center py-8">
-          <p className="text-red-500">{fetchError}</p>
-          <button
-            onClick={fetchCategories}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-      {!loading && !fetchError && (
-        <div>
-          {isSubmitting && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-                <p className="text-white text-lg">Adding your product...</p>
-              </div>
-            </div>
-          )}
-          {showSuccessModal && <SuccessModal />}
-          {showErrorModal && <ErrorModal />}
-          <div className="mb-10">
-            <h1 className="text-3xl font-extrabold text-gray-800 mb-3 tracking-tight">Add New Product</h1>
-            <p className="text-gray-500 text-base">Complete the form below to add a new product to your inventory</p>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-10">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Basic Information</h2>
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Product Name *</label>
-                  <input
-                    type="text"
-                    value={formData.name}
-                    onChange={(e) => handleFormChange("name", e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                    placeholder="Enter product name"
-                    required
-                  />
-                  {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-                </div>
-                {!isColorPriceFilled && !isSizePriceFilled && !isPricingSectionFilled && (
-                  <div>
-                    <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
-                    <input
-                      type="number"
-                      value={formData.price}
-                      onChange={(e) => handleFormChange("price", e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                      placeholder="0.00"
-                      min="0"
-                      step="0.01"
-                    />
-                    {errors.price && <p className="text-red-500 text-xs mt-1">{errors.price}</p>}
-                  </div>
-                )}
-                <div>
-                  <label className="block text-sm font-semibold text-gray-700 mb-2">Stock *</label>
-                  <input
-                    type="number"
-                    value={formData.stock}
-                    onChange={(e) => handleFormChange("stock", e.target.value)}
-                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                    placeholder="0"
-                    min="0"
-                    required
-                  />
-                  {errors.stock && <p className="text-red-500 text-xs mt-1">{errors.stock}</p>}
-                </div>
-              </div>
-              {isBasePriceFilled && (
-                <PriceRangeSection
-                  ranges={basePriceRanges}
-                  onRangeChange={handleBasePriceRangeChange}
-                  onAddRange={addBasePriceRange}
-                  onRemoveRange={removeBasePriceRange}
-                  title="Price Ranges"
-                  isRequired={true}
-                  isRetailPriceDisabled={true}
-                  errors={errors}
-                  parentIndex={0}
-                  sectionType="basePrice"
+
+          <form onSubmit={handleSubmit} className="p-6 space-y-8">
+            {/* Main Product Fields */}
+            <div className="space-y-6">
+              <h2 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">Basic Information</h2>
+
+              {/* Product Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Product Name <span className="text-red-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  value={productData.name}
+                  onChange={(e) => handleProductDataChange("name", e.target.value)}
+                  className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                    errors.name ? "border-red-500" : "border-gray-300"
+                  }`}
+                  placeholder="Enter product name"
                 />
-              )}
-              {errors.base_price && <p className="text-red-500 text-xs mt-1">{errors.base_price}</p>}
-            </div>
+                {errors.name && (
+                  <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                    <AlertCircle className="w-4 h-4" />
+                    {errors.name}
+                  </p>
+                )}
+              </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Category Selection</h2>
-              {categories.length > 0 ? (
-                <div className="space-y-4">
-                  {renderCategoryDropdowns()}
-                  {selectedPath.length > 0 && (
-                    <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm font-semibold text-blue-800 mb-1">Selected Category Path:</p>
-                      <p className="text-blue-600 font-semibold text-lg">{getCategoryBreadCrumb()}</p>
-                    </div>
-                  )}
+              {/* Categories */}
+              {loading ? (
+                <p className="text-gray-600">Loading categories...</p>
+              ) : fetchError ? (
+                <div className="text-center py-4">
+                  <p className="text-red-500 text-sm flex items-center gap-1 justify-center">
+                    <AlertCircle className="w-4 h-4" />
+                    {fetchError}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={fetchCategories}
+                    className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                  >
+                    Retry
+                  </button>
                 </div>
+              ) : mainCategories.length === 0 ? (
+                <p className="text-gray-600">No categories available. Please add categories first.</p>
               ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No categories available. Please add categories first.</p>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {renderCategoryDropdowns()}
                 </div>
               )}
-            </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Product Details</h2>
-              <div className="space-y-4">
-                {details.map((detail, index) => (
-                  <div key={index} className="flex flex-col sm:flex-row gap-4 items-start">
-                    <div className="flex-1 w-full">
+              {/* Category Path */}
+              {selectedPath.length > 0 && (
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                  <p className="text-sm text-blue-800">
+                    <span className="font-medium">Category Path:</span> {getCategoryPath()}
+                  </p>
+                </div>
+              )}
+
+              {/* Product Details */}
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <label className="block text-sm font-medium text-gray-700">Product Details</label>
+                  <button
+                    type="button"
+                    onClick={addProductDetail}
+                    className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+                  >
+                    <Plus className="w-3 h-3" />
+                    Add Detail
+                  </button>
+                </div>
+
+                <div className="space-y-3">
+                  {productDetails.map((detail, index) => (
+                    <div key={detail.id} className="flex items-center gap-3">
                       <input
                         type="text"
-                        value={detail.name}
-                        onChange={(e) => handleDetailChange(index, "name", e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
+                        value={detail.key}
+                        onChange={(e) => updateProductDetail(detail.id, "key", e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                         placeholder="Detail name (e.g., Material)"
                       />
-                    </div>
-                    <div className="flex-1 w-full">
                       <input
                         type="text"
                         value={detail.value}
-                        onChange={(e) => handleDetailChange(index, "value", e.target.value)}
-                        className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                        placeholder="e.g., Cotton"
+                        onChange={(e) => updateProductDetail(detail.id, "value", e.target.value)}
+                        className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                        placeholder="Detail value (e.g., Cotton)"
                       />
-                    </div>
-                    {details.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeDetail(index)}
-                        className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
-                      >
-                        <Trash2 size={16} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={addMoreDetails}
-                className="mt-4 flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-lg transition-colors duration-200"
-              >
-                <Plus size={16} />
-                Add more details
-              </button>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Color Variants</h2>
-              <div className="space-y-6">
-                {colorVariants.map((variant, variantIndex) => (
-                  <div key={variantIndex} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                      <h3 className="text-lg font-semibold text-gray-800">Color Variant {variantIndex + 1}</h3>
-                      {colorVariants.length > 1 && (
+                      {productDetails.length > 1 && (
                         <button
                           type="button"
-                          onClick={() => removeColorVariant(variantIndex)}
-                          className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+                          onClick={() => removeProductDetail(detail.id)}
+                          className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-full transition-colors"
                         >
-                          <Trash2 size={16} />
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       )}
-                    </div>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Color *</label>
-                        <input
-                          type="text"
-                          value={variant.color}
-                          onChange={(e) => handleColorVariantChange(variantIndex, "color", e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          placeholder="e.g., Red, Blue, #FF5733"
-                          required
-                        />
-                        {errors[`color_${variantIndex}`] && (
-                          <p className="text-red-500 text-xs mt-1">{errors[`color_${variantIndex}`]}</p>
-                        )}
-                      </div>
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Image</label>
-                        <input
-                          type="file"
-                          onChange={(e) => handleImageUpload(variantIndex, e)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          accept="image/*"
-                        />
-                      </div>
-                      {!isBasePriceFilled && !isSizePriceFilled && !isPricingSectionFilled && (
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
-                          <input
-                            type="number"
-                            value={variant.price}
-                            onChange={(e) => handleColorVariantChange(variantIndex, "price", e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    <div className="mb-4">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={variant.isDefault}
-                          onChange={(e) => handleColorVariantChange(variantIndex, "isDefault", e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
-                      </label>
-                    </div>
-
-                    {!isSizePriceFilled && !isPricingSectionFilled && (
-                      <div className="mb-4">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">For All Sizes?</label>
-                        <select
-                          value={variant.forAllSizes}
-                          onChange={(e) => handleColorVariantChange(variantIndex, "forAllSizes", e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                        >
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
-                        </select>
-                      </div>
-                    )}
-
-                    {variant.forAllSizes === "no" && !isSizePriceFilled && !isPricingSectionFilled && (
-                      <div className="mb-4">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Select Sizes *</label>
-                        <div className="relative">
-                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white space-y-2">
-                            {sizeOptions.map((size, index) => (
-                              <div key={index} className="flex items-center">
-                                <label className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={variant.availableSizes.includes(size)}
-                                    onChange={() => handleColorAvailableSizesChange(variantIndex, size)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                  />
-                                  <span>{size}</span>
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                        {errors[`color_${variantIndex}`] && (
-                          <p className="text-red-500 text-xs mt-1">{errors[`color_${variantIndex}`]}</p>
-                        )}
-                      </div>
-                    )}
-                    <div className="mb-4">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={variant.isDefault}
-                          onChange={(e) => handleColorVariantChange(variantIndex, "isDefault", e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
-                      </label>
-                    </div>
-                    {variant.price && !isBasePriceFilled && !isSizePriceFilled && !isPricingSectionFilled && (
-                      <PriceRangeSection
-                        ranges={variant.priceRanges}
-                        onRangeChange={(rangeIndex, field, value) =>
-                          handleColorPriceRangeChange(variantIndex, rangeIndex, field, value)
-                        }
-                        onAddRange={() => addColorPriceRange(variantIndex)}
-                        onRemoveRange={(rangeIndex) => removeColorPriceRange(variantIndex, rangeIndex)}
-                        title={`Price Range for ${variant.color || "Color " + (variantIndex + 1)}`}
-                        isRequired={true}
-                        isRetailPriceDisabled={true}
-                        errors={errors}
-                        parentIndex={variantIndex}
-                        sectionType="colorPrice"
-                      />
-                    )}
-                    {errors[`color_price_${variantIndex}`] && (
-                      <p className="text-red-500 text-xs mt-1">{errors[`color_price_${variantIndex}`]}</p>
-                    )}
-                    {variant.optionalDetails.length > 0 && (
-                      <div className="mb-4 mt-6">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Optional Details</h4>
-                        <div className="space-y-2">
-                          {variant.optionalDetails.map((detail, detailIndex) => (
-                            <div key={detailIndex} className="flex flex-col sm:flex-row gap-2 items-start">
-                              <input
-                                type="text"
-                                value={detail.name}
-                                onChange={(e) =>
-                                  handleColorOptionalDetailChange(variantIndex, detailIndex, "name", e.target.value)
-                                }
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                                placeholder="Name"
-                              />
-                              <input
-                                type="text"
-                                value={detail.value}
-                                onChange={(e) =>
-                                  handleColorOptionalDetailChange(variantIndex, detailIndex, "value", e.target.value)
-                                }
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                                placeholder="Value"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeColorOptionalDetail(variantIndex, detailIndex)}
-                                className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => addColorOptionalDetail(variantIndex)}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors duration-200"
-                    >
-                      <Plus size={14} />
-                      Add optional details
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={addColorVariant}
-                className="mt-6 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              >
-                <Plus size={16} />
-                Add Color Variant
-              </button>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Size Variants</h2>
-              {errors.size && <p className="text-red-500 text-xs mt-1">{errors.size}</p>}
-              <div className="space-y-6">
-                {sizeVariants.map((variant, variantIndex) => (
-                  <div key={variantIndex} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                      <h3 className="text-lg font-semibold text-gray-800">Size Variant {variantIndex + 1}</h3>
-                      {sizeVariants.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeSizeVariant(variantIndex)}
-                          className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      )}
-                    </div>
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
-                      <div>
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Size *</label>
-                        {!variant.useDimensions ? (
-                          <div>
-                            <select
-                              value={variant.size}
-                              onChange={(e) => handleSizeVariantChange(variantIndex, "size", e.target.value)}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                              required
-                            >
-                              <option value="">Select Size</option>
-                              {sizeOptions.map((size) => (
-                                <option key={size} value={size}>
-                                  {size}
-                                </option>
-                              ))}
-                            </select>
-                            <button
-                              type="button"
-                              onClick={() => toggleDimensions(variantIndex)}
-                              className="text-blue-600 hover:text-blue-800 text-sm mt-2"
-                            >
-                              Enter dimensions
-                            </button>
-                          </div>
-                        ) : (
-                          <div>
-                            <div className="grid grid-cols-3 gap-2">
-                              <input
-                                type="number"
-                                value={variant.length}
-                                onChange={(e) => handleSizeVariantChange(variantIndex, "length", e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                                placeholder="Length"
-                                min="0"
-                                step="0.01"
-                              />
-                              <input
-                                type="number"
-                                value={variant.breadth}
-                                onChange={(e) => handleSizeVariantChange(variantIndex, "breadth", e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                                placeholder="Breadth"
-                                min="0"
-                                step="0.01"
-                              />
-                              <input
-                                type="number"
-                                value={variant.height}
-                                onChange={(e) => handleSizeVariantChange(variantIndex, "height", e.target.value)}
-                                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                                placeholder="Height"
-                                min="0"
-                                step="0.01"
-                              />
-                            </div>
-                            <button
-                              type="button"
-                              onClick={() => toggleDimensions(variantIndex)}
-                              className="text-blue-600 hover:text-blue-800 text-sm mt-2"
-                            >
-                              Use size dropdown
-                            </button>
-                          </div>
-                        )}
-                        {errors[`size_${variantIndex}`] && (
-                          <p className="text-red-500 text-xs mt-1">{errors[`size_${variantIndex}`]}</p>
-                        )}
-                      </div>
-                      {!isBasePriceFilled && !isColorPriceFilled && !isPricingSectionFilled && (
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">Price</label>
-                          <input
-                            type="number"
-                            value={variant.price}
-                            onChange={(e) => handleSizeVariantChange(variantIndex, "price", e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                            placeholder="0.00"
-                            min="0"
-                            step="0.01"
-                          />
-                        </div>
-                      )}
-                    </div>
-                    {!isColorPriceFilled && !isPricingSectionFilled && (
-                      <div className="mb-4">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">For All Colors?</label>
-                        <select
-                          value={variant.forAllColors}
-                          onChange={(e) => handleSizeVariantChange(variantIndex, "forAllColors", e.target.value)}
-                          className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                        >
-                          <option value="yes">Yes</option>
-                          <option value="no">No</option>
-                        </select>
-                      </div>
-                    )}
-                    {variant.forAllColors === "no" && !isColorPriceFilled && !isPricingSectionFilled && (
-                      <div className="mb-4">
-                        <label className="block text-sm font-semibold text-gray-700 mb-2">Select Colors *</label>
-                        <div className="relative">
-                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white space-y-2">
-                            {colorVariants.map((colorVariant, index) => (
-                              <div key={index} className="flex items-center">
-                                <label className="flex items-center space-x-2">
-                                  <input
-                                    type="checkbox"
-                                    checked={variant.availableColors.includes(colorVariant.color)}
-                                    onChange={() => handleSizeAvailableColorsChange(variantIndex, colorVariant.color)}
-                                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                                    disabled={!colorVariant.color}
-                                  />
-                                  <span>{colorVariant.color || `Color ${index + 1}`}</span>
-                                </label>
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      </div>
-                    )}
-                    <div className="mb-4">
-                      <label className="flex items-center">
-                        <input
-                          type="checkbox"
-                          checked={variant.isDefault}
-                          onChange={(e) => handleSizeVariantChange(variantIndex, "isDefault", e.target.checked)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-2 focus:ring-blue-500"
-                        />
-                        <span className="ml-2 text-sm font-semibold text-gray-700">Set as default variant</span>
-                      </label>
-                    </div>
-                    {variant.price && !isBasePriceFilled && !isColorPriceFilled && !isPricingSectionFilled && (
-                      <PriceRangeSection
-                        ranges={variant.priceRanges}
-                        onRangeChange={(rangeIndex, field, value) =>
-                          handleSizePriceRangeChange(variantIndex, rangeIndex, field, value)
-                        }
-                        onAddRange={() => addSizePriceRange(variantIndex)}
-                        onRemoveRange={(rangeIndex) => removeSizePriceRange(variantIndex, rangeIndex)}
-                        title={`Price Range for ${variant.size || "Size " + (variantIndex + 1)}`}
-                        isRequired={true}
-                        isRetailPriceDisabled={true}
-                        errors={errors}
-                        parentIndex={variantIndex}
-                        sectionType="sizePrice"
-                      />
-                    )}
-                    {errors[`size_price_${variantIndex}`] && (
-                      <p className="text-red-500 text-xs mt-1">{errors[`size_price_${variantIndex}`]}</p>
-                    )}
-                    {variant.optionalDetails.length > 0 && (
-                      <div className="mt-6">
-                        <h4 className="text-sm font-semibold text-gray-700 mb-2">Optional Details</h4>
-                        <div className="space-y-2">
-                          {variant.optionalDetails.map((detail, detailIndex) => (
-                            <div key={detailIndex} className="flex flex-col sm:flex-row gap-2 items-start">
-                              <input
-                                type="text"
-                                value={detail.name}
-                                onChange={(e) =>
-                                  handleSizeOptionalDetailChange(variantIndex, detailIndex, "name", e.target.value)
-                                }
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                                placeholder="Name"
-                              />
-                              <input
-                                type="text"
-                                value={detail.value}
-                                onChange={(e) =>
-                                  handleSizeOptionalDetailChange(variantIndex, detailIndex, "value", e.target.value)
-                                }
-                                className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                                placeholder="Value"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeSizeOptionalDetail(variantIndex, detailIndex)}
-                                className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200 self-start sm:self-center"
-                              >
-                                <Trash2 size={16} />
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                    <button
-                      type="button"
-                      onClick={() => addSizeOptionalDetail(variantIndex)}
-                      className="flex items-center gap-2 px-4 py-2 text-sm text-blue-600 hover:text-blue-800 hover:bg-blue-50 rounded-md transition-colors duration-200"
-                    >
-                      <Plus size={16} />
-                      Add optional details
-                    </button>
-                  </div>
-                ))}
-              </div>
-              <button
-                type="button"
-                onClick={addSizeVariant}
-                className="mt-6 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-              >
-                <Plus size={16} />
-                Add Size Variant
-              </button>
-            </div>
-
-            {!isBasePriceFilled && !isColorPriceFilled && !isSizePriceFilled && (
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <h2 className="text-2xl font-semibold text-gray-800 mb-6">Pricing Combinations</h2>
-                <div className="space-y-6">
-                  {pricingSections.map((section, index) => (
-                    <div key={index} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
-                      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                        <h3 className="text-lg font-semibold text-gray-800">Pricing Combination {index + 1}</h3>
-                        {pricingSections.length > 1 && (
-                          <button
-                            type="button"
-                            onClick={() => removePricingSection(index)}
-                            className="p-2 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        )}
-                      </div>
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">Color</label>
-                          <select
-                            value={section.color}
-                            onChange={(e) => handlePricingSectionChange(index, "color", e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          >
-                            <option value="">Select Color</option>
-                            {colorVariants.map((variant, i) => (
-                              <option key={i} value={variant.color}>
-                                {variant.color || "Color " + (i + 1)}
-                              </option>
-                            ))}
-                          </select>
-                          {errors[`pricingSection_${index}_color`] && (
-                            <p className="text-red-500 text-xs mt-1">{errors[`pricingSection_${index}_color`]}</p>
-                          )}
-                        </div>
-                        <div>
-                          <label className="block text-sm font-semibold text-gray-700 mb-2">Size</label>
-                          <select
-                            value={section.size}
-                            onChange={(e) => handlePricingSectionChange(index, "size", e.target.value)}
-                            className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-                          >
-                            <option value="">Select Size</option>
-                            {sizeVariants.map((variant, i) => (
-                              <option
-                                key={i}
-                                value={variant.size || `${variant.length}x${variant.breadth}x${variant.height}`}
-                              >
-                                {variant.size ||
-                                  `${variant.length}x${variant.breadth}x${variant.height}` ||
-                                  "Size " + (i + 1)}
-                              </option>
-                            ))}
-                          </select>
-                          {errors[`pricingSection_${index}_size`] && (
-                            <p className="text-red-500 text-xs mt-1">{errors[`pricingSection_${index}_size`]}</p>
-                          )}
-                        </div>
-                      </div>
-                      {errors[`pricingSection_${index}_general`] && (
-                        <p className="text-red-500 text-xs mt-1">{errors[`pricingSection_${index}_general`]}</p>
-                      )}
-                      <PriceRangeSection
-                        ranges={section.priceRanges}
-                        onRangeChange={(rangeIndex, field, value) =>
-                          handlePricingSectionPriceRangeChange(index, rangeIndex, field, value)
-                        }
-                        onAddRange={() => addPricingSectionPriceRange(index)}
-                        onRemoveRange={(rangeIndex) => removePricingSectionPriceRange(index, rangeIndex)}
-                        title={`Price Range for Combination ${index + 1}`}
-                        isRequired={true}
-                        errors={errors}
-                        parentIndex={index}
-                        sectionType="pricingSection"
-                      />
                     </div>
                   ))}
                 </div>
-                <button
-                  type="button"
-                  onClick={addPricingSection}
-                  className="mt-6 flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-                >
-                  <Plus size={16} />
-                  Add Pricing Combination
-                </button>
+              </div>
+
+              {/* Important Note */}
+              <div className="bg-gradient-to-r from-yellow-400 to-orange-400 border-l-4 border-yellow-500 p-4 rounded-lg">
+                <div className="flex items-center">
+                  <Info className="w-5 h-5 text-white mr-2" />
+                  <p className="text-white font-bold">
+                    If you want variants for this product, don't fill the fields below (Stock, Price, Image)
+                  </p>
+                </div>
+              </div>
+
+              {/* Stock and Price */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Stock</label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={productData.stock}
+                    onChange={(e) => handleProductDataChange("stock", e.target.value)}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      errors.stock ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Enter stock quantity"
+                  />
+                  {errors.stock && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.stock}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Price ($)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    value={productData.price}
+                    onChange={(e) => handleProductDataChange("price", e.target.value)}
+                    className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                      errors.price ? "border-red-500" : "border-gray-300"
+                    }`}
+                    placeholder="Enter price"
+                  />
+                  {errors.price && (
+                    <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                      <AlertCircle className="w-4 h-4" />
+                      {errors.price}
+                    </p>
+                  )}
+                </div>
+              </div>
+
+              {/* Image Upload */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Product Image</label>
+                <div className="flex items-center space-x-4">
+                  <div className="flex-1">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageUpload}
+                      className="hidden"
+                      id="image-upload"
+                    />
+                    <label
+                      htmlFor="image-upload"
+                      className={`w-full flex items-center justify-center px-4 py-3 border-2 border-dashed rounded-lg cursor-pointer hover:bg-gray-50 transition-colors ${
+                        errors.image ? "border-red-500" : "border-gray-300"
+                      }`}
+                    >
+                      <Upload className="w-5 h-5 text-gray-400 mr-2" />
+                      <span className="text-gray-600">
+                        {productData.image ? productData.image.name : "Choose image file"}
+                      </span>
+                    </label>
+                    {errors.image && (
+                      <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                        <AlertCircle className="w-4 h-4" />
+                        {errors.image}
+                      </p>
+                    )}
+                  </div>
+                  {imagePreview && (
+                    <div className="w-20 h-20 rounded-lg overflow-hidden border border-gray-300">
+                      <img
+                        src={imagePreview || "/placeholder.svg"}
+                        alt="Preview"
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Main Bulk Pricing */}
+              {productData.price && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-lg font-medium text-gray-800">Bulk Pricing</h3>
+                    <button
+                      type="button"
+                      onClick={addMainBulkPricing}
+                      className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+                    >
+                      <Plus className="w-3 h-3" />
+                      Add Bulk Price
+                    </button>
+                  </div>
+
+                  {mainBulkPricing.map((bulk, index) => (
+                    <div key={bulk.id} className="bg-purple-50 p-4 rounded-lg">
+                      <div className="flex items-center justify-between mb-3">
+                        <span className="text-sm font-medium text-purple-800">Bulk Price {index + 1}</span>
+                        <button
+                          type="button"
+                          onClick={() => removeMainBulkPricing(bulk.id)}
+                          className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors"
+                        >
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Wholesale Price ($)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={bulk.wholesalePrice}
+                            onChange={(e) => updateMainBulkPricing(bulk.id, "wholesalePrice", e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                            placeholder="Wholesale price"
+                          />
+                          {bulk.wholesalePrice && validateMainBulkPricing(bulk, index) && (
+                            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                              <AlertCircle className="w-3 h-3" />
+                              {validateMainBulkPricing(bulk, index)}
+                            </p>
+                          )}
+                        </div>
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">
+                            <span className="font-bold">This quantity will be included</span>
+                          </label>
+                          <input
+                            type="number"
+                            min="1"
+                            value={bulk.quantity}
+                            onChange={(e) => updateMainBulkPricing(bulk.id, "quantity", e.target.value)}
+                            className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                            placeholder="Minimum quantity"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Variants Section */}
+            {!isAnyMainFieldFilled() && (
+              <div className="space-y-6">
+                <div className="flex items-center justify-between">
+                  <h2 className="text-xl font-semibold text-gray-800 border-b border-gray-200 pb-2">
+                    Product Variants
+                  </h2>
+                  <button
+                    type="button"
+                    onClick={addVariant}
+                    className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg flex items-center gap-2 transition-colors"
+                  >
+                    <Plus className="w-4 h-4" />
+                    Add Variant
+                  </button>
+                </div>
+
+                {variants.map((variant, variantIndex) => (
+                  <div key={variant.id} className="border border-gray-200 rounded-lg p-6 space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-lg font-medium text-gray-800">Variant {variantIndex + 1}</h3>
+                      {variants.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => removeVariant(variant.id)}
+                          className="text-red-600 hover:text-red-800 p-2 hover:bg-red-50 rounded-full transition-colors"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+
+                    {/* Color Name and Image */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Color Name <span className="text-red-500">*</span>
+                        </label>
+                        <input
+                          type="text"
+                          value={variant.colorName}
+                          onChange={(e) => updateVariant(variant.id, "colorName", e.target.value)}
+                          className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
+                            errors[`variant_${variantIndex}_color`] ? "border-red-500" : "border-gray-300"
+                          }`}
+                          placeholder="Enter color name (e.g., Red, Blue, etc.)"
+                        />
+                        {errors[`variant_${variantIndex}_color`] && (
+                          <p className="text-red-500 text-sm mt-1 flex items-center gap-1">
+                            <AlertCircle className="w-4 h-4" />
+                            {errors[`variant_${variantIndex}_color`]}
+                          </p>
+                        )}
+                      </div>
+
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Variant Image</label>
+                        <div className="flex items-center space-x-4">
+                          <div className="flex-1">
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={(e) => handleVariantImageUpload(variant.id, e)}
+                              className="hidden"
+                              id={`variant-image-upload-${variant.id}`}
+                            />
+                            <label
+                              htmlFor={`variant-image-upload-${variant.id}`}
+                              className="w-full flex items-center justify-center px-4 py-3 border-2 border-dashed border-gray-300 rounded-lg cursor-pointer hover:bg-gray-50 transition-colors"
+                            >
+                              <Upload className="w-4 h-4 text-gray-400 mr-2" />
+                              <span className="text-gray-600 text-sm">
+                                {variant.image ? variant.image.name : "Choose image"}
+                              </span>
+                            </label>
+                          </div>
+                          {variantImagePreviews[variant.id] && (
+                            <div className="w-16 h-16 rounded-lg overflow-hidden border border-gray-300">
+                              <img
+                                src={variantImagePreviews[variant.id] || "/placeholder.svg"}
+                                alt="Variant Preview"
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Sizes */}
+                    <div>
+                      <div className="flex items-center justify-between mb-4">
+                        <label className="block text-sm font-medium text-gray-700">
+                          Sizes <span className="text-red-500">*</span>
+                        </label>
+                        <button
+                          type="button"
+                          onClick={() => addSizeToVariant(variant.id)}
+                          className="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+                        >
+                          <Plus className="w-3 h-3" />
+                          Add Size
+                        </button>
+                      </div>
+
+                      <div className="space-y-4">
+                        {variant.sizes.map((size, sizeIndex) => (
+                          <div key={size.id} className="bg-gray-50 p-4 rounded-lg">
+                            <div className="flex items-center justify-between mb-3">
+                              <span className="text-sm font-medium text-gray-700">Size {sizeIndex + 1}</span>
+                              {variant.sizes.length > 1 && (
+                                <button
+                                  type="button"
+                                  onClick={() => removeSizeFromVariant(variant.id, size.id)}
+                                  className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors"
+                                >
+                                  <X className="w-3 h-3" />
+                                </button>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Length</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={size.length}
+                                  onChange={(e) => updateSizeInVariant(variant.id, size.id, "length", e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                  placeholder="Length"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Breadth</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={size.breadth}
+                                  onChange={(e) => updateSizeInVariant(variant.id, size.id, "breadth", e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                  placeholder="Breadth"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Height</label>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={size.height}
+                                  onChange={(e) => updateSizeInVariant(variant.id, size.id, "height", e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                  placeholder="Height"
+                                />
+                              </div>
+                              <div>
+                                <label className="block text-xs font-medium text-gray-600 mb-1">Unit</label>
+                                <select
+                                  value={size.unit}
+                                  onChange={(e) => updateSizeInVariant(variant.id, size.id, "unit", e.target.value)}
+                                  className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                >
+                                  {dimensionUnits.map((unit) => (
+                                    <option key={unit} value={unit}>
+                                      {unit}
+                                    </option>
+                                  ))}
+                                </select>
+                              </div>
+                            </div>
+
+                            {errors[`variant_${variantIndex}_size_${sizeIndex}`] && (
+                              <p className="text-red-500 text-xs mt-2 flex items-center gap-1">
+                                <AlertCircle className="w-3 h-3" />
+                                {errors[`variant_${variantIndex}_size_${sizeIndex}`]}
+                              </p>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Price Section */}
+                    <div className="space-y-4">
+                      {variant.sizes.length === 1 ? (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Price ($)</label>
+                          <input
+                            type="number"
+                            min="0"
+                            step="0.01"
+                            value={variant.price}
+                            onChange={(e) => updateVariant(variant.id, "price", e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                            placeholder="Enter price"
+                          />
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {variant.isPriceCommon === "yes" && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">Price ($)</label>
+                              <input
+                                type="number"
+                                min="0"
+                                step="0.01"
+                                value={variant.price}
+                                onChange={(e) => updateVariant(variant.id, "price", e.target.value)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                placeholder="Enter price"
+                              />
+                            </div>
+                          )}
+                          <div className={variant.isPriceCommon === "no" ? "col-span-full" : ""}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Is this price common for all sizes?
+                            </label>
+                            <select
+                              value={variant.isPriceCommon}
+                              onChange={(e) => updateVariant(variant.id, "isPriceCommon", e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                            >
+                              <option value="yes">Yes</option>
+                              <option value="no">No</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {variant.isPriceCommon === "no" && variant.sizes.length > 1 && (
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-gray-700">Set price for each combination:</h4>
+                          {generateVariantCombinations(variant).map((combination) => (
+                            <div key={combination.key} className="space-y-3">
+                              <div className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                                <span className="flex-1 text-sm font-medium text-gray-700">{combination.display}</span>
+                                <input
+                                  type="number"
+                                  min="0"
+                                  step="0.01"
+                                  value={variant.variantPrices[combination.key] || ""}
+                                  onChange={(e) => updateVariantPrice(variant.id, combination.key, e.target.value)}
+                                  className="w-32 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                  placeholder="Price"
+                                />
+                              </div>
+
+                              <div className="ml-4 space-y-2">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm font-medium text-gray-600">Optional Details</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => addOptionalDetail(variant.id, combination.key)}
+                                    className="bg-gray-600 hover:bg-gray-700 text-white px-2 py-1 rounded text-xs flex items-center gap-1 transition-colors"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    Add Detail
+                                  </button>
+                                </div>
+
+                                {(variant.optionalDetails[combination.key] || []).map((detail) => (
+                                  <div key={detail.id} className="flex items-center gap-2">
+                                    <input
+                                      type="text"
+                                      value={detail.key}
+                                      onChange={(e) =>
+                                        updateOptionalDetail(
+                                          variant.id,
+                                          combination.key,
+                                          detail.id,
+                                          "key",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+                                      placeholder="Detail name"
+                                    />
+                                    <input
+                                      type="text"
+                                      value={detail.value}
+                                      onChange={(e) =>
+                                        updateOptionalDetail(
+                                          variant.id,
+                                          combination.key,
+                                          detail.id,
+                                          "value",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="flex-1 px-2 py-1 border border-gray-300 rounded text-xs"
+                                      placeholder="Detail value"
+                                    />
+                                    <button
+                                      type="button"
+                                      onClick={() => removeOptionalDetail(variant.id, combination.key, detail.id)}
+                                      className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors"
+                                    >
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stock Section */}
+                    <div className="space-y-4">
+                      {variant.sizes.length === 1 ? (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Stock</label>
+                          <input
+                            type="number"
+                            min="0"
+                            value={variant.stock}
+                            onChange={(e) => updateVariant(variant.id, "stock", e.target.value)}
+                            className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                            placeholder="Enter stock quantity"
+                          />
+                        </div>
+                      ) : (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          {variant.isStockCommon === "yes" && (
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-2">Stock</label>
+                              <input
+                                type="number"
+                                min="0"
+                                value={variant.stock}
+                                onChange={(e) => updateVariant(variant.id, "stock", e.target.value)}
+                                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                                placeholder="Enter stock quantity"
+                              />
+                            </div>
+                          )}
+                          <div className={variant.isStockCommon === "no" ? "col-span-full" : ""}>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                              Is this stock common for all combinations?
+                            </label>
+                            <select
+                              value={variant.isStockCommon}
+                              onChange={(e) => updateVariant(variant.id, "isStockCommon", e.target.value)}
+                              className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
+                            >
+                              <option value="yes">Yes</option>
+                              <option value="no">No</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {variant.isStockCommon === "no" && variant.sizes.length > 1 && (
+                        <div className="space-y-3">
+                          <h4 className="font-medium text-gray-700">Set stock for each combination:</h4>
+                          {generateVariantCombinations(variant).map((combination) => (
+                            <div key={combination.key} className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg">
+                              <span className="flex-1 text-sm font-medium text-gray-700">{combination.display}</span>
+                              <input
+                                type="number"
+                                min="0"
+                                value={variant.variantStocks[combination.key] || ""}
+                                onChange={(e) => updateVariantStock(variant.id, combination.key, e.target.value)}
+                                className="w-32 px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-blue-500 text-sm"
+                                placeholder="Stock"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Bulk Pricing Section */}
+                    {!productData.price && (
+                      <div className="space-y-4">
+                        <h4 className="font-medium text-gray-700 border-t border-gray-200 pt-4">Bulk Pricing</h4>
+
+                        {variant.isPriceCommon === "yes" || variant.sizes.length === 1 ? (
+                          <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                              <span className="text-sm font-medium text-gray-700">
+                                Bulk pricing for all combinations
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => addBulkPricing(variant.id, "common")}
+                                className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+                              >
+                                <Plus className="w-3 h-3" />
+                                Add Bulk Price
+                              </button>
+                            </div>
+
+                            {(variant.bulkPricing.common || []).map((bulk, bulkIndex) => (
+                              <div key={bulk.id} className="bg-purple-50 p-4 rounded-lg">
+                                <div className="flex items-center justify-between mb-3">
+                                  <span className="text-sm font-medium text-purple-800">
+                                    Bulk Price {bulkIndex + 1}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => removeBulkPricing(variant.id, "common", bulk.id)}
+                                    className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors"
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                                      Wholesale Price ($)
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step="0.01"
+                                      value={bulk.wholesalePrice}
+                                      onChange={(e) =>
+                                        updateBulkPricing(
+                                          variant.id,
+                                          "common",
+                                          bulk.id,
+                                          "wholesalePrice",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                                      placeholder="Wholesale price"
+                                    />
+                                    {bulk.wholesalePrice && validateBulkPricing(variant, "common", bulk, bulkIndex) && (
+                                      <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                                        <AlertCircle className="w-3 h-3" />
+                                        {validateBulkPricing(variant, "common", bulk, bulkIndex)}
+                                      </p>
+                                    )}
+                                  </div>
+                                  <div>
+                                    <label className="block text-xs font-medium text-gray-600 mb-1">
+                                      <span className="font-bold">This quantity will be included</span>
+                                    </label>
+                                    <input
+                                      type="number"
+                                      min="1"
+                                      value={bulk.quantity}
+                                      onChange={(e) =>
+                                        updateBulkPricing(
+                                          variant.id,
+                                          "common",
+                                          bulk.id,
+                                          "quantity",
+                                          e.target.value,
+                                        )
+                                      }
+                                      className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                                      placeholder="Minimum quantity"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <div className="space-y-4">
+                            {generateVariantCombinations(variant).map((combination) => (
+                              <div key={combination.key} className="border border-gray-200 rounded-lg p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <span className="text-sm font-medium text-gray-700">{combination.display}</span>
+                                  <button
+                                    type="button"
+                                    onClick={() => addBulkPricing(variant.id, combination.key)}
+                                    className="bg-purple-600 hover:bg-purple-700 text-white px-3 py-1 rounded text-sm flex items-center gap-1 transition-colors"
+                                  >
+                                    <Plus className="w-3 h-3" />
+                                    Add Bulk Price
+                                  </button>
+                                </div>
+
+                                {(variant.bulkPricing[combination.key] || []).map((bulk, bulkIndex) => (
+                                  <div key={bulk.id} className="bg-purple-50 p-3 rounded-lg mb-3">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <span className="text-xs font-medium text-purple-800">
+                                        Bulk Price {bulkIndex + 1}
+                                      </span>
+                                      <button
+                                        type="button"
+                                        onClick={() => removeBulkPricing(variant.id, combination.key, bulk.id)}
+                                        className="text-red-600 hover:text-red-800 p-1 hover:bg-red-50 rounded transition-colors"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                          Wholesale Price ($)
+                                        </label>
+                                        <input
+                                          type="number"
+                                          min="0"
+                                          step="0.01"
+                                          value={bulk.wholesalePrice}
+                                          onChange={(e) =>
+                                            updateBulkPricing(
+                                              variant.id,
+                                              combination.key,
+                                              bulk.id,
+                                              "wholesalePrice",
+                                              e.target.value,
+                                            )
+                                          }
+                                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                                          placeholder="Wholesale price"
+                                        />
+                                        {bulk.wholesalePrice &&
+                                          validateBulkPricing(variant, combination.key, bulk, bulkIndex) && (
+                                            <p className="text-red-500 text-xs mt-1 flex items-center gap-1">
+                                              <AlertCircle className="w-3 h-3" />
+                                              {validateBulkPricing(variant, combination.key, bulk, bulkIndex)}
+                                            </p>
+                                          )}
+                                      </div>
+                                      <div>
+                                        <label className="block text-xs font-medium text-gray-600 mb-1">
+                                          <span className="font-bold">This quantity will be included</span>
+                                        </label>
+                                        <input
+                                          type="number"
+                                          min="1"
+                                          value={bulk.quantity}
+                                          onChange={(e) =>
+                                            updateBulkPricing(
+                                              variant.id,
+                                              combination.key,
+                                              bulk.id,
+                                              "quantity",
+                                              e.target.value,
+                                            )
+                                          }
+                                          className="w-full px-3 py-2 border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-purple-500 text-sm"
+                                          placeholder="Minimum quantity"
+                                        />
+                                      </div>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ))}
               </div>
             )}
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+            {/* Submit Button */}
+            <div className="flex justify-end pt-6 border-t border-gray-200">
               <button
                 type="submit"
-                disabled={isSubmitting}
-                className={`w-full py-3 px-6 text-white rounded-lg transition-colors duration-200 ${
-                  isSubmitting ? "bg-gray-400 cursor-not-allowed" : "bg-blue-600 hover:bg-blue-700"
-                }`}
+                className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 rounded-lg font-medium transition-all duration-200 transform hover:scale-105 shadow-lg"
               >
-                {isSubmitting ? "Adding Product..." : "Add Product"}
+                Add Product
               </button>
             </div>
           </form>
         </div>
-      )}
+      </div>
     </div>
   )
 }
-
-export default AddProduct
