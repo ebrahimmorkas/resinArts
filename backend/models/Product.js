@@ -1,124 +1,69 @@
-const mongoose = require("mongoose");
+const mongoose = require("mongoose")
 
-const productSchema = new mongoose.Schema(
+// Schema for dynamic key-value pairs (Product Details, Optional Details)
+const keyValueSchema = mongoose.Schema({
+  key: { type: String, required: false }, // Made optional for testing
+  value: { type: String, required: false }, // Made optional for testing
+})
+
+// Schema for Bulk Pricing
+const bulkPricingSchema = mongoose.Schema({
+  wholesalePrice: { type: Number, required: false }, // Made optional for testing
+  quantity: { type: Number, required: false }, // Made optional for testing
+})
+
+// Schema for a single Size object
+const singleSizeSchema = mongoose.Schema({
+  length: { type: Number, required: false },
+  breadth: { type: Number, required: false },
+  height: { type: Number, required: false },
+  unit: { type: String, enum: ["cm", "m", "inch"], required: false }, // Changed to required: false
+})
+
+// Schema for 'More Details' section (now representing a specific Size instance)
+const moreDetailsSchema = mongoose.Schema({
+  size: singleSizeSchema, // This should be an object, not an array
+  additionalImages: [String], // Array of Cloudinary URLs
+  optionalDetails: [keyValueSchema],
+  // Fields for price/stock if they are specific to this moreDetails section
+  price: { type: Number, required: false },
+  stock: { type: Number, required: false },
+  bulkPricingCombinations: [bulkPricingSchema],
+})
+
+// Schema for Product Variants
+const productVariantSchema = mongoose.Schema({
+  colorName: { type: String, required: false }, // Made optional for testing
+  variantImage: { type: String, required: false }, // Cloudinary URL
+  optionalDetails: [keyValueSchema], // Variant-specific optional details
+  moreDetails: [moreDetailsSchema], // Array of 'More Details' sections (each representing a unique size instance)
+  // Fields for price/stock if they are common for all moreDetails sections of this variant
+  commonPrice: { type: Number, required: false },
+  commonStock: { type: Number, required: false },
+  commonBulkPricingCombinations: [bulkPricingSchema],
+  isDefault: { type: Boolean, default: false }, // New field for default variant
+})
+
+// Main Product Schema
+const productSchema = mongoose.Schema(
   {
-    name: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-    price: {
-      type: Number,
-      default: null,
-    },
-    stock: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    category: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "Category",
-      required: true,
-    },
-    categoryPath: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "Category",
-      },
-    ],
-    details: [
-      {
-        name: { type: String, trim: true },
-        value: { type: String, trim: true },
-      },
-    ],
-    colorVariants: [
-      {
-        color: { type: String, trim: true, required: true },
-        imageUrl: { type: String, default: null },
-        price: { type: Number, default: null },
-        isDefault: { type: Boolean, default: false },
-        forAllSizes: { type: String, default: "yes" },
-        availableSizes: [{ type: String, trim: true }],
-        optionalDetails: [
-          {
-            name: { type: String, trim: true },
-            value: { type: String, trim: true },
-          },
-        ],
-        priceRanges: [
-          {
-            retailPrice: { type: Number, default: null },
-            wholesalePrice: { type: Number, default: null },
-            thresholdQuantity: { type: Number, default: null },
-          },
-        ],
-      },
-    ],
-    sizeVariants: [
-      {
-        size: { type: String, trim: true },
-        price: { type: Number, default: null },
-        isDefault: { type: Boolean, default: false },
-        length: { type: Number, default: null },
-        breadth: { type: Number, default: null },
-        height: { type: Number, default: null },
-        forAllColors: { type: String, default: "yes" },
-        availableColors: [{ type: String, trim: true }],
-        optionalDetails: [
-          {
-            name: { type: String, trim: true },
-            value: { type: String, trim: true },
-          },
-        ],
-        priceRanges: [
-          {
-            retailPrice: { type: Number, default: null },
-            wholesalePrice: { type: Number, default: null },
-            thresholdQuantity: { type: Number, default: null },
-          },
-        ],
-      },
-    ],
-    pricingSections: [
-      {
-        color: { type: String, trim: true },
-        size: { type: String, trim: true },
-        priceRanges: [
-          {
-            retailPrice: { type: Number, default: null },
-            wholesalePrice: { type: Number, default: null },
-            thresholdQuantity: { type: Number, default: null },
-          },
-        ],
-      },
-    ],
-    basePriceRanges: [
-      {
-        retailPrice: { type: Number, default: null },
-        wholesalePrice: { type: Number, default: null },
-        thresholdQuantity: { type: Number, default: null },
-      },
-    ],
-    restockedAt: {
-      type: Date,
-      default: null,
-    },
-    discountedPrice: {
-      type: Number,
-      default: null,
-    },
-    discountStartDate: {
-      type: Date,
-      default: null,
-    },
-    discountEndDate: {
-      type: Date,
-      default: null,
-    },
-  },
-  { timestamps: true },
-);
+    name: { type: String, required: false, trim: true }, // Made optional for testing
+    mainCategory: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: false }, // Made optional for testing
+    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: false }, // Made optional for testing
+    categoryPath: { type: String, required: false }, // e.g., Electronics > Mobiles > Vivo // Made optional for testing
+    productDetails: [keyValueSchema],
+    stock: { type: Number, required: false }, // Required if no variants
+    price: { type: Number, required: false }, // Required if no variants
+    image: { type: String, required: false }, // Main product image URL (Cloudinary)
+    additionalImages: [String], // Array of Cloudinary URLs for basic product
+    bulkPricing: [bulkPricingSchema], // Bulk pricing for basic product
 
-module.exports = mongoose.model("Product", productSchema);
+    hasVariants: { type: Boolean, default: false }, // Flag to indicate if product has variants
+    variants: [productVariantSchema], // Array of product variants
+  },
+  {
+    timestamps: true,
+  },
+)
+
+module.exports = mongoose.model("Product", productSchema)

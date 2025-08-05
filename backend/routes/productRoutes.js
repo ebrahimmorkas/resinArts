@@ -1,25 +1,11 @@
-const express = require('express');
-const router = express.Router();
-const productController = require('../controllers/productController');
-const multer = require('multer');
-const path = require('path');
-const authorize = require('../middlewares/authorize');
+const express = require("express")
+const router = express.Router()
+const { addProduct } = require("../controllers/productController")
+const authenticate = require("../middlewares/authenticate") // Assuming these exist
+const authorize = require("../middlewares/authorize") // Assuming these exist
 
-// Multer storage configuration
-// const storage = multer.diskStorage({
-//   destination: (req, file, cb) => {
-//     cb(null, 'uploads/');
-//   },
-//   filename: (req, file, cb) => {
-//     cb(null, `${Date.now()}-${file.originalname}`);
-//   },
-// });
-// const upload = multer({ storage });
-const storage = multer.memoryStorage();
-const upload = multer({ storage });
+// Route to add a new product
+// This route will be protected by authentication and authorization middleware
+router.post("/add", authenticate, authorize(["admin"]), addProduct)
 
-// POST /api/product/add
-router.post('/add', authorize(['admin']), upload.array('colorImages'), productController.addProduct);
-router.get('/all', authorize(['admin', 'user']), productController.fetchProducts);
-
-module.exports = router;
+module.exports = router

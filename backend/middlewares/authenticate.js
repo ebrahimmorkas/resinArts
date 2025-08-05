@@ -4,7 +4,8 @@ require('dotenv').config();
 const authenticate = (req, res, next) => {
     const token = req.cookies.token;
     if(!token) {
-        return res.status(401).json({message: 'Please Login to continue'});
+        console.log("From authetnticate " + token);
+        return res.status(401).json({message: 'Please Login to continue blah'});
     }
 
     try {
@@ -12,7 +13,8 @@ const authenticate = (req, res, next) => {
         req.user = decoded;
         next();
     } catch(err) {
-        return res.status(401).json({message: "Please Login to continue"});
+            console.log("From authetnticate catch" + token);
+        return res.status(401).json({message: "Please Login to continue blah blah"});
     }
 }
 

@@ -1,603 +1,620 @@
-// AddProduct.jsx
-"use client";
+// State updates
+const [productData, setProductData] = useState({
+  name: "",
+  stock: "",
+  price: "",
+  image: null,
+  additionalImages: [], // Added for Basic Information additional images
+  selectedCategories: [],
+})
 
-import React, { useState, useEffect, useCallback } from "react";
-import { Trash2, Plus } from "lucide-react";
-import axios from "axios";
+const [variants, setVariants] = useState([
+  {
+    id: Date.now(),
+    colorName: "",
+    sizes: [
+      {
+        id: Date.now(),
+        length: "",
+        breadth: "",
+        height: "",
+        unit: "cm",
+        images: [{ id: Date.now(), file: null, isDefault: true }], // Default image for size
+        additionalImages: [], // Optional additional images for size
+        reuseImagesFrom: null, // For reusing images from another size
+        optionalDetails: [{ id: Date.now(), key: "", value: "" }], // Size-specific details
+        reuseDetailsFrom: null, // For reusing details from another size
+      },
+    ],
+    price: "",
+    isPriceCommon: "yes",
+    stock: "",
+    isStockCommon: "yes",
+    isDefault: true,
+    variantPrices: {},
+    variantStocks: {},
+    bulkPricing: {},
+  },
+])
 
-const AddProduct = () => {
-  const [productData, setProductData] = useState({
-    name: "",
-    description: "",
-    category: "",
-    categoryPath: [],
-  });
-  const [productDetails, setProductDetails] = useState([
-    { name: "", value: "" },
-    { name: "", value: "" },
-    { name: "", value: "" },
-  ]);
-  const [mainBulkPricing, setMainBulkPricing] = useState([
-    { retailPrice: "", wholesalePrice: "", thresholdQuantity: "" },
-  ]);
-  const [variants, setVariants] = useState([
-    {
-      name: "",
-      values: [{ value: "", price: "", stock: "" }],
-      image: null,
-    },
-  ]);
-  const [categories, setCategories] = useState([]);
-  const [mainCategories, setMainCategories] = useState([]);
-  const [selectedPath, setSelectedPath] = useState([]);
-  const [subCategoryOptions, setSubCategoryOptions] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [fetchError, setFetchError] = useState("");
+const [additionalImagePreviews, setAdditionalImagePreviews] = useState({}) // For Basic Information additional images
 
-  const sizeOptions = ["XS", "S", "M", "L", "XL", "XXL", "XXXL", "XXXXL"];
-
-  // Fetch categories from backend
-  const fetchCategories = useCallback(async () => {
-    try {
-      setLoading(true);
-      console.log("Fetching categories from /api/category/all...");
-      const response = await axios.get("http://localhost:3000/api/category/all", {
-        withCredentials: true,
-      });
-      const categoriesData = response.data;
-      console.log("Fetched categories:", JSON.stringify(categoriesData, null, 2));
-      if (!Array.isArray(categoriesData)) {
-        throw new Error("Invalid category data received");
+// Track unique image sets for dropdown
+const getUniqueImageSizes = (variant) => {
+  const uniqueSizes = []
+  const seenImageSets = new Set()
+  variant.sizes.forEach((size, index) => {
+    if (!size.reuseImagesFrom) {
+      const dimensions = [size.length, size.breadth, size.height]
+        .filter((dim) => dim.trim() !== "")
+        .join(" X ")
+      const label = `Size ${index + 1} (${variant.colorName}, ${dimensions} ${size.unit})`
+      uniqueSizes.push({ sizeId: size.id, label })
+      seenImageSets.add(size.id)
+    } else if (!seenImageSets.has(size.reuseImagesFrom)) {
+      const reusedSize = variant.sizes.find((s) => s.id === size.reuseImagesFrom)
+      if (reusedSize) {
+        const dimensions = [reusedSize.length, reusedSize.breadth, reusedSize.height]
+          .filter((dim) => dim.trim() !== "")
+          .join(" X ")
+        const label = `Size ${variant.sizes.findIndex((s) => s.id === size.reuseImagesFrom) + 1} (${
+          variant.colorName
+        }, ${dimensions} ${reusedSize.unit})`
+        uniqueSizes.push({ sizeId: reusedSize.id, label })
+        seenImageSets.add(reusedSize.id)
       }
-      setCategories(categoriesData);
-      const mainCats = categoriesData.filter((cat) => !cat.parent_category_id);
-      setMainCategories(mainCats);
-      console.log("Main categories set:", mainCats);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching categories:", error.message);
-      setFetchError("Failed to load categories. Please try again.");
-      setLoading(false);
     }
-  }, []);
+  })
+  return uniqueSizes
+}
 
-  useEffect(() => {
-    fetchCategories();
-  }, [fetchCategories]);
+// Handle Basic Information additional image
+const addProductAdditionalImage = () => {
+  setProductData((prev) => ({
+    ...prev,
+    additionalImages: [...prev.additionalImages, { id: Date.now(), file: null }],
+  }))
+}
 
-  // Handle main category selection
-  const handleMainCategoryChange = useCallback(
-    (e) => {
-      const selectedId = e.target.value;
-      if (!selectedId) {
-        setProductData((prev) => ({
-          ...prev,
-          category: "",
-          categoryPath: [],
-        }));
-        setSelectedPath([]);
-        setSubCategoryOptions([]);
-        return;
-      }
-      const selectedCategory = categories.find((cat) => cat._id === selectedId);
-      if (!selectedCategory) {
-        console.error("Selected main category not found:", selectedId);
-        return;
-      }
-      setProductData((prev) => ({
+const handleProductAdditionalImageUpload = (imageId, e) => {
+  const file = e.target.files[0]
+  if (file) {
+    setProductData((prev) => ({
+      ...prev,
+      additionalImages: prev.additionalImages.map((img) =>
+        img.id === imageId ? { ...img, file } : img
+      ),
+    }))
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setAdditionalImagePreviews((prev) => ({
         ...prev,
-        category: selectedId,
-        categoryPath: [selectedId],
-      }));
-      setSelectedPath([selectedCategory]);
-      const subs = selectedCategory.subcategories || [];
-      setSubCategoryOptions(subs);
-    },
-    [categories],
-  );
+        [imageId]: e.target.result,
+      }))
+    }
+    reader.readAsDataURL(file)
+  }
+}
 
-  // Handle subcategory selection
-  const handleSubCategoryChange = useCallback(
-    (e) => {
-      const selectedId = e.target.value;
-      if (!selectedId) {
-        const parentCategory = selectedPath[0];
-        setProductData((prev) => ({
-          ...prev,
-          category: parentCategory._id,
-          categoryPath: [parentCategory._id],
-        }));
-        setSelectedPath([parentCategory]);
-        const subs = parentCategory.subcategories || [];
-        setSubCategoryOptions(subs);
-        return;
-      }
-      let selectedCategory = subCategoryOptions.find((cat) => cat._id === selectedId);
-      if (!selectedCategory) {
-        selectedCategory = categories.find((cat) => cat._id === selectedId);
-      }
-      if (!selectedCategory) {
-        console.error("Selected subcategory not found:", selectedId);
-        return;
-      }
-      const newSelectedPath = [...selectedPath, selectedCategory];
-      setProductData((prev) => ({
+const removeProductAdditionalImage = (imageId) => {
+  setProductData((prev) => ({
+    ...prev,
+    additionalImages: prev.additionalImages.filter((img) => img.id !== imageId),
+  }))
+  setAdditionalImagePreviews((prev) => {
+    const { [imageId]: removed, ...rest } = prev
+    return rest
+  })
+}
+
+// Handle size-specific image upload (default image)
+const handleSizeImageUpload = (variantId, sizeId, e) => {
+  const file = e.target.files[0]
+  if (file) {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          return {
+            ...variant,
+            sizes: variant.sizes.map((size) => {
+              if (size.id === sizeId) {
+                return {
+                  ...size,
+                  images: [{ id: Date.now(), file, isDefault: true }],
+                }
+              }
+              return size
+            }),
+          }
+        }
+        return variant
+      })
+    )
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setVariantImagePreviews((prev) => ({
         ...prev,
-        category: selectedId,
-        categoryPath: newSelectedPath.map((cat) => cat._id),
-      }));
-      setSelectedPath(newSelectedPath);
-      const subs = selectedCategory.subcategories || [];
-      setSubCategoryOptions(subs);
-    },
-    [categories, selectedPath, subCategoryOptions],
-  );
+        [sizeId]: e.target.result,
+      }))
+    }
+    reader.readAsDataURL(file)
+    setErrors((prev) => ({ ...prev, [`variant_${variantId}_size_${sizeId}_image`]: "" }))
+  }
+}
 
-  // Handle breadcrumb click to navigate back
-  const handleBreadcrumbClick = useCallback(
-    (index) => {
-      const newSelectedPath = selectedPath.slice(0, index + 1);
-      setSelectedPath(newSelectedPath);
-      const lastCategory = newSelectedPath[newSelectedPath.length - 1];
-      const subs = lastCategory.subcategories || [];
-      setSubCategoryOptions(subs);
-      setProductData((prev) => ({
+// Handle size-specific additional image
+const addSizeAdditionalImage = (variantId, sizeId) => {
+  setVariants((prev) =>
+    prev.map((variant) => {
+      if (variant.id === variantId) {
+        return {
+          ...variant,
+          sizes: variant.sizes.map((size) => {
+            if (size.id === sizeId) {
+              return {
+                ...size,
+                additionalImages: [...(size.additionalImages || []), { id: Date.now(), file: null }],
+              }
+            }
+            return size
+          }),
+        }
+      }
+      return variant
+    })
+  )
+}
+
+const handleSizeAdditionalImageUpload = (variantId, sizeId, imageId, e) => {
+  const file = e.target.files[0]
+  if (file) {
+    setVariants((prev) =>
+      prev.map((variant) => {
+        if (variant.id === variantId) {
+          return {
+            ...variant,
+            sizes: variant.sizes.map((size) => {
+              if (size.id === sizeId) {
+                return {
+                  ...size,
+                  additionalImages: size.additionalImages.map((img) =>
+                    img.id === imageId ? { ...img, file } : img
+                  ),
+                }
+              }
+              return size
+            }),
+          }
+        }
+        return variant
+      })
+    )
+    const reader = new FileReader()
+    reader.onload = (e) => {
+      setVariantAdditionalImagePreviews((prev) => ({
         ...prev,
-        category: lastCategory._id,
-        categoryPath: newSelectedPath.map((cat) => cat._id),
-      }));
-    },
-    [selectedPath],
-  );
-
-  // Generate breadcrumb for selected category path
-  const getCategoryPath = () => {
-    return selectedPath.map((cat, index) => (
-      <span key={cat._id}>
-        <button
-          type="button"
-          onClick={() => handleBreadcrumbClick(index)}
-          className="text-blue-600 hover:underline"
-        >
-          {cat.categoryName}
-        </button>
-        {index < selectedPath.length - 1 && <span className="mx-1">&gt;</span>}
-      </span>
-    ));
-  };
-
-  // Render category dropdowns
-  const renderCategoryDropdowns = () => {
-    return (
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-        <div>
-          <label className="block text-sm font-semibold text-gray-700 mb-2">Main Category *</label>
-          <select
-            value={selectedPath[0]?._id || ""}
-            onChange={handleMainCategoryChange}
-            className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-            required
-          >
-            <option value="">Select Main Category</option>
-            {mainCategories.map((category) => (
-              <option key={category._id} value={category._id}>
-                {category.categoryName}
-              </option>
-            ))}
-          </select>
-        </div>
-        {subCategoryOptions.length > 0 && (
-          <div>
-            <label className="block text-sm font-semibold text-gray-700 mb-2">Subcategory</label>
-            <select
-              value={selectedPath[selectedPath.length - 1]?._id || ""}
-              onChange={handleSubCategoryChange}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors duration-200"
-            >
-              <option value="">Select Subcategory</option>
-              {subCategoryOptions.map((category) => (
-                <option key={category._id} value={category._id}>
-                  {category.categoryName}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  // Existing state handlers (unchanged)
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setProductData((prev) => ({ ...prev, [name]: value }));
-  };
-
-  const handleDetailChange = (index, field, value) => {
-    const updatedDetails = [...productDetails];
-    updatedDetails[index][field] = value;
-    setProductDetails(updatedDetails);
-  };
-
-  const addDetail = () => {
-    setProductDetails([...productDetails, { name: "", value: "" }]);
-  };
-
-  const removeDetail = (index) => {
-    if (productDetails.length > 1) {
-      setProductDetails(productDetails.filter((_, i) => i !== index));
+        [sizeId]: {
+          ...prev[sizeId],
+          [imageId]: e.target.result,
+        },
+      }))
     }
-  };
+    reader.readAsDataURL(file)
+  }
+}
 
-  const handleBulkPricingChange = (index, field, value) => {
-    const updatedPricing = [...mainBulkPricing];
-    updatedPricing[index][field] = value;
-    setMainBulkPricing(updatedPricing);
-  };
+const removeSizeAdditionalImage = (variantId, sizeId, imageId) => {
+  setVariants((prev) =>
+    prev.map((variant) => {
+      if (variant.id === variantId) {
+        return {
+          ...variant,
+          sizes: variant.sizes.map((size) => {
+            if (size.id === sizeId) {
+              return {
+                ...size,
+                additionalImages: size.additionalImages.filter((img) => img.id !== imageId),
+              }
+            }
+            return size
+          }),
+        }
+      }
+      return variant
+    })
+  )
+  setVariantAdditionalImagePreviews((prev) => {
+    const sizePreviews = { ...prev[sizeId] }
+    delete sizePreviews[imageId]
+    return { ...prev, [sizeId]: sizePreviews }
+  })
+}
 
-  const addBulkPricing = () => {
-    setMainBulkPricing([
-      ...mainBulkPricing,
-      { retailPrice: "", wholesalePrice: "", thresholdQuantity: "" },
-    ]);
-  };
+// Handle reuse images dropdown
+const handleReuseImagesChange = (variantId, sizeId, value) => {
+  setVariants((prev) =>
+    prev.map((variant) => {
+      if (variant.id === variantId) {
+        return {
+          ...variant,
+          sizes: variant.sizes.map((size) => {
+            if (size.id === sizeId) {
+              return {
+                ...size,
+                reuseImagesFrom: value === "no" ? null : value,
+                images: value === "no" ? [{ id: Date.now(), file: null, isDefault: true }] : [],
+                additionalImages: value === "no" ? [] : [],
+              }
+            }
+            return size
+          }),
+        }
+      }
+      return variant
+    })
+  )
+}
 
-  const removeBulkPricing = (index) => {
-    if (mainBulkPricing.length > 1) {
-      setMainBulkPricing(mainBulkPricing.filter((_, i) => i !== index));
+// Handle size-specific optional details
+const addSizeOptionalDetail = (variantId, sizeId) => {
+  setVariants((prev) =>
+    prev.map((variant) => {
+      if (variant.id === variantId) {
+        return {
+          ...variant,
+          sizes: variant.sizes.map((size) => {
+            if (size.id === sizeId) {
+              return {
+                ...size,
+                optionalDetails: [...(size.optionalDetails || []), { id: Date.now(), key: "", value: "" }],
+              }
+            }
+            return size
+          }),
+        }
+      }
+      return variant
+    })
+  )
+}
+
+const removeSizeOptionalDetail = (variantId, sizeId, detailId) => {
+  setVariants((prev) =>
+    prev.map((variant) => {
+      if (variant.id === variantId) {
+        return {
+          ...variant,
+          sizes: variant.sizes.map((size) => {
+            if (size.id === sizeId) {
+              return {
+                ...size,
+                optionalDetails: size.optionalDetails.filter((detail) => detail.id !== detailId),
+              }
+            }
+            return size
+          }),
+        }
+      }
+      return variant
+    })
+  )
+}
+
+const updateSizeOptionalDetail = (variantId, sizeId, detailId, field, value) => {
+  setVariants((prev) =>
+    prev.map((variant) => {
+      if (variant.id === variantId) {
+        return {
+          ...variant,
+          sizes: variant.sizes.map((size) => {
+            if (size.id === sizeId) {
+              return {
+                ...size,
+                optionalDetails: size.optionalDetails.map((detail) =>
+                  detail.id === detailId ? { ...detail, [field]: value } : detail
+                ),
+              }
+            }
+            return size
+          }),
+        }
+      }
+      return variant
+    })
+  )
+}
+
+// Handle reuse details dropdown
+const handleReuseDetailsChange = (variantId, sizeId, value) => {
+  setVariants((prev) =>
+    prev.map((variant) => {
+      if (variant.id === variantId) {
+        return {
+          ...variant,
+          sizes: variant.sizes.map((size) => {
+            if (size.id === sizeId) {
+              return {
+                ...size,
+                reuseDetailsFrom: value === "no" ? null : value,
+                optionalDetails: value === "no" ? [{ id: Date.now(), key: "", value: "" }] : [],
+              }
+            }
+            return size
+          }),
+        }
+      }
+      return variant
+    })
+  )
+}
+
+// Update addSizeToVariant to include default fields
+const addSizeToVariant = (variantId) => {
+  setVariants((prev) =>
+    prev.map((variant) => {
+      if (variant.id === variantId) {
+        const newSize = {
+          id: Date.now(),
+          length: "",
+          breadth: "",
+          height: "",
+          unit: "cm",
+          images: [{ id: Date.now(), file: null, isDefault: true }],
+          additionalImages: [],
+          reuseImagesFrom: null,
+          optionalDetails: [{ id: Date.now(), key: "", value: "" }],
+          reuseDetailsFrom: null,
+        }
+        return {
+          ...variant,
+          sizes: [...variant.sizes, newSize],
+        }
+      }
+      return variant
+    })
+  )
+}
+
+// Update removeSizeFromVariant to clean up previews
+const removeSizeFromVariant = (variantId, sizeId) => {
+  setVariants((prev) =>
+    prev.map((variant) => {
+      if (variant.id === variantId) {
+        return {
+          ...variant,
+          sizes: variant.sizes.filter((size) => size.id !== sizeId),
+          variantPrices: Object.fromEntries(
+            Object.entries(variant.variantPrices).filter(([key]) => !key.includes(sizeId))
+          ),
+          variantStocks: Object.fromEntries(
+            Object.entries(variant.variantStocks).filter(([key]) => !key.includes(sizeId))
+          ),
+          bulkPricing: Object.fromEntries(
+            Object.entries(variant.bulkPricing).filter(([key]) => !key.includes(sizeId))
+          ),
+        }
+      }
+      return variant
+    })
+  )
+  setVariantImagePreviews((prev) => {
+    const { [sizeId]: removed, ...rest } = prev
+    return rest
+  })
+  setVariantAdditionalImagePreviews((prev) => {
+    const { [sizeId]: removed, ...rest } = prev
+    return rest
+  })
+}
+
+// Update generateVariantCombinations to use size.id
+const generateVariantCombinations = (variant) => {
+  if (!variant.colorName) return []
+  return variant.sizes
+    .filter((size) => {
+      const filledDimensions = [size.length, size.breadth, size.height].filter(
+        (dim) => dim.trim() !== ""
+      ).length
+      return filledDimensions >= 2
+    })
+    .map((size) => {
+      const dimensions = [size.length, size.breadth, size.height]
+        .filter((dim) => dim.trim() !== "")
+        .join(" X ")
+      return {
+        key: `${variant.colorName}-${size.id}`,
+        display: `${variant.colorName}, ${dimensions} ${size.unit}`,
+        sizeId: size.id,
+      }
+    })
+}
+
+// Update addVariant to remove variant.image and optionalDetails
+const addVariant = () => {
+  const newVariant = {
+    id: Date.now(),
+    colorName: "",
+    sizes: [
+      {
+        id: Date.now(),
+        length: "",
+        breadth: "",
+        height: "",
+        unit: "cm",
+        images: [{ id: Date.now(), file: null, isDefault: true }],
+        additionalImages: [],
+        reuseImagesFrom: null,
+        optionalDetails: [{ id: Date.now(), key: "", value: "" }],
+        reuseDetailsFrom: null,
+      },
+    ],
+    price: "",
+    isPriceCommon: "yes",
+    stock: "",
+    isStockCommon: "yes",
+    isDefault: false,
+    variantPrices: {},
+    variantStocks: {},
+    bulkPricing: {},
+  }
+  setVariants((prev) => [...prev, newVariant])
+}
+
+// Update removeVariant to clean up previews
+const removeVariant = (variantId) => {
+  setVariants((prev) => {
+    const updatedVariants = prev.filter((variant) => variant.id !== variantId)
+    if (updatedVariants.length > 0 && prev.find((v) => v.id === variantId).isDefault) {
+      updatedVariants[0].isDefault = true
     }
-  };
+    return updatedVariants
+  })
+  setVariantImagePreviews((prev) => {
+    const updated = { ...prev }
+    Object.keys(updated).forEach((key) => {
+      if (key.startsWith(`${variantId}-`)) {
+        delete updated[key]
+      }
+    })
+    return updated
+  })
+  setVariantAdditionalImagePreviews((prev) => {
+    const updated = { ...prev }
+    Object.keys(updated).forEach((key) => {
+      if (key.startsWith(`${variantId}-`)) {
+        delete updated[key]
+      }
+    })
+    return updated
+  })
+}
 
-  const handleVariantChange = (variantIndex, valueIndex, field, value) => {
-    const updatedVariants = [...variants];
-    updatedVariants[variantIndex].values[valueIndex][field] = value;
-    setVariants(updatedVariants);
-  };
+// Update validation
+const handleSubmit = async (e) => {
+  e.preventDefault()
+  const newErrors = {}
 
-  const handleVariantNameChange = (index, value) => {
-    const updatedVariants = [...variants];
-    updatedVariants[index].name = value;
-    setVariants(updatedVariants);
-  };
+  if (!productData.name) newErrors.name = "Product name is required"
+  if (!productData.selectedCategories.length) newErrors.category_0 = "Main category is required"
 
-  const addVariantValue = (variantIndex) => {
-    const updatedVariants = [...variants];
-    updatedVariants[variantIndex].values.push({ value: "", price: "", stock: "" });
-    setVariants(updatedVariants);
-  };
+  if (!isAnyMainFieldFilled()) {
+    variants.forEach((variant, index) => {
+      if (!variant.colorName) {
+        newErrors[`variant_${index}_color`] = "Color name is required"
+      }
+      variant.sizes.forEach((size, sizeIndex) => {
+        const filledDimensions = [size.length, size.breadth, size.height].filter(
+          (dim) => dim.trim() !== ""
+        ).length
+        if (filledDimensions < 2) {
+          newErrors[`variant_${index}_size_${sizeIndex}`] = "At least 2 dimensions are required"
+        }
+        if (!size.reuseImagesFrom && !size.images[0]?.file) {
+          newErrors[`variant_${index}_size_${size.id}_image`] = "Default image is required"
+        }
+      })
+    })
+  } else {
+    if (!productData.stock) newErrors.stock = "Stock is required"
+    if (!productData.price) newErrors.price = "Price is required"
+    if (!productData.image) newErrors.image = "Image is required"
+  }
 
-  const removeVariantValue = (variantIndex, valueIndex) => {
-    const updatedVariants = [...variants];
-    if (updatedVariants[variantIndex].values.length > 1) {
-      updatedVariants[variantIndex].values = updatedVariants[variantIndex].values.filter(
-        (_, i) => i !== valueIndex
-      );
-      setVariants(updatedVariants);
+  if (Object.keys(newErrors).length > 0) {
+    setErrors(newErrors)
+    return
+  }
+
+  const formDataToSend = new FormData()
+  formDataToSend.append("name", productData.name)
+  formDataToSend.append("stock", productData.stock)
+  formDataToSend.append("price", productData.price)
+  if (productData.image) formDataToSend.append("image", productData.image)
+  formDataToSend.append("details", JSON.stringify(productDetails.filter((detail) => detail.key && detail.value)))
+  formDataToSend.append("categoryId", productData.selectedCategories[productData.selectedCategories.length - 1] || "")
+  formDataToSend.append("categoryPath", JSON.stringify(productData.selectedCategories))
+  formDataToSend.append("mainBulkPricing", JSON.stringify(isAnyMainFieldFilled() ? mainBulkPricing : []))
+  productData.additionalImages.forEach((img, index) => {
+    if (img.file) {
+      formDataToSend.append(`additional_image_${img.id}`, img.file)
     }
-  };
+  })
 
-  const addVariant = () => {
+  const variantsToSend = variants.map((variant) => ({
+    ...variant,
+    sizes: variant.sizes.map((size) => ({
+      ...size,
+      images: size.reuseImagesFrom ? [] : size.images.map((img) => img.id),
+      additionalImages: size.reuseImagesFrom ? [] : size.additionalImages.map((img) => img.id),
+      optionalDetails: size.reuseDetailsFrom ? [] : size.optionalDetails.filter((d) => d.key && d.value),
+    })),
+  }))
+  formDataToSend.append("variants", JSON.stringify(isAnyMainFieldFilled() ? [] : variantsToSend))
+
+  variants.forEach((variant, index) => {
+    variant.sizes.forEach((size) => {
+      if (!size.reuseImagesFrom) {
+        if (size.images[0]?.file) {
+          formDataToSend.append(`variant_${index}_size_${size.id}_image`, size.images[0].file)
+        }
+        size.additionalImages.forEach((img) => {
+          if (img.file) {
+            formDataToSend.append(`variant_${index}_size_${size.id}_additional_${img.id}`, img.file)
+          }
+        })
+      }
+    })
+  })
+
+  try {
+    const response = await axios.post("http://localhost:3000/api/product/add", formDataToSend, {
+      headers: { "Content-Type": "multipart/form-data" },
+      withCredentials: true,
+    })
+    console.log("Product added successfully:", response.data)
+    alert("Product added successfully!")
+    setProductData({ name: "", stock: "", price: "", image: null, additionalImages: [], selectedCategories: [] })
+    setSelectedPath([])
+    setSubCategoryOptions([])
+    setImagePreview(null)
+    setAdditionalImagePreviews({})
+    setProductDetails([
+      { id: Date.now(), key: "", value: "" },
+      { id: Date.now() + 1, key: "", value: "" },
+    ])
+    setMainBulkPricing([])
     setVariants([
-      ...variants,
-      { name: "", values: [{ value: "", price: "", stock: "" }], image: null },
-    ]);
-  };
-
-  const removeVariant = (index) => {
-    if (variants.length > 1) {
-      setVariants(variants.filter((_, i) => i !== index));
-    }
-  };
-
-  const handleImageUpload = (variantIndex, e) => {
-    const file = e.target.files[0];
-    if (file) {
-      const updatedVariants = [...variants];
-      updatedVariants[variantIndex].image = file;
-      setVariants(updatedVariants);
-    }
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    console.log("Form submitted:", { productData, productDetails, mainBulkPricing, variants });
-    alert("Product data logged to console!");
-  };
-
-  return (
-    <div className="max-w-7xl mx-auto p-6">
-      {loading && (
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
-          </div>
-        </div>
-      )}
-      {fetchError && (
-        <div className="text-center py-8">
-          <p className="text-red-500">{fetchError}</p>
-          <button
-            onClick={fetchCategories}
-            className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-          >
-            Retry
-          </button>
-        </div>
-      )}
-      {!loading && !fetchError && (
-        <div>
-          <div className="mb-10">
-            <h1 className="text-3xl font-bold text-gray-800">Add New Product</h1>
-            <p className="text-gray-500">Fill in the details to add a new product to your inventory.</p>
-          </div>
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Basic Information</h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Product Name *</label>
-                  <input
-                    type="text"
-                    name="name"
-                    value={productData.name}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter product name"
-                    required
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700">Description</label>
-                  <textarea
-                    name="description"
-                    value={productData.description}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                    placeholder="Enter product description"
-                    rows="4"
-                  />
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Category Selection</h2>
-              {categories.length > 0 ? (
-                <div className="space-y-4">
-                  {renderCategoryDropdowns()}
-                  {selectedPath.length > 0 && (
-                    <div className="mt-4 p-4 bg-blue-50 rounded-lg border border-blue-200">
-                      <p className="text-sm font-semibold text-blue-800 mb-1">Selected Category Path:</p>
-                      <p className="text-blue-600 font-semibold text-lg">{getCategoryPath()}</p>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <p>No categories available. Please add categories first.</p>
-                </div>
-              )}
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Product Details</h2>
-              {productDetails.map((detail, index) => (
-                <div key={index} className="flex items-center space-x-4 mb-4">
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={detail.name}
-                      onChange={(e) => handleDetailChange(index, "name", e.target.value)}
-                      className="block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Detail name (e.g., Material)"
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <input
-                      type="text"
-                      value={detail.value}
-                      onChange={(e) => handleDetailChange(index, "value", e.target.value)}
-                      className="block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Detail value (e.g., Cotton)"
-                    />
-                  </div>
-                  {productDetails.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeDetail(index)}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addDetail}
-                className="mt-2 flex items-center text-blue-600 hover:text-blue-800"
-              >
-                <Plus size={20} className="mr-2" /> Add Detail
-              </button>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Main Bulk Pricing</h2>
-              {mainBulkPricing.map((range, index) => (
-                <div key={index} className="flex items-center space-x-4 mb-4">
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700">Retail Price *</label>
-                    <input
-                      type="number"
-                      value={range.retailPrice}
-                      onChange={(e) => handleBulkPricingChange(index, "retailPrice", e.target.value)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="0.00"
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700">Wholesale Price *</label>
-                    <input
-                      type="number"
-                      value={range.wholesalePrice}
-                      onChange={(e) => handleBulkPricingChange(index, "wholesalePrice", e.target.value)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="0.00"
-                      step="0.01"
-                      required
-                    />
-                  </div>
-                  <div className="flex-1">
-                    <label className="block text-sm font-medium text-gray-700">Threshold Quantity *</label>
-                    <input
-                      type="number"
-                      value={range.thresholdQuantity}
-                      onChange={(e) => handleBulkPricingChange(index, "thresholdQuantity", e.target.value)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="0"
-                      min="0"
-                      required
-                    />
-                  </div>
-                  {mainBulkPricing.length > 1 && (
-                    <button
-                      type="button"
-                      onClick={() => removeBulkPricing(index)}
-                      className="text-red-500 hover:text-red-600"
-                    >
-                      <Trash2 size={20} />
-                    </button>
-                  )}
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addBulkPricing}
-                className="mt-2 flex items-center text-blue-600 hover:text-blue-800"
-              >
-                <Plus size={20} className="mr-2" /> Add Price Range
-              </button>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Variants</h2>
-              {variants.map((variant, variantIndex) => (
-                <div key={variantIndex} className="mb-6 border-b pb-4">
-                  <div className="flex items-center justify-between mb-4">
-                    <input
-                      type="text"
-                      value={variant.name}
-                      onChange={(e) => handleVariantNameChange(variantIndex, e.target.value)}
-                      className="block w-1/3 border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Variant name (e.g., Color)"
-                    />
-                    {variants.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={() => removeVariant(variantIndex)}
-                        className="text-red-500 hover:text-red-600"
-                      >
-                        <Trash2 size={20} />
-                      </button>
-                    )}
-                  </div>
-                  {variant.values.map((value, valueIndex) => (
-                    <div key={valueIndex} className="flex items-center space-x-4 mb-4">
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700">Value *</label>
-                        <input
-                          type="text"
-                          value={value.value}
-                          onChange={(e) =>
-                            handleVariantChange(variantIndex, valueIndex, "value", e.target.value)
-                          }
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="e.g., Red"
-                          required
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700">Price *</label>
-                        <input
-                          type="number"
-                          value={value.price}
-                          onChange={(e) =>
-                            handleVariantChange(variantIndex, valueIndex, "price", e.target.value)
-                          }
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="0.00"
-                          step="0.01"
-                          required
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <label className="block text-sm font-medium text-gray-700">Stock *</label>
-                        <input
-                          type="number"
-                          value={value.stock}
-                          onChange={(e) =>
-                            handleVariantChange(variantIndex, valueIndex, "stock", e.target.value)
-                          }
-                          className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2 focus:ring-blue-500 focus:border-blue-500"
-                          placeholder="0"
-                          min="0"
-                          required
-                        />
-                      </div>
-                      {variant.values.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() => removeVariantValue(variantIndex, valueIndex)}
-                          className="text-red-500 hover:text-red-600"
-                        >
-                          <Trash2 size={20} />
-                        </button>
-                      )}
-                    </div>
-                  ))}
-                  <button
-                    type="button"
-                    onClick={() => addVariantValue(variantIndex)}
-                    className="mt-2 flex items-center text-blue-600 hover:text-blue-800"
-                  >
-                    <Plus size={20} className="mr-2" /> Add Variant Value
-                  </button>
-                  <div className="mt-4">
-                    <label className="block text-sm font-medium text-gray-700">Image</label>
-                    <input
-                      type="file"
-                      onChange={(e) => handleImageUpload(variantIndex, e)}
-                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm p-2"
-                      accept="image/*"
-                    />
-                  </div>
-                </div>
-              ))}
-              <button
-                type="button"
-                onClick={addVariant}
-                className="mt-2 flex items-center text-blue-600 hover:text-blue-800"
-              >
-                <Plus size={20} className="mr-2" /> Add Variant
-              </button>
-            </div>
-
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-200">
-              <button
-                type="submit"
-                className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700"
-              >
-                Add Product
-              </button>
-            </div>
-          </form>
-        </div>
-      )}
-    </div>
-  );
-};
-
-export default AddProduct;
+      {
+        id: Date.now(),
+        colorName: "",
+        sizes: [
+          {
+            id: Date.now(),
+            length: "",
+            breadth: "",
+            height: "",
+            unit: "cm",
+            images: [{ id: Date.now(), file: null, isDefault: true }],
+            additionalImages: [],
+            reuseImagesFrom: null,
+            optionalDetails: [{ id: Date.now(), key: "", value: "" }],
+            reuseDetailsFrom: null,
+          },
+        ],
+        price: "",
+        isPriceCommon: "yes",
+        stock: "",
+        isStockCommon: "yes",
+        isDefault: true,
+        variantPrices: {},
+        variantStocks: {},
+        bulkPricing: {},
+      },
+    ])
+    setVariantImagePreviews({})
+    setVariantAdditionalImagePreviews({})
+  } catch (error) {
+    console.error("Error adding product:", error)
+    alert("Failed to add product: " + (error.response?.data?.message || "Please try again."))
+  }
+}
