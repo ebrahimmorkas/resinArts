@@ -160,7 +160,58 @@ const addProduct = async (req, res) => {
   }
 }
 
+const fetchProducts = async (req, res) => {
+  try {
+    const products = await Product.find();
+    return res.status(200).json({
+      products
+    });
+  } catch (err) {
+    console.log("Error in fetching the products");
+    return res.status(500).json({message: 'Internal server error'});
+  }
+}
+
+const restock = async (req, res) => {
+  try {
+    const { productId, updatedStock } = req.body;
+
+    // Validate input
+    if (!productId || typeof updatedStock !== "number") {
+      return res.status(400).json({ message: "Invalid input data" });
+    }
+
+    // Find the product
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
+
+    // Calculate new stock
+    const newStock = product.stock + updatedStock;
+
+    // Update product
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      { $set: { stock: newStock } },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      message: "Stock updated successfully",
+      product: updatedProduct
+    });
+
+  } catch (error) {
+    console.error("Restock error:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+
 // Export addProduct with upload.any() middleware directly
 module.exports = {
   addProduct: [upload.any(), addProduct],
+  fetchProducts,
+  restock
 }

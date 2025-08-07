@@ -52,9 +52,9 @@ const productSchema = mongoose.Schema(
     subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: false }, // Made optional for testing
     categoryPath: { type: String, required: false }, // e.g., Electronics > Mobiles > Vivo // Made optional for testing
     productDetails: [keyValueSchema],
-    stock: { type: Number, required: false }, // Required if no variants
-    price: { type: Number, required: false }, // Required if no variants
-    image: { type: String, required: false }, // Main product image URL (Cloudinary)
+    stock: { type: Number, required: false, default: "" }, // Required if no variants
+    price: { type: Number, required: false, default: "" }, // Required if no variants
+    image: { type: String, required: false, default: "" }, // Main product image URL (Cloudinary)
     additionalImages: [String], // Array of Cloudinary URLs for basic product
     bulkPricing: [bulkPricingSchema], // Bulk pricing for basic product
 

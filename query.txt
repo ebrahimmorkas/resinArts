@@ -1,730 +1,1342 @@
-Okay lets start.
-
-I want to create the form for Adding Product named it as AddProduct.jsx.
-It should contain the following:
-
-The form should be divided into two sections:
-1. Basic Information section
-2. Product Variant Sections (Admin should be able to add multiple)
-
-Now In the basic information section include :-
-Name
-Category :-
-For this include two dropdowns side by side. First for the main category and then second for the sub category. When user selects the main category then all the sub categories of the main category should be displayed in this second dropdown. Then if this selected sub category of the main category again has the sub categories then that values should be displayed in this second dropdown of categories. Below this show the category path. That means I have nested category for eg main category is Electronics inside it mobiles inside mobiles again two categories vivo and oppo and inside vivo there is sub category v11 and inside oppo there is sub category o11. This categories need to fetched from the backend. I will later provide you the necessary files for fetching the categories.
-product details :- This should be in the manner of key value pair. Admin should be able to as many he want and can delete as well.
-Stock 
-Price
-Image
-Additional Images :- This is also section that admin can create as many he wants that is admin will upload the image of the product now he want to add multiple views of the product so that images will be added in the additional images section.
-Bulk pricing section :- Admin should be able to create multiple Bulk pricing section. This section should contain the following fields:
-Wholesale price :- This should be less than the price which is entered above.
-Quantity :- For this field show bold message that this will be included
-
-This completes the Basic Information section. Above the fields show message that Fill below fields only if you dont have any product variants. Display this message in very eye catching manner. Now if user enters data in either price, stock, image fields this Product Variants section shoud be hidden and vice versa is that if user enters data in any field inside this section then the price, stock, image fileds should be hidden. 
-
-Product variant Section:-
-It should include the following:
-Color name
-Variant image
-Optional Details :- Admin should be able to add multiple sections of optioals details as well. This should be in the form of key value pairs as well. (optional)
-More details section (Starts here)
-Sizes section :- The admin should be able to add multiple sizes section and can delete as well. It should include the following fields:
-      Length
-      Breadth
-      Height
-      Dropdown - include values such as (cm, m, inch)
-Out of lenght breadth and height only two should be required not all.
-Additional Images section :- Same, as in basic information section that is user should be able to add multiple images for the product variant (Optional).
-Optional Details for this size :- Again, can be added multiple times and optional
-(more details section ends here)
-
-Now these sizes, additional images, optional details for this more details section, These all three sections should be replicated when user clicks on 'Add more detail section' button means additional images, optional products and size as well are associated with the more details section in the product variant rather than variant itself for eg:
-red color 12 X 12 X 12 size and red color 13 X 13 X 13 size can have different additional images and optional details for this more detail section and same optional details (This one is variant specific).
-
-Now if user adds the another more detail section so again these three sections that is size, additional images, optional details for this more detail section will be replicated. So if there are more 'more details section'  section then one that means user may have aded additional images and optional details for previous more details section so in the next more detailn section, in the additional images section user should be provided dropdown asking 'Do you want to reuse additional images?'  display options yes and no. 
-If user selects yes then in the dropdown show options such as color name + size entered in the size section of the more detail section in which the additional images are being added and then again display the image field if user wants to add more in coninuation from the previous one and this image field can be created muultiple times . And if user selecs no then directly display images fields where user can add images and this section can be created muultiple times 
-Same process for optional details for this size.
-
-for eg user has created 3 more detail section in which user has added additional images for the first more detail section. When second and third more detail sections were added the admin reused the additional images and optional details. Now user added 4th more detail section and added different additional images and optional detials. Now admin added 5th more details section and while adding additional images the admin selected yes so now he should be only displayed two options that is red 12 X 12 X 12 (Color name and size of the first more detailed section) and second option that is red 14 X 14 X 14 (color name and size of the 4th more detailed section) that means the more detailed s4ction that are simply reusing additional imags and optional details should not be listed. NOTE:- Additional images and optional details should be indepenedent of each other means if admin is reusing additional images so he can add the optional details for this more detail section, if he is reusing addditional images that does not mean he will not reuse the optional details for this more detail section and vice versa.
-
-now again entering the fields of product variants sections:-
-price :- if user has created multiple more details section then display the dropdown saying 'is price same for all more details section' display option yes and no. If users selects yes then display only one filed for entering price and this price will be common for all more details section. Now if user selects no then display different price field for each more detail section for eg user selects no :- then display color name + size entered in that more details section and the price field. For eg there are 2 more details section named red 12 X 12 X 12 and red 13 X 13 X 13 
-So it should be like:
-red 12 X 12 X 12 price field
-red 13 X 13 X 13 price field
-
-stock :- Same as price logic
-
-Bulk pricing combinations :- It will include the same fields as declated in the basic information section and the logic is same if price is common then only for one price user can create multiple bulk pricing sections and iof there are multiple price fields for the same variant then admin can create bulk pricing section for each price field and for each price user can add multiple bulk pricing section.
-
-Now display add product button and add variant button as well. 
-now if user has entered data in the price, image, or stock image so product variant section will be hidden and when user clicks on add variant section so all these fileds (price, stock, image, additional images) should be hidden and product variant section should be displayed but data inside that should not be lost but it should not be vice versa.
-
-Files to implement Fetching of category. I have implemented nested category in my mongoDB.
-Category.js :-
-const mongoose = require('mongoose');
-
-
-
-
-const categorySchema = mongoose.Schema({
-
-  categoryName: {
-
-    type: String,
-
-    required: true,
-
-    trim: true,
-
-  },
-
-  parent_category_id: {
-
-    type: mongoose.Schema.Types.ObjectId,
-
-    default: null,
-
-    required: false,
-
-    ref: 'Category',
-
-  },
-
-  image: {
-
-    type: String, // Store Cloudinary image URL for main categories
-
-    required: false,
-
-  },
-
-}, {
-
-  timestamps: true,
-
-});
-
-
-
-
-// Index for faster queries on parent_category_id
-
-categorySchema.index({ parent_category_id: 1 });
-
-
-
-
-module.exports = mongoose.model('Category', categorySchema);
-
-addCategoryController.js :-
-const Category = require('../models/Category');
-
-const { cloudinary } = require('../utils/cloudinary');
-
-const multer = require('multer');
-
-
-
-
-// Configure multer for in-memory storage
-
-const storage = multer.memoryStorage();
-
-const upload = multer({ storage });
-
-
-
-
-const addCategory = async (req, res) => {
-
-  console.log('Adding category request received:', JSON.stringify(req.body, null, 2));
-
-  try {
-
-    const { categories } = req.body;
-
-    const imageFile = req.file;
-
-
-
-
-    if (!categories) {
-
-      console.log('Categories data is required');
-
-      return res.status(400).json({ error: 'Categories data is required' });
-
-    }
-
-
-
-
-    // Parse categories if it's a string (from FormData)
-
-    let parsedCategories;
-
-    try {
-
-      parsedCategories = JSON.parse(categories);
-
-    } catch (error) {
-
-      console.log('Invalid categories JSON format');
-
-      return res.status(400).json({ error: 'Invalid categories JSON format' });
-
-    }
-
-
-
-
-    if (!Array.isArray(parsedCategories) || parsedCategories.length === 0) {
-
-      console.log('Categories array is required');
-
-      return res.status(400).json({ error: 'Categories array is required' });
-
-    }
-
-
-
-
-    if (!parsedCategories[0].categoryName) {
-
-      console.log('Main category name is required');
-
-      return res.status(400).json({ error: 'Main category name is required' });
-
-    }
-
-
-
-
-    let imageUrl = null;
-
-    if (imageFile) {
-
-      // Upload image to Cloudinary
-
-      const uploadResult = await new Promise((resolve, reject) => {
-
-        const uploadStream = cloudinary.uploader.upload_stream(
-
-          { folder: 'categories' },
-
-          (error, result) => {
-
-            if (error) reject(error);
-
-            else resolve(result);
-
-          }
-
-        );
-
-        uploadStream.end(imageFile.buffer);
-
-      });
-
-      imageUrl = uploadResult.secure_url;
-
-      console.log('Image uploaded to Cloudinary:', imageUrl);
-
-    }
-
-
-
-
-    // Validate that only main category can have an image
-
-    for (const category of parsedCategories) {
-
-      if (category.parent_category_id !== null && category.image) {
-
-        console.log('Only main categories can have images');
-
-        return res.status(400).json({ error: 'Only main categories can have images' });
-
-      }
-
-      if (category.image && !isValidUrl(category.image)) {
-
-        console.log('Invalid image URL provided');
-
-        return res.status(400).json({ error: 'Invalid image URL' });
-
-      }
-
-    }
-
-
-
-
-    // Update main category with Cloudinary image URL
-
-    if (imageUrl) {
-
-      parsedCategories[0].image = imageUrl;
-
-    }
-
-
-
-
-    const savedCategoryIds = {};
-
-    const savedCategories = [];
-
-
-
-
-    for (const category of parsedCategories) {
-
-      let parentId = null;
-
-
-
-
-      if (category.parent_category_id) {
-
-        console.log(`Processing parent_category_id: ${category.parent_category_id}`);
-
-
-
-
-        if (category.parent_category_id === 'main') {
-
-          parentId = savedCategoryIds['main'];
-
-        } else {
-
-          const pathKey = category.parent_category_id;
-
-          if (!savedCategoryIds[pathKey]) {
-
-            console.log(`Invalid parent_category_id: ${category.parent_category_id} (path: ${pathKey})`);
-
-            return res.status(400).json({ error: `Invalid parent_category_id: ${category.parent_category_id}` });
-
-          }
-
-          parentId = savedCategoryIds[pathKey];
-
-        }
-
-      }
-
-
-
-
-      console.log(`Saving category: ${category.categoryName}, parentId: ${parentId || 'null'}`);
-
-
-
-
-      const newCategory = new Category({
-
-        categoryName: category.categoryName,
-
-        parent_category_id: parentId,
-
-        image: category.image || null,
-
-      });
-
-
-
-
-      const saved = await newCategory.save();
-
-      savedCategories.push(saved);
-
-
-
-
-      if (category.parent_category_id === null) {
-
-        savedCategoryIds['main'] = saved._id;
-
-        console.log(`Saved main category: ${category.categoryName}, _id: ${saved._id}`);
-
-      } else {
-
-        const currentPath = category.current_path;
-
-        if (currentPath) {
-
-          savedCategoryIds[currentPath] = saved._id;
-
-          console.log(`Saved subcategory: ${category.categoryName}, path: ${currentPath}, _id: ${saved._id}`);
-
-        }
-
-      }
-
-    }
-
-
-
-
-    res.status(201).json({
-
-      message: 'Categories created successfully',
-
-      categories: savedCategories,
-
-    });
-
-  } catch (error) {
-
-    console.error('Error creating categories:', error.message);
-
-    res.status(500).json({ error: 'Internal server error' });
-
-  }
-
-};
-
-
-
-
-// Helper function to validate URL
-
-const isValidUrl = (string) => {
-
-  try {
-
-    new URL(string);
-
-    return true;
-
-  } catch (_) {
-
-    return false;
-
-  }
-
-};
-
-
-
-
-// Export the controller wrapped with multer middleware
-
-module.exports = {
-
-  addCategory: [upload.single('image'), addCategory],
-
-};
-
-getAllCategoryController.js:-
-// controllers/getAllCategoriesController.js
-
-const Category = require('../models/Category');
-
-
-
-
-const buildCategoryTree = (categories, parentId = null) => {
-
-  return categories
-
-    .filter(cat => String(cat.parent_category_id) === String(parentId))
-
-    .map(cat => ({
-
-      _id: cat._id,
-
-      categoryName: cat.categoryName,
-
-      image: cat.image || null,
-
-      subcategories: buildCategoryTree(categories, cat._id)
-
-    }));
-
-};
-
-
-
-
-const getAllCategories = async (req, res) => {
-
-  try {
-
-    const categories = await Category.find().lean();
-
-    const tree = buildCategoryTree(categories);
-
-    res.status(200).json(tree);
-
-  } catch (error) {
-
-    console.error("Error fetching categories:", error.message);
-
-    res.status(500).json({ error: "Internal server error" });
-
-  }
-
-};
-
-
-
-
-module.exports = getAllCategories;
-
-categoryRoutes.js :-
-const express = require('express');
-
-const router = express.Router();
-
-const { addCategory } = require('../controllers/addCategoryController');
-
-const getAllCategories = require('../controllers/getAllCategoriesController');
-
-
-
-
-router.post('/add', ...addCategory);
-
-router.get('/all', getAllCategories);
-
-
-
-
-module.exports = router;
-
-the above files are fully tested and they are working means I can fetch the nested category as discussed above in basic information section
-
-server.js:-
-const express = require('express');
-
-const mongoose = require('mongoose');
-
-const cors = require('cors');
-
-require('dotenv').config();
-
-const cookieParser = require('cookie-parser');
-
-const path = require('path');
-
-const authRoutes = require('./routes/authRoutes');
-
-const categoryRoutes = require('./routes/categoryRoutes');
-
-const productRoutes = require('./routes/productRoutes');
-
-const authenticate = require('./middlewares/authenticate');
-
-const authorize = require('./middlewares/authorize');
-
-const User = require('./models/User');
-
-const morgan = require('morgan');
-
-
-
-
-const app = express();
-
-
-
-
-// Middleware
-
-// app.use(morgan('dev')); // Request logging for debugging
-
-app.use(express.json());
-
-app.use(express.urlencoded({ extended: true }));
-
-app.use(cookieParser());
-
-app.use(
-
-  cors({
-
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Configurable frontend origin
-
-    credentials: true, // Allow cookies
-
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-
-    allowedHeaders: ['Content-Type', 'Authorization'],
-
-  })
-
-);
-
-
-
-
-// Serve static files for uploads
-
-// app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
-
-
-
-
-// MongoDB Connection
-
-mongoose
-
-  .connect(process.env.MONGO_URI)
-
-  .then(() => console.log('Connected to MongoDB'))
-
-  .catch((err) => {
-
-    console.error('MongoDB connection error:', err);
-
-    process.exit(1); // Exit on connection failure
-
-  });
-
-
-
-
-// Routes
-
-// Authentication routes (login, signup, logout)
-
-app.use('/api/auth', authRoutes);
-
-
-
-
-// User routes (if any, e.g., profile management)
-
-app.get('/api/user/profile', authenticate, async (req, res) => {
-
-  try {
-
-    const user = await User.findById(req.user.id).select('-password');
-
-    if (!user) {
-
-      return res.status(404).json({ message: 'User not found' });
-
-    }
-
-    res.json({ message: 'User profile', user });
-
-  } catch (err) {
-
-    res.status(500).json({ message: 'Server error' });
-
-  }
-
-});
-
-
-
-
-// Admin routes (protected by authenticate and authorize)
-
-app.use('/api/category', authenticate, authorize(['admin']), categoryRoutes);
-
-app.use('/api/product', authenticate, productRoutes);
-
-
-
-
-// Authenticated user info
-
-app.get('/api/auth/me', authenticate, async (req, res) => {
-
-  try {
-
-    const user = await User.findById(req.user.id).select('-password');
-
-    if (!user) {
-
-      return res.status(404).json({ message: 'User not found' });
-
-    }
-
-    res.json({
-
-      message: 'User logged in',
-
-      user: {
-
-        id: user._id,
-
-        name: user.name,
-
-        role: user.role,
-
-        email: user.email, // Include additional fields as needed
-
-      },
-
-    });
-
-  } catch (err) {
-
-    res.status(500).json({ message: 'Server error' });
-
-  }
-
-});
-
-
-
-
-// Global error handling middleware
-
-app.use((err, req, res, next) => {
-
-  console.error('Error:', err.stack);
-
-  res.status(500).json({ message: 'Something went wrong!' });
-
-});
-
-
-
-
-// Start server
-
-const PORT = process.env.PORT || 3000;
-
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-I want to store the images in cloudnary. I have created config file for cloudinary in root folder/utils/cloudinary.js
-cloudinary.js:-
-const cloudinary = require("cloudinary").v2;
-
-require("dotenv").config();
-
-
-
-
-// Configure Cloudinary
-
-cloudinary.config({
-
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-
-  api_key: process.env.CLOUDINARY_API_KEY,
-
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-
-});
-
-
-
-
-
-module.exports = { cloudinary };
-
-now for backend name the files in such manner:
-controller:- productController.js
-Schema:- Product.js
-
-AddProduct.jsx - frontend file
-
-Please implement the following and the design should be very beautiful and eye catching and responsive so that it can work on world's largest secreen to world's smallest screen.
+"use client"
+
+import React from "react"
+
+import { useState, useCallback, useContext } from "react"
+import { Edit, Trash2, X, Calendar, Clock, DollarSign, Check, Package } from "lucide-react"
+import { ProductContext } from "../../../../../Context/ProductContext"
+
+// Mock products data - replace with your actual context data
+const mockProducts = [
+  {
+    _id: "688a36fddd24e93753865284",
+    name: "test image claude",
+    price: 10,
+    stock: 12,
+    details: [
+      {
+        name: "w",
+        value: "e",
+      },
+    ],
+    colorVariants: [
+      {
+        color: "red",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753888507/ProductImages/izlm97cj0yfqyddgdbeb.png",
+        price: null,
+        isDefault: true,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+      },
+      {
+        color: "blue",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753888508/ProductImages/qmkjpn1svscdxrji77jw.png",
+        price: null,
+        isDefault: false,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+      },
+    ],
+    sizeVariants: [
+      {
+        size: "XXL",
+        price: null,
+        isDefault: true,
+        forAllColors: "yes",
+        availableColors: [],
+        optionalDetails: [],
+      },
+    ],
+    basePriceRanges: [
+      {
+        retailPrice: 10,
+        wholesalePrice: 9,
+        thresholdQuantity: 1,
+      },
+    ],
+    type: "revised-rates",
+    category: "Electronics",
+    description: "Premium quality product with multiple variants available.",
+    rating: 4.5,
+    originalPrice: 13,
+    variants: {
+      colors: [
+        {
+          name: "red",
+          value: "#FF0000",
+          image: "https://res.cloudinary.com/djn2jtaez/image/upload/v1753888507/ProductImages/izlm97cj0yfqyddgdbeb.png",
+          price: 10,
+          priceChart: [{ quantity: "1+", price: 9 }],
+        },
+        {
+          name: "blue",
+          value: "#0000FF",
+          image: "https://res.cloudinary.com/djn2jtaez/image/upload/v1753888508/ProductImages/qmkjpn1svscdxrji77jw.png",
+          price: 10,
+          priceChart: [{ quantity: "1+", price: 9 }],
+        },
+      ],
+      sizes: ["XXL"],
+    },
+    priceChart: [{ quantity: "1+", price: 9 }],
+  },
+  {
+    _id: "688a418cdd24e9375386529b",
+    name: "test agai a",
+    price: null,
+    stock: 9,
+    details: [
+      {
+        name: "erjk",
+        value: "jdhfjk",
+      },
+    ],
+    colorVariants: [
+      {
+        color: "red",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891208/ProductImages/gqh4o36gntmqqkp7h7ks.jpg",
+        price: 9,
+        isDefault: false,
+        forAllSizes: "no",
+        availableSizes: ["S", "XS"],
+        optionalDetails: [],
+        priceRanges: [
+          {
+            retailPrice: 9,
+            wholesalePrice: 8,
+            thresholdQuantity: 9,
+          },
+        ],
+      },
+      {
+        color: "green",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891209/ProductImages/yl48luxaynw6dypznaox.png",
+        price: 10,
+        isDefault: true,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+        priceRanges: [
+          {
+            retailPrice: 10,
+            wholesalePrice: 9,
+            thresholdQuantity: 11,
+          },
+        ],
+      },
+      {
+        color: "blue",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891211/ProductImages/s5xbxzqxsaoncer6vbof.png",
+        price: 8,
+        isDefault: false,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+        priceRanges: [
+          {
+            retailPrice: 8,
+            wholesalePrice: 7,
+            thresholdQuantity: 78,
+          },
+        ],
+      },
+    ],
+    sizeVariants: [
+      {
+        size: "XS",
+        price: null,
+        isDefault: true,
+        forAllColors: "yes",
+        availableColors: [],
+        optionalDetails: [],
+      },
+      {
+        size: "XXXL",
+        price: null,
+        isDefault: false,
+        forAllColors: "yes",
+        availableColors: [],
+        optionalDetails: [],
+      },
+    ],
+    basePriceRanges: [],
+    type: "restocked",
+    category: "Clothing",
+    description: "Premium quality product with multiple variants available.",
+    rating: 4.5,
+    originalPrice: 12,
+    variants: {
+      colors: [
+        {
+          name: "red",
+          value: "#FF0000",
+          image: "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891208/ProductImages/gqh4o36gntmqqkp7h7ks.jpg",
+          price: 9,
+          priceChart: [{ quantity: "9+", price: 8 }],
+        },
+        {
+          name: "green",
+          value: "#00FF00",
+          image: "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891209/ProductImages/yl48luxaynw6dypznaox.png",
+          price: 10,
+          priceChart: [{ quantity: "11+", price: 9 }],
+        },
+        {
+          name: "blue",
+          value: "#0000FF",
+          image: "https://res.cloudinary.com/djn2jtaez/image/upload/v1753891211/ProductImages/s5xbxzqxsaoncer6vbof.png",
+          price: 8,
+          priceChart: [
+            { quantity: "78+", price: 7 },
+            { quantity: "79+", price: 6 },
+          ],
+        },
+      ],
+      sizes: ["XS", "XXXL"],
+    },
+    priceChart: [{ quantity: "9+", price: 8 }],
+  },
+  {
+    _id: "688b5bd7b8f57fcbe72a50d3",
+    name: "test",
+    price: null,
+    stock: 9,
+    details: [
+      {
+        name: "rew",
+        value: "dfsdf",
+      },
+    ],
+    colorVariants: [
+      {
+        color: "yellow",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753963477/ProductImages/lgl7gvm7fab0a8bjeqer.jpg",
+        price: null,
+        isDefault: true,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+      },
+      {
+        color: "pink",
+        imageUrl:
+          "https://res.cloudinary.com/djn2jtaez/image/upload/v1753963478/ProductImages/xmyvc8z34drawkf1ix0v.jpg",
+        price: null,
+        isDefault: false,
+        forAllSizes: "yes",
+        availableSizes: [],
+        optionalDetails: [],
+      },
+    ],
+    sizeVariants: [
+      {
+        size: "XS",
+        price: 45,
+        isDefault: true,
+        forAllColors: "no",
+        availableColors: ["yellow"],
+        optionalDetails: [],
+        priceRanges: [
+          {
+            retailPrice: 45,
+            wholesalePrice: 30,
+            thresholdQuantity: 5,
+          },
+        ],
+      },
+      {
+        size: "S",
+        price: 56,
+        isDefault: false,
+        forAllColors: "yes",
+        availableColors: [],
+        optionalDetails: [],
+        priceRanges: [
+          {
+            retailPrice: 56,
+            wholesalePrice: 45,
+            thresholdQuantity: 6,
+          },
+        ],
+      },
+    ],
+    basePriceRanges: [],
+    type: "just-arrived",
+    category: "Accessories",
+    description: "Premium quality product with multiple variants available.",
+    rating: 4.5,
+    originalPrice: 60,
+    variants: {
+      colors: [
+        {
+          name: "yellow",
+          value: "#FFFF00",
+          image: "https://res.cloudinary.com/djn2jtaez/image/upload/v1753963477/ProductImages/lgl7gvm7fab0a8bjeqer.jpg",
+          price: 45,
+          priceChart: [
+            { quantity: "5+", price: 30 },
+            { quantity: "6+", price: 15 },
+          ],
+        },
+        {
+          name: "pink",
+          value: "#FFC0CB",
+          image: "https://res.cloudinary.com/djn2jtaez/image/upload/v1753963478/ProductImages/xmyvc8z34drawkf1ix0v.jpg",
+          price: 56,
+          priceChart: [{ quantity: "6+", price: 45 }],
+        },
+      ],
+      sizes: ["XS", "S"],
+    },
+    priceChart: [{ quantity: "5+", price: 30 }],
+  },
+]
+
+export default function AdminProductsPage() {
+  const {products, loading, error} = useContext(ProductContext);
+console.log(products);
+
+if(loading) return <div>Loading Products</div>
+if(error) return <div>Error ${error}</div>
+  // Replace with your actual context
+  // const products = useContext(ProductContext);
+  const productss = mockProducts
+
+  const [selectedProduct, setSelectedProduct] = useState(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showRevisedRateModal, setShowRevisedRateModal] = useState(false)
+  const [showRestockModal, setShowRestockModal] = useState(false)
+  const [selectedProducts, setSelectedProducts] = useState([])
+  const [revisedRateData, setRevisedRateData] = useState({
+    startDate: "",
+    startTime: "",
+    endDate: "",
+    discountedPrice: "",
+  })
+  const [restockData, setRestockData] = useState({})
+
+  // For updating the textfield of stock
+  const [stockTextfieldData, setStockTextfieldData] = useState("");
+
+  // Store variant selections per product ID
+  const [variantSelections, setVariantSelections] = useState({})
+
+  // Get current date and time for validation
+  const getCurrentDateTime = () => {
+    const now = new Date()
+    const date = now.toISOString().split("T")[0]
+    const time = now.toTimeString().slice(0, 5)
+    return { date, time }
+  }
+
+  const { date: currentDate, time: currentTime } = getCurrentDateTime()
+
+  // Get product image - prioritize cloudinary links
+  const getProductImage = (product) => {
+    // My logic starts here
+    
+    // Check whether the product contains the variants
+    if(product.hasVariants) {
+      // console.log("It has variants");
+      const defaultVariant = product.variants.find(variant => variant.isDefault);
+      return defaultVariant?.variantImage;
+    }
+    else {
+      // console.log("No variants");
+      return product.image;
+    }
+
+    // My logic ends here
+    // Check for cloudinary image in color variants
+    const colorWithImage = product.colorVariants?.find(
+      (color) => color.imageUrl && color.imageUrl.includes("cloudinary"),
+    )
+
+    if (colorWithImage) {
+      return colorWithImage.imageUrl
+    }
+
+    // Check for any image in color variants
+    const anyColorWithImage = product.colorVariants?.find((color) => color.imageUrl)
+    if (anyColorWithImage) {
+      return anyColorWithImage.imageUrl
+    }
+
+    // Return random placeholder image
+    return `https://images.unsplash.com/photo-${Math.floor(Math.random() * 1000000000000)}?w=100&h=100&fit=crop`
+  }
+
+  // Get product price display
+  const getProductPrice = (product) => {
+    if (product.price) {
+      return `$${product.price}`
+    }
+    return "-"
+  }
+
+  const getNumberOfSizeVariants = (product) => {
+    const sizeLength = product.variants.map(variant => variant.moreDetails.length)
+    console.log(sizeLength)
+    return sizeLength.reduce((sum, current) => sum + current, 0);
+  }
+
+  // Checkbox handling
+  const handleSelectProduct = (productId) => {
+    setSelectedProducts((prev) =>
+      prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId],
+    )
+  }
+
+  const handleSelectAll = () => {
+    if (selectedProducts.length === products.length) {
+      setSelectedProducts([])
+    } else {
+      setSelectedProducts(products.map((p) => p._id))
+    }
+  }
+
+  // Get variant selection for admin details modal
+  const getVariantSelection = useCallback(
+    (productId) => {
+      if (!variantSelections[productId]) {
+        const product = products.find((p) => p._id === productId)
+        if (product) {
+          const defaultSelection = {
+            color: product.variants.colors[0],
+            size: product.variants.sizes[0],
+          }
+          setVariantSelections((prev) => ({
+            ...prev,
+            [productId]: defaultSelection,
+          }))
+          return defaultSelection
+        }
+      }
+      return variantSelections[productId]
+    },
+    [variantSelections, products],
+  )
+
+  // Update variant selection for a specific product
+  const updateVariantSelection = useCallback(
+    (productId, type, value) => {
+      setVariantSelections((prev) => ({
+        ...prev,
+        [productId]: {
+          ...prev[productId],
+          [type]: value,
+        },
+      }))
+    },
+    [setVariantSelections],
+  )
+
+  // Get pricing info for database products (same as Home.jsx)
+  const getProductPricing = (product, selectedColor = null, selectedSize = null) => {
+    if (!product.colorVariants) {
+      // Regular mock product
+      return {
+        price: product.price,
+        priceChart: product.priceChart || [],
+      }
+    }
+
+    // Helper function to format price ranges correctly
+    const formatPriceRanges = (priceRanges) => {
+      if (!priceRanges || priceRanges.length === 0) return []
+
+      const validRanges = priceRanges.filter((range) => range.thresholdQuantity != null && range.wholesalePrice != null)
+
+      if (validRanges.length === 0) return []
+
+      const sortedRanges = validRanges.sort((a, b) => a.thresholdQuantity - b.thresholdQuantity)
+
+      if (sortedRanges.length === 1) {
+        return [
+          {
+            quantity: `${sortedRanges[0].thresholdQuantity}+ pieces`,
+            price: sortedRanges[0].wholesalePrice,
+          },
+        ]
+      } else {
+        const formattedRanges = []
+
+        for (let i = 0; i < sortedRanges.length; i++) {
+          const current = sortedRanges[i]
+          const next = sortedRanges[i + 1]
+
+          if (i === 0) {
+            formattedRanges.push({
+              quantity: `1 - ${current.thresholdQuantity} pieces`,
+              price: current.wholesalePrice,
+            })
+          }
+
+          if (next) {
+            formattedRanges.push({
+              quantity: `${current.thresholdQuantity + 1} - ${next.thresholdQuantity} pieces`,
+              price: next.wholesalePrice,
+            })
+          } else if (i > 0) {
+            formattedRanges.push({
+              quantity: `${current.thresholdQuantity + 1}+ pieces`,
+              price: current.wholesalePrice,
+            })
+          }
+        }
+
+        return formattedRanges
+      }
+    }
+
+    // Base price scenario
+    if (product.price) {
+      return {
+        price: product.price,
+        priceChart: formatPriceRanges(product.basePriceRanges),
+      }
+    }
+
+    // Color-based pricing
+    if (selectedColor && product.colorVariants.some((c) => c.price)) {
+      const colorVariant = product.colorVariants.find((c) => c.color === selectedColor)
+      if (colorVariant && colorVariant.price) {
+        return {
+          price: colorVariant.price,
+          priceChart: formatPriceRanges(colorVariant.priceRanges),
+        }
+      }
+    }
+
+    // Size-based pricing
+    if (selectedSize && product.sizeVariants.some((s) => s.price)) {
+      const sizeVariant = product.sizeVariants.find((s) => s.size === selectedSize)
+      if (sizeVariant && sizeVariant.price) {
+        return {
+          price: sizeVariant.price,
+          priceChart: formatPriceRanges(sizeVariant.priceRanges),
+        }
+      }
+    }
+
+    return {
+      price: product.price || 0,
+      priceChart: product.priceChart || [],
+    }
+  }
+
+  // Handle revised rate form submission
+  const handleRevisedRateSubmit = () => {
+    if (selectedProducts.length > 0) {
+      console.log("Starting discount for products:", selectedProducts)
+    } else {
+      console.log("Starting discount for product:", selectedProduct._id)
+    }
+    console.log("Revised rate data:", revisedRateData)
+
+    setShowRevisedRateModal(false)
+    setRevisedRateData({
+      startDate: "",
+      startTime: "",
+      endDate: "",
+      discountedPrice: "",
+    })
+    setSelectedProduct(null)
+    setSelectedProducts([])
+
+    alert("Discount started successfully!")
+  }
+
+  // Handle restock form submission
+  const handleRestockSubmit = () => {
+    console.log("Restock data:", restockData)
+
+    setShowRestockModal(false)
+    setRestockData({})
+    setSelectedProduct(null)
+    setSelectedProducts([])
+
+    alert("Stock updated successfully!")
+  }
+
+  // Validate revised rate form data
+  const isRevisedRateFormValid = () => {
+    const { startDate, startTime, endDate, discountedPrice } = revisedRateData
+
+    if (!startDate || !startTime || !endDate || !discountedPrice) {
+      return false
+    }
+
+    if (startDate < currentDate) {
+      return false
+    }
+
+    if (startDate === currentDate && startTime < currentTime) {
+      return false
+    }
+
+    if (endDate <= startDate) {
+      return false
+    }
+
+    if (isNaN(Number.parseFloat(discountedPrice)) || Number.parseFloat(discountedPrice) <= 0) {
+      return false
+    }
+
+    return true
+  }
+
+  // Validate restock form data
+  const isRestockFormValid = () => {
+    if (selectedProducts.length > 0) {
+      return selectedProducts.every((productId) => {
+        const stockValue = restockData[productId]
+        return stockValue && !isNaN(Number.parseInt(stockValue)) && Number.parseInt(stockValue) > 0
+      })
+    } else if (selectedProduct) {
+      const stockValue = restockData[selectedProduct._id]
+      return stockValue && !isNaN(Number.parseInt(stockValue)) && Number.parseInt(stockValue) > 0
+    }
+    return false
+  }
+
+  // Initialize restock data when modal opens
+  const initializeRestockData = (productIds) => {
+    const initialData = {}
+    productIds.forEach((productId) => {
+      const product = products.find((p) => p._id === productId)
+      if (product) {
+        initialData[productId] = product.stock.toString()
+      }
+    })
+    setRestockData(initialData)
+  }
+
+  // Details Modal Component (exactly like Home.jsx VariantModal)
+  const DetailsModal = ({ product, onClose }) => {
+    if (!product) return null
+
+    // Get current selections for this product
+    const currentSelection = getVariantSelection(product._id)
+
+    if (!currentSelection) return null
+
+    const selectedColorName = currentSelection.color?.name || currentSelection.color?.color || currentSelection.color
+    const pricingInfo = getProductPricing(product, selectedColorName, currentSelection.size)
+
+    const handleColorSelect = (color) => {
+      const colorToSelect = color.color || color.name || color
+      const colorObject = availableColors.find((c) => (c.color || c.name) === colorToSelect) || color
+      updateVariantSelection(product._id, "color", colorObject)
+    }
+
+    const handleSizeSelect = (size) => {
+      updateVariantSelection(product._id, "size", size)
+    }
+
+    // Get available sizes for selected color
+    const getAvailableSizes = () => {
+      if (!product.colorVariants) return product.variants.sizes
+
+      const selectedColorVariant = product.colorVariants.find((c) => c.color === selectedColorName)
+
+      if (selectedColorVariant && selectedColorVariant.forAllSizes === "no") {
+        return selectedColorVariant.availableSizes
+      }
+
+      return product.sizeVariants.map((s) => s.size)
+    }
+
+    // Get available colors for selected size
+    const getAvailableColors = () => {
+      if (!product.colorVariants) return product.variants.colors
+
+      const selectedSizeVariant = product.sizeVariants.find((s) => s.size === currentSelection.size)
+
+      if (selectedSizeVariant && selectedSizeVariant.forAllColors === "no") {
+        return product.colorVariants.filter((c) => selectedSizeVariant.availableColors.includes(c.color))
+      }
+
+      return product.colorVariants
+    }
+
+    // Get optional details for current selection
+    const getOptionalDetails = () => {
+      if (!product.colorVariants) return []
+
+      let details = []
+
+      const selectedColorVariant = product.colorVariants.find((c) => c.color === selectedColorName)
+      if (selectedColorVariant && selectedColorVariant.optionalDetails) {
+        details = [...details, ...selectedColorVariant.optionalDetails]
+      }
+
+      const selectedSizeVariant = product.sizeVariants.find((s) => s.size === currentSelection.size)
+      if (selectedSizeVariant && selectedSizeVariant.optionalDetails) {
+        details = [...details, ...selectedSizeVariant.optionalDetails]
+      }
+
+      return details.filter((detail) => detail.name && detail.value)
+    }
+
+    const availableSizes = getAvailableSizes()
+    const availableColors = getAvailableColors()
+    const optionalDetails = getOptionalDetails()
+
+    // Get the current selected color's image
+    const getCurrentColorImage = () => {
+      if (!currentSelection.color) return getProductImage(product)
+
+      // For database products
+      if (product.colorVariants) {
+        const selectedColorVariant = availableColors.find((c) => c.color === selectedColorName)
+        return selectedColorVariant?.imageUrl || getProductImage(product)
+      }
+
+      // For mock products
+      return currentSelection.color.image || getProductImage(product)
+    }
+
+    const currentImage = getCurrentColorImage()
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col">
+          <div className="flex justify-between items-start p-6 pb-4 flex-shrink-0">
+            <h2 className="text-xl font-bold text-gray-800">Product Details</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="px-6 pb-6 overflow-y-auto flex-1">
+            <div className="mb-4">
+              <img
+                src={currentImage || "/placeholder.svg"}
+                alt={`${product.name} - ${selectedColorName || "default"} variant`}
+                className="w-full h-48 object-cover rounded-lg mb-4"
+              />
+              <h3 className="font-semibold text-lg">{product.name}</h3>
+              <p className="text-2xl font-bold text-blue-600">${pricingInfo.price}</p>
+            </div>
+
+            {/* Variant Description */}
+            <div className="mb-4 p-3 bg-gray-50 rounded-lg">
+              <p className="text-sm text-gray-700">{product.description}</p>
+            </div>
+
+            {/* Color Selection */}
+            <div className="mb-6">
+              <h4 className="font-semibold mb-3">Color: {selectedColorName || "Select Color"}</h4>
+              <div className="flex gap-3 flex-wrap">
+                {availableColors.map((color, index) => {
+                  const colorName = color.color || color.name
+                  const isSelected = selectedColorName === colorName
+
+                  return (
+                    <button
+                      key={`color-${product._id}-${index}`}
+                      onClick={() => handleColorSelect(color)}
+                      className={`relative w-16 h-16 sm:w-20 sm:h-20 rounded-lg border-2 transition-all overflow-hidden ${
+                        isSelected ? "border-blue-500 scale-105 shadow-lg" : "border-gray-300 hover:border-gray-400"
+                      }`}
+                      title={colorName}
+                    >
+                      {color.imageUrl || color.image ? (
+                        <img
+                          src={color.imageUrl || color.image}
+                          alt={colorName}
+                          className="w-full h-full object-cover rounded-lg"
+                        />
+                      ) : (
+                        <div
+                          className="w-full h-full rounded-lg"
+                          style={{ backgroundColor: color.value || colorName }}
+                        />
+                      )}
+                      {isSelected && (
+                        <div className="absolute inset-0 bg-blue-500/20 rounded-lg flex items-center justify-center">
+                          <div className="bg-white rounded-full p-1 shadow-md">
+                            <Check className="w-4 h-4 text-blue-600" />
+                          </div>
+                        </div>
+                      )}
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+
+            {/* Size Selection */}
+            <div className="mb-6">
+              <h4 className="font-semibold mb-3">Size: {currentSelection.size || "Select Size"}</h4>
+              <div className="flex gap-2 flex-wrap">
+                {availableSizes.map((size, index) => (
+                  <button
+                    key={`size-${product._id}-${index}`}
+                    onClick={() => handleSizeSelect(size)}
+                    className={`px-4 py-2 rounded-lg border transition-all ${
+                      currentSelection.size === size
+                        ? "border-blue-500 bg-blue-50 text-blue-700"
+                        : "border-gray-300 hover:border-gray-400"
+                    }`}
+                  >
+                    {size}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Optional Details */}
+            {optionalDetails.length > 0 && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-gray-800 mb-2">Variant Details</h4>
+                <div className="space-y-2">
+                  {optionalDetails.map((detail, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span className="font-medium">{detail.name}:</span>
+                      <span>{detail.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* Variant-specific Price Chart */}
+            <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+              <h4 className="font-semibold text-gray-800 mb-2">Bulk Pricing for {selectedColorName || "Default"}</h4>
+              <div className="space-y-2">
+                {pricingInfo.priceChart.map((tier, index) => (
+                  <div key={index} className="flex justify-between text-sm">
+                    <span>{tier.quantity}</span>
+                    <span className="font-semibold">${tier.price} each</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Product Details */}
+            {product.details && product.details.length > 0 && (
+              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
+                <h4 className="font-semibold text-gray-800 mb-2">Product Details</h4>
+                <div className="space-y-2">
+                  {product.details.map((detail, index) => (
+                    <div key={index} className="flex justify-between text-sm">
+                      <span className="font-medium">{detail.name}:</span>
+                      <span>{detail.value}</span>
+                    </div>
+                  ))}
+                  {product.stock && (
+                    <div className="flex justify-between text-sm">
+                      <span className="font-medium">Stock:</span>
+                      <span>{product.stock} available</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Revised Rate Modal Component
+  const RevisedRateModal = ({ product, selectedProductIds, onClose }) => {
+    const productsToShow =
+      selectedProductIds.length > 0
+        ? products.filter((p) => selectedProductIds.includes(p._id))
+        : product
+          ? [product]
+          : []
+
+    if (productsToShow.length === 0) return null
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-start p-6 pb-4">
+            <h2 className="text-xl font-bold text-gray-800">Add Revised Rate</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="px-6 pb-6">
+            {/* Products Info */}
+            <div className="mb-4 space-y-2">
+              {productsToShow.map((prod) => (
+                <div key={prod._id} className="p-3 bg-gray-50 rounded-lg">
+                  <h3 className="font-medium text-gray-800">{prod.name}</h3>
+                  <p className="text-sm text-gray-600">Current Price: {getProductPrice(prod)}</p>
+                </div>
+              ))}
+            </div>
+
+            <div className="space-y-4">
+              {/* Discount Start Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Discount Start Date
+                </label>
+                <input
+                  type="date"
+                  min={currentDate}
+                  value={revisedRateData.startDate}
+                  onChange={(e) => setRevisedRateData((prev) => ({ ...prev, startDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Discount Start Time */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Clock className="w-4 h-4 inline mr-1" />
+                  Discount Start Time
+                </label>
+                <input
+                  type="time"
+                  min={revisedRateData.startDate === currentDate ? currentTime : "00:00"}
+                  value={revisedRateData.startTime}
+                  onChange={(e) => setRevisedRateData((prev) => ({ ...prev, startTime: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Discount End Date */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <Calendar className="w-4 h-4 inline mr-1" />
+                  Discount End Date
+                </label>
+                <input
+                  type="date"
+                  min={revisedRateData.startDate || currentDate}
+                  value={revisedRateData.endDate}
+                  onChange={(e) => setRevisedRateData((prev) => ({ ...prev, endDate: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              {/* Discounted Price */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <DollarSign className="w-4 h-4 inline mr-1" />
+                  Discounted Price
+                </label>
+                <input
+                  type="number"
+                  step="0.01"
+                  min="0.01"
+                  placeholder="Enter discounted price"
+                  value={revisedRateData.discountedPrice}
+                  onChange={(e) => setRevisedRateData((prev) => ({ ...prev, discountedPrice: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRevisedRateSubmit}
+                disabled={!isRevisedRateFormValid()}
+                className={`flex-1 px-4 py-2 rounded-md transition-colors ${
+                  isRevisedRateFormValid()
+                    ? "bg-blue-600 hover:bg-blue-700 text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                Start Discount
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Restock Modal Component
+  const RestockModal = ({ product, selectedProductIds, onClose }) => {
+    const productsToShow =
+      selectedProductIds.length > 0
+        ? products.filter((p) => selectedProductIds.includes(p._id))
+        : product
+          ? [product]
+          : []
+
+          
+          if (productsToShow.length === 0) return null
+
+          const productsWithVariants = productsToShow.filter((product) => product.hasVariants);
+          const productsWithoutVariants = productsToShow.filter((product) => !product.hasVariants);
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-start p-6 pb-4">
+            <h2 className="text-xl font-bold text-gray-800">Restock Products</h2>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="px-6 pb-6">
+            <div className="space-y-4">
+              {productsWithoutVariants.map((prod) => (
+                <div key={prod._id} className="p-4 border border-gray-200 rounded-lg">
+                  <div className="flex items-start gap-3 mb-3">
+                    <img
+                      src={getProductImage(prod) || "/placeholder.svg"}
+                      alt={prod.name}
+                      className="w-16 h-16 rounded-lg object-cover"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-800">{prod.name}</h3>
+                      <p className="text-sm text-gray-600">Current Stock: {prod.stock}</p>
+                    </div>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">Update Stock Quantity</label>
+                    <input
+                    key="abcf"
+                      type="number"
+                      min="0"
+                      value={stockTextfieldData || ""}
+                      placeholder="Enter quantity to restock"
+                      onChange={(e) => {
+                        setStockTextfieldData(e.target.value);
+                        setRestockData((prev) => ({
+                          ...prev,
+                          [prod._id]: Number(restockData[prod._id]) + Number(e.target.value),
+                        }))
+                        console.log("HIIIII")
+                        console.log(restockData);
+                        console.log(typeof(restockData[prod._id]))
+                        console.log(typeof(e.target.value))
+                      }
+                      }
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Action Buttons */}
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRestockSubmit}
+                disabled={!isRestockFormValid()}
+                className={`flex-1 px-4 py-2 rounded-md transition-colors ${
+                  isRestockFormValid()
+                    ? "bg-green-600 hover:bg-green-700 text-white"
+                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                }`}
+              >
+                Update Stock
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 p-6">
+      <div className="max-w-7xl mx-auto">
+        {/* Header */}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Product Management</h1>
+          <p className="text-gray-600 mt-2">Manage your product inventory and pricing</p>
+        </div>
+
+        {/* Bulk Actions (shown when products are selected) */}
+        {selectedProducts.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+            <div className="flex items-center justify-between">
+              <span className="text-blue-800 font-medium">
+                {selectedProducts.length} product{selectedProducts.length > 1 ? "s" : ""} selected
+              </span>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => {
+                    setShowRevisedRateModal(true)
+                    setRevisedRateData({
+                      startDate: currentDate,
+                      startTime: currentTime,
+                      endDate: "",
+                      discountedPrice: "",
+                    })
+                  }}
+                  className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded-md text-sm font-medium transition-colors"
+                >
+                  Add Revised Rate 
+                </button>
+                <button
+                  onClick={() => {
+                    initializeRestockData(selectedProducts)
+                    setShowRestockModal(true)
+                  }}
+                  className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded-md text-sm font-medium transition-colors"
+                >
+                  Restock
+                </button>
+                <button
+                  onClick={() => {
+                    if (
+                      confirm(
+                        `Are you sure you want to delete ${selectedProducts.length} product${selectedProducts.length > 1 ? "s" : ""}?`,
+                      )
+                    ) {
+                      console.log("Delete products:", selectedProducts)
+                      setSelectedProducts([])
+                    }
+                  }}
+                  className="bg-red-100 hover:bg-red-200 text-red-800 px-3 py-1 rounded-md text-sm font-medium transition-colors"
+                >
+                  Delete Selected
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Products Table */}
+        <div className="bg-white rounded-lg shadow overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={selectedProducts.length === products.length && products.length > 0}
+                      onChange={handleSelectAll}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Sr No
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Image
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Stock
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Color Variants
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Size Variants
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Price
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {products.map((product, index) => (
+                  <tr key={product._id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <input
+                        type="checkbox"
+                        checked={selectedProducts.includes(product._id)}
+                        onChange={() => handleSelectProduct(product._id)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">{index + 1}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="flex justify-center">
+                        <img
+                          src={getProductImage(product) || "/placeholder.svg"}
+                          alt={product.name}
+                          className="w-12 h-12 rounded-lg object-cover"
+                        />
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                      <div className="text-sm font-medium text-gray-900">{product.name}</div>
+                      <div className="text-sm text-gray-500">{product.category}</div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                      {
+                        product.hasVariants ? (<button className="bg-blue-600">View stock</button>) : (product.stock)   
+                      }
+                      </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                      {product.variants?.length || 0}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                      {
+                        getNumberOfSizeVariants(product)
+                      }
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 text-center">
+                      {
+                        product.hasVariants ? (<button className="bg-blue-600">View price</button>) : (product.price)   
+                      }
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <div className="flex items-center justify-center space-x-2">
+                        {/* Details Button - Always visible */}
+                        <button
+                          onClick={() => {
+                            setSelectedProduct(product)
+                            setShowDetailsModal(true)
+                          }}
+                          className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded-md text-xs font-medium transition-colors"
+                        >
+                          Details
+                        </button>
+
+                        {/* Individual action buttons - Only show when no products are selected */}
+                        {selectedProducts.length === 0 && (
+                          <>
+                            {/* Add Revised Rate Button */}
+                            <button
+                              onClick={() => {
+                                setSelectedProduct(product)
+                                setShowRevisedRateModal(true)
+                                setRevisedRateData({
+                                  startDate: currentDate,
+                                  startTime: currentTime,
+                                  endDate: "",
+                                  discountedPrice: "",
+                                })
+                              }}
+                              className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded-md text-xs font-medium transition-colors"
+                            >
+                              Add Revised Rate
+                            </button>
+
+                            {/* Restock Button */}
+                            <button
+                              onClick={() => {
+                                setSelectedProduct(product)
+                                initializeRestockData([product._id])
+                                setShowRestockModal(true)
+                              }}
+                              className="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1"
+                            >
+                              <Package className="w-3 h-3" />
+                              Restock
+                            </button>
+
+                            {/* Edit Button */}
+                            <button
+                              onClick={() => {
+                                console.log("Edit product:", product._id)
+                              }}
+                              className="p-2 text-gray-600 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                              title="Edit Product"
+                            >
+                              <Edit className="w-4 h-4" />
+                            </button>
+
+                            {/* Delete Button */}
+                            <button
+                              onClick={() => {
+                                if (confirm(`Are you sure you want to delete "${product.name}"?`)) {
+                                  console.log("Delete product:", product._id)
+                                }
+                              }}
+                              className="p-2 text-gray-600 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                              title="Delete Product"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        {/* Empty State */}
+        {products.length === 0 && (
+          <div className="text-center py-12">
+            <div className="text-gray-500 text-lg">No products found</div>
+            <p className="text-gray-400 mt-2">Add some products to get started</p>
+          </div>
+        )}
+      </div>
+
+      {/* Details Modal */}
+      {showDetailsModal && (
+        <DetailsModal
+          product={selectedProduct}
+          onClose={() => {
+            setShowDetailsModal(false)
+            setSelectedProduct(null)
+          }}
+        />
+      )}
+
+      {/* Revised Rate Modal */}
+      {showRevisedRateModal && (
+        <RevisedRateModal
+          product={selectedProduct}
+          selectedProductIds={selectedProducts}
+          onClose={() => {
+            setShowRevisedRateModal(false)
+            setSelectedProduct(null)
+            setRevisedRateData({
+              startDate: "",
+              startTime: "",
+              endDate: "",
+              discountedPrice: "",
+            })
+          }}
+        />
+      )}
+
+      {/* Restock Modal */}
+      {showRestockModal && (
+        <RestockModal
+          product={selectedProduct}
+          selectedProductIds={selectedProducts}
+          onClose={() => {
+            setShowRestockModal(false)
+            setSelectedProduct(null)
+            setRestockData({})
+          }}
+        />
+      )}
+    </div>
+  )
+}
+
+
+This is the code written using REACT and TAILWIND CSS. Some of the backend is also integrated.. I want you to remove all of the backend logic and frontend logic as well. that id you read the code you will come to know that when multiple products are selected uysing checkbox then three buttons appear at the top remove this logic as well and directly displaythe button adt the top. Means I dont want to change ad remove any of the UI just remove the logic of the frontend and the backendx
