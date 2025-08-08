@@ -14,9 +14,11 @@ export default function AdminProductsPage() {
   const [showRestockModal, setShowRestockModal] = useState(false);
   const [stockTextfield, setStockTextfield] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [multipleProductsToRestock, setMultipleProductsToRestock] = useState({});
 
   useEffect(() => {
     console.log(selectedProducts);
+    console.log(typeof(selectedProducts));
   }, [selectedProducts]);
 
   // Function to check if product exists
@@ -56,7 +58,7 @@ export default function AdminProductsPage() {
   if (error) return <div>Error</div>;
 
   // Restock Modal Component (Single Product Only)
-  const RestockModal = ({ product, onClose }) => {
+  const RestockModal = ({ product={}, onClose }) => {
     // Validate stock input
     const isValidStock = stockTextfield !== "" && parseInt(stockTextfield) >= 0;
 
@@ -98,7 +100,7 @@ export default function AdminProductsPage() {
   }
 };
 
-    if (!product) {
+    if (selectedProducts) {
       return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -112,13 +114,58 @@ export default function AdminProductsPage() {
               </button>
             </div>
             <div className="px-6 pb-6 text-center text-gray-600">
-              No product selected
+              <div>
+                      {Object.values(selectedProducts).map(product => {
+     return product.hasVariants ? 
+     (<div className="border-2">
+      <img src={getImageUrl(product)} alt={product.name} />
+      <p>Product Name: {product.name}</p>
+      {product.variants.map(variant => {
+        return (<div>
+          Variant Name: {variant.colorName}
+          {variant.moreDetails.map(size => {
+            return (
+              <div>
+                <p>Curreent stock {size.size.stock}</p>
+              <p>Enter the quantity to update for size : {size.size.length} X {size.size.breadth} X {size.size.height}</p>
+              <input type="text" name="" id="" />
+              </div>
+
+            )
+          })}
+        </div>)
+      })}
+          <p>Enter the quantity to update.</p>
+
+     </div>) : 
+     (<div className="border-2">
+          <img src={getImageUrl(product)} alt="" />
+          <p>{product.name}</p>
+          <p>Enter the quantity to update.</p>
+          <p>Current Quantity: {product.stock}</p>
+          <input type="text" name="" id="" />      </div>)
+      })}
+  </div>
             </div>
           </div>
         </div>
       );
     }
-
+// if(selectedProducts) {
+//   return (
+//     <div>
+//       {selectedProducts.map(product => {
+//         product.hasVariants ? (<div>Multiple Products to be displayed</div>) : (<div className="border-2">
+//           <img src={getImageUrl(product)} alt="" />
+//           <p>{product.name}</p>
+//           <p>Enter the quantity to update.</p>
+//           <p>Current Quantity: {product.stock}</p>
+//           <input type="text" name="" id="" />
+//         </div>)
+//       })}
+//     </div>
+//   );
+// }
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -204,12 +251,9 @@ export default function AdminProductsPage() {
               </button>
               <button
                 className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded-md text-sm font-medium transition-colors"
-                disabled={selectedProducts.length !== 1} // Enable only for single product
                 onClick={() => {
-                  if (selectedProducts.length === 1) {
-                    setRestockProduct(selectedProducts[0]);
+                  console.log("Helo bulk actions")
                     setShowRestockModal(true);
-                  }
                 }}
               >
                 Restock
@@ -472,7 +516,7 @@ export default function AdminProductsPage() {
       </div>
       {showRestockModal && (
         <RestockModal
-          product={restockProduct}
+          // product={restockProduct}
           onClose={() => setShowRestockModal(false)}
         />
       )}
