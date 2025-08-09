@@ -1,6 +1,8 @@
+const { default: mongoose } = require("mongoose")
 const Product = require("../models/Product")
 const { cloudinary } = require("../utils/cloudinary")
 const multer = require("multer")
+const e = require("express")
 
 // Configure multer for in-memory storage to handle file uploads
 const storage = multer.memoryStorage()
@@ -172,41 +174,156 @@ const fetchProducts = async (req, res) => {
   }
 }
 
-const restock = async (req, res) => {
-  try {
-    const { productId, updatedStock } = req.body;
+// const restock = async (req, res) => {
+//   try {
+//     const { productId, updatedStock } = req.body;
 
-    // Validate input
-    if (!productId || typeof updatedStock !== "number") {
-      return res.status(400).json({ message: "Invalid input data" });
-    }
+//     // Validate input
+//     if (!productId || typeof updatedStock !== "number") {
+//       return res.status(400).json({ message: "Invalid input data" });
+//     }
 
-    // Find the product
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
+//     // Find the product
+//     const product = await Product.findById(productId);
+//     if (!product) {
+//       return res.status(404).json({ message: "Product not found" });
+//     }
 
-    // Calculate new stock
-    const newStock = product.stock + updatedStock;
+//     // Calculate new stock
+//     const newStock = product.stock + updatedStock;
 
-    // Update product
-    const updatedProduct = await Product.findByIdAndUpdate(
-      productId,
-      { $set: { stock: newStock } },
+//     // Update product
+//     const updatedProduct = await Product.findByIdAndUpdate(
+//       productId,
+//       { $set: { stock: newStock } },
+//       { new: true }
+//     );
+
+//     return res.status(200).json({
+//       message: "Stock updated successfully",
+//       product: updatedProduct
+//     });
+
+//   } catch (error) {
+//     console.error("Restock error:", error);
+//     return res.status(500).json({ message: "Internal Server Error" });
+//   }
+// };
+
+const restock = (req, res) => {
+  // console.log(req.body);
+  const data = req.body;
+  // console.log(typeof(data));
+  try{
+    Object.entries(data).forEach(async ([productID, productData]) => {
+      console.log(productID);
+      console.log("Product data starts here")
+      console.log(productData);
+      console.log("Product data ends here")
+      console.log(typeof(productData))
+
+      const product = await Product.findById(productID);
+      if(product) {
+      if(product.hasVariants) {
+        const p_id = new mongoose.Types.ObjectId(productID);
+        Object.entries(productData).forEach(([variantID, variantData]) => {
+          const v_id = new mongoose.Types.ObjectId(variantID);
+          console.log("Variant data starts here")
+          console.log(variantData);
+          console.log("Variant data ends here")
+
+          Object.entries(variantData).forEach(([detailsID, detailsData]) => {
+            const details_id = new mongoose.Types.ObjectId(detailsID);
+            console.log("details data starts here")
+            console.log(detailsData)
+            console.log(typeof(detailsData))
+            console.log("details data ends here")
+
+            Object.entries(detailsData).forEach(([sizeID, stockData]) => {
+              const s_id = new mongoose.Types.ObjectId(sizeID);
+              console.log("Stock data starts here")
+              console.log(stockData);
+              console.log(typeof(stockData));
+              console.log("Stock data ends here")
+               if(stockData === "") {
+              // console.log("Empty data")
+
+              // Nothing has been filled in stock field
+            } else {
+              // console.log("Heres some data");
+
+              // Theere some data in stock field
+              // Implement update logic
+              product.variants.forEach((variant) => {
+                variant.moreDetails.forEach(async (details) => {
+                  if(details.size._id.toString() === s_id.toString()) {
+                    console.log("IDs matched")
+                    console.log(details.stock)
+                    const oldStock = parseInt(details.stock);
+                    const newStock = parseInt(stockData);
+                    const updatedStock = oldStock + newStock;
+                    try {
+                    const updatedProduct = await Product.updateOne(
+                      {_id: product._id},
+                      { $set: {
+                        "variants.$[v].moreDetails.$[md].stock": updatedStock,
+                        "variants.$[v].moreDetails.$[md].lastRestockedAt": new Date()
+                      } },
+                      {
+                        arrayFilters: [
+                          {"v._id": variantID},
+                          {"md._id": detailsID}
+                        ]
+                      }
+                    )
+                  } catch(error) {
+                    return res.status(500).json({message: "There was problem while updating data"})
+                  }
+                  } else {
+                    console.log('IDs mismatch');
+                    console.log(details.size._id)
+                    console.log(typeof(details.size._id))
+                    console.log(s_id)
+                    console.log(typeof(s_id))
+                  }
+                })
+                // console.log(variant)
+              })
+            }
+            })
+            
+
+           
+          })
+        })
+      } else {
+        // Product does not have any variants
+          console.log(productData)
+          console.log(typeof(productData))
+          Object.values(productData).forEach(async (stock) => {
+            console.log(stock);
+            try {
+            const updatedStock = parseInt(product.stock) + parseInt(stock);
+            const updatedProduct = await Product.findByIdAndUpdate(
+      productID,
+      { $set: { stock: updatedStock,
+        lastRestockedAt: new Date()
+       } },
       { new: true }
     );
-
-    return res.status(200).json({
-      message: "Stock updated successfully",
-      product: updatedProduct
-    });
-
-  } catch (error) {
-    console.error("Restock error:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
+  } catch(error) {
+    return res.status(500).json({message: "Could not update product"})
   }
-};
+          })
+      }
+      }else {
+        console.log(`Product not found for ID: ${productID}`);
+      }
+    })
+  } catch(error) {
+    console.log(error);
+  }
+}
 
 
 // Export addProduct with upload.any() middleware directly

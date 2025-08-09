@@ -17,9 +17,39 @@ export default function AdminProductsPage() {
   const [multipleProductsToRestock, setMultipleProductsToRestock] = useState({});
 
   useEffect(() => {
-    console.log(selectedProducts);
-    console.log(typeof(selectedProducts));
+    console.log(selectedProducts)
+    const newMultipleProductsToRestock = {}
+    selectedProducts.forEach(product => {
+      newMultipleProductsToRestock[product._id] = {};
+      if(product.hasVariants)  {
+        // It has variants
+
+        // Now creating the variant ID's
+        product.variants.forEach(variant => {
+          newMultipleProductsToRestock[product._id][variant._id] = {}
+          // Now creating the size ID's
+          variant.moreDetails.forEach(details => {
+              newMultipleProductsToRestock[product._id][variant._id][details._id] = {};
+              newMultipleProductsToRestock[product._id][variant._id][details._id][details.size._id] = "";
+          });
+        })  
+      } else {
+        // It does not have variants
+
+        // Take the id and assign the stock
+        newMultipleProductsToRestock[product._id] = {};
+        newMultipleProductsToRestock[product._id]['stock'] = "";
+      }
+    });
+
+    setMultipleProductsToRestock(newMultipleProductsToRestock);
+
   }, [selectedProducts]);
+
+  useEffect(() => {
+    console.log("Multiple products to restock")
+    console.log(multipleProductsToRestock)
+  }, [multipleProductsToRestock])
 
   // Function to check if product exists
   const doesProductExist = (product) => {
@@ -62,44 +92,63 @@ export default function AdminProductsPage() {
     // Validate stock input
     const isValidStock = stockTextfield !== "" && parseInt(stockTextfield) >= 0;
 
-    const handleUpdateStock = async () => {
-  if (!isValidStock) return; // Stop if the number isn’t good
+    // This needs to be uncommented it is working version for restocking the single product that has no variants.
+//     const handleUpdateStock = async () => {
+//   if (!isValidStock) return; // Stop if the number isn’t good
 
-  // Show the kid we’re working (like a spinning toy)
+//   // Show the kid we’re working (like a spinning toy)
+//   setIsLoading(true);
+
+//   try {
+//     // Send only the toy ID and the new number to the toy store
+//     const dataToSend = {
+//       productId: product._id, // Just the toy’s ID
+//       updatedStock: parseInt(stockTextfield), // Make sure it’s a number
+//     };
+
+//     // Talk to the toy store
+//     const res = await axios.post(
+//       'http://localhost:3000/api/product/restock',
+//       dataToSend,
+//       { withCredentials: true }
+//     );
+
+//     // Check if the toy store said “Okay!”
+//     if (res.status === 200 || res.status === 201) {
+//       console.log(`Saved ${stockTextfield} toys for ${product.name}`);
+//       setStockTextfield(""); // Clear the number box
+//       onClose(); // Close the toy box
+//     } else {
+//       // If the toy store said “No,” show a warning
+//       setError("Oops, couldn’t save the toys! Try again.");
+//     }
+//   } catch (error) {
+//     // If something broke, tell the kid what happened
+//     setError("Something went wrong with the toy store: " + error.message);
+//   } finally {
+//     // Stop the spinning toy
+//     setIsLoading(false);
+//   }
+// };
+
+const handleUpdateStock = async () => {
   setIsLoading(true);
 
-  try {
-    // Send only the toy ID and the new number to the toy store
-    const dataToSend = {
-      productId: product._id, // Just the toy’s ID
-      updatedStock: parseInt(stockTextfield), // Make sure it’s a number
-    };
-
-    // Talk to the toy store
-    const res = await axios.post(
-      'http://localhost:3000/api/product/restock',
-      dataToSend,
-      { withCredentials: true }
-    );
-
-    // Check if the toy store said “Okay!”
-    if (res.status === 200 || res.status === 201) {
-      console.log(`Saved ${stockTextfield} toys for ${product.name}`);
-      setStockTextfield(""); // Clear the number box
-      onClose(); // Close the toy box
-    } else {
-      // If the toy store said “No,” show a warning
-      setError("Oops, couldn’t save the toys! Try again.");
+  try{
+    const res = await axios.post('http://localhost:3000/api/product/restock', multipleProductsToRestock, {
+      withCredentials: true,
+    });
+    if(res.status === 200) {
+      console.log("Updated");
     }
-  } catch (error) {
-    // If something broke, tell the kid what happened
-    setError("Something went wrong with the toy store: " + error.message);
-  } finally {
-    // Stop the spinning toy
-    setIsLoading(false);
+    else {
+      console.log("Oops something went wrong")
+    }
+  } catch(err) {
+    console.log("jfsdfgrfchwifcjwufhewruyfhqoidgwuydq;.ojdusi9qdwejhfyvctduqwgdsuqyedt6q" + err);
   }
 };
-
+// if(!product) {
     if (selectedProducts) {
       return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -117,18 +166,36 @@ export default function AdminProductsPage() {
               <div>
                       {Object.values(selectedProducts).map(product => {
      return product.hasVariants ? 
-     (<div className="border-2">
+     (<div className="border-2" key={product._id}>
       <img src={getImageUrl(product)} alt={product.name} />
       <p>Product Name: {product.name}</p>
       {product.variants.map(variant => {
-        return (<div>
+        return (<div key={variant._id}>
           Variant Name: {variant.colorName}
-          {variant.moreDetails.map(size => {
+          {variant.moreDetails.map(details => {
             return (
-              <div>
-                <p>Curreent stock {size.size.stock}</p>
-              <p>Enter the quantity to update for size : {size.size.length} X {size.size.breadth} X {size.size.height}</p>
-              <input type="text" name="" id="" />
+              <div key={details._id}>
+                <p>Current stock {details.size.stock}</p>
+              <p>Enter the quantity to update for size : {details.size.length} X {details.size.breadth} X {details.size.height}</p>
+              <input 
+  type="text" 
+  value={multipleProductsToRestock[product._id][variant._id][details._id][details.size._id]} 
+  onChange={(e) => {
+    setMultipleProductsToRestock(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        [variant._id]: {
+          ...prev[product._id][variant._id],
+          [details._id]: {
+            ...prev[product._id][variant._id][details._id],
+            [details.size._id]: e.target.value
+          }
+        }
+      }
+    }));
+  }}
+/>
               </div>
 
             )
@@ -143,8 +210,22 @@ export default function AdminProductsPage() {
           <p>{product.name}</p>
           <p>Enter the quantity to update.</p>
           <p>Current Quantity: {product.stock}</p>
-          <input type="text" name="" id="" />      </div>)
+          <input 
+  type="text" 
+  value={multipleProductsToRestock[product._id]['stock']} 
+  onChange={(e) => {
+    setMultipleProductsToRestock(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        stock: e.target.value
+      }
+    }));
+  }}
+/>
+           </div>)
       })}
+      <button onClick={handleUpdateStock}>Update</button>
   </div>
             </div>
           </div>
