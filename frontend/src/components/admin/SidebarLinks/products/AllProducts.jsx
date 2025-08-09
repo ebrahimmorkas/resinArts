@@ -92,46 +92,48 @@ export default function AdminProductsPage() {
     // Validate stock input
     const isValidStock = stockTextfield !== "" && parseInt(stockTextfield) >= 0;
 
-    // This needs to be uncommented it is working version for restocking the single product that has no variants.
-//     const handleUpdateStock = async () => {
-//   if (!isValidStock) return; // Stop if the number isn’t good
 
-//   // Show the kid we’re working (like a spinning toy)
-//   setIsLoading(true);
+    // Function that will update only single stock
+    const handleUpdateStock = async () => {
+  if (!isValidStock) return; // Stop if the number isn’t good
 
-//   try {
-//     // Send only the toy ID and the new number to the toy store
-//     const dataToSend = {
-//       productId: product._id, // Just the toy’s ID
-//       updatedStock: parseInt(stockTextfield), // Make sure it’s a number
-//     };
+  // Show the kid we’re working (like a spinning toy)
+  setIsLoading(true);
 
-//     // Talk to the toy store
-//     const res = await axios.post(
-//       'http://localhost:3000/api/product/restock',
-//       dataToSend,
-//       { withCredentials: true }
-//     );
+  try {
+    // Send only the toy ID and the new number to the toy store
+    const dataToSend = {
+      productId: product._id, // Just the toy’s ID
+      updatedStock: parseInt(stockTextfield), // Make sure it’s a number
+    };
 
-//     // Check if the toy store said “Okay!”
-//     if (res.status === 200 || res.status === 201) {
-//       console.log(`Saved ${stockTextfield} toys for ${product.name}`);
-//       setStockTextfield(""); // Clear the number box
-//       onClose(); // Close the toy box
-//     } else {
-//       // If the toy store said “No,” show a warning
-//       setError("Oops, couldn’t save the toys! Try again.");
-//     }
-//   } catch (error) {
-//     // If something broke, tell the kid what happened
-//     setError("Something went wrong with the toy store: " + error.message);
-//   } finally {
-//     // Stop the spinning toy
-//     setIsLoading(false);
-//   }
-// };
+    // Talk to the toy store
+    const res = await axios.post(
+      'http://localhost:3000/api/product/restock',
+      dataToSend,
+      { withCredentials: true }
+    );
 
-const handleUpdateStock = async () => {
+    // Check if the toy store said “Okay!”
+    if (res.status === 200 || res.status === 201) {
+      console.log(`Saved ${stockTextfield} toys for ${product.name}`);
+      setStockTextfield(""); // Clear the number box
+      onClose(); // Close the toy box
+    } else {
+      // If the toy store said “No,” show a warning
+      setError("Oops, couldn’t save the toys! Try again.");
+    }
+  } catch (error) {
+    // If something broke, tell the kid what happened
+    setError("Something went wrong with the toy store: " + error.message);
+  } finally {
+    // Stop the spinning toy
+    setIsLoading(false);
+  }
+};
+
+// Function for updating multiple stocks
+const handleUpdateMultipleStock = async () => {
   setIsLoading(true);
 
   try{
@@ -148,8 +150,9 @@ const handleUpdateStock = async () => {
     console.log("jfsdfgrfchwifcjwufhewruyfhqoidgwuydq;.ojdusi9qdwejhfyvctduqwgdsuqyedt6q" + err);
   }
 };
-// if(!product) {
-    if (selectedProducts) {
+
+    if (selectedProducts.length>0) {
+      console.log("For multiple products")
       return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -225,28 +228,35 @@ const handleUpdateStock = async () => {
 />
            </div>)
       })}
-      <button onClick={handleUpdateStock}>Update</button>
+      <button onClick={handleUpdateMultipleStock}>Update</button>
   </div>
             </div>
           </div>
         </div>
       );
     }
-// if(selectedProducts) {
-//   return (
-//     <div>
-//       {selectedProducts.map(product => {
-//         product.hasVariants ? (<div>Multiple Products to be displayed</div>) : (<div className="border-2">
-//           <img src={getImageUrl(product)} alt="" />
-//           <p>{product.name}</p>
-//           <p>Enter the quantity to update.</p>
-//           <p>Current Quantity: {product.stock}</p>
-//           <input type="text" name="" id="" />
-//         </div>)
-//       })}
-//     </div>
-//   );
-// }
+
+    if (!product) {
+      return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start p-6 pb-4">
+              <h2 className="text-xl font-bold text-gray-800">Restock Product</h2>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 pb-6 text-center text-gray-600">
+              No Product Selected
+            </div>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -261,7 +271,26 @@ const handleUpdateStock = async () => {
           </div>
           <div className="px-6 pb-6">
             <div className="space-y-4">
-              <div className="p-4 border border-gray-200 rounded-lg">
+              
+              {product.hasVariants ? (<div>
+              
+                {product.variants.map((variant) => {
+                  return <div key={variant._id}>
+                    <p>Update quntity for</p>
+                    Variant Color: {variant.colorName}
+                    {variant.moreDetails.map((details) => {
+                      // return console.log(details.size.length)
+                      return (<div key={details._id}><p>{details.size.length} X {details.size.breadth} X {details.size.height}</p>
+                      <p>Current stock{details.stock}</p>
+                      <p>
+                        Enter stock to update
+                      </p>
+                        <input key={details.size._id} type="text" name="" id="" /></div>
+                      )
+                    })}
+                    </div>
+                })}
+              </div>) : (<div className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">
                   <img
                     src={getImageUrl(product)}
@@ -286,7 +315,8 @@ const handleUpdateStock = async () => {
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-              </div>
+              </div>)}
+              
             </div>
             <div className="flex gap-3 mt-6">
               <button
@@ -411,7 +441,7 @@ const handleUpdateStock = async () => {
                           Add Revised Rate
                         </button>
                         <button
-                          className="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1"
+                          className="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1" 
                           onClick={() => {
                             setRestockProduct(product);
                             setStockTextfield(""); // Reset input when opening modal
@@ -595,12 +625,17 @@ const handleUpdateStock = async () => {
           </div>
         </div>
       </div>
-      {showRestockModal && (
+      {/* {showRestockModal && (
         <RestockModal
-          // product={restockProduct}
+          product={restockProduct}
           onClose={() => setShowRestockModal(false)}
         />
-      )}
+      )}  */}
+
+      {showRestockModal && (selectedProducts.length > 0 ? <RestockModal onClose={() => setShowRestockModal(false)} /> : <RestockModal
+          product={restockProduct}
+          onClose={() => setShowRestockModal(false)}
+        />)}
     </div>
   );
 }
