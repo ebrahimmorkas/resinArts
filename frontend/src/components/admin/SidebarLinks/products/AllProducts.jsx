@@ -15,6 +15,7 @@ export default function AdminProductsPage() {
   const [stockTextfield, setStockTextfield] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [multipleProductsToRestock, setMultipleProductsToRestock] = useState({});
+  const [stateVariableForDataForSingleProductWithVariants, setStateVariableForDataForSingleProductWithVariants] = useState({});
 
   useEffect(() => {
     console.log(selectedProducts)
@@ -84,6 +85,34 @@ export default function AdminProductsPage() {
     );
   };
 
+const setDataForSingleProductWithVariants = (product) => {
+  // Check if state is already initialized
+  const isStateEmpty = Object.keys(stateVariableForDataForSingleProductWithVariants).length === 0;
+  
+  if (!isStateEmpty) {
+    console.log("State already initialized, not resetting values");
+    return; // Don't reinitialize if state already has data
+  }
+  
+  console.log("🔵 Initializing empty state for product:", product);
+  const dataForSingleProductWithVariants = {};
+  product.variants.forEach(variant => {
+    dataForSingleProductWithVariants[variant._id] = {}
+    variant.moreDetails.forEach(details => {
+      dataForSingleProductWithVariants[variant._id][details._id] = {}
+      dataForSingleProductWithVariants[variant._id][details._id][details.size._id] = "";
+    });
+  });
+  console.log("🟢 Setting state to:", dataForSingleProductWithVariants);
+  setStateVariableForDataForSingleProductWithVariants(dataForSingleProductWithVariants);
+}
+
+  useEffect(() => {
+    console.log("Single product")
+    console.log(stateVariableForDataForSingleProductWithVariants);
+  }, [stateVariableForDataForSingleProductWithVariants])
+  
+
   if (loading) return <div>Loading the products</div>;
   if (error) return <div>Error</div>;
 
@@ -95,18 +124,27 @@ export default function AdminProductsPage() {
 
     // Function that will update only single stock
     const handleUpdateStock = async () => {
-  if (!isValidStock) return; // Stop if the number isn’t good
+  // if (!isValidStock) return; // Stop if the number isn’t good
 
   // Show the kid we’re working (like a spinning toy)
   setIsLoading(true);
 
   try {
     // Send only the toy ID and the new number to the toy store
-    const dataToSend = {
+    let dataToSend = {}
+    if(product.hasVariants) {
+      dataToSend = {
+        productId: product._id,
+        updatedStock: "",
+        productData: stateVariableForDataForSingleProductWithVariants
+      }
+    } else {
+    dataToSend = {
       productId: product._id, // Just the toy’s ID
       updatedStock: parseInt(stockTextfield), // Make sure it’s a number
+      productData: {}
     };
-
+  }
     // Talk to the toy store
     const res = await axios.post(
       'http://localhost:3000/api/product/restock',
@@ -121,11 +159,13 @@ export default function AdminProductsPage() {
       onClose(); // Close the toy box
     } else {
       // If the toy store said “No,” show a warning
-      setError("Oops, couldn’t save the toys! Try again.");
+      // setError("Oops, couldn’t save the toys! Try again.");
+      console.log("Not happening")
     }
   } catch (error) {
     // If something broke, tell the kid what happened
-    setError("Something went wrong with the toy store: " + error.message);
+    // setError("Something went wrong with the toy store: " + error.message);
+    console.log(error.message);
   } finally {
     // Stop the spinning toy
     setIsLoading(false);
@@ -137,7 +177,7 @@ const handleUpdateMultipleStock = async () => {
   setIsLoading(true);
 
   try{
-    const res = await axios.post('http://localhost:3000/api/product/restock', multipleProductsToRestock, {
+    const res = await axios.post('http://localhost:3000/api/product/mass-restock', multipleProductsToRestock, {
       withCredentials: true,
     });
     if(res.status === 200) {
@@ -276,6 +316,8 @@ const handleUpdateMultipleStock = async () => {
               
                 {product.variants.map((variant) => {
                   return <div key={variant._id}>
+                    <img src={getImageUrl(product)} alt="" />
+                    <p>Product Name: {product.name}</p>
                     <p>Update quntity for</p>
                     Variant Color: {variant.colorName}
                     {variant.moreDetails.map((details) => {
@@ -285,11 +327,32 @@ const handleUpdateMultipleStock = async () => {
                       <p>
                         Enter stock to update
                       </p>
-                        <input key={details.size._id} type="text" name="" id="" /></div>
+                       <input 
+  key={details.size._id} 
+  type="text" 
+  name={details.size._id} 
+  id="" 
+  value={stateVariableForDataForSingleProductWithVariants[variant._id]?.[details._id]?.[details.size._id] || ""}
+  onChange={(e) => {
+    setStateVariableForDataForSingleProductWithVariants(prevState => ({
+      ...prevState,
+      [variant._id]: {
+        ...prevState[variant._id],
+        [details._id]: {
+          ...(prevState[variant._id]?.[details._id] || {}), // Safe spreading with fallback
+          [details.size._id]: e.target.value
+        }
+      }
+    }));
+  }}
+/>
+                        </div>
                       )
                     })}
                     </div>
-                })}
+                })
+                }
+                {/* <button onClick={() => {setDataForSingleProductWithVariants(product)}}>stock</button> */}
               </div>) : (<div className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">
                   <img
@@ -327,12 +390,12 @@ const handleUpdateMultipleStock = async () => {
               </button>
               <button
                 onClick={handleUpdateStock}
-                disabled={!isValidStock}
-                className={`flex-1 px-4 py-2 rounded-md transition-colors ${
-                  isValidStock
-                    ? "bg-blue-600 text-white hover:bg-blue-700"
-                    : "bg-gray-300 text-gray-500 cursor-not-allowed"
-                }`}
+                // disabled={!isValidStock}
+                // className={`flex-1 px-4 py-2 rounded-md transition-colors ${
+                //   isValidStock
+                //     ? "bg-blue-600 text-white hover:bg-blue-700"
+                //     : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                // }`}
               >
                 Update Stock
               </button>

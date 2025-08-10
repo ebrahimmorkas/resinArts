@@ -174,43 +174,120 @@ const fetchProducts = async (req, res) => {
   }
 }
 
-// const restock = async (req, res) => {
-//   try {
-//     const { productId, updatedStock } = req.body;
+// Function that will restock products that are single. (Both condition that is variants and non-variant product will be handled over here)
+const restock = async (req, res) => {
+  console.log("Request received")
+  try {
+    const { productId, updatedStock, productData } = req.body;
 
-//     // Validate input
-//     if (!productId || typeof updatedStock !== "number") {
-//       return res.status(400).json({ message: "Invalid input data" });
-//     }
+    if(Object.keys(productData).length === 0) {
+      console.log("Request received for product without variants")
+// The product does not have any variants
+    // Validate input
+    if (!productId || typeof updatedStock !== "number") {
+      return res.status(400).json({ message: "Invalid input data" });
+    }
 
-//     // Find the product
-//     const product = await Product.findById(productId);
-//     if (!product) {
-//       return res.status(404).json({ message: "Product not found" });
-//     }
+    // Find the product
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: "Product not found" });
+    }
 
-//     // Calculate new stock
-//     const newStock = product.stock + updatedStock;
+    // Calculate new stock
+    const newStock = product.stock + updatedStock;
 
-//     // Update product
-//     const updatedProduct = await Product.findByIdAndUpdate(
-//       productId,
-//       { $set: { stock: newStock } },
-//       { new: true }
-//     );
+    // Update product
+    const updatedProduct = await Product.findByIdAndUpdate(
+      productId,
+      { $set: { stock: newStock } },
+      { new: true }
+    );
 
-//     return res.status(200).json({
-//       message: "Stock updated successfully",
-//       product: updatedProduct
-//     });
+    return res.status(200).json({
+      message: "Stock updated successfully",
+      product: updatedProduct
+    });
+  } else {
+    // The product have variants
+    console.log("Request received for product with variants")
+    const product = await Product.findById(productId)
+    if(!product) {
+      return res.status(400).json({message: "Product not found"});
+    }
 
-//   } catch (error) {
-//     console.error("Restock error:", error);
-//     return res.status(500).json({ message: "Internal Server Error" });
-//   }
-// };
+    console.log(productData)
+    Object.entries(productData).forEach(([variantID, variantData]) => {
+      console.log(variantID)
+      console.log(variantData)
 
-const restock = (req, res) => {
+      Object.entries(variantData).forEach(([detailsID, detailsData]) => {
+        console.log(detailsID)
+        console.log(detailsData)
+
+        Object.entries(detailsData).forEach(([sizeID, stockData]) => {
+          console.log(sizeID)
+          console.log(stockData)
+          const s_id = new mongoose.Types.ObjectId(sizeID);
+          if(stockData === "") {
+              // console.log("Empty data")
+
+              // Nothing has been filled in stock field
+            } else {
+              // console.log("Heres some data");
+
+              // Theere some data in stock field
+              // Implement update logic
+              product.variants.forEach((variant) => {
+                variant.moreDetails.forEach(async (details) => {
+                  if(details.size._id.toString() === s_id.toString()) {
+                    console.log("IDs matched")
+                    console.log(details.stock)
+                    const oldStock = parseInt(details.stock);
+                    const newStock = parseInt(stockData);
+                    const updatedStock = oldStock + newStock;
+                    try {
+                    const updatedProduct = await Product.updateOne(
+                      {_id: product._id},
+                      { $set: {
+                        "variants.$[v].moreDetails.$[md].stock": updatedStock,
+                        "variants.$[v].moreDetails.$[md].lastRestockedAt": new Date()
+                      } },
+                      {
+                        arrayFilters: [
+                          {"v._id": variantID},
+                          {"md._id": detailsID}
+                        ]
+                      }
+                    )
+
+                    return res.status(200).json({message: "Product updated successfully"})
+                  } catch(error) {
+                    return res.status(500).json({message: "There was problem while updating data"})
+                  }
+                  } else {
+                    console.log('IDs mismatch');
+                    console.log(details.size._id)
+                    console.log(typeof(details.size._id))
+                    console.log(s_id)
+                    console.log(typeof(s_id))
+                  }
+                })
+                // console.log(variant)
+              })
+            }
+        });
+      })
+    })
+  }
+
+  } catch (error) {
+    console.error("Restock error:", error);
+    return res.status(500).json({ message: "Internal Server Error" });
+  }
+};
+
+const massRestock = (req, res) => {
   // console.log(req.body);
   const data = req.body;
   // console.log(typeof(data));
@@ -276,6 +353,8 @@ const restock = (req, res) => {
                         ]
                       }
                     )
+
+                    return res.status(200).json({message: "Product updated successfully"})
                   } catch(error) {
                     return res.status(500).json({message: "There was problem while updating data"})
                   }
@@ -330,5 +409,6 @@ const restock = (req, res) => {
 module.exports = {
   addProduct: [upload.any(), addProduct],
   fetchProducts,
-  restock
+  restock,
+  massRestock
 }
