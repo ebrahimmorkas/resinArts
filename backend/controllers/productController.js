@@ -260,8 +260,7 @@ const restock = async (req, res) => {
                         ]
                       }
                     )
-
-                    return res.status(200).json({message: "Product updated successfully"})
+                    return res.status(200).json({message: "Product Updated successfully"});
                   } catch(error) {
                     return res.status(500).json({message: "There was problem while updating data"})
                   }
@@ -354,7 +353,7 @@ const massRestock = (req, res) => {
                       }
                     )
 
-                    return res.status(200).json({message: "Product updated successfully"})
+                    // return res.status(200).json({message: "Product updated successfully"})
                   } catch(error) {
                     return res.status(500).json({message: "There was problem while updating data"})
                   }
