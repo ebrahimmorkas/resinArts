@@ -692,21 +692,83 @@ const handleUpdateMultipleStock = async () => {
      (<div className="border-2">
           <img src={getImageUrl(product)} alt="" />
           <p>{product.name}</p>
-          <p>Enter the quantity to update.</p>
-          <p>Current Quantity: {product.stock}</p>
+          <p>Current Price: {product.price}</p>
+          <p>Enter the discounted price</p>
           <input 
   type="text" 
-  value={multipleProductsToRestock[product._id]['stock']} 
+  value={multipleProductsForRevisedRate[product._id]['price']} 
   onChange={(e) => {
-    setMultipleProductsToRestock(prev => ({
+    setMultipleProductsForRevisedRate(prev => ({
       ...prev,
       [product._id]: {
         ...prev[product._id],
-        stock: e.target.value
+        price: e.target.value
+      }
+    }));
+
+
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        discountPrice: e.target.value
       }
     }));
   }}
 />
+
+<p>Discount start date</p>
+<input 
+  type="datetime-local" 
+  name="" 
+  id="" 
+  value={multipleProductsForRevisedRate[product._id]["discountStartDate"] || ""}
+  onChange={(e) => {
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        "discountStartDate": e.target.value
+      }
+    }));
+  }}
+/>              
+
+<p>Discount end date</p>
+<input 
+  type="datetime-local" 
+  name="" 
+  id="" 
+  value={multipleProductsForRevisedRate[product._id]["discountEndDate"] || ""}
+  onChange={(e) => {
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        "discountEndDate": e.target.value
+      }
+    }));
+  }}
+/> 
+
+<select 
+  name="" 
+  id=""
+  value={multipleProductsForRevisedRate[product._id]["comeBackToOriginalPrice"] || ""}
+  onChange={(e) => {
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        "comeBackToOriginalPrice": e.target.value
+      }
+    }));
+  }}
+>
+  <option value="">Select option</option>
+  <option value="yes">Yes</option>
+  <option value="no">No</option>
+</select>   
            </div>)
       })}
       <button onClick={handleUpdateMultipleStock}>Update</button>
