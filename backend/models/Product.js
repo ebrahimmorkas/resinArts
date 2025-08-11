@@ -28,6 +28,10 @@ const moreDetailsSchema = mongoose.Schema({
   // Fields for price/stock if they are specific to this moreDetails section
   price: { type: Number, required: false },
   stock: { type: Number, required: false },
+  discountStartDate: {type: Date, required: false, default: null},
+    discountEndDate: {type: Date, required: false, default: null},
+    discountPrice: {type: Number, required: false, default: ""},
+    comeBackToOriginalPrice: {type: Boolean, required: false, default: null},
   bulkPricingCombinations: [bulkPricingSchema],
 })
 
@@ -54,6 +58,10 @@ const productSchema = mongoose.Schema(
     productDetails: [keyValueSchema],
     stock: { type: Number, required: false, default: "" }, // Required if no variants
     price: { type: Number, required: false, default: "" }, // Required if no variants
+    discountStartDate: {type: Date, required: false, default: null},
+    discountEndDate: {type: Date, required: false, default: null},
+    discountPrice: {type: Number, required: false, default: ""},
+    comeBackToOriginalPrice: {type: Boolean, required: false, default: null},
     image: { type: String, required: false, default: "" }, // Main product image URL (Cloudinary)
     additionalImages: [String], // Array of Cloudinary URLs for basic product
     bulkPricing: [bulkPricingSchema], // Bulk pricing for basic product

@@ -1,8 +1,6 @@
-const { default: mongoose } = require("mongoose")
 const Product = require("../models/Product")
 const { cloudinary } = require("../utils/cloudinary")
 const multer = require("multer")
-const e = require("express")
 
 // Configure multer for in-memory storage to handle file uploads
 const storage = multer.memoryStorage()
@@ -122,11 +120,27 @@ const addProduct = async (req, res) => {
                   ? md.optionalDetails
                   : md.optionalDetails.filter((od) => od.key && od.value)
 
+              // Determine price, stock, and bulk pricing for this specific moreDetails entry
+              // If 'isPriceSame' is 'yes' or there's only one size section, use common price/bulk pricing
+              const finalPrice =
+                variant.isPriceSame === "yes" || variant.moreDetails.length === 1 ? variant.commonPrice : md.price
+              const finalBulkPricingCombinations =
+                variant.isPriceSame === "yes" || variant.moreDetails.length === 1
+                  ? variant.commonBulkPricingCombinations.filter((bpc) => bpc.wholesalePrice && bpc.quantity)
+                  : md.bulkPricingCombinations.filter((bpc) => bpc.wholesalePrice && bpc.quantity)
+
+              // If 'isStockSame' is 'yes' or there's only one size section, use common stock
+              const finalStock =
+                variant.isStockSame === "yes" || variant.moreDetails.length === 1 ? variant.commonStock : md.stock
+
               return {
                 ...md,
                 additionalImages: mdAdditionalImagesUrls, // Use the URLs from uploaded files
                 optionalDetails: processedOptionalDetails, // Use processed optional details
                 size: processedSize, // Use the processed size object
+                price: finalPrice, // Always include price
+                stock: finalStock, // Always include stock
+                bulkPricingCombinations: finalBulkPricingCombinations, // Always include bulk pricing
               }
             }),
           )
@@ -144,6 +158,11 @@ const addProduct = async (req, res) => {
             ...variant,
             variantImage: variantImageUrl,
             moreDetails: processedMoreDetails,
+            // Remove commonPrice, commonStock, commonBulkPricingCombinations from the variant object itself
+            // as they are now propagated to each moreDetails entry
+            commonPrice: undefined,
+            commonStock: undefined,
+            commonBulkPricingCombinations: undefined,
           }
         }),
       )
@@ -161,6 +180,12 @@ const addProduct = async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: error.message })
   }
 }
+
+// Export addProduct with upload.any() middleware directly
+module.exports = {
+  addProduct: [upload.any(), addProduct],
+}
+
 
 const fetchProducts = async (req, res) => {
   try {
