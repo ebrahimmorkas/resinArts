@@ -19,11 +19,14 @@ export default function AdminProductsPage() {
 
   // Starting of state variables for revised rate functionality
   const [showRevisedRateModal, setShowRevisedRateModal] = useState(false);
+  const [multipleProductsForRevisedRate, setMultipleProductsForRevisedRate] = useState({});
   // Ending of state variables for revised rate functionality
   
   // Start of useEffect that will handle the selection and deselection of products selected through checkbox and also update state variable mutipleProductsToRestock
   useEffect(() => {
     console.log(selectedProducts)
+
+    // Updating state variable for Restock
     const newMultipleProductsToRestock = {}
     selectedProducts.forEach(product => {
       newMultipleProductsToRestock[product._id] = {};
@@ -47,8 +50,42 @@ export default function AdminProductsPage() {
         newMultipleProductsToRestock[product._id]['stock'] = "";
       }
     });
-
     setMultipleProductsToRestock(newMultipleProductsToRestock);
+
+    // Updating the state variable for Revised Rate
+    const newMultipleProductsForRevisedRate = {}
+    selectedProducts.forEach(product => {
+      newMultipleProductsForRevisedRate[product._id] = {};
+      if(product.hasVariants)  {
+        // It has variants
+
+        // Now creating the variant ID's
+        product.variants.forEach(variant => {
+          newMultipleProductsForRevisedRate[product._id][variant._id] = {}
+          // Now creating the size ID's
+          variant.moreDetails.forEach(details => {
+            newMultipleProductsForRevisedRate[product._id][variant._id][details._id] = {};
+            newMultipleProductsForRevisedRate[product._id][variant._id][details._id][details.size._id] = "";
+            newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["discountStartDate"] = null;
+              newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["discountEndDate"] = null;
+              newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["discountPrice"] = "";
+              newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["comeBackToOriginalPrice"] = null; 
+          });
+        }) 
+      } else {
+        // It does not have variants
+
+        // Take the id and assign the stock
+        newMultipleProductsForRevisedRate[product._id] = {};
+        newMultipleProductsForRevisedRate[product._id]['price'] = "";
+         newMultipleProductsForRevisedRate[product._id]["discountStartDate"] = null;
+              newMultipleProductsForRevisedRate[product._id]["discountEndDate"] = null;
+              newMultipleProductsForRevisedRate[product._id]["discountPrice"] = "";
+              newMultipleProductsForRevisedRate[product._id]["comeBackToOriginalPrice"] = null; 
+      }
+    });
+    setMultipleProductsForRevisedRate(newMultipleProductsForRevisedRate)
+
 
   }, [selectedProducts]);
 // End of useEffect that will handle the selection and deselection of products selected through checkbox and also update state variable mutipleProductsToRestock
@@ -59,6 +96,13 @@ export default function AdminProductsPage() {
     console.log(multipleProductsToRestock)
   }, [multipleProductsToRestock])
 // End of useEffect that will only pront state variable 'multipleProductsToRestock'
+
+// Start of useEffect that will only pront state variable 'multipleProductsForRevisedRate'
+  useEffect(() => {
+    console.log("Multiple products for revised rate")
+    console.log(multipleProductsForRevisedRate)
+  }, [multipleProductsForRevisedRate])
+// End of useEffect that will only pront state variable 'multipleProductsForRevisedRate'
 
   // Function to check if product exists
   const doesProductExist = (product) => {
@@ -488,7 +532,7 @@ const handleUpdateMultipleStock = async () => {
   setIsLoading(true);
 
   try{
-    const res = await axios.post('http://localhost:3000/api/product/mass-revised-rate', multipleProductsToRestock, {
+    const res = await axios.post('http://localhost:3000/api/product/mass-revised-rate', multipleProductsForRevisedRate, {
       withCredentials: true,
     });
     if(res.status === 200) {
@@ -531,13 +575,13 @@ const handleUpdateMultipleStock = async () => {
           {variant.moreDetails.map(details => {
             return (
               <div key={details._id}>
-                <p>Current stock {details.size.stock}</p>
-              <p>Enter the quantity to update for size : {details.size.length} X {details.size.breadth} X {details.size.height}</p>
+              <p>Enter the discounted price for size : {details.size.length} X {details.size.breadth} X {details.size.height}</p>
+                <p>Current price {details.price}</p>
               <input 
   type="text" 
-  value={multipleProductsToRestock[product._id][variant._id][details._id][details.size._id]} 
+  value={multipleProductsForRevisedRate[product._id][variant._id][details._id][details.size._id]} 
   onChange={(e) => {
-    setMultipleProductsToRestock(prev => ({
+    setMultipleProductsForRevisedRate(prev => ({
       ...prev,
       [product._id]: {
         ...prev[product._id],
@@ -550,9 +594,93 @@ const handleUpdateMultipleStock = async () => {
         }
       }
     }));
+
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        [variant._id]: {
+          ...prev[product._id][variant._id],
+          [details._id]: {
+            ...prev[product._id][variant._id][details._id],
+            "discountPrice": e.target.value
+          }
+        }
+      }
+    }));
   }}
 />
-              </div>
+<p>Discount start date</p>
+<input 
+  type="datetime-local" 
+  name="" 
+  id="" 
+  value={multipleProductsForRevisedRate[product._id][variant._id][details._id]["discountStartDate"] || ""}
+  onChange={(e) => {
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        [variant._id]: {
+          ...prev[product._id][variant._id],
+          [details._id]: {
+            ...prev[product._id][variant._id][details._id],
+            "discountStartDate": e.target.value
+          }
+        }
+      }
+    }));
+  }}
+/>              
+
+<p>Discount end date</p>
+<input 
+  type="datetime-local" 
+  name="" 
+  id="" 
+  value={multipleProductsForRevisedRate[product._id][variant._id][details._id]["discountEndDate"] || ""}
+  onChange={(e) => {
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        [variant._id]: {
+          ...prev[product._id][variant._id],
+          [details._id]: {
+            ...prev[product._id][variant._id][details._id],
+            "discountEndDate": e.target.value
+          }
+        }
+      }
+    }));
+  }}
+/> 
+
+<select 
+  name="" 
+  id=""
+  value={multipleProductsForRevisedRate[product._id][variant._id][details._id]["comeBackToOriginalPrice"] || ""}
+  onChange={(e) => {
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        [variant._id]: {
+          ...prev[product._id][variant._id],
+          [details._id]: {
+            ...prev[product._id][variant._id][details._id],
+            "comeBackToOriginalPrice": e.target.value
+          }
+        }
+      }
+    }));
+  }}
+>
+  <option value="">Select option</option>
+  <option value="yes">Yes</option>
+  <option value="no">No</option>
+</select>            
+</div>
 
             )
           })}
@@ -641,9 +769,9 @@ const handleUpdateMultipleStock = async () => {
                     {variant.moreDetails.map((details) => {
                       // return console.log(details.size.length)
                       return (<div key={details._id}><p>{details.size.length} X {details.size.breadth} X {details.size.height}</p>
-                      <p>Current stock{details.stock}</p>
+                      <p>Current price{details.price}</p>
                       <p>
-                        Enter stock to update
+                        Enter discounted price
                       </p>
                        <input 
   key={details.size._id} 

@@ -28,6 +28,7 @@ const moreDetailsSchema = mongoose.Schema({
   // Fields for price/stock if they are specific to this moreDetails section
   price: { type: Number, required: false },
   stock: { type: Number, required: false },
+  lastRestockedAt: {type: Date, required: false, default: null},
   discountStartDate: {type: Date, required: false, default: null},
     discountEndDate: {type: Date, required: false, default: null},
     discountPrice: {type: Number, required: false, default: ""},
@@ -58,6 +59,7 @@ const productSchema = mongoose.Schema(
     productDetails: [keyValueSchema],
     stock: { type: Number, required: false, default: "" }, // Required if no variants
     price: { type: Number, required: false, default: "" }, // Required if no variants
+    lastRestockedAt: {type: Date, required: false, default: null},
     discountStartDate: {type: Date, required: false, default: null},
     discountEndDate: {type: Date, required: false, default: null},
     discountPrice: {type: Number, required: false, default: ""},

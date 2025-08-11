@@ -1,6 +1,8 @@
+const { default: mongoose } = require("mongoose")
 const Product = require("../models/Product")
 const { cloudinary } = require("../utils/cloudinary")
 const multer = require("multer")
+const e = require("express")
 
 // Configure multer for in-memory storage to handle file uploads
 const storage = multer.memoryStorage()
@@ -432,123 +434,245 @@ const massRestock = (req, res) => {
 
 // Start of function for revising rate for multiple products
 const massRevisedRate = (req, res) => {
-  // console.log(req.body);
+  console.log("Revised rate request received")
+  console.log(req.body);
   const data = req.body;
-  // console.log(typeof(data));
-  try{
-    Object.entries(data).forEach(async ([productID, productData]) => {
+  
+  try {
+    // Use Promise.all to properly handle async operations
+    const updatePromises = Object.entries(data).map(async ([productID, productData]) => {
       console.log(productID);
       console.log("Product data starts here")
       console.log(productData);
       console.log("Product data ends here")
-      console.log(typeof(productData))
 
       const product = await Product.findById(productID);
-      if(product) {
-      if(product.hasVariants) {
-        const p_id = new mongoose.Types.ObjectId(productID);
-        Object.entries(productData).forEach(([variantID, variantData]) => {
-          const v_id = new mongoose.Types.ObjectId(variantID);
+      if (!product) {
+        console.log(`Product not found for ID: ${productID}`);
+        return { success: false, productID, error: "Product not found" };
+      }
+
+      if (product.hasVariants) {
+        // Handle products with variants
+        const variantUpdatePromises = Object.entries(productData).map(async ([variantID, variantData]) => {
           console.log("Variant data starts here")
           console.log(variantData);
           console.log("Variant data ends here")
 
-          Object.entries(variantData).forEach(([detailsID, detailsData]) => {
-            const details_id = new mongoose.Types.ObjectId(detailsID);
+          const detailsUpdatePromises = Object.entries(variantData).map(async ([detailsID, detailsData]) => {
             console.log("details data starts here")
             console.log(detailsData)
-            console.log(typeof(detailsData))
             console.log("details data ends here")
 
-            Object.entries(detailsData).forEach(([sizeID, priceData]) => {
+            // Extract discount/pricing data
+            const { 
+              discountStartDate, 
+              discountEndDate, 
+              discountPrice, 
+              comeBackToOriginalPrice,
+              ...sizeData 
+            } = detailsData;
+
+            // Process only the size data (ObjectId keys)
+            const sizeUpdatePromises = Object.entries(sizeData).map(async ([sizeID, priceData]) => {
+              if (!mongoose.Types.ObjectId.isValid(sizeID)) {
+                console.log(`Invalid ObjectId: ${sizeID}, skipping...`);
+                return { success: false, error: "Invalid ObjectId" };
+              }
+
               const s_id = new mongoose.Types.ObjectId(sizeID);
               console.log("Price data starts here")
               console.log(priceData);
-              console.log(typeof(priceData));
               console.log("Price data ends here")
-               if(priceData === "") {
-              // console.log("Empty data")
 
-              // Nothing has been filled in stock field
-            } else {
-              // console.log("Heres some data");
+              if (priceData === "" || !priceData) {
+                console.log("Empty price data, skipping...");
+                return { success: true, skipped: true };
+              }
 
-              // Theere some data in stock field
-              // Implement update logic
-              product.variants.forEach((variant) => {
-                variant.moreDetails.forEach(async (details) => {
-                  if(details.size._id.toString() === s_id.toString()) {
-                    console.log("IDs matched")
-                    console.log(details.price)
-                    const oldPrice = parseInt(details.price);
-                    const newPrice = parseInt(priceData);
-                    const updatedPrice = oldPrice + newPrice;
-                    try {
-                    const updatedProduct = await Product.updateOne(
-                      {_id: product._id},
-                      { $set: {
-                        "variants.$[v].moreDetails.$[md].price": updatedPrice,
-                        "variants.$[v].moreDetails.$[md].discountStartDate": new Date(),
-                        "variants.$[v].moreDetails.$[md].discountEndDate": new Date(),
-                        "variants.$[v].moreDetails.$[md].discountPrice": updatedPrice
-                      } },
-                      {
-                        arrayFilters: [
-                          {"v._id": variantID},
-                          {"md._id": detailsID}
-                        ]
-                      }
-                    )
+              // Find the specific variant and details to get current price
+              const variant = product.variants.find(v => v._id.toString() === variantID);
+              if (!variant) {
+                console.log("Variant not found");
+                return { success: false, error: "Variant not found" };
+              }
 
-                    // return res.status(200).json({message: "Product updated successfully"})
-                  } catch(error) {
-                    return res.status(500).json({message: "There was problem while updating data"})
+              const details = variant.moreDetails.find(md => md._id.toString() === detailsID);
+              if (!details) {
+                console.log("Details not found");
+                return { success: false, error: "Details not found" };
+              }
+
+              const sizeDetail = details.size._id.toString() === s_id.toString() ? details : null;
+              if (!sizeDetail) {
+                console.log("Size detail not found");
+                return { success: false, error: "Size detail not found" };
+              }
+
+              const oldPrice = parseFloat(sizeDetail.price);
+              const newDiscountPrice = parseFloat(priceData);
+
+              // Validation: discount price should be less than original price
+              if (newDiscountPrice >= oldPrice) {
+                console.log("Discounted price cannot be greater than or equal to original price");
+                return { success: false, error: "Invalid discount price" };
+              }
+
+              try {
+                console.log("Updating the product");
+                
+                // Prepare update object
+                let updateObj = {
+                  "variants.$[v].moreDetails.$[md].discountPrice": newDiscountPrice,
+                };
+
+                // Add other discount fields if they exist
+                if (discountStartDate) {
+                  updateObj["variants.$[v].moreDetails.$[md].discountStartDate"] = new Date(discountStartDate);
+                }
+                if (discountEndDate) {
+                  updateObj["variants.$[v].moreDetails.$[md].discountEndDate"] = new Date(discountEndDate);
+                }
+                if (comeBackToOriginalPrice !== null && comeBackToOriginalPrice !== undefined) {
+                  const shouldComeBack = comeBackToOriginalPrice === 'yes';
+                  updateObj["variants.$[v].moreDetails.$[md].comeBackToOriginalPrice"] = shouldComeBack;
+                  
+                  // If comeBackToOriginalPrice is false (no), update the actual price as well
+                  if (!shouldComeBack) {
+                    updateObj["variants.$[v].moreDetails.$[md].price"] = newDiscountPrice;
                   }
-                  } else {
-                    console.log('IDs mismatch');
-                    console.log(details.size._id)
-                    console.log(typeof(details.size._id))
-                    console.log(s_id)
-                    console.log(typeof(s_id))
-                  }
-                })
-                // console.log(variant)
-              })
-            }
-            })
-            
+                }
 
-           
-          })
-        })
+                const updatedProduct = await Product.updateOne(
+                  { _id: product._id },
+                  { $set: updateObj },
+                  {
+                    arrayFilters: [
+                      { "v._id": new mongoose.Types.ObjectId(variantID) },
+                      { "md._id": new mongoose.Types.ObjectId(detailsID) }
+                    ]
+                  }
+                );
+
+                return { success: true, updated: updatedProduct.modifiedCount > 0 };
+
+              } catch (error) {
+                console.error("Error updating variant product:", error);
+                return { success: false, error: error.message };
+              }
+            });
+
+            const sizeResults = await Promise.all(sizeUpdatePromises);
+            return { success: true, sizeResults };
+          });
+
+          const detailsResults = await Promise.all(detailsUpdatePromises);
+          return { success: true, detailsResults };
+        });
+
+        const variantResults = await Promise.all(variantUpdatePromises);
+        return { success: true, productID, variantResults };
+
       } else {
-        // Product does not have any variants
-          console.log(productData)
-          console.log(typeof(productData))
-          Object.values(productData).forEach(async (price) => {
-            console.log(price);
-            try {
-            const updatedPrice = parseInt(product.price) + parseInt(price);
-            const updatedProduct = await Product.findByIdAndUpdate(
-      productID,
-      { $set: { stock: updatedPrice,
-        discountStartDate: new Date(),
-        discountEndDate: new Date(),
-        discountPrice: updatedPrice
-       } },
-      { new: true }
-    );
-  } catch(error) {
-    return res.status(500).json({message: "Could not update product"})
-  }
-          })
+        // Handle products without variants
+        console.log("Processing product without variants");
+        console.log(productData);
+
+        // Extract discount/pricing data for non-variant products
+        const { 
+          discountStartDate, 
+          discountEndDate, 
+          discountPrice, 
+          comeBackToOriginalPrice,
+          ...priceData 
+        } = productData;
+
+        // Get the actual price value (should be the only remaining key)
+        const priceValues = Object.values(priceData).filter(val => val !== "");
+        
+        if (priceValues.length === 0) {
+          console.log("No price data to update");
+          return { success: true, skipped: true };
+        }
+
+        const newDiscountPrice = parseFloat(priceValues[0]);
+        const oldPrice = parseFloat(product.price);
+
+        // Validation: discount price should be less than original price
+        if (newDiscountPrice >= oldPrice) {
+          console.log("Discounted price cannot be greater than or equal to original price");
+          return { success: false, error: "Invalid discount price" };
+        }
+
+        try {
+          let updateObj = {
+            discountPrice: newDiscountPrice
+          };
+
+          // Add other discount fields if they exist
+          if (discountStartDate) {
+            updateObj.discountStartDate = new Date(discountStartDate);
+          }
+          if (discountEndDate) {
+            updateObj.discountEndDate = new Date(discountEndDate);
+          }
+          if (comeBackToOriginalPrice !== null && comeBackToOriginalPrice !== undefined) {
+            const shouldComeBack = comeBackToOriginalPrice === 'yes';
+            updateObj.comeBackToOriginalPrice = shouldComeBack;
+            
+            // If comeBackToOriginalPrice is false (no), update the actual price as well
+            if (!shouldComeBack) {
+              updateObj.price = newDiscountPrice;
+            }
+          }
+
+          const updatedProduct = await Product.findByIdAndUpdate(
+            productID,
+            { $set: updateObj },
+            { new: true }
+          );
+
+          return { success: true, productID, updated: !!updatedProduct };
+
+        } catch (error) {
+          console.error("Error updating non-variant product:", error);
+          return { success: false, error: error.message };
+        }
       }
-      }else {
-        console.log(`Product not found for ID: ${productID}`);
-      }
-    })
-  } catch(error) {
-    console.log(error);
+    });
+
+    // Wait for all updates to complete
+    Promise.all(updatePromises)
+      .then(results => {
+        const failures = results.filter(r => !r.success);
+        if (failures.length > 0) {
+          console.error("Some updates failed:", failures);
+          return res.status(400).json({ 
+            message: "Some products failed to update", 
+            failures 
+          });
+        }
+        
+        console.log("All products updated successfully");
+        return res.status(200).json({ 
+          message: "Mass revised rate update completed successfully",
+          results 
+        });
+      })
+      .catch(error => {
+        console.error("Error in mass revised rate:", error);
+        return res.status(500).json({ 
+          message: "Error processing mass revised rate",
+          error: error.message 
+        });
+      });
+
+  } catch (error) {
+    console.error("Error in mass revised rate:", error);
+    return res.status(500).json({ 
+      message: "Error processing mass revised rate",
+      error: error.message 
+    });
   }
 }
 // End of function for revising rate for multiple products
