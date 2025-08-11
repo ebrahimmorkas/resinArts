@@ -20,6 +20,12 @@ export default function AdminProductsPage() {
   // Starting of state variables for revised rate functionality
   const [showRevisedRateModal, setShowRevisedRateModal] = useState(false);
   const [multipleProductsForRevisedRate, setMultipleProductsForRevisedRate] = useState({});
+  const [RevisedRateProduct, setRevisedRateProduct] = useState(null);
+  const [revisedRateTextfield, setRevisedRateTextfield] = useState("");
+  const [discountStartDate, setDiscountStartDate] = useState(null);
+  const [discountEndDate, setDiscountEndDate] = useState(null);
+  const [discountPrice, setDiscountPrice] = useState(null);
+  const [comeBackToOriginalPrice, setComeBackToOriginalPrice] = useState(null);
   // Ending of state variables for revised rate functionality
   
   // Start of useEffect that will handle the selection and deselection of products selected through checkbox and also update state variable mutipleProductsToRestock
@@ -477,7 +483,7 @@ const handleUpdateMultipleStock = async () => {
 
 
     // Start of function that will update only stock of only one product with and without variants
-    const handleUpdateStock = async () => {
+    const handleUpdateRevisedRate = async () => {
   // if (!isValidStock) return; // Stop if the number isn’t good
 
   // Show the kid we’re working (like a spinning toy)
@@ -495,13 +501,17 @@ const handleUpdateMultipleStock = async () => {
     } else {
     dataToSend = {
       productId: product._id, // Just the toy’s ID
-      updatedStock: parseInt(stockTextfield), // Make sure it’s a number
+      updatedPrice: parseInt(revisedRateTextfield),
+      discountStartDate,
+      discountEndDate,
+      discountPrice: parseInt(revisedRateTextfield),
+      comeBackToOriginalPrice,
       productData: {}
     };
   }
     // Talk to the toy store
     const res = await axios.post(
-      'http://localhost:3000/api/product/restock',
+      'http://localhost:3000/api/product/revised-rate',
       dataToSend,
       { withCredentials: true }
     );
@@ -803,7 +813,6 @@ const handleUpdateMultipleStock = async () => {
     }
 // End of iff products are not selected through checkbox check whether the actual product was passed or not. And if no product show Not found
 
-
 // Start of jsx for showing the modal where user can restock single product with and without stock
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -826,7 +835,7 @@ const handleUpdateMultipleStock = async () => {
                   return <div key={variant._id}>
                     <img src={getImageUrl(product)} alt="" />
                     <p>Product Name: {product.name}</p>
-                    <p>Update quntity for</p>
+                    <p>Revise rate for</p>
                     Variant Color: {variant.colorName}
                     {variant.moreDetails.map((details) => {
                       // return console.log(details.size.length)
@@ -836,24 +845,80 @@ const handleUpdateMultipleStock = async () => {
                         Enter discounted price
                       </p>
                        <input 
-  key={details.size._id} 
   type="text" 
-  name={details.size._id} 
-  id="" 
-  value={stateVariableForDataForSingleProductWithVariants[variant._id]?.[details._id]?.[details.size._id] || ""}
+  value={multipleProductsForRevisedRate[product._id]['price']} 
   onChange={(e) => {
-    setStateVariableForDataForSingleProductWithVariants(prevState => ({
-      ...prevState,
-      [variant._id]: {
-        ...prevState[variant._id],
-        [details._id]: {
-          ...(prevState[variant._id]?.[details._id] || {}), // Safe spreading with fallback
-          [details.size._id]: e.target.value
-        }
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        price: e.target.value
+      }
+    }));
+
+
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        discountPrice: e.target.value
       }
     }));
   }}
 />
+<p>Discount start date</p>
+<input 
+  type="datetime-local" 
+  name="" 
+  id="" 
+  value={multipleProductsForRevisedRate[product._id]["discountStartDate"] || ""}
+  onChange={(e) => {
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        "discountStartDate": e.target.value
+      }
+    }));
+  }}
+/>              
+
+<p>Discount end date</p>
+<input 
+  type="datetime-local" 
+  name="" 
+  id="" 
+  value={multipleProductsForRevisedRate[product._id]["discountEndDate"] || ""}
+  onChange={(e) => {
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        "discountEndDate": e.target.value
+      }
+    }));
+  }}
+/> 
+
+<p>Update to original price after end date?</p>
+<select 
+  name="" 
+  id=""
+  value={multipleProductsForRevisedRate[product._id]["comeBackToOriginalPrice"] || ""}
+  onChange={(e) => {
+    setMultipleProductsForRevisedRate(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        "comeBackToOriginalPrice": e.target.value
+      }
+    }));
+  }}
+>
+  <option value="">Select option</option>
+  <option value="yes">Yes</option>
+  <option value="no">No</option>
+</select> 
                         </div>
                       )
                     })}
@@ -861,7 +926,7 @@ const handleUpdateMultipleStock = async () => {
                 })
                 }
                 {/* <button onClick={() => {setDataForSingleProductWithVariants(product)}}>stock</button> */}
-              </div>) : (<div className="p-4 border border-gray-200 rounded-lg">
+              </div>) : ( <div className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">
                   <img
                     src={getImageUrl(product)}
@@ -870,21 +935,96 @@ const handleUpdateMultipleStock = async () => {
                   />
                   <div className="flex-1">
                     <h3 className="font-medium text-gray-800">{product.name}</h3>
-                    <p className="text-sm text-gray-600">Current Stock: {product.stock}</p>
+                    <p className="text-sm text-gray-600">Current Price: {product.price}</p>
                   </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Update Stock Quantity
+                    Enter discounted price
                   </label>
-                  <input
-                    value={stockTextfield}
-                    onChange={(e) => setStockTextfield(e.target.value)}
-                    type="number"
-                    min="0"
-                    placeholder="Enter quantity to restock"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  />
+                  <p>
+                        Enter discounted price
+                      </p>
+                       <input 
+  type="text" 
+  value={revisedRateTextfield} 
+  onChange={(e) => {
+    // setMultipleProductsForRevisedRate(prev => ({
+    //   ...prev,
+    //   [product._id]: {
+    //     ...prev[product._id],
+    //     price: e.target.value
+    //   }
+    // }));
+
+
+    // setMultipleProductsForRevisedRate(prev => ({
+    //   ...prev,
+    //   [product._id]: {
+    //     ...prev[product._id],
+    //     discountPrice: e.target.value
+    //   }
+    // }));
+
+    setRevisedRateTextfield(e.target.value)
+  }}
+/>
+<p>Discount start date</p>
+<input 
+  type="datetime-local" 
+  name="" 
+  id="" 
+  value={discountStartDate || ""}
+  onChange={(e) => {
+  setDiscountStartDate(e.target.value);
+    // setMultipleProductsForRevisedRate(prev => ({
+    //   ...prev,
+    //   [product._id]: {
+    //     ...prev[product._id],
+    //     "discountStartDate": e.target.value
+    //   }
+    // }));
+  }}
+/>              
+
+<p>Discount end date</p>
+<input 
+  type="datetime-local" 
+  name="" 
+  id="" 
+  value={discountEndDate || ""}
+  onChange={(e) => {
+    // setMultipleProductsForRevisedRate(prev => ({
+    //   ...prev,
+    //   [product._id]: {
+    //     ...prev[product._id],
+    //     "discountEndDate": e.target.value
+    //   }
+    // }));
+    setDiscountEndDate(e.target.value);
+  }}
+/> 
+
+<p>Update to original price after end date?</p>
+<select 
+  name="" 
+  id=""
+  value={comeBackToOriginalPrice || ""}
+  onChange={(e) => {
+    // setMultipleProductsForRevisedRate(prev => ({
+    //   ...prev,
+    //   [product._id]: {
+    //     ...prev[product._id],
+    //     "comeBackToOriginalPrice": e.target.value
+    //   }
+    // }));
+    setComeBackToOriginalPrice(e.target.value)
+  }}
+>
+  <option value="">Select option</option>
+  <option value="yes">Yes</option>
+  <option value="no">No</option>
+</select> 
                 </div>
               </div>)}
               
@@ -897,7 +1037,7 @@ const handleUpdateMultipleStock = async () => {
                 Cancel
               </button>
               <button
-                onClick={handleUpdateStock}
+                onClick={handleUpdateRevisedRate}
                 // disabled={!isValidStock}
                 // className={`flex-1 px-4 py-2 rounded-md transition-colors ${
                 //   isValidStock
@@ -905,7 +1045,7 @@ const handleUpdateMultipleStock = async () => {
                 //     : "bg-gray-300 text-gray-500 cursor-not-allowed"
                 // }`}
               >
-                Update Stock
+                Revise rate
               </button>
             </div>
           </div>
@@ -1014,7 +1154,10 @@ const handleUpdateMultipleStock = async () => {
                         <button className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded-md text-xs font-medium transition-colors">
                           Details
                         </button>
-                        <button className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded-md text-xs font-medium transition-colors">
+                        <button className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded-md text-xs font-medium transition-colors" onClick={() => {
+                        setRevisedRateProduct(product);
+                        setShowRevisedRateModal(true)
+                        }}>
                           Add Revised Rate
                         </button>
                         <button
@@ -1214,8 +1357,8 @@ const handleUpdateMultipleStock = async () => {
           onClose={() => setShowRestockModal(false)}
         />)}
     {showRevisedRateModal && (selectedProducts.length > 0 ? <RevisedRateModal onClose={() => setShowRevisedRateModal(false)} /> : <RevisedRateModal
-          product={restockProduct}
-          onClose={() => setShowRestockModal(false)}
+          product={RevisedRateProduct}
+          onClose={() => setShowRevisedRateModal(false)}
         />)}
     </div>
 

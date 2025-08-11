@@ -675,7 +675,14 @@ const massRevisedRate = (req, res) => {
     });
   }
 }
-// End of function for revising rate for multiple products
+// End of function for revising rate for multiple 
+
+// Start of function that will handle the product without being checked
+const revisedRate = (req, res) => {
+  console.log("Request received for the single product and revised rate");
+  console.log(req.body);
+}
+// End of function that will handle the product without being checked
 
 
 // Export addProduct with upload.any() middleware directly
@@ -684,5 +691,6 @@ module.exports = {
   fetchProducts,
   restock,
   massRestock,
-  massRevisedRate
+  massRevisedRate,
+  revisedRate
 }
