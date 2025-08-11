@@ -286,6 +286,7 @@ const restock = async (req, res) => {
   }
 };
 
+// Start of function to mass restock
 const massRestock = (req, res) => {
   // console.log(req.body);
   const data = req.body;
@@ -402,6 +403,130 @@ const massRestock = (req, res) => {
     console.log(error);
   }
 }
+// End of function to mass restock
+
+// Start of function for revising rate for multiple products
+const massRevisedRate = (req, res) => {
+  // console.log(req.body);
+  const data = req.body;
+  // console.log(typeof(data));
+  try{
+    Object.entries(data).forEach(async ([productID, productData]) => {
+      console.log(productID);
+      console.log("Product data starts here")
+      console.log(productData);
+      console.log("Product data ends here")
+      console.log(typeof(productData))
+
+      const product = await Product.findById(productID);
+      if(product) {
+      if(product.hasVariants) {
+        const p_id = new mongoose.Types.ObjectId(productID);
+        Object.entries(productData).forEach(([variantID, variantData]) => {
+          const v_id = new mongoose.Types.ObjectId(variantID);
+          console.log("Variant data starts here")
+          console.log(variantData);
+          console.log("Variant data ends here")
+
+          Object.entries(variantData).forEach(([detailsID, detailsData]) => {
+            const details_id = new mongoose.Types.ObjectId(detailsID);
+            console.log("details data starts here")
+            console.log(detailsData)
+            console.log(typeof(detailsData))
+            console.log("details data ends here")
+
+            Object.entries(detailsData).forEach(([sizeID, priceData]) => {
+              const s_id = new mongoose.Types.ObjectId(sizeID);
+              console.log("Price data starts here")
+              console.log(priceData);
+              console.log(typeof(priceData));
+              console.log("Price data ends here")
+               if(priceData === "") {
+              // console.log("Empty data")
+
+              // Nothing has been filled in stock field
+            } else {
+              // console.log("Heres some data");
+
+              // Theere some data in stock field
+              // Implement update logic
+              product.variants.forEach((variant) => {
+                variant.moreDetails.forEach(async (details) => {
+                  if(details.size._id.toString() === s_id.toString()) {
+                    console.log("IDs matched")
+                    console.log(details.price)
+                    const oldPrice = parseInt(details.price);
+                    const newPrice = parseInt(priceData);
+                    const updatedPrice = oldPrice + newPrice;
+                    try {
+                    const updatedProduct = await Product.updateOne(
+                      {_id: product._id},
+                      { $set: {
+                        "variants.$[v].moreDetails.$[md].price": updatedPrice,
+                        "variants.$[v].moreDetails.$[md].discountStartDate": new Date(),
+                        "variants.$[v].moreDetails.$[md].discountEndDate": new Date(),
+                        "variants.$[v].moreDetails.$[md].discountPrice": updatedPrice
+                      } },
+                      {
+                        arrayFilters: [
+                          {"v._id": variantID},
+                          {"md._id": detailsID}
+                        ]
+                      }
+                    )
+
+                    // return res.status(200).json({message: "Product updated successfully"})
+                  } catch(error) {
+                    return res.status(500).json({message: "There was problem while updating data"})
+                  }
+                  } else {
+                    console.log('IDs mismatch');
+                    console.log(details.size._id)
+                    console.log(typeof(details.size._id))
+                    console.log(s_id)
+                    console.log(typeof(s_id))
+                  }
+                })
+                // console.log(variant)
+              })
+            }
+            })
+            
+
+           
+          })
+        })
+      } else {
+        // Product does not have any variants
+          console.log(productData)
+          console.log(typeof(productData))
+          Object.values(productData).forEach(async (price) => {
+            console.log(price);
+            try {
+            const updatedPrice = parseInt(product.price) + parseInt(price);
+            const updatedProduct = await Product.findByIdAndUpdate(
+      productID,
+      { $set: { stock: updatedPrice,
+        discountStartDate: new Date(),
+        discountEndDate: new Date(),
+        discountPrice: updatedPrice
+       } },
+      { new: true }
+    );
+  } catch(error) {
+    return res.status(500).json({message: "Could not update product"})
+  }
+          })
+      }
+      }else {
+        console.log(`Product not found for ID: ${productID}`);
+      }
+    })
+  } catch(error) {
+    console.log(error);
+  }
+}
+// End of function for revising rate for multiple products
 
 
 // Export addProduct with upload.any() middleware directly
@@ -409,5 +534,6 @@ module.exports = {
   addProduct: [upload.any(), addProduct],
   fetchProducts,
   restock,
-  massRestock
+  massRestock,
+  massRevisedRate
 }

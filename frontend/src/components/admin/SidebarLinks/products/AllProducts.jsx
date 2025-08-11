@@ -17,6 +17,11 @@ export default function AdminProductsPage() {
   const [multipleProductsToRestock, setMultipleProductsToRestock] = useState({});
   const [stateVariableForDataForSingleProductWithVariants, setStateVariableForDataForSingleProductWithVariants] = useState({});
 
+  // Starting of state variables for revised rate functionality
+  const [showRevisedRateModal, setShowRevisedRateModal] = useState(false);
+  // Ending of state variables for revised rate functionality
+  
+  // Start of useEffect that will handle the selection and deselection of products selected through checkbox and also update state variable mutipleProductsToRestock
   useEffect(() => {
     console.log(selectedProducts)
     const newMultipleProductsToRestock = {}
@@ -46,11 +51,14 @@ export default function AdminProductsPage() {
     setMultipleProductsToRestock(newMultipleProductsToRestock);
 
   }, [selectedProducts]);
+// End of useEffect that will handle the selection and deselection of products selected through checkbox and also update state variable mutipleProductsToRestock
 
+// Start of useEffect that will only pront state variable 'multipleProductsToRestock'
   useEffect(() => {
     console.log("Multiple products to restock")
     console.log(multipleProductsToRestock)
   }, [multipleProductsToRestock])
+// End of useEffect that will only pront state variable 'multipleProductsToRestock'
 
   // Function to check if product exists
   const doesProductExist = (product) => {
@@ -85,6 +93,8 @@ export default function AdminProductsPage() {
     );
   };
 
+
+  // This function is not currenly in use
 const setDataForSingleProductWithVariants = (product) => {
   // Check if state is already initialized
   const isStateEmpty = Object.keys(stateVariableForDataForSingleProductWithVariants).length === 0;
@@ -116,13 +126,13 @@ const setDataForSingleProductWithVariants = (product) => {
   if (loading) return <div>Loading the products</div>;
   if (error) return <div>Error</div>;
 
-  // Restock Modal Component (Single Product Only)
+  // Restock Modal Component
   const RestockModal = ({ product={}, onClose }) => {
     // Validate stock input
     const isValidStock = stockTextfield !== "" && parseInt(stockTextfield) >= 0;
 
 
-    // Function that will update only single stock
+    // Start of function that will update only stock of only one product with and without variants
     const handleUpdateStock = async () => {
   // if (!isValidStock) return; // Stop if the number isn’t good
 
@@ -171,8 +181,9 @@ const setDataForSingleProductWithVariants = (product) => {
     setIsLoading(false);
   }
 };
+// End of function that will update only stock of only one product with and without variants
 
-// Function for updating multiple stocks
+// Start of function for updating multiple stocks with both type of preoducts that is with and without variants.
 const handleUpdateMultipleStock = async () => {
   setIsLoading(true);
 
@@ -190,7 +201,9 @@ const handleUpdateMultipleStock = async () => {
     console.log("jfsdfgrfchwifcjwufhewruyfhqoidgwuydq;.ojdusi9qdwejhfyvctduqwgdsuqyedt6q" + err);
   }
 };
+// End of function for updating multiple stocks with both type of preoducts that is with and without variants.
 
+// Start of jsx for showing modal to restock multiple products with and without variants
     if (selectedProducts.length>0) {
       console.log("For multiple products")
       return (
@@ -275,7 +288,9 @@ const handleUpdateMultipleStock = async () => {
         </div>
       );
     }
+// End of jsx for showing modal to restock multiple products with and without variants
 
+// Start of iff products are not selected through checkbox check whether the actual product was passed or not. And if no product show Not found
     if (!product) {
       return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -296,7 +311,10 @@ const handleUpdateMultipleStock = async () => {
         </div>
       );
     }
+// End of iff products are not selected through checkbox check whether the actual product was passed or not. And if no product show Not found
 
+
+// Start of jsx for showing the modal where user can restock single product with and without stock
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -404,8 +422,311 @@ const handleUpdateMultipleStock = async () => {
         </div>
       </div>
     );
+    // End of jsx for showing the modal where user can restock single product with and without stock
   };
+  // End of restock modal
 
+  // Staart of Revised Rate Modal component
+  const RevisedRateModal = ({ product={}, onClose }) => {
+    // Validate stock input
+    const isValidStock = stockTextfield !== "" && parseInt(stockTextfield) >= 0;
+
+
+    // Start of function that will update only stock of only one product with and without variants
+    const handleUpdateStock = async () => {
+  // if (!isValidStock) return; // Stop if the number isn’t good
+
+  // Show the kid we’re working (like a spinning toy)
+  setIsLoading(true);
+
+  try {
+    // Send only the toy ID and the new number to the toy store
+    let dataToSend = {}
+    if(product.hasVariants) {
+      dataToSend = {
+        productId: product._id,
+        updatedStock: "",
+        productData: stateVariableForDataForSingleProductWithVariants
+      }
+    } else {
+    dataToSend = {
+      productId: product._id, // Just the toy’s ID
+      updatedStock: parseInt(stockTextfield), // Make sure it’s a number
+      productData: {}
+    };
+  }
+    // Talk to the toy store
+    const res = await axios.post(
+      'http://localhost:3000/api/product/restock',
+      dataToSend,
+      { withCredentials: true }
+    );
+
+    // Check if the toy store said “Okay!”
+    if (res.status === 200 || res.status === 201) {
+      console.log(`Saved ${stockTextfield} toys for ${product.name}`);
+      setStockTextfield(""); // Clear the number box
+      onClose(); // Close the toy box
+    } else {
+      // If the toy store said “No,” show a warning
+      // setError("Oops, couldn’t save the toys! Try again.");
+      console.log("Not happening")
+    }
+  } catch (error) {
+    // If something broke, tell the kid what happened
+    // setError("Something went wrong with the toy store: " + error.message);
+    console.log(error.message);
+  } finally {
+    // Stop the spinning toy
+    setIsLoading(false);
+  }
+};
+// End of function that will update only stock of only one product with and without variants
+
+// Start of function for updating multiple price with both type of preoducts that is with and without variants.
+const handleUpdateMultipleStock = async () => {
+  setIsLoading(true);
+
+  try{
+    const res = await axios.post('http://localhost:3000/api/product/mass-revised-rate', multipleProductsToRestock, {
+      withCredentials: true,
+    });
+    if(res.status === 200) {
+      console.log("Updated");
+    }
+    else {
+      console.log("Oops something went wrong")
+    }
+  } catch(err) {
+    console.log("jfsdfgrfchwifcjwufhewruyfhqoidgwuydq;.ojdusi9qdwejhfyvctduqwgdsuqyedt6q" + err);
+  }
+};
+// End of function for updating multiple price with both type of preoducts that is with and without variants.
+
+// Start of jsx for showing modal to restock multiple products with and without variants
+    if (selectedProducts.length>0) {
+      console.log("For multiple products")
+      return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start p-6 pb-4">
+              <h2 className="text-xl font-bold text-gray-800">Revised Rate</h2>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 pb-6 text-center text-gray-600">
+              <div>
+                      {Object.values(selectedProducts).map(product => {
+     return product.hasVariants ? 
+     (<div className="border-2" key={product._id}>
+      <img src={getImageUrl(product)} alt={product.name} />
+      <p>Product Name: {product.name}</p>
+      {product.variants.map(variant => {
+        return (<div key={variant._id}>
+          Variant Name: {variant.colorName}
+          {variant.moreDetails.map(details => {
+            return (
+              <div key={details._id}>
+                <p>Current stock {details.size.stock}</p>
+              <p>Enter the quantity to update for size : {details.size.length} X {details.size.breadth} X {details.size.height}</p>
+              <input 
+  type="text" 
+  value={multipleProductsToRestock[product._id][variant._id][details._id][details.size._id]} 
+  onChange={(e) => {
+    setMultipleProductsToRestock(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        [variant._id]: {
+          ...prev[product._id][variant._id],
+          [details._id]: {
+            ...prev[product._id][variant._id][details._id],
+            [details.size._id]: e.target.value
+          }
+        }
+      }
+    }));
+  }}
+/>
+              </div>
+
+            )
+          })}
+        </div>)
+      })}
+          <p>Enter the quantity to update.</p>
+
+     </div>) : 
+     (<div className="border-2">
+          <img src={getImageUrl(product)} alt="" />
+          <p>{product.name}</p>
+          <p>Enter the quantity to update.</p>
+          <p>Current Quantity: {product.stock}</p>
+          <input 
+  type="text" 
+  value={multipleProductsToRestock[product._id]['stock']} 
+  onChange={(e) => {
+    setMultipleProductsToRestock(prev => ({
+      ...prev,
+      [product._id]: {
+        ...prev[product._id],
+        stock: e.target.value
+      }
+    }));
+  }}
+/>
+           </div>)
+      })}
+      <button onClick={handleUpdateMultipleStock}>Update</button>
+  </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
+// End of jsx for showing modal to restock multiple products with and without variants
+
+// Start of iff products are not selected through checkbox check whether the actual product was passed or not. And if no product show Not found
+    if (!product) {
+      return (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-start p-6 pb-4">
+              <h2 className="text-xl font-bold text-gray-800">Restock Product</h2>
+              <button
+                onClick={onClose}
+                className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+            <div className="px-6 pb-6 text-center text-gray-600">
+              No Product Selected
+            </div>
+          </div>
+        </div>
+      );
+    }
+// End of iff products are not selected through checkbox check whether the actual product was passed or not. And if no product show Not found
+
+
+// Start of jsx for showing the modal where user can restock single product with and without stock
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
+          <div className="flex justify-between items-start p-6 pb-4">
+            <h2 className="text-xl font-bold text-gray-800">Restock Product</h2>
+            <button
+              onClick={onClose}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="px-6 pb-6">
+            <div className="space-y-4">
+              
+              {product.hasVariants ? (<div>
+              
+                {product.variants.map((variant) => {
+                  return <div key={variant._id}>
+                    <img src={getImageUrl(product)} alt="" />
+                    <p>Product Name: {product.name}</p>
+                    <p>Update quntity for</p>
+                    Variant Color: {variant.colorName}
+                    {variant.moreDetails.map((details) => {
+                      // return console.log(details.size.length)
+                      return (<div key={details._id}><p>{details.size.length} X {details.size.breadth} X {details.size.height}</p>
+                      <p>Current stock{details.stock}</p>
+                      <p>
+                        Enter stock to update
+                      </p>
+                       <input 
+  key={details.size._id} 
+  type="text" 
+  name={details.size._id} 
+  id="" 
+  value={stateVariableForDataForSingleProductWithVariants[variant._id]?.[details._id]?.[details.size._id] || ""}
+  onChange={(e) => {
+    setStateVariableForDataForSingleProductWithVariants(prevState => ({
+      ...prevState,
+      [variant._id]: {
+        ...prevState[variant._id],
+        [details._id]: {
+          ...(prevState[variant._id]?.[details._id] || {}), // Safe spreading with fallback
+          [details.size._id]: e.target.value
+        }
+      }
+    }));
+  }}
+/>
+                        </div>
+                      )
+                    })}
+                    </div>
+                })
+                }
+                {/* <button onClick={() => {setDataForSingleProductWithVariants(product)}}>stock</button> */}
+              </div>) : (<div className="p-4 border border-gray-200 rounded-lg">
+                <div className="flex items-start gap-3 mb-3">
+                  <img
+                    src={getImageUrl(product)}
+                    alt={product.name}
+                    className="w-16 h-16 rounded-lg object-cover"
+                  />
+                  <div className="flex-1">
+                    <h3 className="font-medium text-gray-800">{product.name}</h3>
+                    <p className="text-sm text-gray-600">Current Stock: {product.stock}</p>
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Update Stock Quantity
+                  </label>
+                  <input
+                    value={stockTextfield}
+                    onChange={(e) => setStockTextfield(e.target.value)}
+                    type="number"
+                    min="0"
+                    placeholder="Enter quantity to restock"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+              </div>)}
+              
+            </div>
+            <div className="flex gap-3 mt-6">
+              <button
+                onClick={onClose}
+                className="flex-1 px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUpdateStock}
+                // disabled={!isValidStock}
+                // className={`flex-1 px-4 py-2 rounded-md transition-colors ${
+                //   isValidStock
+                //     ? "bg-blue-600 text-white hover:bg-blue-700"
+                //     : "bg-gray-300 text-gray-500 cursor-not-allowed"
+                // }`}
+              >
+                Update Stock
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+    // End of jsx for showing the modal where user can restock single product with and without stock
+  };
+  // End of revised rate component
+
+  // Start of table
   return (
     <div className="min-h-screen bg-gray-50 p-6">
       <div className="max-w-7xl mx-auto">
@@ -420,13 +741,16 @@ const handleUpdateMultipleStock = async () => {
           <div className="flex items-center justify-between">
             <span className="text-blue-800 font-medium">{selectedProducts.length} products selected</span>
             <div className="flex items-center space-x-2">
-              <button className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded-md text-sm font-medium transition-colors">
+              <button className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded-md text-sm font-medium transition-colors" onClick={() => {
+                console.log("Hello bulk actions for revised rates")
+                setShowRevisedRateModal(true)
+              }}>
                 Add Revised Rate
               </button>
               <button
                 className="bg-blue-100 hover:bg-blue-200 text-blue-800 px-3 py-1 rounded-md text-sm font-medium transition-colors"
                 onClick={() => {
-                  console.log("Helo bulk actions")
+                  console.log("Helo bulk actions for restock")
                     setShowRestockModal(true);
                 }}
               >
@@ -699,6 +1023,12 @@ const handleUpdateMultipleStock = async () => {
           product={restockProduct}
           onClose={() => setShowRestockModal(false)}
         />)}
+    {showRevisedRateModal && (selectedProducts.length > 0 ? <RevisedRateModal onClose={() => setShowRevisedRateModal(false)} /> : <RevisedRateModal
+          product={restockProduct}
+          onClose={() => setShowRestockModal(false)}
+        />)}
     </div>
+
   );
+  // End of table
 }
