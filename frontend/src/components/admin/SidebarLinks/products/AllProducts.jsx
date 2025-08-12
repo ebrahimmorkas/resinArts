@@ -26,6 +26,7 @@ export default function AdminProductsPage() {
   const [discountEndDate, setDiscountEndDate] = useState(null);
   const [discountPrice, setDiscountPrice] = useState(null);
   const [comeBackToOriginalPrice, setComeBackToOriginalPrice] = useState(null);
+  const [singleProductDiscountBulkPricing, setSingleProductDiscountBulkPricing] = useState([]);
   // Ending of state variables for revised rate functionality
   
   // Start of useEffect that will handle the selection and deselection of products selected through checkbox and also update state variable mutipleProductsToRestock
@@ -485,7 +486,7 @@ const handleUpdateMultipleStock = async () => {
     const isValidStock = stockTextfield !== "" && parseInt(stockTextfield) >= 0;
 
 
-    // Start of function that will update only stock of only one product with and without variants
+    // Start of function that will update only price of only one product with and without variants
     const handleUpdateRevisedRate = async () => {
   // if (!isValidStock) return; // Stop if the number isn’t good
 
@@ -509,6 +510,7 @@ const handleUpdateMultipleStock = async () => {
       discountEndDate,
       discountPrice: parseInt(revisedRateTextfield),
       comeBackToOriginalPrice,
+      discountBulkPricing: singleProductDiscountBulkPricing,
       productData: {}
     };
   }
@@ -1078,7 +1080,9 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                 })
                 }
                 {/* <button onClick={() => {setDataForSingleProductWithVariants(product)}}>stock</button> */}
-              </div>) : ( <div className="p-4 border border-gray-200 rounded-lg">
+              </div>) 
+              : 
+              ( <div className="p-4 border border-gray-200 rounded-lg">
                 <div className="flex items-start gap-3 mb-3">
                   <img
                     src={getImageUrl(product)}
@@ -1177,6 +1181,53 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
   <option value="yes">Yes</option>
   <option value="no">No</option>
 </select> 
+{/* DISCOUNT BULK PRICING SECTION FOR NON-VARIANTS */}
+<button onClick={() => {
+  setSingleProductDiscountBulkPricing(prev => [
+    ...prev,
+    {id: Date.now(), wholesalePrice: "", quantity: ""}
+  ]);
+}}>
+  Add Tier
+</button>
+
+{singleProductDiscountBulkPricing.length === 0 ? (<p>Nothing</p>) : (
+  singleProductDiscountBulkPricing.map((tier, index) => {
+    return (<div key={index}>
+    Whole sale price<input type="text" name="" id="" value={tier.wholesalePrice} onChange={
+(e) => {
+  setSingleProductDiscountBulkPricing(prev => 
+    prev.map(t => 
+      t.id === tier.id ? {...t, wholesalePrice: e.target.value} : t
+    )
+  )
+}
+    }/>
+    Quantity<input type="text" name="" id="" value={tier.quantity} onChange={
+      (e) => {
+        setSingleProductDiscountBulkPricing(prev => 
+          prev.map(t => 
+            t.id === tier.id ? {...t,quantity: e.target.value} : t
+          )
+        )
+      }
+    }/>
+    <button onClick={
+      () => {
+        setSingleProductDiscountBulkPricing(prev => 
+        prev.filter(t =>
+          t.id !== tier.id
+        )
+      )
+      }
+    }>
+      Delete
+    </button>
+  </div>);
+  })
+  
+)}
+                    {/* End of bulk pricig section for witout variants */}
                 </div>
               </div>)}
               

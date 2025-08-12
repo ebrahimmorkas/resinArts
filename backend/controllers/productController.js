@@ -712,9 +712,75 @@ const massRevisedRate = (req, res) => {
 // End of function for revising rate for multiple 
 
 // Start of function that will handle the product without being checked
-const revisedRate = (req, res) => {
-  console.log("Request received for the single product and revised rate");
-  console.log(req.body);
+const revisedRate = async (req, res) => {
+  console.log("Request received");
+  const {productId, updatedPrice, discountStartDate, discountEndDate, discountPrice, comeBackToOriginalPrice, discountBulkPricing, productData} = req.body;
+  if(Object.keys(productData).length === 0) {
+    console.log("Without varianst")
+    // Updation logic for single product without variants
+    const product = await Product.findById(productId);
+    if(product) {
+      console.log("Product found")
+      // Checking if the discount price entered is greater than the original price store in db.
+      if(parseInt(product.price <= discountPrice)) {
+        console.log("Discount price is greater")
+        return res.status(400).json({message: "Discount price cannot be greater than original price"});
+      } else {
+        console.log("Discount price is smaller")
+        console.log()
+        try {
+          if(comeBackToOriginalPrice === 'yes') {
+            console.log("Selected yes")
+            const updatedProduct = await Product.findByIdAndUpdate(
+              productId,
+              {
+                $set: {
+                  discountPrice,
+                  discountStartDate,
+                  discountEndDate,
+                  discountBulkPricing,
+                  comeBackToOriginalPrice: true,
+                }
+              },
+              {new: true}
+            )
+            console.log("Rate Revised Successfully");
+            return res.status(200).json({message: "Rate revised successfully"});
+          } else {
+            console.log("Selected no");
+            // Change the original price as well
+            const updatedProduct = await Product.findByIdAndUpdate(
+              productId,
+              {
+                $set: {
+                  discountPrice,
+                  discountStartDate,
+                  discountEndDate,
+                  discountBulkPricing,
+                  comeBackToOriginalPrice: false,
+                  price: discountPrice,
+                  bulkPricing: discountBulkPricing
+                }
+              },
+              {new: true}
+            )
+
+            console.log("Rate Revised Successfully");
+            return res.status(200).json({message: "Rate revised successfully"});
+          }
+        } catch(err) {
+          console.log("Something went wrong");
+          console.log(err);
+          return res.status(400).json({message: "Revising rate failed"})
+        }
+      }
+    } else {
+      return res.status(400).json({message: "product with this ID not found"})
+    }
+  } else {
+    // Updation logic for single product with variants
+    console.log("With variants")
+  }
 }
 // End of function that will handle the product without being checked
 
