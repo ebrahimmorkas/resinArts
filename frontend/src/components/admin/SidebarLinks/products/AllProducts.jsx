@@ -27,6 +27,7 @@ export default function AdminProductsPage() {
   const [discountPrice, setDiscountPrice] = useState(null);
   const [comeBackToOriginalPrice, setComeBackToOriginalPrice] = useState(null);
   const [singleProductDiscountBulkPricing, setSingleProductDiscountBulkPricing] = useState([]);
+  const [stateVariableToReviseRateForSingleProductWithVariants, setStateVariableToReviseRateForSingleProductWithVariants] = useState({});
   // Ending of state variables for revised rate functionality
   
   // Start of useEffect that will handle the selection and deselection of products selected through checkbox and also update state variable mutipleProductsToRestock
@@ -499,8 +500,7 @@ const handleUpdateMultipleStock = async () => {
     if(product.hasVariants) {
       dataToSend = {
         productId: product._id,
-        updatedStock: "",
-        productData: stateVariableForDataForSingleProductWithVariants
+        productData: stateVariableToReviseRateForSingleProductWithVariants
       }
     } else {
     dataToSend = {
@@ -540,7 +540,7 @@ const handleUpdateMultipleStock = async () => {
     setIsLoading(false);
   }
 };
-// End of function that will update only stock of only one product with and without variants
+// End of function that will update only price of only one product with and without variants
 
 // Start of function for updating multiple price with both type of preoducts that is with and without variants.
 const handleUpdateMultipleStock = async () => {
@@ -985,100 +985,211 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
               
               {product.hasVariants ? (<div>
               
-                {product.variants.map((variant) => {
-                  return <div key={variant._id}>
-                    <img src={getImageUrl(product)} alt="" />
-                    <p>Product Name: {product.name}</p>
-                    <p>Revise rate for</p>
-                    Variant Color: {variant.colorName}
-                    {variant.moreDetails.map((details) => {
-                      // return console.log(details.size.length)
-                      return (<div key={details._id}><p>{details.size.length} X {details.size.breadth} X {details.size.height}</p>
-                      <p>Current price{details.price}</p>
-                      <p>
-                        Enter discounted price
-                      </p>
-                       <input 
-  type="text" 
-  value={multipleProductsForRevisedRate[product._id]['price']} 
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        price: e.target.value
-      }
-    }));
-
-
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        discountPrice: e.target.value
-      }
-    }));
-  }}
-/>
-<p>Discount start date</p>
-<input 
-  type="datetime-local" 
-  name="" 
-  id="" 
-  value={multipleProductsForRevisedRate[product._id]["discountStartDate"] || ""}
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        "discountStartDate": e.target.value
-      }
-    }));
-  }}
-/>              
-
-<p>Discount end date</p>
-<input 
-  type="datetime-local" 
-  name="" 
-  id="" 
-  value={multipleProductsForRevisedRate[product._id]["discountEndDate"] || ""}
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        "discountEndDate": e.target.value
-      }
-    }));
-  }}
-/> 
-
-<p>Update to original price after end date?</p>
-<select 
-  name="" 
-  id=""
-  value={multipleProductsForRevisedRate[product._id]["comeBackToOriginalPrice"] || ""}
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        "comeBackToOriginalPrice": e.target.value
-      }
-    }));
-  }}
->
-  <option value="">Select option</option>
-  <option value="yes">Yes</option>
-  <option value="no">No</option>
-</select> 
-                        </div>
-                      )
-                    })}
-                    </div>
-                })
+               {product.variants.map((variant) => {
+  return <div key={variant._id}>
+    <img src={getImageUrl(product)} alt="" />
+    <p>Product Name: {product.name}</p>
+    <p>Revise rate for</p>
+    Variant Color: {variant.colorName}
+    {variant.moreDetails.map((details) => {
+      return (<div key={details._id}>
+        <p>{details.size.length} X {details.size.breadth} X {details.size.height}</p>
+        <p>Current price: {details.price}</p>
+        
+        <p>Enter discounted price</p>
+        <input 
+          name="discountPrice"
+          type="text" 
+          value={stateVariableToReviseRateForSingleProductWithVariants?.[variant._id]?.[details._id]?.['discountPrice'] || ""} 
+          onChange={(e) => {
+            setStateVariableToReviseRateForSingleProductWithVariants(prev => ({
+              ...prev,
+              [variant._id]: {
+                ...prev[variant._id],
+                [details._id]: {
+                  ...(prev[variant._id]?.[details._id] || {}),
+                  [e.target.name]: e.target.value
                 }
+              }
+            }))
+          }}
+        />
+        
+        <p>Discount start date</p>
+        <input 
+          type="datetime-local" 
+          name="discountStartDate" 
+          value={stateVariableToReviseRateForSingleProductWithVariants?.[variant._id]?.[details._id]?.['discountStartDate'] || ""} 
+          onChange={(e) => {
+            setStateVariableToReviseRateForSingleProductWithVariants(prev => ({
+              ...prev,
+              [variant._id]: {
+                ...prev[variant._id],
+                [details._id]: {
+                  ...(prev[variant._id]?.[details._id] || {}),
+                  [e.target.name]: e.target.value
+                }
+              }
+            }))
+          }}
+        />              
+
+        <p>Discount end date</p>
+        <input 
+          type="datetime-local" 
+          name="discountEndDate" 
+          value={stateVariableToReviseRateForSingleProductWithVariants?.[variant._id]?.[details._id]?.['discountEndDate'] || ""} 
+          onChange={(e) => {
+            setStateVariableToReviseRateForSingleProductWithVariants(prev => ({
+              ...prev,
+              [variant._id]: {
+                ...prev[variant._id],
+                [details._id]: {
+                  ...(prev[variant._id]?.[details._id] || {}),
+                  [e.target.name]: e.target.value
+                }
+              }
+            }))
+          }}
+        /> 
+
+        <p>Update to original price after end date?</p>
+        <select 
+          name="comeBackToOriginalPrice" 
+          value={stateVariableToReviseRateForSingleProductWithVariants?.[variant._id]?.[details._id]?.['comeBackToOriginalPrice'] || ""} 
+          onChange={(e) => {
+            setStateVariableToReviseRateForSingleProductWithVariants(prev => ({
+              ...prev,
+              [variant._id]: {
+                ...prev[variant._id],
+                [details._id]: {
+                  ...(prev[variant._id]?.[details._id] || {}),
+                  [e.target.name]: e.target.value
+                }
+              }
+            }))
+          }}
+        >
+          <option value="">Select option</option>
+          <option value="yes">Yes</option>
+          <option value="no">No</option>
+        </select> 
+
+        {/* FIXED BULK PRICING SECTION - Now specific to each variant/size combination */}
+        <div>
+          <button onClick={() => {
+            setStateVariableToReviseRateForSingleProductWithVariants(prev => {
+              // Get current bulk pricing for this specific variant/size, or empty array
+              const currentBulkPricing = prev?.[variant._id]?.[details._id]?.bulkPricing || [];
+              
+              return {
+                ...prev,
+                [variant._id]: {
+                  ...prev[variant._id],
+                  [details._id]: {
+                    ...(prev[variant._id]?.[details._id] || {}),
+                    bulkPricing: [
+                      ...currentBulkPricing,
+                      {
+                        id: Date.now() + Math.random(), // Unique ID
+                        wholesalePrice: "", 
+                        quantity: ""
+                      }
+                    ]
+                  }
+                }
+              };
+            });
+          }}>
+            Add tier
+          </button>
+          
+          {/* Display bulk pricing specific to this variant/size combination */}
+          {(() => {
+            const currentBulkPricing = stateVariableToReviseRateForSingleProductWithVariants?.[variant._id]?.[details._id]?.bulkPricing || [];
+            
+            return currentBulkPricing.length === 0 ? (
+              <span>No pricing section added</span>
+            ) : (
+              currentBulkPricing.map((tier, index) => {
+                return (
+                  <div key={tier.id}>
+                    <label>Wholesale Price</label>
+                    <input 
+                      type="text" 
+                      value={tier.wholesalePrice} 
+                      onChange={(e) => {
+                        setStateVariableToReviseRateForSingleProductWithVariants(prev => {
+                          const currentBulkPricing = prev?.[variant._id]?.[details._id]?.bulkPricing || [];
+                          
+                          return {
+                            ...prev,
+                            [variant._id]: {
+                              ...prev[variant._id],
+                              [details._id]: {
+                                ...(prev[variant._id]?.[details._id] || {}),
+                                bulkPricing: currentBulkPricing.map(t => 
+                                  t.id === tier.id ? { ...t, wholesalePrice: e.target.value } : t
+                                )
+                              }
+                            }
+                          };
+                        });
+                      }} 
+                    />
+
+                    <label>Quantity</label>
+                    <input 
+                      type="text" 
+                      value={tier.quantity} 
+                      onChange={(e) => {
+                        setStateVariableToReviseRateForSingleProductWithVariants(prev => {
+                          const currentBulkPricing = prev?.[variant._id]?.[details._id]?.bulkPricing || [];
+                          
+                          return {
+                            ...prev,
+                            [variant._id]: {
+                              ...prev[variant._id],
+                              [details._id]: {
+                                ...(prev[variant._id]?.[details._id] || {}),
+                                bulkPricing: currentBulkPricing.map(t => 
+                                  t.id === tier.id ? { ...t, quantity: e.target.value } : t
+                                )
+                              }
+                            }
+                          };
+                        });
+                      }} 
+                    />
+
+                    <button onClick={() => {
+                      setStateVariableToReviseRateForSingleProductWithVariants(prev => {
+                        const currentBulkPricing = prev?.[variant._id]?.[details._id]?.bulkPricing || [];
+                        
+                        return {
+                          ...prev,
+                          [variant._id]: {
+                            ...prev[variant._id],
+                            [details._id]: {
+                              ...(prev[variant._id]?.[details._id] || {}),
+                              bulkPricing: currentBulkPricing.filter(t => t.id !== tier.id)
+                            }
+                          }
+                        };
+                      });
+                    }}>
+                      Delete
+                    </button>
+                  </div>
+                );
+              })
+            );
+          })()}
+        </div>
+      </div>)
+    })}
+  </div>
+})}
                 {/* <button onClick={() => {setDataForSingleProductWithVariants(product)}}>stock</button> */}
               </div>) 
               : 
@@ -1359,6 +1470,8 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                         </button>
                         <button className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded-md text-xs font-medium transition-colors" onClick={() => {
                         setRevisedRateProduct(product);
+                        setStateVariableToReviseRateForSingleProductWithVariants({});
+                        setSingleProductDiscountBulkPricing([]);
                         setShowRevisedRateModal(true)
                         }}>
                           Add Revised Rate

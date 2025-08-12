@@ -779,7 +779,34 @@ const revisedRate = async (req, res) => {
     }
   } else {
     // Updation logic for single product with variants
-    console.log("With variants")
+    // console.log("With variants")
+    // console.log(req.body)
+    const {productId, productData} = req.body;
+    const product = await Product.findById(productId);
+    if(product) {
+Object.entries(productData).forEach(([variantId, variantData]) => {
+  console.log(variantData)
+      Object.entries(variantData).forEach(([detailsId, detailsData]) => {
+        // console.log(detailsData.discountPrice);
+        console.log(detailsData);
+
+        // Checking if the discount price entered is less than the original price
+        product.variants.map((variant) => {
+          variant.moreDetails.map((details) => {
+            if(parseInt(details.price) <= detailsData.discountPrice) {
+              console.log("Discout price is greater")
+            } else {
+              console.log("Discount price is smaller");
+              console.log(detailsId)
+            }
+          })
+        })
+      })
+    })
+    } else {
+      return res.status(400).json({message: "Product Not found"});
+    }
+    
   }
 }
 // End of function that will handle the product without being checked
