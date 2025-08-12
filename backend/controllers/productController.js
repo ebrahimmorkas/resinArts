@@ -464,12 +464,13 @@ const massRevisedRate = (req, res) => {
             console.log(detailsData)
             console.log("details data ends here")
 
-            // Extract discount/pricing data
+            // Extract discount/pricing data INCLUDING discountBulkPricing
             const { 
               discountStartDate, 
               discountEndDate, 
               discountPrice, 
               comeBackToOriginalPrice,
+              discountBulkPricing,
               ...sizeData 
             } = detailsData;
 
@@ -540,7 +541,23 @@ const massRevisedRate = (req, res) => {
                   // If comeBackToOriginalPrice is false (no), update the actual price as well
                   if (!shouldComeBack) {
                     updateObj["variants.$[v].moreDetails.$[md].price"] = newDiscountPrice;
+                    
+                    // 🎯 NEW TWIST: Update bulkPricing with discountBulkPricing when comeBackToOriginal is No
+                    if (discountBulkPricing && Array.isArray(discountBulkPricing)) {
+                      const validBulkPricing = discountBulkPricing.filter(item => 
+                        item.wholesalePrice !== '' && item.quantity !== ''
+                      );
+                      updateObj["variants.$[v].moreDetails.$[md].bulkPricingCombinations"] = validBulkPricing;
+                    }
                   }
+                }
+
+                // Always store discountBulkPricing
+                if (discountBulkPricing && Array.isArray(discountBulkPricing)) {
+                  const validDiscountBulkPricing = discountBulkPricing.filter(item => 
+                    item.wholesalePrice !== '' && item.quantity !== ''
+                  );
+                  updateObj["variants.$[v].moreDetails.$[md].discountBulkPricing"] = validDiscountBulkPricing;
                 }
 
                 const updatedProduct = await Product.updateOne(
@@ -578,12 +595,13 @@ const massRevisedRate = (req, res) => {
         console.log("Processing product without variants");
         console.log(productData);
 
-        // Extract discount/pricing data for non-variant products
+        // Extract discount/pricing data for non-variant products INCLUDING discountBulkPricing
         const { 
           discountStartDate, 
           discountEndDate, 
           discountPrice, 
           comeBackToOriginalPrice,
+          discountBulkPricing,
           ...priceData 
         } = productData;
 
@@ -623,7 +641,23 @@ const massRevisedRate = (req, res) => {
             // If comeBackToOriginalPrice is false (no), update the actual price as well
             if (!shouldComeBack) {
               updateObj.price = newDiscountPrice;
+              
+              // 🎯 NEW TWIST: Update bulkPricing with discountBulkPricing when comeBackToOriginal is No
+              if (discountBulkPricing && Array.isArray(discountBulkPricing)) {
+                const validBulkPricing = discountBulkPricing.filter(item => 
+                  item.wholesalePrice !== '' && item.quantity !== ''
+                );
+                updateObj.bulkPricing = validBulkPricing;
+              }
             }
+          }
+
+          // Always store discountBulkPricing
+          if (discountBulkPricing && Array.isArray(discountBulkPricing)) {
+            const validDiscountBulkPricing = discountBulkPricing.filter(item => 
+              item.wholesalePrice !== '' && item.quantity !== ''
+            );
+            updateObj.discountBulkPricing = validDiscountBulkPricing;
           }
 
           const updatedProduct = await Product.findByIdAndUpdate(

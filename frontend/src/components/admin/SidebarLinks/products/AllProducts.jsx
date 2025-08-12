@@ -75,7 +75,9 @@ export default function AdminProductsPage() {
             newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["discountStartDate"] = null;
               newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["discountEndDate"] = null;
               newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["discountPrice"] = "";
-              newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["comeBackToOriginalPrice"] = null; 
+              newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["comeBackToOriginalPrice"] = null;
+              newMultipleProductsForRevisedRate[product._id][variant._id][details._id]["discountBulkPricing"] = [];
+
           });
         }) 
       } else {
@@ -88,6 +90,7 @@ export default function AdminProductsPage() {
               newMultipleProductsForRevisedRate[product._id]["discountEndDate"] = null;
               newMultipleProductsForRevisedRate[product._id]["discountPrice"] = "";
               newMultipleProductsForRevisedRate[product._id]["comeBackToOriginalPrice"] = null; 
+              newMultipleProductsForRevisedRate[product._id]["discountBulkPricing"] = [];
       }
     });
     setMultipleProductsForRevisedRate(newMultipleProductsForRevisedRate)
@@ -557,8 +560,95 @@ const handleUpdateMultipleStock = async () => {
 };
 // End of function for updating multiple price with both type of preoducts that is with and without variants.
 
+// Start of functions for managing the discountBulkPricing (Currenlty for multiple products)
+// ADD DISCOUNT BULK PRICING SECTION
+// UPDATED FUNCTIONS - Change thresholdQuantity to quantity
+
+// ADD DISCOUNT BULK PRICING SECTION
+const addDiscountBulkPricingSection = (productId, variantId = null, detailsId = null) => {
+  setMultipleProductsForRevisedRate(prev => ({
+    ...prev,
+    [productId]: {
+      ...prev[productId],
+      ...(variantId && detailsId ? {
+        [variantId]: {
+          ...prev[productId][variantId],
+          [detailsId]: {
+            ...prev[productId][variantId][detailsId],
+            discountBulkPricing: [
+              ...(prev[productId][variantId][detailsId].discountBulkPricing || []),
+              { wholesalePrice: '', quantity: '' } // CHANGED: thresholdQuantity -> quantity
+            ]
+          }
+        }
+      } : {
+        discountBulkPricing: [
+          ...(prev[productId].discountBulkPricing || []),
+          { wholesalePrice: '', quantity: '' } // CHANGED: thresholdQuantity -> quantity
+        ]
+      })
+    }
+  }));
+};
+
+// REMOVE DISCOUNT BULK PRICING SECTION
+const removeDiscountBulkPricingSection = (productId, index, variantId = null, detailsId = null) => {
+  setMultipleProductsForRevisedRate(prev => ({
+    ...prev,
+    [productId]: {
+      ...prev[productId],
+      ...(variantId && detailsId ? {
+        [variantId]: {
+          ...prev[productId][variantId],
+          [detailsId]: {
+            ...prev[productId][variantId][detailsId],
+            discountBulkPricing: prev[productId][variantId][detailsId].discountBulkPricing.filter((_, i) => i !== index)
+          }
+        }
+      } : {
+        discountBulkPricing: prev[productId].discountBulkPricing.filter((_, i) => i !== index)
+      })
+    }
+  }));
+};
+
+// UPDATE DISCOUNT BULK PRICING VALUES
+const updateDiscountBulkPricing = (productId, index, field, value, variantId = null, detailsId = null) => {
+  setMultipleProductsForRevisedRate(prev => ({
+    ...prev,
+    [productId]: {
+      ...prev[productId],
+      ...(variantId && detailsId ? {
+        [variantId]: {
+          ...prev[productId][variantId],
+          [detailsId]: {
+            ...prev[productId][variantId][detailsId],
+            discountBulkPricing: prev[productId][variantId][detailsId].discountBulkPricing.map((item, i) => 
+              i === index ? { ...item, [field]: value } : item
+            )
+          }
+        }
+      } : {
+        discountBulkPricing: prev[productId].discountBulkPricing.map((item, i) => 
+          i === index ? { ...item, [field]: value } : item
+        )
+      })
+    }
+  }));
+};
+
+// GET COUNT OF DISCOUNT BULK PRICING SECTIONS
+const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = null) => {
+  if (variantId && detailsId) {
+    return multipleProductsForRevisedRate[productId]?.[variantId]?.[detailsId]?.discountBulkPricing?.length || 0;
+  } else {
+    return multipleProductsForRevisedRate[productId]?.discountBulkPricing?.length || 0;
+  }
+};
+// End of functions for managing the discountBulkPricing (Currenlty for multiple products)
+
 // Start of jsx for showing modal to restock multiple products with and without variants
-    if (selectedProducts.length>0) {
+   if (selectedProducts.length>0) {
       console.log("For multiple products")
       return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
@@ -574,215 +664,277 @@ const handleUpdateMultipleStock = async () => {
             </div>
             <div className="px-6 pb-6 text-center text-gray-600">
               <div>
-                      {Object.values(selectedProducts).map(product => {
-     return product.hasVariants ? 
-     (<div className="border-2" key={product._id}>
-      <img src={getImageUrl(product)} alt={product.name} />
-      <p>Product Name: {product.name}</p>
-      {product.variants.map(variant => {
-        return (<div key={variant._id}>
-          Variant Name: {variant.colorName}
-          {variant.moreDetails.map(details => {
-            return (
-              <div key={details._id}>
-              <p>Enter the discounted price for size : {details.size.length} X {details.size.breadth} X {details.size.height}</p>
-                <p>Current price {details.price}</p>
-              <input 
-  type="text" 
-  value={multipleProductsForRevisedRate[product._id][variant._id][details._id][details.size._id]} 
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        [variant._id]: {
-          ...prev[product._id][variant._id],
-          [details._id]: {
-            ...prev[product._id][variant._id][details._id],
-            [details.size._id]: e.target.value
-          }
-        }
-      }
-    }));
+                {Object.values(selectedProducts).map(product => {
+                  return product.hasVariants ? 
+                  (<div className="border-2" key={product._id}>
+                    <img src={getImageUrl(product)} alt={product.name} />
+                    <p>Product Name: {product.name}</p>
+                    {product.variants.map(variant => {
+                      return (<div key={variant._id}>
+                        Variant Name: {variant.colorName}
+                        {variant.moreDetails.map(details => {
+                          return (
+                            <div key={details._id}>
+                              <p>Enter the discounted price for size : {details.size.length} X {details.size.breadth} X {details.size.height}</p>
+                              <p>Current price {details.price}</p>
+                              
+                              <input 
+                                type="text" 
+                                value={multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.[details.size._id] || ''} 
+                                onChange={(e) => {
+                                  setMultipleProductsForRevisedRate(prev => ({
+                                    ...prev,
+                                    [product._id]: {
+                                      ...prev[product._id],
+                                      [variant._id]: {
+                                        ...prev[product._id][variant._id],
+                                        [details._id]: {
+                                          ...prev[product._id][variant._id][details._id],
+                                          [details.size._id]: e.target.value,
+                                          "discountPrice": e.target.value
+                                        }
+                                      }
+                                    }
+                                  }));
+                                }}
+                              />
 
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        [variant._id]: {
-          ...prev[product._id][variant._id],
-          [details._id]: {
-            ...prev[product._id][variant._id][details._id],
-            "discountPrice": e.target.value
-          }
-        }
-      }
-    }));
-  }}
-/>
-<p>Discount start date</p>
-<input 
-  type="datetime-local" 
-  name="" 
-  id="" 
-  value={multipleProductsForRevisedRate[product._id][variant._id][details._id]["discountStartDate"] || ""}
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        [variant._id]: {
-          ...prev[product._id][variant._id],
-          [details._id]: {
-            ...prev[product._id][variant._id][details._id],
-            "discountStartDate": e.target.value
-          }
-        }
-      }
-    }));
-  }}
-/>              
+                              <p>Discount start date</p>
+                              <input 
+                                type="datetime-local" 
+                                value={multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.["discountStartDate"] || ""}
+                                onChange={(e) => {
+                                  setMultipleProductsForRevisedRate(prev => ({
+                                    ...prev,
+                                    [product._id]: {
+                                      ...prev[product._id],
+                                      [variant._id]: {
+                                        ...prev[product._id][variant._id],
+                                        [details._id]: {
+                                          ...prev[product._id][variant._id][details._id],
+                                          "discountStartDate": e.target.value
+                                        }
+                                      }
+                                    }
+                                  }));
+                                }}
+                              />              
 
-<p>Discount end date</p>
-<input 
-  type="datetime-local" 
-  name="" 
-  id="" 
-  value={multipleProductsForRevisedRate[product._id][variant._id][details._id]["discountEndDate"] || ""}
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        [variant._id]: {
-          ...prev[product._id][variant._id],
-          [details._id]: {
-            ...prev[product._id][variant._id][details._id],
-            "discountEndDate": e.target.value
-          }
-        }
-      }
-    }));
-  }}
-/> 
+                              <p>Discount end date</p>
+                              <input 
+                                type="datetime-local" 
+                                value={multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.["discountEndDate"] || ""}
+                                onChange={(e) => {
+                                  setMultipleProductsForRevisedRate(prev => ({
+                                    ...prev,
+                                    [product._id]: {
+                                      ...prev[product._id],
+                                      [variant._id]: {
+                                        ...prev[product._id][variant._id],
+                                        [details._id]: {
+                                          ...prev[product._id][variant._id][details._id],
+                                          "discountEndDate": e.target.value
+                                        }
+                                      }
+                                    }
+                                  }));
+                                }}
+                              /> 
 
-<select 
-  name="" 
-  id=""
-  value={multipleProductsForRevisedRate[product._id][variant._id][details._id]["comeBackToOriginalPrice"] || ""}
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        [variant._id]: {
-          ...prev[product._id][variant._id],
-          [details._id]: {
-            ...prev[product._id][variant._id][details._id],
-            "comeBackToOriginalPrice": e.target.value
-          }
-        }
-      }
-    }));
-  }}
->
-  <option value="">Select option</option>
-  <option value="yes">Yes</option>
-  <option value="no">No</option>
-</select>            
+                              <select 
+                                value={multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.["comeBackToOriginalPrice"] || ""}
+                                onChange={(e) => {
+                                  setMultipleProductsForRevisedRate(prev => ({
+                                    ...prev,
+                                    [product._id]: {
+                                      ...prev[product._id],
+                                      [variant._id]: {
+                                        ...prev[product._id][variant._id],
+                                        [details._id]: {
+                                          ...prev[product._id][variant._id][details._id],
+                                          "comeBackToOriginalPrice": e.target.value
+                                        }
+                                      }
+                                    }
+                                  }));
+                                }}
+                              >
+                                <option value="">Select option</option>
+                                <option value="yes">Yes</option>
+                                <option value="no">No</option>
+                              </select>
+
+                              {/* start of BULK PRICING SECTION FOR VARIANTS */}
+                              // ADD THIS AFTER THE SELECT DROPDOWN FOR VARIANTS
+{/* DISCOUNT BULK PRICING SECTION FOR VARIANTS */}
+<div className="mt-4 p-3 bg-gray-100 rounded">
+  <h4 className="font-bold mb-2">
+    Discount Bulk Pricing ({getDiscountBulkPricingCount(product._id, variant._id, details._id)} sections)
+  </h4>
+  
+  {(multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.discountBulkPricing || []).map((pricing, index) => (
+    <div key={index} className="flex gap-2 mb-2 p-2 bg-white rounded border">
+      <div className="flex-1">
+        <label className="text-xs text-gray-600">Wholesale Price</label>
+        <input 
+          type="number"
+          placeholder="e.g., 100"
+          value={pricing.wholesalePrice}
+          onChange={(e) => updateDiscountBulkPricing(product._id, index, 'wholesalePrice', e.target.value, variant._id, details._id)}
+          className="w-full p-1 border rounded"
+        />
+      </div>
+      <div className="flex-1">
+        <label className="text-xs text-gray-600">Quantity</label>
+        <input 
+          type="number"
+          placeholder="e.g., 12"
+          value={pricing.quantity} // CHANGED: thresholdQuantity -> quantity
+          onChange={(e) => updateDiscountBulkPricing(product._id, index, 'quantity', e.target.value, variant._id, details._id)} // CHANGED: thresholdQuantity -> quantity
+          className="w-full p-1 border rounded"
+        />
+      </div>
+      <button 
+        onClick={() => removeDiscountBulkPricingSection(product._id, index, variant._id, details._id)}
+        className="px-2 py-1 bg-red-500 text-white rounded text-xs self-end"
+      >
+        Remove
+      </button>
+    </div>
+  ))}
+  
+  <button 
+    onClick={() => addDiscountBulkPricingSection(product._id, variant._id, details._id)}
+    className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
+  >
+    Add Discount Bulk Pricing
+  </button>
 </div>
+                              {/* End of Bulk pricing section for variant */}
+                            </div>
+                          )
+                        })}
+                      </div>)
+                    })}
+                  </div>) : 
+                  (<div className="border-2" key={product._id}>
+                    <img src={getImageUrl(product)} alt="" />
+                    <p>{product.name}</p>
+                    <p>Current Price: {product.price}</p>
+                    <p>Enter the discounted price</p>
+                    
+                    <input 
+                      type="text" 
+                      value={multipleProductsForRevisedRate[product._id]?.['price'] || ''} 
+                      onChange={(e) => {
+                        setMultipleProductsForRevisedRate(prev => ({
+                          ...prev,
+                          [product._id]: {
+                            ...prev[product._id],
+                            price: e.target.value,
+                            discountPrice: e.target.value
+                          }
+                        }));
+                      }}
+                    />
 
-            )
-          })}
-        </div>)
-      })}
-          <p>Enter the quantity to update.</p>
+                    <p>Discount start date</p>
+                    <input 
+                      type="datetime-local" 
+                      value={multipleProductsForRevisedRate[product._id]?.["discountStartDate"] || ""}
+                      onChange={(e) => {
+                        setMultipleProductsForRevisedRate(prev => ({
+                          ...prev,
+                          [product._id]: {
+                            ...prev[product._id],
+                            "discountStartDate": e.target.value
+                          }
+                        }));
+                      }}
+                    />              
 
-     </div>) : 
-     (<div className="border-2">
-          <img src={getImageUrl(product)} alt="" />
-          <p>{product.name}</p>
-          <p>Current Price: {product.price}</p>
-          <p>Enter the discounted price</p>
-          <input 
-  type="text" 
-  value={multipleProductsForRevisedRate[product._id]['price']} 
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        price: e.target.value
-      }
-    }));
+                    <p>Discount end date</p>
+                    <input 
+                      type="datetime-local" 
+                      value={multipleProductsForRevisedRate[product._id]?.["discountEndDate"] || ""}
+                      onChange={(e) => {
+                        setMultipleProductsForRevisedRate(prev => ({
+                          ...prev,
+                          [product._id]: {
+                            ...prev[product._id],
+                            "discountEndDate": e.target.value
+                          }
+                        }));
+                      }}
+                    /> 
 
+                    <select 
+                      value={multipleProductsForRevisedRate[product._id]?.["comeBackToOriginalPrice"] || ""}
+                      onChange={(e) => {
+                        setMultipleProductsForRevisedRate(prev => ({
+                          ...prev,
+                          [product._id]: {
+                            ...prev[product._id],
+                            "comeBackToOriginalPrice": e.target.value
+                          }
+                        }));
+                      }}
+                    >
+                      <option value="">Select option</option>
+                      <option value="yes">Yes</option>
+                      <option value="no">No</option>
+                    </select>
 
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        discountPrice: e.target.value
-      }
-    }));
-  }}
-/>
-
-<p>Discount start date</p>
-<input 
-  type="datetime-local" 
-  name="" 
-  id="" 
-  value={multipleProductsForRevisedRate[product._id]["discountStartDate"] || ""}
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        "discountStartDate": e.target.value
-      }
-    }));
-  }}
-/>              
-
-<p>Discount end date</p>
-<input 
-  type="datetime-local" 
-  name="" 
-  id="" 
-  value={multipleProductsForRevisedRate[product._id]["discountEndDate"] || ""}
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        "discountEndDate": e.target.value
-      }
-    }));
-  }}
-/> 
-
-<select 
-  name="" 
-  id=""
-  value={multipleProductsForRevisedRate[product._id]["comeBackToOriginalPrice"] || ""}
-  onChange={(e) => {
-    setMultipleProductsForRevisedRate(prev => ({
-      ...prev,
-      [product._id]: {
-        ...prev[product._id],
-        "comeBackToOriginalPrice": e.target.value
-      }
-    }));
-  }}
->
-  <option value="">Select option</option>
-  <option value="yes">Yes</option>
-  <option value="no">No</option>
-</select>   
-           </div>)
-      })}
-      <button onClick={handleUpdateMultipleStock}>Update</button>
-  </div>
+                    {/* BULK PRICING SECTION FOR NON-VARIANTS */}
+{/* DISCOUNT BULK PRICING SECTION FOR NON-VARIANTS */}
+<div className="mt-4 p-3 bg-gray-100 rounded">
+  <h4 className="font-bold mb-2">
+    Discount Bulk Pricing ({getDiscountBulkPricingCount(product._id)} sections)
+  </h4>
+  
+  {(multipleProductsForRevisedRate[product._id]?.discountBulkPricing || []).map((pricing, index) => (
+    <div key={index} className="flex gap-2 mb-2 p-2 bg-white rounded border">
+      <div className="flex-1">
+        <label className="text-xs text-gray-600">Wholesale Price</label>
+        <input 
+          type="number"
+          placeholder="e.g., 150"
+          value={pricing.wholesalePrice}
+          onChange={(e) => updateDiscountBulkPricing(product._id, index, 'wholesalePrice', e.target.value)}
+          className="w-full p-1 border rounded"
+        />
+      </div>
+      <div className="flex-1">
+        <label className="text-xs text-gray-600">Quantity</label>
+        <input 
+          type="number"
+          placeholder="e.g., 10"
+          value={pricing.quantity} // CHANGED: thresholdQuantity -> quantity
+          onChange={(e) => updateDiscountBulkPricing(product._id, index, 'quantity', e.target.value)} // CHANGED: thresholdQuantity -> quantity
+          className="w-full p-1 border rounded"
+        />
+      </div>
+      <button 
+        onClick={() => removeDiscountBulkPricingSection(product._id, index)}
+        className="px-2 py-1 bg-red-500 text-white rounded text-xs self-end"
+      >
+        Remove
+      </button>
+    </div>
+  ))}
+  
+  <button 
+    onClick={() => addDiscountBulkPricingSection(product._id)}
+    className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
+  >
+    Add Discount Bulk Pricing
+  </button>
+</div>
+                    {/* End of bulk pricig section for witout variants */}
+                  </div>)
+                })}
+                <button onClick={handleUpdateMultipleStock}>Update</button>
+              </div>
             </div>
           </div>
         </div>

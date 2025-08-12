@@ -33,6 +33,10 @@ const moreDetailsSchema = mongoose.Schema({
     discountEndDate: {type: Date, required: false, default: null},
     discountPrice: {type: Number, required: false, default: ""},
     comeBackToOriginalPrice: {type: Boolean, required: false, default: null},
+    discountBulkPricing: [{
+  wholesalePrice: { type: Number },
+  quantity: { type: Number }
+}],
   bulkPricingCombinations: [bulkPricingSchema],
 })
 
@@ -64,6 +68,10 @@ const productSchema = mongoose.Schema(
     discountEndDate: {type: Date, required: false, default: null},
     discountPrice: {type: Number, required: false, default: ""},
     comeBackToOriginalPrice: {type: Boolean, required: false, default: null},
+    discountBulkPricing: [{
+  wholesalePrice: { type: Number },
+  quantity: { type: Number }
+}],
     image: { type: String, required: false, default: "" }, // Main product image URL (Cloudinary)
     additionalImages: [String], // Array of Cloudinary URLs for basic product
     bulkPricing: [bulkPricingSchema], // Bulk pricing for basic product
