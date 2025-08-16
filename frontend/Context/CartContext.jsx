@@ -46,7 +46,7 @@ export const CartProvider = ({ children }) => {
           const cartKey = `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`
           formattedCart[cartKey] = {
             productId: item.product_id,
-            colorName: item.variant_name || null,
+            variantName: item.variant_name || null,
             sizeString: item.size || null,
             quantity: item.quantity,
             price: item.price,
@@ -57,6 +57,7 @@ export const CartProvider = ({ children }) => {
             detailsId: item.details_id,
             sizeId: item.size_id,
             cashApplied: item.cash_applied,
+            userId: item.user_id
           }
         })
         setCartItems(formattedCart)

@@ -8,6 +8,7 @@ const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
 const cartRoutes = require('./routes/cartRoutes');
+const orderRoutes = require('./routes/orderRoutes');
 const authenticate = require('./middlewares/authenticate');
 const authorize = require('./middlewares/authorize');
 const User = require('./models/User');
@@ -62,6 +63,7 @@ app.get('/api/user/profile', authenticate, async (req, res) => {
 app.use('/api/category', authenticate, authorize(['admin']), categoryRoutes);
 app.use('/api/product', authenticate, productRoutes);
 app.use('/api/cart', authenticate, authorize(['user']), cartRoutes);
+app.use('/api/order', authenticate, orderRoutes);
 
 // Authenticated user info
 app.get('/api/auth/me', authenticate, async (req, res) => {

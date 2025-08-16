@@ -24,6 +24,7 @@ import {
   Share2,
   MessageCircle,
 } from "lucide-react"
+import axios from "axios";
 
 const categories = [
   {
@@ -85,6 +86,14 @@ export default function Home() {
     getUniqueCartItemsCount,
     getTotalItemsCount,
   } = useCart()
+
+
+  const handleCartCheckout = async (cartProducts) => {
+      const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
+        withCredential: true,
+      });
+      
+    }
 
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [selectedFilters, setSelectedFilters] = useState(["all"])
@@ -1264,6 +1273,9 @@ export default function Home() {
                     <button
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200"
                       disabled={cartLoading}
+                      onClick={() => {
+                        handleCartCheckout(cartItems);
+                      }}
                     >
                       {cartLoading ? "Processing..." : "Checkout"}
                     </button>

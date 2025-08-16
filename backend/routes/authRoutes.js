@@ -83,6 +83,8 @@ router.post('/login', async (req, res) => {
     id: user._id,
     name: user.first_name + " " + user.middle_name + " " + user.last_name,
     email: user.email,
+    phone_number: user.phone_number,
+    whatsapp_number: user.whatsapp_number,
     role: user.role
   }
 });
