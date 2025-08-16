@@ -1,12 +1,45 @@
 const mongoose = require('mongoose');
 
+const orderedProductSchema = new mongoose.Schema({
+    image_url: {
+        type: String,
+        required: true,
+    },
+  product_id: {
+    type: mongoose.Types.ObjectId,
+    required: true,
+  },
+  product_name: {
+    type: String,
+    required: true,
+  },
+  variant_id: {
+    type: mongoose.Types.ObjectId,
+  },
+  variant_name: {
+    type: String,
+    required: false
+  },
+  size_id: {
+    type: mongoose.Types.ObjectId,
+  },
+  size: {
+    type: String,
+    required: false
+  },
+  quantity: {
+    type: Number,
+    required: true,
+  },
+  original_price: {
+    type: Number,
+    required: true,
+  }
+}, { _id: false });
+
 const orderSchema = mongoose.Schema({
     user_id: {
         type: mongoose.Types.ObjectId,
-        required: true,
-    },
-    image_url: {
-        type: String,
         required: true,
     },
     user_name: {
@@ -25,48 +58,10 @@ const orderSchema = mongoose.Schema({
         type: String,
         required: true,
     },
-    product_id: {
-        type: mongoose.Types.ObjectId,
-        required: true,
-    },
-    product_name: {
-        type: String,
-        required: true,
-    },
-    variant_id: {
-        type: mongoose.Types.ObjectId,
-        required: false,
-    },
-    variant_name: {
-        type: String,
-        required: false,
-        default: "",
-    },
-    size_id: {
-        type: mongoose.Types.ObjectId,
-        require: false,
-    },
-    size: {
-        type: String,
-        required: false,
-        default: "",
-    },
-    quantity: {
-        type: Number,
-        required: true,
-    },
-    category: {
-        type: String,
-        required: false,
-        default: null,
-    },
-    original_price: {
-        type: Number,
-        required: true,
-    },
+    orderedProducts: [orderedProductSchema],
     status: {
         type: String,
-        enum: ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed"],
+        enum: ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending"],
         required: true,
         default: "Pending",
     },
@@ -74,6 +69,10 @@ const orderSchema = mongoose.Schema({
         type: String,
         // enum: ["yes", "no"],
         required: false,
+    },
+    price: {
+        type: Number,
+        required: true,
     },
     total_price: {
         type: String,
