@@ -7,6 +7,7 @@ const path = require('path');
 const authRoutes = require('./routes/authRoutes');
 const categoryRoutes = require('./routes/categoryRoutes');
 const productRoutes = require('./routes/productRoutes');
+const cartRoutes = require('./routes/cartRoutes');
 const authenticate = require('./middlewares/authenticate');
 const authorize = require('./middlewares/authorize');
 const User = require('./models/User');
@@ -60,6 +61,7 @@ app.get('/api/user/profile', authenticate, async (req, res) => {
 // Admin routes (protected by authenticate and authorize)
 app.use('/api/category', authenticate, authorize(['admin']), categoryRoutes);
 app.use('/api/product', authenticate, productRoutes);
+app.use('/api/cart', authenticate, authorize(['user']), cartRoutes);
 
 // Authenticated user info
 app.get('/api/auth/me', authenticate, async (req, res) => {

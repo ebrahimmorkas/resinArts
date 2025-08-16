@@ -782,6 +782,7 @@ const revisedRate = async (req, res) => {
     // console.log("With variants")
     // console.log(req.body)
     const {productId, productData} = req.body;
+    const errors = [];
     const product = await Product.findById(productId);
     if(product) {
 Object.entries(productData).forEach(([variantId, variantData]) => {
@@ -792,12 +793,74 @@ Object.entries(productData).forEach(([variantId, variantData]) => {
 
         // Checking if the discount price entered is less than the original price
         product.variants.map((variant) => {
-          variant.moreDetails.map((details) => {
-            if(parseInt(details.price) <= detailsData.discountPrice) {
-              console.log("Discout price is greater")
-            } else {
-              console.log("Discount price is smaller");
-              console.log(detailsId)
+          variant.moreDetails.map(async (details) => {
+            if(details._id.toString() === detailsId.toString()) {
+              if(parseInt(details.price) <= detailsData.discountPrice) {
+                console.log("Discout price is greater")
+                errors.push({variantId, detailsId, message: "Discount price is greater"});
+              } else {
+                console.log("Discount price is smaller");
+                console.log(detailsId)
+
+                // Checking is comeBackToOriginal is true or false
+                if(detailsData.comeBackToOriginalPrice === 'yes') {
+                  // Dont update price and bulk pricing sizes
+                  try {
+                    const updatedProduct = await Product.updateOne(
+                      {
+                        _id: productId
+                      }, 
+                      {
+                        $set: {
+                          "variants.$[v].moreDetails.$[md].discountPrice": detailsData.discountPrice,
+                          "variants.$[v].moreDetails.$[md].discountStartDate": detailsData.discountStartDate,
+                          "variants.$[v].moreDetails.$[md].discountEndDate": detailsData.discountEndDate,
+                          "variants.$[v].moreDetails.$[md].comeBackToOriginalPrice": detailsData.comeBackToOriginalPrice,
+                          "variants.$[v].moreDetails.$[md].discountBulkPricing": detailsData.bulkPricing,
+                        }
+                      },
+                       {
+                        arrayFilters: [
+                          {"v._id": variantId},
+                          {"md._id": detailsId}
+                        ]
+                      }
+                    )
+                  } catch(err) {
+                    console.log(err)
+                    return res.status(400).json({message: "There was problem while udating the product"});
+                  }
+                } else {
+                  // Update the price and bulk pricing with discountPrice and discountBulkPricing
+                  try {
+                    const updatedProduct = await Product.updateOne(
+                      {
+                        _id: productId
+                      }, 
+                      {
+                        $set: {
+                          "variants.$[v].moreDetails.$[md].discountPrice": detailsData.discountPrice,
+                          "variants.$[v].moreDetails.$[md].discountStartDate": detailsData.discountStartDate,
+                          "variants.$[v].moreDetails.$[md].discountEndDate": detailsData.discountEndDate,
+                          "variants.$[v].moreDetails.$[md].comeBackToOriginalPrice": detailsData.comeBackToOriginalPrice,
+                          "variants.$[v].moreDetails.$[md].discountBulkPricing": detailsData.bulkPricing,
+                          "variants.$[v].moreDetails.$[md].price": detailsData.discountPrice,
+                          "variants.$[v].moreDetails.$[md].bulkPricingCombinations": detailsData.bulkPricing,
+                        }
+                      },
+                       {
+                        arrayFilters: [
+                          {"v._id": variantId},
+                          {"md._id": detailsId}
+                        ]
+                      }
+                    )
+                  } catch(err) {
+                    console.log(err);
+                    return res.status(400).json({message: "There some problem in updating the product"})
+                  }
+                }
+              }
             }
           })
         })

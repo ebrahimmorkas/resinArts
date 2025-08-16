@@ -1,0 +1,97 @@
+{
+  "_id": {
+    "$oid": "688ba599339bab0a9242fbab"
+  },
+  "name": "tefde",
+  "price": 56,
+  "stock": 54,
+  "category": {
+    "$oid": "688110bc5387fa46bb139d71"
+  },
+  "categoryPath": [
+    {
+      "$oid": "688110bc5387fa46bb139d71"
+    }
+  ],
+  "details": [
+    {
+      "name": "sw",
+      "value": "sw",
+      "_id": {
+        "$oid": "688ba599339bab0a9242fbac"
+      }
+    }
+  ],
+  "colorVariants": [
+    {
+      "color": "ews",
+      "imageUrl": "https://res.cloudinary.com/djn2jtaez/image/upload/v1753982360/ProductImages/kj309qhej6dap47cgkcl.jpg",
+      "price": null,
+      "isDefault": true,
+      "forAllSizes": "yes",
+      "availableSizes": [],
+      "optionalDetails": [],
+      "priceRanges": [
+        {
+          "retailPrice": null,
+          "wholesalePrice": null,
+          "thresholdQuantity": null,
+          "_id": {
+            "$oid": "688ba599339bab0a9242fbae"
+          }
+        }
+      ],
+      "_id": {
+        "$oid": "688ba599339bab0a9242fbad"
+      }
+    }
+  ],
+  "sizeVariants": [
+    {
+      "size": "XXXL",
+      "price": null,
+      "isDefault": true,
+      "length": null,
+      "breadth": null,
+      "height": null,
+      "forAllColors": "yes",
+      "availableColors": [],
+      "optionalDetails": [],
+      "priceRanges": [
+        {
+          "retailPrice": null,
+          "wholesalePrice": null,
+          "thresholdQuantity": null,
+          "_id": {
+            "$oid": "688ba599339bab0a9242fbb0"
+          }
+        }
+      ],
+      "_id": {
+        "$oid": "688ba599339bab0a9242fbaf"
+      }
+    }
+  ],
+  "pricingSections": [],
+  "basePriceRanges": [
+    {
+      "retailPrice": 56,
+      "wholesalePrice": 14,
+      "thresholdQuantity": 14,
+      "_id": {
+        "$oid": "688ba599339bab0a9242fbb1"
+      }
+    }
+  ],
+  "restockedAt": null,
+  "discountedPrice": null,
+  "discountStartDate": null,
+  "discountEndDate": null,
+  "createdAt": {
+    "$date": "2025-07-31T17:19:21.462Z"
+  },
+  "updatedAt": {
+    "$date": "2025-07-31T17:19:21.462Z"
+  },
+  "__v": 0
+}
