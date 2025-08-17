@@ -31,7 +31,11 @@ const orderedProductSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
-  original_price: {
+  price: {
+    type: Number,
+    required: true,
+  },
+  total: {
     type: Number,
     required: true,
   }

@@ -2,9 +2,11 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
 
+// Function to add the order
 const placeOrder = async (req, res) => {
     try {
         const cartItems = Object.values(req.body);
+        console.log(cartItems);
         
         // Validate input
         if (!cartItems || cartItems.length === 0) {
@@ -86,7 +88,8 @@ const placeOrder = async (req, res) => {
                         size_id: cartData.sizeId,
                         size: cartData.sizeString,
                         quantity: cartData.quantity,
-                        original_price: cartData.price * cartData.quantity,
+                        price: cartData.price,
+                        total: cartData.price * cartData.quantity,
                     });
                 } else {
                     // Product without variants (no variants = no sizes = no details)
@@ -95,7 +98,8 @@ const placeOrder = async (req, res) => {
                         product_id: cartData.productId,
                         product_name: cartData.productName,
                         quantity: cartData.quantity,
-                        original_price: cartData.price * cartData.quantity,
+                        price: cartData.price,
+                        total: cartData.price * cartData.quantity,
                     });
                 }
 
@@ -108,7 +112,7 @@ const placeOrder = async (req, res) => {
 
         // ✅ Create order if we have valid items
         if (ordersToAdd.length > 0) {
-            const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.original_price, 0);
+            const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.total, 0);
 
             const newOrder = new Order({
                 user_id: req.user.id, // From auth middleware
@@ -157,6 +161,23 @@ const placeOrder = async (req, res) => {
     }
 };
 
+// Function to fetch all the orders
+const fetchOrders = async (req, res) => {
+    console.log("Request received for fetching orders");
+    try {
+        const orders = await Order.find();
+        if(orders) {
+            console.log(orders);
+            return res.status(200).json({message: "Success", orders});
+        } else {
+            return res.status(400).json({message: "No orders found"});
+        }
+    } catch(error) {
+        return res.status(500).json({message: "Internal server error"});
+    }
+};
+
 module.exports = {
     placeOrder,
+    fetchOrders,
 };
