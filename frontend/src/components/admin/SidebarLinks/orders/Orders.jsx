@@ -4,6 +4,7 @@ import { useState, useMemo, useEffect, useContext } from "react"
 import { Search, Download, Check, X, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle } from "lucide-react"
 import axios from "axios"
 import { ProductContext } from "../../../../../Context/ProductContext"
+import ShippingPriceModal from "./ShippingPriceModal"
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -27,7 +28,9 @@ const statusIcons = {
 function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMappedWithOrderId }) {
   if (!isOpen || !order) return null
 
-  const StatusIcon = statusIcons[order.status]
+  const StatusIcon = statusIcons[order.status];
+  const [showShippingPriceModal, setShowShippingPriceModal] = useState(false);
+  const [orderId, setOrderId] = useState("");
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -131,7 +134,12 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => onStatusChange(order._id, "Accepted")}
+                onClick={() => {
+                  onStatusChange(order._id, "Accepted");
+                  setOrderId(order._id);
+                  setShowShippingPriceModal(true);
+
+                }}
                 className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
                 disabled={order.status === "Accepted"}
               >
@@ -360,7 +368,9 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
           </div>
         </div>
       </div>
+    {showShippingPriceModal && <ShippingPriceModal onClose={() => setShowShippingPriceModal(false)} orderId={orderId} />}
     </div>
+
   )
   // End of order details modal
 }

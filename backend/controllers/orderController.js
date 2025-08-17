@@ -1,6 +1,7 @@
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
+const mongoose = require('mongoose');
 
 // Function to add the order
 const placeOrder = async (req, res) => {
@@ -167,7 +168,7 @@ const fetchOrders = async (req, res) => {
     try {
         const orders = await Order.find();
         if(orders) {
-            console.log(orders);
+            // console.log(orders);
             return res.status(200).json({message: "Success", orders});
         } else {
             return res.status(400).json({message: "No orders found"});
@@ -177,7 +178,55 @@ const fetchOrders = async (req, res) => {
     }
 };
 
+// Function where admin will update the shiping price
+const shippingPriceUpdate = async (req, res) => {
+    // console.log(req.body);
+    try {
+        const {shippingPriceValue, orderId} = req.body;
+        const order = await Order.findById(orderId);
+        if(order) {
+            // Order with this ID is present
+            console.log(typeof(orderId))
+            // Checking the input
+            if(parseInt(shippingPriceValue) > 0) {
+                // Input is proper
+
+                // Updating the order
+                try {
+                    const totalPrice = order.price + parseInt(shippingPriceValue);
+                    const updatedOrder = await Order.findByIdAndUpdate(
+                        orderId,
+                         {
+                            total_price: totalPrice,
+                            status: "Accepted",
+                        },
+                    
+                    {
+                        new: true,
+                        runValidators: true
+                    }
+                    );
+
+                    return res.status(200).json({message: "Shipping price updated"});
+                } catch(error) {
+                    // Prolem while updating the order
+                    return res.status(400).json({message: "Problem while updating the order"});
+                }
+            } else {
+                // Input is not proper
+                return res.status(400).json({message: "Input is not proper"})
+            }
+        } else {
+            // Order with this id is not present
+            return res.status(400).json({message: "Product not found"})
+        }
+    } catch(error) {
+        return res.status(500).json({message: `Internal server error ${error}`});
+    }
+}
+
 module.exports = {
     placeOrder,
     fetchOrders,
+    shippingPriceUpdate
 };
