@@ -5,6 +5,7 @@ import { Search, Download, Check, X, Clock, Truck, CheckCircle, Eye, User, Packa
 import axios from "axios"
 import { ProductContext } from "../../../../../Context/ProductContext"
 import ShippingPriceModal from "./ShippingPriceModal"
+import StatusModal from "./StatusModal";
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -30,6 +31,8 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
 
   const StatusIcon = statusIcons[order.status];
   const [showShippingPriceModal, setShowShippingPriceModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
+  const [status, setStatus] = useState("");
   const [orderId, setOrderId] = useState("");
 
   const formatDate = (dateString) => {
@@ -50,6 +53,8 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       const res = await axios.post('http://localhost:3000/api/order/status-change', {status, orderId}, {withCredentials: true}) ;
       if(res.status === 200) {
         console.log("Order status changed successfully");
+        setStatus(status);
+        setShowStatusModal(true)
       } else {
         console.log("Order status change request cannot be processed")
         }
@@ -387,6 +392,10 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         </div>
       </div>
     {showShippingPriceModal && <ShippingPriceModal onClose={() => setShowShippingPriceModal(false)} orderId={orderId} email={order.email} />}
+      {showStatusModal && <StatusModal onClose={() => {
+        setStatus("");
+        setShowStatusModal(false);
+      }} status={status} />}
     </div>
 
   )

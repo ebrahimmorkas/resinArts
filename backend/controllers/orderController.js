@@ -269,11 +269,12 @@ const handleStatusChange = async (req, res) => {
 
         // Checking whether user exists or not
         if(user) {
+            console.log("Updting")
             // Start the updating process
-            const updatedOrder = Order.findByIdAndUpdate(
+            const updatedOrder = await Order.findByIdAndUpdate(
                 orderId,
                 {
-                    status,
+                    status: status,
                     total_price: status
                 },
                 {
@@ -284,10 +285,13 @@ const handleStatusChange = async (req, res) => {
 
             // Sending the email
             try {
+                console.log("try email")
                 sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
             } catch (error) {
+                console.log("catch email")
                 console.log("Error in sending email");
             } finally {
+                console.log("Finally email")
                 return res.status(200).json({message: "Rejected successfully"});
             }
         } else {
