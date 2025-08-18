@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { X } from "lucide-react"
 import axios from "axios";
 
-function ShippingPriceModal({onClose, orderId}) {
+function ShippingPriceModal({onClose, orderId, email}) {
     const [shippingPriceValue, setShippingPriceValue] = useState("");
     const [isLoading, setIsLoading] = useState(false);
 
@@ -12,7 +12,7 @@ function ShippingPriceModal({onClose, orderId}) {
         if(parseInt(shippingPriceValue) > 0) {
             setIsLoading(true);
             try {
-                const res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {shippingPriceValue, orderId}, {withCredentials: true});
+                const res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {shippingPriceValue, orderId, email}, {withCredentials: true});
                 
                 if(res.status === 200) {
                     // Response status code is 200

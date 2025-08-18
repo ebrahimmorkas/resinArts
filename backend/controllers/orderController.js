@@ -1,7 +1,30 @@
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
-const mongoose = require('mongoose');
+const sendEmail = require('../utils/sendEmail');
+
+// Function to check whether the order exists or not
+const findOrder = async (orderId) => {
+    try {
+        const order = await Order.findById(orderId);
+        if(order) {
+            return order;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        throw error;
+    }
+}
+
+const findUser = async (userId) => {
+    const user = await User.findById(userId);
+    if(user) {
+        return user;
+    } else {
+        return null;
+    }
+}
 
 // Function to add the order
 const placeOrder = async (req, res) => {
@@ -182,11 +205,11 @@ const fetchOrders = async (req, res) => {
 const shippingPriceUpdate = async (req, res) => {
     // console.log(req.body);
     try {
-        const {shippingPriceValue, orderId} = req.body;
+        const {shippingPriceValue, orderId, email} = req.body;
         const order = await Order.findById(orderId);
         if(order) {
             // Order with this ID is present
-            console.log(typeof(orderId))
+            console.log(order)
             // Checking the input
             if(parseInt(shippingPriceValue) > 0) {
                 // Input is proper
@@ -206,8 +229,14 @@ const shippingPriceUpdate = async (req, res) => {
                         runValidators: true
                     }
                     );
-
-                    return res.status(200).json({message: "Shipping price updated"});
+                    // console.log(email)
+                    try {
+                        await sendEmail(email, "Accepted", `Your order has been accepted for id ${orderId}`)
+                    } catch(error) {
+                        console.log("Error in sending email");
+                    } finally {
+                        return res.status(200).json({message: "Shipping price updated"});
+                    }
                 } catch(error) {
                     // Prolem while updating the order
                     return res.status(400).json({message: "Problem while updating the order"});
@@ -225,8 +254,58 @@ const shippingPriceUpdate = async (req, res) => {
     }
 }
 
+// Function to handle status
+const handleStatusChange = async (req, res) => {
+    // console.log(req.body);
+    try {
+    const {status, orderId} = req.body;
+
+    // Checking whether the order exists or not
+    const order = await findOrder(orderId);
+    // checking whether user exists or not
+    const user = await findUser(order.user_id)
+    if(order) {
+        // Order is present
+
+        // Checking whether user exists or not
+        if(user) {
+            // Start the updating process
+            const updatedOrder = Order.findByIdAndUpdate(
+                orderId,
+                {
+                    status,
+                    total_price: status
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            )
+
+            // Sending the email
+            try {
+                sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
+            } catch (error) {
+                console.log("Error in sending email");
+            } finally {
+                return res.status(200).json({message: "Rejected successfully"});
+            }
+        } else {
+            // User does not exist
+            return res.status(400).json({message: "User not found"})
+        }
+    } else {
+        // Order is not present
+        return res.status(400).json({message: "Order not found"})        
+    }
+} catch(error) {
+    return res.status(500).json({message: "Internal server error"});
+}
+}
+
 module.exports = {
     placeOrder,
     fetchOrders,
-    shippingPriceUpdate
+    shippingPriceUpdate,
+    handleStatusChange
 };

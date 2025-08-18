@@ -44,6 +44,20 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
 
   const totalQuantity = order.orderedProducts.reduce((sum, product) => sum + product.quantity, 0)
 
+  // Function to handle status change for backend
+  const handleStatusChangeBackend = async (status, orderId) => {
+    try {
+      const res = await axios.post('http://localhost:3000/api/order/status-change', {status, orderId}, {withCredentials: true}) ;
+      if(res.status === 200) {
+        console.log("Order status changed successfully");
+      } else {
+        console.log("Order status change request cannot be processed")
+        }
+    } catch(error) {
+      console.log(error);
+    }
+  }
+
   // Function to check stock status and return appropriate styling
   const getStockStatus = (orderedQuantity, currentStock) => {
     if (currentStock === undefined || currentStock === null) {
@@ -147,7 +161,11 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 Accept
               </button>
               <button
-                onClick={() => onStatusChange(order._id, "Rejected")}
+                onClick={
+                  () => {
+                    onStatusChange(order._id, "Rejected")
+                    handleStatusChangeBackend("Rejected", order._id);
+                  }}
                 className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
                 disabled={order.status === "Rejected"}
               >
@@ -368,7 +386,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
           </div>
         </div>
       </div>
-    {showShippingPriceModal && <ShippingPriceModal onClose={() => setShowShippingPriceModal(false)} orderId={orderId} />}
+    {showShippingPriceModal && <ShippingPriceModal onClose={() => setShowShippingPriceModal(false)} orderId={orderId} email={order.email} />}
     </div>
 
   )
