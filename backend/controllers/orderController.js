@@ -295,7 +295,7 @@ const handleStatusChange = async (req, res) => {
 
             // Sending the email
             try {
-                console.log("try email")
+                // console.log("try email")
                 sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
             } catch (error) {
                 console.log("catch email")
@@ -339,18 +339,31 @@ const editOrder = async (req, res) => {
                 }
                 const price = prices.reduce((accumulator, current) => accumulator + current, 0);
                 const totalPrice = price + order.shipping_price;
-                const updatedProduct = await Order.findByIdAndUpdate(
-                    order._id,
-                    {
-                        orderedProducts: products,
-                        price: price,
-                        total_price: totalPrice
-                    },
-                    {
-                        new: true,
-                        runValidators: true
+                try {
+                    const updatedProduct = await Order.findByIdAndUpdate(
+                        order._id,
+                        {
+                            orderedProducts: products,
+                            price: price,
+                            total_price: totalPrice
+                        },
+                        {
+                            new: true,
+                            runValidators: true
+                        }
+                    );
+
+                    try {
+                        // console.log("Sending email");
+                        sendEmail(user.email, `Updation of order ${order._id}`, `Your total price is ${updatedProduct.total_price}`);
+                    } catch(error) {
+                        console.log("Problem in sending email");
+                    } finally {
+                        return res.status(200).json({message: "Product edited successfully"});
                     }
-                );
+                } catch(error) {
+                    return res.status(400).json({message: `Problem while updating the order ${error}`});
+                }
             } else {
                 return res.status(400).json({message: "User not found"});
             }
