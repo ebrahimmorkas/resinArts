@@ -26,6 +26,15 @@ const findUser = async (userId) => {
     }
 }
 
+const findProduct = async (productId) => {
+    const product = await Product.findById(productId);
+    if(product) {
+        return product;
+    } else {
+        return null;
+    }
+}
+
 // Function to add the order
 const placeOrder = async (req, res) => {
     try {
@@ -220,6 +229,7 @@ const shippingPriceUpdate = async (req, res) => {
                     const updatedOrder = await Order.findByIdAndUpdate(
                         orderId,
                          {
+                            shipping_price: shippingPriceValue,
                             total_price: totalPrice,
                             status: "Accepted",
                         },
@@ -307,9 +317,55 @@ const handleStatusChange = async (req, res) => {
 }
 }
 
+// Function to edit the order that is quantity and price
+const editOrder = async (req, res) => {
+    // console.log(req.body);
+    try {
+        const {products} = req.body;
+        const {orderId} = req.params;
+        const order = await findOrder(orderId);
+        const user = await findUser(order.user_id);
+        if(order) {
+            console.log(products[0]);
+            if(user) {
+                const prices = [];
+                for (const prod of products) {
+                    const product = await findProduct(prod.product_id);
+                    if(!product) {
+                        return res.status(400).json({message: "Product not found"})
+                    } else {
+                        prices.push(prod.total);
+                    }
+                }
+                const price = prices.reduce((accumulator, current) => accumulator + current, 0);
+                const totalPrice = price + order.shipping_price;
+                const updatedProduct = await Order.findByIdAndUpdate(
+                    order._id,
+                    {
+                        orderedProducts: products,
+                        price: price,
+                        total_price: totalPrice
+                    },
+                    {
+                        new: true,
+                        runValidators: true
+                    }
+                );
+            } else {
+                return res.status(400).json({message: "User not found"});
+            }
+        } else {
+            return res.status(400).json({message: "Order not found"});
+        }
+    } catch (error) {
+        return res.status(500).json({message: "Internal server error"});
+    }
+}
+
 module.exports = {
     placeOrder,
     fetchOrders,
     shippingPriceUpdate,
-    handleStatusChange
+    handleStatusChange,
+    editOrder,
 };

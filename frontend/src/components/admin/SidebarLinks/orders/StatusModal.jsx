@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { X } from "lucide-react"
 import axios from "axios";
 
-function ShippingPriceModal({onClose, status}) {
+function StatusModal({onClose, status}) {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
@@ -35,4 +35,4 @@ function ShippingPriceModal({onClose, status}) {
     )
 }
 
-export default ShippingPriceModal
+export default StatusModal

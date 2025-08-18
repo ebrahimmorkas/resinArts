@@ -6,6 +6,7 @@ import axios from "axios"
 import { ProductContext } from "../../../../../Context/ProductContext"
 import ShippingPriceModal from "./ShippingPriceModal"
 import StatusModal from "./StatusModal";
+import EditOrderModal from "./EditOrderModal"
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -34,6 +35,8 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   const [showStatusModal, setShowStatusModal] = useState(false);
   const [status, setStatus] = useState("");
   const [orderId, setOrderId] = useState("");
+  const [currentOrder, setCurrentOrder] = useState(null);
+  const [showEditModal, setShowEditModal] = useState(false);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -61,6 +64,23 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     } catch(error) {
       console.log(error);
     }
+  }
+
+  // Function that will handle the editing of the order:
+  const handleEdit = async (order) => {
+    setCurrentOrder(order);
+    setShowEditModal(true);
+    // try {
+    //   const res = await axios.post('http://localhost:3000/api/order/edit-order', order, {withCredentials: true});
+
+    //   // if(res.status === 200) {
+    //   //   console.log("dited successfully");
+    //   // } else {
+    //   //   console.log("Cannot edit");
+    //   // }
+    // } catch(error) {
+    //   console.log(error);
+    // }
   }
 
   // Function to check stock status and return appropriate styling
@@ -200,6 +220,16 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Complete
+              </button>
+              <button
+                onClick={() => {
+                  handleEdit(order)
+                  setOrderId(order._id);
+                }}
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+              >
+                <CheckCircle className="h-4 w-4 mr-2" />
+                Edit
               </button>
             </div>
           </div>
@@ -396,6 +426,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         setStatus("");
         setShowStatusModal(false);
       }} status={status} />}
+      {showEditModal && <EditOrderModal onClose={() => setShowEditModal(false)} order={currentOrder} />}
     </div>
 
   )
