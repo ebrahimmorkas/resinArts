@@ -44,8 +44,8 @@ function AdminPanel() {
         {/* <OrdersAccepted></OrdersAccepted> */}
         {/* <RestockPanel></RestockPanel> */}
         {/* <AllProducts></AllProducts> */}
-        {/* <Orders></Orders> */}
-        <Users></Users>
+        <Orders></Orders>
+        {/* <Users></Users> */}
       </main>
     </div>
   )

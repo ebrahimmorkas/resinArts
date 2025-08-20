@@ -198,6 +198,18 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 Reject
               </button>
               <button
+                onClick={
+                  () => {
+                    onStatusChange(order._id, "Rejected")
+                    handleStatusChangeBackend("Confirm", order._id);
+                  }}
+                className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                disabled={order.status === "Rejected"}
+              >
+                <X className="h-4 w-4 mr-2" />
+                Confirm
+              </button>
+              <button
                 onClick={() => onStatusChange(order._id, "In Progress")}
                 className="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
                 disabled={order.status === "In Progress"}

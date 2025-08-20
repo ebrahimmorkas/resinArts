@@ -270,6 +270,11 @@ const handleStatusChange = async (req, res) => {
     try {
     const {status, orderId} = req.body;
 
+    const statuses = ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"];
+
+    // Check whether the received status is valid
+    if(statuses.includes(status)) {
+
     // Checking whether the order exists or not
     const order = await findOrder(orderId);
     // checking whether user exists or not
@@ -281,10 +286,15 @@ const handleStatusChange = async (req, res) => {
         if(user) {
             console.log("Updting")
             // Start the updating process
+            let paymentStatus = "Payment Pending";
+            if(status === "Confirm") {
+                paymentStatus = "Paid"
+            }
             const updatedOrder = await Order.findByIdAndUpdate(
                 orderId,
                 {
                     status: status, 
+                    payment_status: paymentStatus
                 },
                 {
                     new: true,
@@ -295,12 +305,24 @@ const handleStatusChange = async (req, res) => {
             // Sending the email
             try {
                 // console.log("try email")
-                sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
+                switch(status) {
+                    case "Rejected":
+                    sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
+                    break;
+
+                    case "Confirm":
+                        sendEmail(user.email, status, `We have successfully received your payment for order ${orderId}. Your order will be delivered soon`);
+                        break;
+                    
+                        case "Dispatched":
+                            sendEmail(user.email, status, `Your order ${orderId} has been successfully dispatched`);
+                            break;
+                }
             } catch (error) {
-                console.log("catch email")
+                // console.log("catch email")
                 console.log("Error in sending email");
             } finally {
-                console.log("Finally email")
+                // console.log("Finally email")
                 return res.status(200).json({message: "Rejected successfully"});
             }
         } else {
@@ -311,6 +333,9 @@ const handleStatusChange = async (req, res) => {
         // Order is not present
         return res.status(400).json({message: "Order not found"})        
     }
+} else {
+    return res.status(400).json({message: "Invalid status"});
+}
 } catch(error) {
     return res.status(500).json({message: "Internal server error"});
 }
