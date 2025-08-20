@@ -87,6 +87,12 @@ const orderSchema = mongoose.Schema({
         required: false,
         default: "Pending",
     },
+    payment_status: {
+      type: String,
+      required: true,
+      enum: ['Paid', 'Payment Pending'],
+      default: "Payment Pending",
+    }
 });
 
 module.exports = mongoose.model('Order', orderSchema);

@@ -18,6 +18,10 @@ const userSchema = mongoose.Schema({
     role: {
         type: String,
         default: 'user',
+    },
+    zip_code: {
+        type: String,
+        required: true
     }
 });
 

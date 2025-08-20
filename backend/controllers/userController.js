@@ -18,6 +18,12 @@ const findUser = async (req, res) => {
                 const user = await User.findById(userId);
                 if(user) {
                     // Fetch the orders
+                    const userAddress = {
+                        state: user.state,
+                        city: user.city,
+                        zipCode: user.zip_code,
+                        address: user.address,
+                    }
                     try {
                         const orders = await Order.find({user_id: userId});
                         // console.log(orders)
@@ -26,7 +32,8 @@ const findUser = async (req, res) => {
                             return res.status(200).json(
                                 {
                                     message: "Orders Fetched",
-                                    orders: orders
+                                    orders: orders,
+                                    userAddress
                                 }
                             )
                         } else {

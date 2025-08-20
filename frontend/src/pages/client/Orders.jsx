@@ -22,276 +22,8 @@ import {
   AlertCircle,
   RotateCcw,
 } from "lucide-react"
-import {useParams} from "react-router-dom";
-import axios from 'axios';
-
-// Mock orders data with updated status system
-const mockOrders = [
-  {
-    id: "ORD-2024-001",
-    date: "2024-01-15",
-    items: [
-      {
-        name: "Premium Wireless Headphones",
-        quantity: 1,
-        price: 150,
-        image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=60&h=60&fit=crop",
-      },
-      {
-        name: "Smart Fitness Watch",
-        quantity: 1,
-        price: 100,
-        image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 250,
-    shippingPrice: 15,
-    total: 265,
-    status: "delivered",
-    trackingNumber: "ORD-2024-001",
-    estimatedDelivery: "2024-01-18",
-    shippingAddress: "123 Main St, New York, NY 10001",
-    paymentStatus: "paid",
-  },
-  {
-    id: "ORD-2024-002",
-    date: "2024-01-20",
-    items: [
-      {
-        name: "Organic Cotton T-Shirt",
-        quantity: 2,
-        price: 25,
-        image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 50,
-    shippingPrice: 10,
-    total: 60,
-    status: "shipped",
-    trackingNumber: "ORD-2024-002",
-    estimatedDelivery: "2024-01-25",
-    shippingAddress: "123 Main St, New York, NY 10001",
-    paymentStatus: "paid",
-  },
-  {
-    id: "ORD-2024-003",
-    date: "2024-01-22",
-    items: [
-      {
-        name: "Professional Camera Lens",
-        quantity: 1,
-        price: 299,
-        image: "https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=60&h=60&fit=crop",
-      },
-      {
-        name: "Luxury Leather Wallet",
-        quantity: 1,
-        price: 80,
-        image: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 379,
-    shippingPrice: 18,
-    total: 397,
-    status: "processing",
-    trackingNumber: "ORD-2024-003",
-    estimatedDelivery: "2024-01-28",
-    shippingAddress: "123 Main St, New York, NY 10001",
-    paymentStatus: "paid",
-  },
-  {
-    id: "ORD-2024-004",
-    date: "2024-01-25",
-    items: [
-      {
-        name: "Gaming Mechanical Keyboard",
-        quantity: 1,
-        price: 120,
-        image: "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 120,
-    shippingPrice: 0,
-    total: 120,
-    status: "cancelled",
-    trackingNumber: "ORD-2024-004",
-    estimatedDelivery: null,
-    shippingAddress: "123 Main St, New York, NY 10001",
-    paymentStatus: "refunded",
-  },
-  {
-    id: "ORD-2024-005",
-    date: "2024-01-28",
-    items: [
-      {
-        name: "Wireless Bluetooth Speaker",
-        quantity: 1,
-        price: 75,
-        image: "https://images.unsplash.com/photo-1608043152269-423dbba4e7e1?w=60&h=60&fit=crop",
-      },
-      {
-        name: "Designer Sunglasses",
-        quantity: 1,
-        price: 120,
-        image: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 195,
-    shippingPrice: "pending",
-    total: "pending",
-    status: "pending",
-    trackingNumber: "ORD-2024-005",
-    estimatedDelivery: "2024-02-02",
-    shippingAddress: "123 Main St, New York, NY 10001",
-    paymentStatus: "pending",
-  },
-  {
-    id: "ORD-2024-006",
-    date: "2024-01-30",
-    items: [
-      {
-        name: "Premium Wireless Headphones",
-        quantity: 1,
-        price: 150,
-        image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 150,
-    shippingPrice: 12,
-    total: 162,
-    status: "confirmed",
-    trackingNumber: "ORD-2024-006",
-    estimatedDelivery: "2024-02-03",
-    shippingAddress: "456 Oak Ave, Los Angeles, CA 90210",
-    paymentStatus: "paid",
-  },
-  {
-    id: "ORD-2024-007",
-    date: "2024-02-01",
-    items: [
-      {
-        name: "Smart Fitness Watch",
-        quantity: 1,
-        price: 100,
-        image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=60&h=60&fit=crop",
-      },
-      {
-        name: "Organic Cotton T-Shirt",
-        quantity: 3,
-        price: 25,
-        image: "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 175,
-    shippingPrice: 12,
-    total: 187,
-    status: "accepted",
-    trackingNumber: "ORD-2024-007",
-    estimatedDelivery: "2024-02-04",
-    shippingAddress: "789 Pine St, Chicago, IL 60601",
-    paymentStatus: "pending",
-  },
-  {
-    id: "ORD-2024-008",
-    date: "2024-02-03",
-    items: [
-      {
-        name: "Professional Camera Lens",
-        quantity: 1,
-        price: 299,
-        image: "https://images.unsplash.com/photo-1606983340126-99ab4feaa64a?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 299,
-    shippingPrice: 0,
-    total: 299,
-    status: "rejected",
-    trackingNumber: "ORD-2024-008",
-    estimatedDelivery: null,
-    shippingAddress: "321 Elm St, Miami, FL 33101",
-    paymentStatus: "pending",
-  },
-  {
-    id: "ORD-2024-009",
-    date: "2024-02-05",
-    items: [
-      {
-        name: "Luxury Leather Wallet",
-        quantity: 1,
-        price: 80,
-        image: "https://images.unsplash.com/photo-1627123424574-724758594e93?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 80,
-    shippingPrice: 8,
-    total: 88,
-    status: "returned",
-    trackingNumber: "ORD-2024-009",
-    estimatedDelivery: null,
-    shippingAddress: "555 Maple Dr, Seattle, WA 98101",
-    paymentStatus: "refund_pending",
-  },
-  {
-    id: "ORD-2024-010",
-    date: "2024-02-07",
-    items: [
-      {
-        name: "Gaming Mechanical Keyboard",
-        quantity: 1,
-        price: 120,
-        image: "https://images.unsplash.com/photo-1541140532154-b024d705b90a?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 120,
-    shippingPrice: 15,
-    total: 135,
-    status: "completed",
-    trackingNumber: "ORD-2024-010",
-    estimatedDelivery: null,
-    shippingAddress: "777 Cedar St, Boston, MA 02101",
-    paymentStatus: "paid",
-  },
-  {
-    id: "ORD-2024-011",
-    date: "2024-02-08",
-    items: [
-      {
-        name: "Wireless Mouse",
-        quantity: 1,
-        price: 45,
-        image: "https://images.unsplash.com/photo-1527864550417-724758594e93?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 45,
-    shippingPrice: "pending",
-    total: "pending",
-    status: "pending",
-    trackingNumber: "ORD-2024-011",
-    estimatedDelivery: "2024-02-12",
-    shippingAddress: "999 Broadway, New York, NY 10001",
-    paymentStatus: "pending",
-  },
-  {
-    id: "ORD-2024-012",
-    date: "2024-02-09",
-    items: [
-      {
-        name: "Bluetooth Earbuds",
-        quantity: 1,
-        price: 89,
-        image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=60&h=60&fit=crop",
-      },
-    ],
-    itemsTotal: 89,
-    shippingPrice: 0,
-    total: 89,
-    status: "rejected",
-    trackingNumber: "ORD-2024-012",
-    estimatedDelivery: null,
-    shippingAddress: "456 Tech Ave, San Francisco, CA 94102",
-    paymentStatus: "pending",
-  },
-]
+import { useParams, useNavigate } from "react-router-dom"
+import axios from "axios"
 
 const statusConfig = {
   pending: {
@@ -316,6 +48,11 @@ const statusConfig = {
   },
   shipped: {
     label: "Shipped",
+    color: "bg-cyan-100 text-cyan-800 border-cyan-200",
+    icon: Truck,
+  },
+  dispatched: {
+    label: "Dispatched",
     color: "bg-cyan-100 text-cyan-800 border-cyan-200",
     icon: Truck,
   },
@@ -351,6 +88,10 @@ const paymentStatusConfig = {
     label: "Paid",
     color: "bg-green-100 text-green-800 border-green-200",
   },
+  "payment pending": {
+    label: "Payment Pending",
+    color: "bg-yellow-100 text-yellow-800 border-yellow-200",
+  },
   pending: {
     label: "Payment Pending",
     color: "bg-yellow-100 text-yellow-800 border-yellow-200",
@@ -366,7 +107,122 @@ const paymentStatusConfig = {
 }
 
 // Default ongoing statuses
-const ongoingStatuses = ["pending", "accepted", "confirmed", "processing", "shipped", "delivered"]
+const ongoingStatuses = ["pending", "accepted", "confirmed", "processing", "shipped", "dispatched", "delivered"]
+
+// Cache duration in milliseconds (5 minutes)
+const CACHE_DURATION = 5 * 60 * 1000
+
+// Cache management utility functions
+const CacheManager = {
+  // Clear all user-related cache data
+  clearAllUserCache: (userId = null) => {
+    const keysToRemove = []
+
+    // Get all localStorage keys
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+
+      // Remove user-specific cache or all cache if no userId provided
+      if (userId) {
+        if (key.includes(`_${userId}`) || key.includes(`orders_${userId}`) || key.includes(`userAddress_${userId}`)) {
+          keysToRemove.push(key)
+        }
+      } else {
+        // Remove all cache keys that look like our cache format
+        if (key.includes("orders_") || key.includes("userAddress_") || key.includes("_timestamp")) {
+          keysToRemove.push(key)
+        }
+      }
+    }
+
+    // Remove the identified keys
+    keysToRemove.forEach((key) => localStorage.removeItem(key))
+
+    console.log(`Cleared ${keysToRemove.length} cache entries for user: ${userId || "all users"}`)
+  },
+
+  // Clear expired cache
+  clearExpiredCache: (userId) => {
+    const cacheKey = `orders_${userId}`
+    const addressCacheKey = `userAddress_${userId}`
+    const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`)
+
+    if (cacheTimestamp) {
+      const isExpired = Date.now() - Number.parseInt(cacheTimestamp) > CACHE_DURATION
+
+      if (isExpired) {
+        localStorage.removeItem(cacheKey)
+        localStorage.removeItem(addressCacheKey)
+        localStorage.removeItem(`${cacheKey}_timestamp`)
+        console.log("Expired cache cleared from localStorage")
+        return true
+      }
+    }
+    return false
+  },
+
+  // Check if cache exists and is valid
+  getCachedData: (userId) => {
+    const cacheKey = `orders_${userId}`
+    const addressCacheKey = `userAddress_${userId}`
+    const cachedData = localStorage.getItem(cacheKey)
+    const cachedAddress = localStorage.getItem(addressCacheKey)
+    const cacheTimestamp = localStorage.getItem(`${cacheKey}_timestamp`)
+
+    if (cachedData && cachedAddress && cacheTimestamp) {
+      const isValidCache = Date.now() - Number.parseInt(cacheTimestamp) < CACHE_DURATION
+
+      if (isValidCache) {
+        return {
+          orders: JSON.parse(cachedData),
+          userAddress: JSON.parse(cachedAddress),
+        }
+      }
+    }
+    return null
+  },
+
+  // Set cache data
+  setCachedData: (userId, orders, userAddress) => {
+    const cacheKey = `orders_${userId}`
+    const addressCacheKey = `userAddress_${userId}`
+
+    localStorage.setItem(cacheKey, JSON.stringify(orders))
+    localStorage.setItem(addressCacheKey, JSON.stringify(userAddress))
+    localStorage.setItem(`${cacheKey}_timestamp`, Date.now().toString())
+  },
+}
+
+// Axios interceptor to handle JWT expiration
+const setupAxiosInterceptors = (navigate) => {
+  // Response interceptor to catch JWT expiration
+  axios.interceptors.response.use(
+    (response) => response,
+    (error) => {
+      // Check if error is due to JWT expiration
+      if (
+        error.response?.status === 401 ||
+        error.response?.status === 403 ||
+        error.response?.data?.message?.includes("token") ||
+        error.response?.data?.message?.includes("expired") ||
+        error.response?.data?.message?.includes("unauthorized")
+      ) {
+        console.log("JWT token expired or unauthorized - clearing all cache")
+
+        // Clear all user cache data
+        CacheManager.clearAllUserCache()
+
+        // Optionally redirect to login page
+        // navigate('/login')
+
+        // Or show a notification
+        alert("Your session has expired. Please log in again.")
+      }
+
+      return Promise.reject(error)
+    },
+  )
+}
 
 export default function Orders() {
   const [searchQuery, setSearchQuery] = useState("")
@@ -374,34 +230,101 @@ export default function Orders() {
   const [currentPage, setCurrentPage] = useState(1)
   const [selectedOrder, setSelectedOrder] = useState(null)
   const ordersPerPage = 5
-  const [paymentFilter, setPaymentFilter] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all")
   const [loadingOrders, setLoadingOrders] = useState(true)
-  const [orders, setOrders] = useState(null);
-  const {userId} = useParams();
+  const [orders, setOrders] = useState([])
+  const [userAddress, setUserAddress] = useState(null)
+  const { userId } = useParams()
+  const navigate = useNavigate()
+
+  // Setup axios interceptors on component mount
+  useEffect(() => {
+    setupAxiosInterceptors(navigate)
+  }, [navigate])
 
   useEffect(() => {
-    // Check whether the user exists or not 
     const fetchOrders = async () => {
-      // console.log(userId);
       try {
-        const res = await axios.post('http://localhost:3000/api/user/find-user', {userId}, {withCredentials: true});
-        if(res.status === 200) {
-          setOrders(res.data.orders);
-        }
-      } catch(error) {
-        console.log("Error " + error);
-      }
-    };
-    fetchOrders();
-  }, [userId]);
+        // Clear expired cache first
+        CacheManager.clearExpiredCache(userId)
 
-  useEffect(() => {
-    console.log(orders);
-    setLoadingOrders(false);
-  }, [orders])
+        // Check if we have cached data
+        const cachedData = CacheManager.getCachedData(userId)
+
+        if (cachedData) {
+          console.log("Loading orders from cache...")
+          setOrders(cachedData.orders)
+          setUserAddress(cachedData.userAddress)
+          setLoadingOrders(false)
+          return
+        }
+
+        // If no valid cache, fetch from API
+        console.log("Fetching orders from API...")
+        const res = await axios.post("http://localhost:3000/api/user/find-user", { userId }, { withCredentials: true })
+
+        if (res.status === 200) {
+          const fetchedOrders = res.data.orders || []
+          const fetchedAddress = res.data.userAddress
+
+          setOrders(fetchedOrders)
+          setUserAddress(fetchedAddress)
+
+          // Cache the data
+          CacheManager.setCachedData(userId, fetchedOrders, fetchedAddress)
+        }
+      } catch (error) {
+        console.log("Error fetching orders:", error)
+
+        // Check if error is due to authentication issues
+        if (error.response?.status === 401 || error.response?.status === 403) {
+          console.log("Authentication error - clearing cache and redirecting")
+          CacheManager.clearAllUserCache()
+          // Optionally redirect to login
+          // navigate('/login')
+        }
+
+        setOrders([])
+      } finally {
+        setLoadingOrders(false)
+      }
+    }
+
+    fetchOrders()
+  }, [userId, navigate])
+
+  // Function to manually clear cache (call this when user logs out)
+  const clearOrdersCache = () => {
+    CacheManager.clearAllUserCache(userId)
+  }
+
+  // Transform backend data to match frontend expectations
+  const transformOrder = (order) => {
+    return {
+      id: order._id,
+      date: new Date(order.createdAt || Date.now()).toISOString().split("T")[0],
+      items: order.orderedProducts.map((product) => ({
+        name: product.product_name + (product.variant_name ? ` - ${product.variant_name}` : ""),
+        quantity: product.quantity,
+        price: product.price,
+        image: product.image_url,
+        size: product.size || null,
+      })),
+      itemsTotal: order.price,
+      shippingPrice: order.shipping_price || 0,
+      total: order.total_price,
+      status: order.status.toLowerCase(),
+      trackingNumber: order._id,
+      estimatedDelivery: null,
+      shippingAddress: userAddress
+        ? `${userAddress.address}, ${userAddress.city}, ${userAddress.state} ${userAddress.zipCode}`
+        : "Address not available",
+      paymentStatus: order.payment_status ? order.payment_status.toLowerCase() : "pending",
+    }
+  }
 
   // Filter orders based on search and status
-  const filteredOrders = mockOrders.filter((order) => {
+  const filteredOrders = orders.map(transformOrder).filter((order) => {
     const matchesSearch =
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
       order.items.some((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase()))
@@ -425,111 +348,143 @@ export default function Orders() {
   const downloadInvoice = async (order, e) => {
     e.stopPropagation()
 
-    // Create invoice content using jsPDF
-    const doc = new jsPDF()
+    try {
+      const doc = new jsPDF()
 
-    // Company Logo and Header
-    doc.setFontSize(24)
-    doc.setFont(undefined, "bold")
-    doc.text("OULA MARKET", 20, 30)
+      // Company Logo and Header
+      doc.setFontSize(24)
+      doc.setFont(undefined, "bold")
+      doc.text("OULA MARKET", 20, 30)
 
-    doc.setFontSize(10)
-    doc.setFont(undefined, "normal")
-    doc.text("Email: support@oulamarket.com", 20, 40)
-    doc.text("Phone: +1 (555) 123-4567", 20, 45)
-    doc.text("WhatsApp: +1 (555) 987-6543", 20, 50)
-    doc.text("Address: 123 Business Ave, Commerce City, CC 12345", 20, 55)
+      doc.setFontSize(10)
+      doc.setFont(undefined, "normal")
+      doc.text("Email: support@oulamarket.com", 20, 40)
+      doc.text("Phone: +1 (555) 123-4567", 20, 45)
+      doc.text("WhatsApp: +1 (555) 987-6543", 20, 50)
+      doc.text("Address: 123 Business Ave, Commerce City, CC 12345", 20, 55)
 
-    // Invoice Header
-    doc.setFontSize(18)
-    doc.setFont(undefined, "bold")
-    doc.text("INVOICE", 150, 30)
+      // Invoice Header - Better positioning to show full ID
+      doc.setFontSize(18)
+      doc.setFont(undefined, "bold")
+      doc.text("INVOICE", 120, 30)
 
-    doc.setFontSize(10)
-    doc.setFont(undefined, "normal")
-    doc.text(`Invoice #: ${order.id}`, 150, 40)
-    doc.text(`Date: ${new Date(order.date).toLocaleDateString()}`, 150, 45)
-    doc.text(`Status: ${statusConfig[order.status].label}`, 150, 50)
-    doc.text(`Payment: ${paymentStatusConfig[getPaymentStatus(order)].label}`, 150, 55)
+      doc.setFontSize(9)
+      doc.setFont(undefined, "normal")
+      doc.text(`Invoice #: ${order.id}`, 120, 40)
+      doc.text(`Date: ${new Date(order.date).toLocaleDateString()}`, 120, 45)
+      doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 50)
+      doc.text(`Payment: ${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}`, 120, 55)
 
-    // Customer Information
-    doc.setFontSize(12)
-    doc.setFont(undefined, "bold")
-    doc.text("BILL TO:", 20, 75)
+      // Customer Information
+      doc.setFontSize(12)
+      doc.setFont(undefined, "bold")
+      doc.text("BILL TO:", 20, 75)
 
-    doc.setFontSize(10)
-    doc.setFont(undefined, "normal")
-    doc.text(order.shippingAddress, 20, 85)
+      doc.setFontSize(10)
+      doc.setFont(undefined, "normal")
+      // Split address into multiple lines if too long
+      const addressLines = doc.splitTextToSize(order.shippingAddress, 170)
+      let addressY = 85
+      addressLines.forEach((line) => {
+        doc.text(line, 20, addressY)
+        addressY += 5
+      })
 
-    // Items Header
-    doc.setFontSize(12)
-    doc.setFont(undefined, "bold")
-    doc.text("ITEMS:", 20, 105)
+      // Items Header
+      const itemsStartY = addressY + 10
+      doc.setFontSize(12)
+      doc.setFont(undefined, "bold")
+      doc.text("ITEMS:", 20, itemsStartY)
 
-    // Table Headers
-    doc.setFontSize(9)
-    doc.setFont(undefined, "bold")
-    doc.text("Item", 20, 115)
-    doc.text("Qty", 120, 115)
-    doc.text("Price", 140, 115)
-    doc.text("Total", 170, 115)
+      // Table Headers
+      const tableStartY = itemsStartY + 10
+      doc.setFontSize(9)
+      doc.setFont(undefined, "bold")
+      doc.text("Image", 20, tableStartY)
+      doc.text("Item", 40, tableStartY)
+      doc.text("Qty", 120, tableStartY)
+      doc.text("Price", 140, tableStartY)
+      doc.text("Total", 170, tableStartY)
 
-    // Draw line under headers
-    doc.line(20, 118, 190, 118)
+      // Draw line under headers
+      doc.line(20, tableStartY + 3, 190, tableStartY + 3)
 
-    // Items List
-    let yPosition = 125
-    doc.setFont(undefined, "normal")
+      // Items List with Images
+      let yPosition = tableStartY + 10
+      doc.setFont(undefined, "normal")
 
-    order.items.forEach((item, index) => {
-      const itemTotal = item.price * item.quantity
+      for (const item of order.items) {
+        const itemTotal = item.price * item.quantity
 
-      doc.text(item.name, 20, yPosition)
-      doc.text(item.quantity.toString(), 120, yPosition)
-      doc.text(`$${item.price}`, 140, yPosition)
-      doc.text(`$${itemTotal}`, 170, yPosition)
+        // Add product image if available
+        if (item.image && item.image !== "/placeholder.svg") {
+          try {
+            const img = new Image()
+            img.crossOrigin = "anonymous"
+            img.onload = function () {
+              doc.addImage(this, "JPEG", 20, yPosition - 5, 15, 10)
+            }
+            img.src = item.image
+          } catch (error) {
+            console.log("Could not add image to PDF")
+          }
+        } else {
+          // Draw placeholder rectangle
+          doc.setFillColor(240, 240, 240)
+          doc.rect(20, yPosition - 5, 15, 10, "F")
+          doc.setFontSize(6)
+          doc.text("IMG", 25, yPosition)
+          doc.setFontSize(9)
+        }
 
+        // Item details
+        const itemName = item.name.length > 35 ? item.name.substring(0, 35) + "..." : item.name
+        doc.text(itemName, 40, yPosition)
+        doc.text(item.quantity.toString(), 120, yPosition)
+        doc.text(`$${item.price}`, 140, yPosition)
+        doc.text(`$${itemTotal}`, 170, yPosition)
+
+        yPosition += 15
+      }
+
+      // Totals Section
+      yPosition += 5
+      doc.line(20, yPosition, 190, yPosition)
+      yPosition += 10
+
+      doc.setFont(undefined, "normal")
+      doc.text(`Items Subtotal:`, 120, yPosition)
+      doc.text(`$${order.itemsTotal}`, 170, yPosition)
       yPosition += 8
-    })
 
-    // Totals Section
-    yPosition += 10
-    doc.line(20, yPosition, 190, yPosition)
-    yPosition += 10
-
-    doc.setFont(undefined, "normal")
-    doc.text(`Items Subtotal:`, 120, yPosition)
-    doc.text(`$${order.itemsTotal}`, 170, yPosition)
-    yPosition += 8
-
-    if (order.shippingPrice === "pending") {
-      doc.text(`Shipping:`, 120, yPosition)
-      doc.text(`Pending`, 170, yPosition)
-    } else {
       doc.text(`Shipping:`, 120, yPosition)
       doc.text(`$${order.shippingPrice}`, 170, yPosition)
-    }
-    yPosition += 8
+      yPosition += 8
 
-    doc.setFont(undefined, "bold")
-    doc.setFontSize(12)
-    if (order.total === "pending") {
-      doc.text(`TOTAL:`, 120, yPosition)
-      doc.text(`Pending`, 170, yPosition)
-    } else {
+      doc.setFont(undefined, "bold")
+      doc.setFontSize(12)
       doc.text(`TOTAL:`, 120, yPosition)
       doc.text(`$${order.total}`, 170, yPosition)
+
+      // Footer
+      yPosition += 20
+      doc.setFontSize(8)
+      doc.setFont(undefined, "normal")
+      doc.text("Thank you for your business!", 20, yPosition)
+      doc.text("For support, contact us at support@oulamarket.com", 20, yPosition + 5)
+
+      // Use shorter filename to avoid issues
+      const filename = `invoice-${order.id.substring(0, 10)}.pdf`
+      doc.save(filename)
+    } catch (error) {
+      console.error("Error generating invoice:", error)
+
+      // Check if error is due to authentication
+      if (error.response?.status === 401 || error.response?.status === 403) {
+        CacheManager.clearAllUserCache()
+        alert("Your session has expired. Please log in again.")
+      }
     }
-
-    // Footer
-    yPosition += 20
-    doc.setFontSize(8)
-    doc.setFont(undefined, "normal")
-    doc.text("Thank you for your business!", 20, yPosition)
-    doc.text("For support, contact us at support@oulamarket.com", 20, yPosition + 5)
-
-    // Save the PDF
-    doc.save(`invoice-${order.id}.pdf`)
   }
 
   const getPaymentStatus = (order) => {
@@ -539,11 +494,11 @@ export default function Orders() {
     if (order.status === "pending" || order.status === "accepted" || order.status === "rejected") {
       return "pending"
     }
-    return "paid"
+    return order.paymentStatus || "pending"
   }
 
   const StatusBadge = ({ status }) => {
-    const config = statusConfig[status]
+    const config = statusConfig[status] || statusConfig.pending
     const IconComponent = config.icon
 
     return (
@@ -558,7 +513,7 @@ export default function Orders() {
 
   const PaymentStatusBadge = ({ order }) => {
     const paymentStatus = getPaymentStatus(order)
-    const config = paymentStatusConfig[paymentStatus]
+    const config = paymentStatusConfig[paymentStatus] || paymentStatusConfig.pending
 
     return (
       <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium border ${config.color}`}>
@@ -603,23 +558,11 @@ export default function Orders() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Shipping:</span>
-                      <span className="font-semibold">
-                        {order.shippingPrice === "pending" ? (
-                          <span className="text-yellow-600">Pending</span>
-                        ) : (
-                          `$${order.shippingPrice}`
-                        )}
-                      </span>
+                      <span className="font-semibold">${order.shippingPrice}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Total:</span>
-                      <span className="font-semibold">
-                        {order.total === "pending" ? (
-                          <span className="text-yellow-600">Pending</span>
-                        ) : (
-                          `$${order.total}`
-                        )}
-                      </span>
+                      <span className="font-semibold">${order.total}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Payment:</span>
@@ -628,23 +571,15 @@ export default function Orders() {
                   </div>
                 </div>
 
-                {order.trackingNumber && (
-                  <div>
-                    <h3 className="font-semibold text-gray-800 mb-2">Tracking</h3>
-                    <div className="space-y-2 text-sm">
-                      <div className="flex justify-between">
-                        <span className="text-gray-600">Tracking Number:</span>
-                        <span className="font-mono">{order.trackingNumber}</span>
-                      </div>
-                      {order.estimatedDelivery && (
-                        <div className="flex justify-between">
-                          <span className="text-gray-600">Est. Delivery:</span>
-                          <span>{new Date(order.estimatedDelivery).toLocaleDateString()}</span>
-                        </div>
-                      )}
+                <div>
+                  <h3 className="font-semibold text-gray-800 mb-2">Tracking</h3>
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-gray-600">Tracking Number:</span>
+                      <span className="font-mono">{order.trackingNumber}</span>
                     </div>
                   </div>
-                )}
+                </div>
               </div>
 
               <div>
@@ -668,7 +603,10 @@ export default function Orders() {
                     />
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-800">{item.name}</h4>
-                      <p className="text-sm text-gray-600">Quantity: {item.quantity}</p>
+                      <p className="text-sm text-gray-600">
+                        Quantity: {item.quantity}
+                        {item.size && ` • Size: ${item.size}`}
+                      </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">${item.price * item.quantity}</p>
@@ -694,9 +632,7 @@ export default function Orders() {
               </button>
               <div className="text-right">
                 <span className="text-lg font-semibold">Total Amount:</span>
-                <span className="text-2xl font-bold text-blue-600 ml-2">
-                  {order.total === "pending" ? "Pending" : `$${order.total}`}
-                </span>
+                <span className="text-2xl font-bold text-blue-600 ml-2">${order.total}</span>
               </div>
             </div>
           </div>
@@ -705,14 +641,29 @@ export default function Orders() {
     )
   }
 
+  const handleBackClick = () => {
+    navigate(-1) // Go back to previous page
+  }
+
+  if (loadingOrders) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading your orders...</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 w-full">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
       {/* Header */}
       <div className="bg-white shadow-sm border-b w-full">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <button className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <button onClick={handleBackClick} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <ArrowLeft className="w-5 h-5" />
               </button>
               <div>
@@ -762,6 +713,7 @@ export default function Orders() {
                   <option value="confirmed">Confirmed</option>
                   <option value="processing">Processing</option>
                   <option value="shipped">Shipped</option>
+                  <option value="dispatched">Dispatched</option>
                   <option value="delivered">Delivered</option>
                   <option value="cancelled">Cancelled</option>
                   <option value="rejected">Rejected</option>
@@ -783,6 +735,7 @@ export default function Orders() {
                   <option value="all">All Payments</option>
                   <option value="paid">Paid</option>
                   <option value="pending">Payment Pending</option>
+                  <option value="payment pending">Payment Pending</option>
                   <option value="refunded">Refunded</option>
                   <option value="refund_pending">Refund Pending</option>
                 </select>
@@ -792,159 +745,146 @@ export default function Orders() {
         </div>
 
         {/* Orders Table */}
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden w-full">
+        <div className="bg-white rounded-xl shadow-sm w-full min-h-[500px]">
           <div className="overflow-x-auto">
-            <table className="w-full min-w-full">
-              <thead className="bg-gray-50 border-b border-gray-200">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Order
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Date
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Items
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Shipping
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Total
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Payment
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              {loadingOrders ? (<div>Loading Your Orders</div>) : (
-              <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedOrders.map((order) => (
-                  <tr
-                    key={order.id}
-                    className="hover:bg-gray-50 transition-colors cursor-pointer"
-                    onClick={() => setSelectedOrder(order)}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{order.id}</div>
-                        {order.trackingNumber && (
-                          <div className="text-xs text-gray-500 font-mono">{order.trackingNumber}</div>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
-                        <Calendar className="w-4 h-4 mr-2 text-gray-400" />
-                        {new Date(order.date).toLocaleDateString()}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center space-x-2">
-                        <div className="flex -space-x-2">
-                          {order.items.slice(0, 3).map((item, index) => (
-                            <img
-                              key={index}
-                              src={item.image || "/placeholder.svg"}
-                              alt={item.name}
-                              className="w-8 h-8 rounded-full border-2 border-white object-cover"
-                              onError={(e) => {
-                                e.target.src = "/placeholder.svg?height=32&width=32"
-                              }}
-                            />
-                          ))}
-                        </div>
-                        <div className="text-sm">
-                          <div className="font-medium text-gray-900">
-                            {order.items.length} item{order.items.length > 1 ? "s" : ""}
-                          </div>
-                          <div className="text-gray-500 truncate max-w-32">
-                            {order.items[0].name}
-                            {order.items.length > 1 && ` +${order.items.length - 1} more`}
-                          </div>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm font-semibold text-gray-900">
-                        <DollarSign className="w-4 h-4 mr-1 text-gray-400" />
-                        {order.itemsTotal}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm text-gray-900">
-                        {order.shippingPrice === "pending" ? (
-                          <span className="text-yellow-600 font-medium">Pending</span>
-                        ) : (
-                          <>
-                            <DollarSign className="w-4 h-4 mr-1 text-gray-400" />
-                            {order.shippingPrice}
-                          </>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center text-sm font-bold text-gray-900">
-                        {order.total === "pending" ? (
-                          <span className="text-yellow-600 font-medium">Pending</span>
-                        ) : (
-                          <>
-                            <DollarSign className="w-4 h-4 mr-1 text-gray-400" />
-                            {order.total}
-                          </>
-                        )}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <StatusBadge status={order.status} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <PaymentStatusBadge order={order} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setSelectedOrder(order)
-                          }}
-                          className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-                        >
-                          <Eye className="w-4 h-4 mr-2" />
-                          View
-                        </button>
-                        <button
-                          onClick={(e) => downloadInvoice(order, e)}
-                          disabled={order.status === "pending" || order.status === "rejected"}
-                          className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md transition-colors ${
-                            order.status === "pending" || order.status === "rejected"
-                              ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed"
-                              : "border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-                          }`}
-                        >
-                          <Download className="w-4 h-4 mr-2" />
-                          Invoice
-                        </button>
-                      </div>
-                    </td>
+            <div className="min-w-[1200px]">
+              <table className="w-full">
+                <thead className="bg-gray-50 border-b border-gray-200">
+                  <tr>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Order
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Date
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Items
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Price
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Shipping
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Total
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Payment
+                    </th>
+                    <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody> )}
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {paginatedOrders.map((order) => (
+                    <tr
+                      key={order.id}
+                      className="hover:bg-gray-50 transition-colors cursor-pointer"
+                      onClick={() => setSelectedOrder(order)}
+                    >
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div>
+                          <div className="text-sm font-medium text-gray-900">{order.id}</div>
+                          <div className="text-xs text-gray-500 font-mono">{order.trackingNumber}</div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-gray-900">
+                          <Calendar className="w-4 h-4 mr-2 text-gray-400" />
+                          {new Date(order.date).toLocaleDateString()}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center space-x-2">
+                          <div className="flex -space-x-2">
+                            {order.items.slice(0, 3).map((item, index) => (
+                              <img
+                                key={index}
+                                src={item.image || "/placeholder.svg"}
+                                alt={item.name}
+                                className="w-8 h-8 rounded-full border-2 border-white object-cover"
+                                onError={(e) => {
+                                  e.target.src = "/placeholder.svg?height=32&width=32"
+                                }}
+                              />
+                            ))}
+                          </div>
+                          <div className="text-sm">
+                            <div className="font-medium text-gray-900">
+                              {order.items.length} item{order.items.length > 1 ? "s" : ""}
+                            </div>
+                            <div className="text-gray-500 truncate max-w-32">
+                              {order.items[0].name}
+                              {order.items.length > 1 && ` +${order.items.length - 1} more`}
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm font-semibold text-gray-900">
+                          <DollarSign className="w-4 h-4 mr-1 text-gray-400" />
+                          {order.itemsTotal}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm text-gray-900">
+                          <DollarSign className="w-4 h-4 mr-1 text-gray-400" />
+                          {order.shippingPrice}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center text-sm font-bold text-gray-900">
+                          <DollarSign className="w-4 h-4 mr-1 text-gray-400" />
+                          {order.total}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <StatusBadge status={order.status} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <PaymentStatusBadge order={order} />
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation()
+                              setSelectedOrder(order)
+                            }}
+                            className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                          >
+                            <Eye className="w-4 h-4 mr-2" />
+                            View
+                          </button>
+                          <button
+                            onClick={(e) => downloadInvoice(order, e)}
+                            disabled={order.status === "pending" || order.status === "rejected"}
+                            className={`inline-flex items-center px-3 py-2 border shadow-sm text-sm leading-4 font-medium rounded-md transition-colors ${
+                              order.status === "pending" || order.status === "rejected"
+                                ? "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed"
+                                : "border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                            }`}
+                          >
+                            <Download className="w-4 h-4 mr-2" />
+                            Invoice
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
 
           {/* Empty State */}
           {paginatedOrders.length === 0 && (
-            <div className="text-center py-12">
+            <div className="text-center py-12 w-full min-h-[400px] flex flex-col items-center justify-center">
               <ShoppingBag className="mx-auto h-12 w-12 text-gray-400" />
               <h3 className="mt-2 text-sm font-medium text-gray-900">No orders found</h3>
               <p className="mt-1 text-sm text-gray-500">
@@ -1006,7 +946,6 @@ export default function Orders() {
           </div>
         )}
       </div>
-    
 
       {/* Order Details Modal */}
       <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />

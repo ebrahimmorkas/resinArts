@@ -34,7 +34,7 @@ try {
                     const saltRounds = 10;
                     const hashedPassword = await bcrypt.hash(password, saltRounds);
                     
-                    const newUser = new User({first_name, middle_name, last_name, state, city, address, email, phone_number, whatsapp_number, password: hashedPassword});
+                    const newUser = new User({first_name, middle_name, last_name, state, city, address, email, phone_number, whatsapp_number, password: hashedPassword, zip_code});
                     await newUser.save();
                     console.log("User added successfully")
                     return res.status(200).json({message: "User created successfully"});
