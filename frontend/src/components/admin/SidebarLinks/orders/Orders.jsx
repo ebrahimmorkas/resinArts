@@ -382,7 +382,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                             <div>
                               <span className="text-gray-600">Current Stock:</span>
                               <div className={`font-medium ${stockStatus.textColor}`}>
-                                {product.current_stock !== undefined ? product.current_stock : "Unknown"}
+                                {stock !== undefined ? stock : "Unknown"}
                               </div>
                             </div>
                             <div>

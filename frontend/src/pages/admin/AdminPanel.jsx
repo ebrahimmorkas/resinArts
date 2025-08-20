@@ -10,6 +10,7 @@ import OrdersAccepted from '../../components/admin/SidebarLinks/orders/OrdersAcc
 import RestockPanel from '../../components/admin/SidebarLinks/products/RestockPanel';
 import AllProducts from '../../components/admin/SidebarLinks/products/AllProducts';
 import Orders from '../../components/admin/SidebarLinks/orders/Orders';
+import Users from '../../components/admin/SidebarLinks/users/Users';
 
 function AdminPanel() {
   // State to manage sidebar open/close
@@ -43,7 +44,8 @@ function AdminPanel() {
         {/* <OrdersAccepted></OrdersAccepted> */}
         {/* <RestockPanel></RestockPanel> */}
         {/* <AllProducts></AllProducts> */}
-        <Orders></Orders>
+        {/* <Orders></Orders> */}
+        <Users></Users>
       </main>
     </div>
   )
