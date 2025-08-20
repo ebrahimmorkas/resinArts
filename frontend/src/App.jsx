@@ -5,6 +5,7 @@ import Signup from './pages/client/Signup';
 import Login from './pages/client/Login';
 import AdminPanel from './pages/admin/AdminPanel';
 import Home from './pages/client/Home';
+import Orders from './pages/client/Orders';
 import OrdersPanel from './components/admin/SidebarLinks/orders/OrdersPanel';
 import ProtectedRoute from './protectedRoutes';
 
@@ -24,6 +25,13 @@ function App() {
               <Home />
             </ProtectedRoute>
           } />
+        <Route path='/orders/:userId' element={
+            <ProtectedRoute allowedRole="user">
+              <Orders />
+            </ProtectedRoute>
+          } />
+          
+        
         <Route path='/admin' element={<OrdersPanel />} />
       </Routes>
   );

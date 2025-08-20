@@ -206,7 +206,10 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 In Progress
               </button>
               <button
-                onClick={() => onStatusChange(order._id, "Dispatched")}
+                onClick={() => {
+                  onStatusChange(order._id, "Dispatched");
+                  handleStatusChangeBackend("Dispatched", order._id)
+                }}
                 className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
                 disabled={order.status === "Dispatched"}
               >
@@ -214,7 +217,10 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 Dispatch
               </button>
               <button
-                onClick={() => onStatusChange(order._id, "Completed")}
+                onClick={() => {
+                  onStatusChange(order._id, "Completed");
+                  handleStatusChangeBackend("Completed", order._id);
+                }}
                 className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
                 disabled={order.status === "Completed"}
               >

@@ -284,8 +284,7 @@ const handleStatusChange = async (req, res) => {
             const updatedOrder = await Order.findByIdAndUpdate(
                 orderId,
                 {
-                    status: status,
-                    total_price: status
+                    status: status, 
                 },
                 {
                     new: true,

@@ -3,6 +3,9 @@
 import { useState, useEffect, useRef, useContext } from "react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
+import  { Link } from 'react-router-dom';
+import Orders from './Orders';
+
 import {
   Search,
   User,
@@ -25,6 +28,7 @@ import {
   MessageCircle,
 } from "lucide-react"
 import axios from "axios";
+import { AuthContext } from "../../../Context/AuthContext"
 
 const categories = [
   {
@@ -115,9 +119,11 @@ export default function Home() {
   const justArrivedRef = useRef(null)
   const restockedRef = useRef(null)
   const revisedRatesRef = useRef(null)
+  const {user} = useContext(AuthContext);
 
   // Auto-rotate banners
   useEffect(() => {
+    console.log(user.id);
     const interval = setInterval(() => {
       setCurrentBanner((prev) => (prev + 1) % banners.length)
     }, 5000)
@@ -1122,6 +1128,7 @@ export default function Home() {
                 />
                 <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
+              <Link to={`/orders/${user.id}`}>Orders</Link>
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative profile-dropdown">

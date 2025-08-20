@@ -9,16 +9,12 @@ function StatusModal({onClose, status}) {
                 {/* Modal Header */}
                 <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
                     <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Enter Shipping Price</h2>
+                        <h2 className="text-2xl font-bold text-gray-900">Status changed to {status}</h2>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
                         <X className="h-6 w-6" />
                     </button>
                 </div>
-                    {/* Modal content */}
-                    <div>
-                        {status}
-                    </div>
                 {/* Form for entering shipping price */}
                 <div className="p-6">
                     <div className="mb-4">
