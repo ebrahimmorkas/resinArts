@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import {
   Search,
   Filter,
@@ -20,7 +20,10 @@ import {
   ShoppingBag,
   Gift,
   RefreshCw,
-} from "lucide-react"
+} from "lucide-react";
+import { useContext } from "react";
+import { UserContext } from "../../../../../Context/UserContext";
+import axios from "axios";
 
 // Mock users data
 const mockUsers = [
@@ -92,7 +95,8 @@ const mockUsers = [
 ]
 
 export default function Users() {
-  const [users, setUsers] = useState(mockUsers)
+  const {users, loadingUsers, userErrors} = useContext(UserContext);
+  // const [usersToDisplay, setUsersToDisplay] = useState(mockUsers)
   const [searchQuery, setSearchQuery] = useState("")
   const [selectedUsers, setSelectedUsers] = useState([])
   const [currentPage, setCurrentPage] = useState(1)
@@ -104,7 +108,51 @@ export default function Users() {
     ordersType: "below",
     ordersAmount: "",
     selectedDate: "",
-  })
+  });
+  const [categories, setCategories] = useState([]);
+  const [mainCategories, setMainCategories] = useState([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState("");
+  const [subCategories, setSubCategories] = useState([]);
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [loadingCategories, setLoadingcategories] = useState(true);
+  const [categoriesFetchingError, setCategoriesFetchingError]  = useState("");
+  const [noSubCategories, setNoSubCategories] = useState("");
+  const [subCategoriesError, setSubCategoriesError] = useState("");
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
+
+        if(res.status === 200) {
+          setLoadingcategories(false);
+          setCategories(res.data.categories)
+          console.log(res.data.categories);
+          setLoadingcategories(false);
+          setCategoriesFetchingError("");
+        }
+      } catch(error) {
+        setCategoriesFetchingError("Cannot fetch categories");
+        console.log(error);
+        console.log("Something went wrong while fetching categories");
+      } finally {
+        setLoadingcategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [])
+
+  useEffect(() => {
+    const updateMainCategory = () => {
+      // setMainCategories()
+      const maincategories = categories.filter(category => category.parent_category_id === null);
+      // console.log(maincategories);
+      setMainCategories(maincategories);
+    };
+    updateMainCategory();
+  }, [categories])
+
 
   // Modal states
   const [showBanModal, setShowBanModal] = useState(false)
@@ -113,12 +161,16 @@ export default function Users() {
   const [showPasswordModal, setShowPasswordModal] = useState(false)
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
   const [showRevokeCashModal, setShowRevokeCashModal] = useState(false)
+  const [mainCategoryError, setMainCategoryError] = useState("");
+  
 
   const [selectedUser, setSelectedUser] = useState(null)
   const [cashForm, setCashForm] = useState({
     amount: "",
     validAbove: "",
     endDate: "",
+    selectedMainCategory: "",
+    selectedSubCategory: "",
   })
   const [newPassword, setNewPassword] = useState("")
 
@@ -126,8 +178,9 @@ export default function Users() {
 
   // Filter users based on search and filters
   const filteredUsers = users.filter((user) => {
+    // console.log(user)
     const matchesSearch =
-      user.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.phone.includes(searchQuery)
 
@@ -304,6 +357,69 @@ export default function Users() {
     setShowFilters(false)
   }
 
+  const handleMainCategoryChange = (e) => {
+    const categoryID = e.target.value;
+    const category = categories.find(cat => cat._id.toString() === categoryID);
+    setNoSubCategories(false);
+    setSubCategoriesError("");
+    setMainCategoryError("");
+    if(!category) {
+      setMainCategoryError("Selected Category Not Found");
+      return;
+    }
+    const sub_categories = categories.filter(cat => cat.parent_category_id === categoryID);
+    if(sub_categories.length === 0) {
+      setNoSubCategories(true);
+      return;
+    }
+    // console.log(sub_categories);
+    setSelectedMainCategory(category._id);
+    setSubCategories(sub_categories);
+    setCashForm((prev) => ({
+      ...prev,
+      selectedMainCategory: e.target.value,
+      selectedSubCategory: ""
+    }))
+  };
+
+  const handleSubCategoriesChange = (e) => {
+    setNoSubCategories(false);
+    setMainCategoryError("");
+    setSubCategoriesError("");
+    const categoryID = e.target.value;
+    const category = categories.find(cat => cat._id.toString() === categoryID);
+    if(!category) {
+      setSubCategoriesError("Selected Sub category Not Found");
+      return;
+    }
+
+    const sub_categories = categories.filter(cat => cat.parent_category_id === categoryID);
+    if(sub_categories.length === 0) {
+      setNoSubCategories(true);
+      return;
+    }
+
+    setSubCategories(sub_categories);
+    setSelectedSubCategory(category._id);
+    setCashForm((prev) => ({
+      ...prev,
+      selectedSubCategory: e.target.value
+    }))
+  };
+
+  const handleCashModalFormSubmit = (e) => {
+    e.preventDefault();
+    console.log('Form Submitted');
+    console.log(cashForm);
+  }
+
+  if(userErrors) return (<div>Error while fetching users</div>)
+if(loadingUsers) return(<div>Loading users</div>)
+  if(!users || users.length == 0) return (<div>No Users to display</div>)
+
+    const newUsers=users.filter((user) => user.role != "admin");
+    // console.log(newUsers)
+
   // Modal Components
   const ConfirmModal = ({ show, onClose, onConfirm, title, message, type = "danger" }) => {
     if (!show) return null
@@ -347,6 +463,7 @@ export default function Users() {
     )
   }
 
+  // Sarting of pay cash modal
   const CashModal = ({ show, onClose, onConfirm }) => {
     if (!show) return null
 
@@ -359,7 +476,7 @@ export default function Users() {
               <X className="w-5 h-5" />
             </button>
           </div>
-
+        <form onSubmit={handleCashModalFormSubmit}>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">Cash Amount (₹)</label>
@@ -384,6 +501,27 @@ export default function Users() {
             </div>
 
             <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Main Category</label>
+
+              {mainCategories.length == 0 ? (<span>Laoding main categories</span>) : (
+                <select name="" id="" onChange={handleMainCategoryChange} value={selectedMainCategory}>
+                  <option disabled value="">Select</option>
+                {mainCategories.map(category => <option key={category._id} value={category._id}>{category.categoryName}</option>)}
+              </select>
+              )}
+
+              {!mainCategoryError === "" && (<span>Category Not Found</span>)}
+
+              {subCategories.length == 0 ? (<span>Loading Sub categories</span>) : (
+                <select onChange={handleSubCategoriesChange} value={selectedSubCategory}>
+                  <option value="" disabled>Select</option>
+                  {!noSubCategories && subCategories.map(sub_category => <option key={sub_category._id} value={sub_category._id}>{sub_category.categoryName}</option>)}
+                </select>
+              )}
+              
+            </div>
+
+            <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
               <input
                 type="date"
@@ -398,6 +536,7 @@ export default function Users() {
                 <strong>Note:</strong> If you do not enter the end date, you need to revoke cash manually.
               </p>
             </div>
+          
           </div>
 
           <div className="flex gap-3 justify-end mt-6">
@@ -408,17 +547,19 @@ export default function Users() {
               Cancel
             </button>
             <button
-              onClick={onConfirm}
+              type="submit"
               disabled={!cashForm.amount}
               className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Pay Cash
             </button>
           </div>
+          </form>
         </div>
       </div>
     )
   }
+  // Ending of pay cash modal
 
   const PasswordModal = ({ show, onClose, onConfirm }) => {
     if (!show) return null
@@ -465,6 +606,7 @@ export default function Users() {
       </div>
     )
   }
+  
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
@@ -691,7 +833,7 @@ export default function Users() {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {paginatedUsers.map((user, index) => (
+                {newUsers.map((user, index) => (
                   <tr key={user.id} className="hover:bg-gray-50 transition-colors">
                     <td className="px-6 py-4">
                       <input
@@ -705,7 +847,8 @@ export default function Users() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
-                          {user.name.charAt(0).toUpperCase()}
+                          {user.first_name.charAt(0).toUpperCase()}
+                          {user.last_name.charAt(0).toUpperCase()}
                         </div>
                         <div className="ml-4">
                           <div className="text-sm font-medium text-gray-900">{user.name}</div>
@@ -733,13 +876,13 @@ export default function Users() {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-900">
                         <Phone className="w-4 h-4 mr-2 text-gray-400" />
-                        {user.phone}
+                        {user.phone_number}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center text-sm text-gray-900">
                         <MessageCircle className="w-4 h-4 mr-2 text-green-500" />
-                        {user.whatsapp}
+                        {user.whatsapp_number}
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">

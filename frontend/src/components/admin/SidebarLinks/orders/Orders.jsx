@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useMemo, useEffect, useContext } from "react"
-import { Search, Download, Check, X, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle } from "lucide-react"
+import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle } from "lucide-react"
+
 import axios from "axios"
 import { ProductContext } from "../../../../../Context/ProductContext"
 import ShippingPriceModal from "./ShippingPriceModal"
@@ -164,7 +165,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 <span
                   className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusColors[order.status]}`}
                 >
-                  <StatusIcon className="h-4 w-4 mr-2" />
+                  {/* <StatusIcon className="h-4 w-4 mr-2" /> */}
                   {order.status}
                 </span>
               </div>
@@ -808,7 +809,7 @@ export default function OrdersManagement() {
                       <span
                         className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[order.status]}`}
                       >
-                        <StatusIcon className="h-3 w-3 mr-1" />
+                        {/* <StatusIcon className="h-3 w-3 mr-1" /> */}
                         {order.status}
                       </span>
                     </td>

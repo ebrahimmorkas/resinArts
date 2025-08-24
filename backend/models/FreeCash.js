@@ -1,0 +1,54 @@
+const mongoose = require('mongoose');
+
+const freeCashSchema = mongoose.Schema({
+    user_id: {
+        required: true,
+        type: mongoose.Types.ObjectId,
+    },
+    start_date: {
+        required: false,
+        type: Date,
+        default: Date.now(),
+    },
+    end_date: {
+        required: false,
+        type: Date,
+        default: null,
+    },
+    amount: {
+        required: true,
+        type: Number,
+    },
+    valid_above_amount: {
+        requried: false,
+        type: Number,
+        default: 0,
+    },
+    category: {
+        required: false,
+        type: String,
+        default: null,
+    },
+    sub_category: {
+        required: false,
+        type: String,
+        default: null
+    },
+    is_cash_applied_on__all_products: {
+        required: false,
+        type: Boolean,
+        default: false
+    },
+    is_cash_used: {
+        required: false,
+        type: Boolean,
+        default: false
+    },
+    cash_used_date: {
+        required: false,
+        type: Date,
+        default: null,
+    }
+});
+
+module.exports = mongoose.model('FreeCash', freeCashSchema);

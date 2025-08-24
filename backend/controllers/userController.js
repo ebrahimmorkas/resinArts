@@ -57,6 +57,37 @@ const findUser = async (req, res) => {
     }
 }
 
+const fetchUsers = async (req, res) => {
+    console.log("Request received fro fetching the users");
+    try {
+        const users = await User.find({});
+
+        if(!users || users.length == 0) {
+            console.log("Inside first if block");
+            return res.status(200).json({
+                message: "No users found",
+            });
+        }
+        console.log(users);
+        return res.status(200).json(
+            {
+                message: "Users fetched successfully",
+                users
+            }
+        )
+    } catch(error) {
+        console.log("Inside catch block");
+        console.log(error.message);
+        return res.status(400).json(
+            {
+                message: "Error fetching users",
+                error: error.message,
+            }
+        );
+    }   
+};
+
 module.exports = {
     findUser,
+    fetchUsers
 }
