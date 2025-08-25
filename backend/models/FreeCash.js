@@ -26,12 +26,12 @@ const freeCashSchema = mongoose.Schema({
     },
     category: {
         required: false,
-        type: String,
+        type: mongoose.Types.ObjectId,
         default: null,
     },
     sub_category: {
         required: false,
-        type: String,
+        type: mongoose.Types.ObjectId,
         default: null
     },
     is_cash_applied_on__all_products: {
@@ -48,6 +48,11 @@ const freeCashSchema = mongoose.Schema({
         required: false,
         type: Date,
         default: null,
+    },
+    is_cash_expired: {
+        required: false,
+        type: Boolean,
+        default: false,
     }
 });
 

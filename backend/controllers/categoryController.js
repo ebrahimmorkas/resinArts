@@ -16,6 +16,27 @@ const fetchCategories = async (req, res) => {
     }
 };
 
+// This function will be used by other controller for checking whether categopry exists or not
+const findCategoryById = async (categoryID) => {
+    try {
+        const category = await Category.findById(categoryID);
+        return category;
+    } catch (error) {
+        throw new Error("Error while finding category " + error.message);
+    }
+}
+
+const findSubCategoryById = async (categoryID) => {
+    try {
+        const category = await Category.findById(categoryID);
+        return category;
+    } catch (error) {
+        throw new Error("Error while finding category " + error.message);
+    }
+}
+
 module.exports = {
     fetchCategories,
+    findCategoryById,
+    findSubCategoryById
 }

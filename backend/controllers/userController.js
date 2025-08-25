@@ -87,7 +87,18 @@ const fetchUsers = async (req, res) => {
     }   
 };
 
+// This function will be used buy other controllers to check whether the us4er esxists or not
+const findUserById = async (userId) => {
+  try {
+    const user = await User.findById(userId);
+    return user; // will be null if not found
+  } catch (err) {
+    throw new Error("Error while finding user: " + err.message);
+  }
+};
+
 module.exports = {
     findUser,
-    fetchUsers
+    fetchUsers,
+    findUserById
 }

@@ -162,6 +162,7 @@ export default function Users() {
   const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
   const [showRevokeCashModal, setShowRevokeCashModal] = useState(false)
   const [mainCategoryError, setMainCategoryError] = useState("");
+  const [isFreeCashValidForAllProducts, setIsFreeCashValidForAllProducts] = useState(false);
   
 
   const [selectedUser, setSelectedUser] = useState(null)
@@ -171,6 +172,7 @@ export default function Users() {
     endDate: "",
     selectedMainCategory: "",
     selectedSubCategory: "",
+    validForAllProducts: false
   })
   const [newPassword, setNewPassword] = useState("")
 
@@ -407,10 +409,19 @@ export default function Users() {
     }))
   };
 
-  const handleCashModalFormSubmit = (e) => {
+  const handleCashModalFormSubmit = async (e) => {
     e.preventDefault();
     console.log('Form Submitted');
     console.log(cashForm);
+    try {
+      const res = await axios.post('http://localhost:3000/api/free-cash/add', {cashForm, userID: selectedUser._id}, {withCredentials: true});
+      if(res.status === 200) {
+        console.log("Success");
+      }
+    } catch (error) {
+      console.log(error);
+      console.log("Problem while adding the cash");
+    }
   }
 
   if(userErrors) return (<div>Error while fetching users</div>)
@@ -464,7 +475,7 @@ if(loadingUsers) return(<div>Loading users</div>)
   }
 
   // Sarting of pay cash modal
-  const CashModal = ({ show, onClose, onConfirm }) => {
+  const CashModal = ({ show, onClose, onConfirm, userID }) => {
     if (!show) return null
 
     return (
@@ -498,6 +509,19 @@ if(loadingUsers) return(<div>Loading users</div>)
                 className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                 placeholder="Minimum order amount"
               />
+            </div>
+
+            <div>
+              <input
+                type="checkbox"
+                checked={isFreeCashValidForAllProducts}
+                onChange={(e) => {
+                  isFreeCashValidForAllProducts ? setIsFreeCashValidForAllProducts(false) : setIsFreeCashValidForAllProducts(true)
+                  setCashForm({...cashForm, validForAllProducts: e.target.checked})
+                }}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valid for all products</label>
             </div>
 
             <div>
@@ -1052,7 +1076,7 @@ if(loadingUsers) return(<div>Loading users</div>)
         type="warning"
       />
 
-      <CashModal show={showCashModal} onClose={() => setShowCashModal(false)} onConfirm={confirmPayCash} />
+      <CashModal show={showCashModal} onClose={() => setShowCashModal(false)} onConfirm={confirmPayCash} userID = {selectedUser._id}/>
 
       <PasswordModal
         show={showPasswordModal}
