@@ -6,7 +6,7 @@ const fetchCategories = async (req, res) => {
         const categories = await Category.find({});
 
         if(!categories || categories.length == 0) {
-            return res.status(200).json({message: "No user found"});
+            return res.status(200).json({message: "No categories found"});
         }
 
         // categories found

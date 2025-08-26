@@ -3,6 +3,7 @@ import { AuthContext } from '../Context/AuthContext';
 import { ProductProvider } from '../Context/ProductContext';
 import { CartProvider } from '../Context/CartContext';
 import { UserProvider } from '../Context/UserContext';
+import { CategoryProvider } from '../Context/CategoryContext';
 // import User from '../../backend/models/User';
 
 const ConditionalProvider = ({children}) => {
@@ -12,7 +13,9 @@ const ConditionalProvider = ({children}) => {
         return(
             <ProductProvider>
                 <UserProvider>
+                    <CategoryProvider>
                     {children}
+                    </CategoryProvider>
                 </UserProvider>
             </ProductProvider>
         );
@@ -21,7 +24,9 @@ const ConditionalProvider = ({children}) => {
     return (
         <ProductProvider>
             <CartProvider>
+                <CategoryProvider>
                 {children}
+                </CategoryProvider>
             </CartProvider>
         </ProductProvider>
     )
