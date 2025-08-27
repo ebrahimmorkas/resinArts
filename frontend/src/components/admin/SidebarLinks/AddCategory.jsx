@@ -7,6 +7,73 @@ import axios from 'axios'
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 
+// Move SubCategoryItem outside AddCategory for stability
+const SubCategoryItem = ({ subCategory, path, level = 0, handleSubCategoryChange, removeSubCategory, addSubCategory, getSubCategoryNameAttribute }) => {
+  const uniqueKey = path.join('-') // Use path as a stable key
+  return (
+    <div className="space-y-3" key={uniqueKey}>
+      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
+        <div className="flex justify-between items-center mb-3">
+          <h3 className="text-base font-medium text-gray-800">
+            {level === 0 ? "Sub Category" : `Level ${level + 1} Category`} {path[path.length - 1] + 1}
+          </h3>
+          <button
+            type="button"
+            onClick={() => removeSubCategory(path)}
+            className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+            title="Remove sub category"
+          >
+            <Trash2 size={16} />
+          </button>
+        </div>
+
+        <div className="space-y-3">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Sub Category Name *</label>
+            <input
+              type="text"
+              name={getSubCategoryNameAttribute(path)}
+              value={subCategory.name}
+              onChange={(e) => handleSubCategoryChange(path, "name", e.target.value)}
+              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200 text-sm"
+              placeholder={`Enter ${level === 0 ? "sub category" : `level ${level + 1} category`} name`}
+              required
+            />
+          </div>
+
+          <div className="pt-3 border-t border-gray-100">
+            <button
+              type="button"
+              onClick={() => addSubCategory(path)}
+              className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors duration-200 font-medium shadow-sm hover:shadow-md text-sm"
+            >
+              <Plus size={14} />
+              <span>Add Sub Category</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {subCategory.subCategories && subCategory.subCategories.length > 0 && (
+        <div className="ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
+          {subCategory.subCategories.map((nestedSub, index) => (
+            <SubCategoryItem
+              key={`${uniqueKey}-${index}`}
+              subCategory={nestedSub}
+              path={[...path, index]}
+              level={level + 1}
+              handleSubCategoryChange={handleSubCategoryChange}
+              removeSubCategory={removeSubCategory}
+              addSubCategory={addSubCategory}
+              getSubCategoryNameAttribute={getSubCategoryNameAttribute}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 const AddCategory = () => {
   const [categoryData, setCategoryData] = useState({ name: "", image: null })
   const [subCategories, setSubCategories] = useState([])
@@ -102,63 +169,6 @@ const AddCategory = () => {
     }
     name += ".name"
     return name
-  }
-
-  const SubCategoryItem = ({ subCategory, path, level = 0 }) => {
-    const uniqueKey = path.join('-') // Use path as a stable key
-    return (
-      <div className="space-y-3" key={uniqueKey}>
-        <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-base font-medium text-gray-800">
-              {level === 0 ? "Sub Category" : `Level ${level + 1} Category`} {path[path.length - 1] + 1}
-            </h3>
-            <button
-              type="button"
-              onClick={() => removeSubCategory(path)}
-              className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
-              title="Remove sub category"
-            >
-              <Trash2 size={16} />
-            </button>
-          </div>
-
-          <div className="space-y-3">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Sub Category Name *</label>
-              <input
-                type="text"
-                name={getSubCategoryNameAttribute(path)}
-                value={subCategory.name}
-                onChange={(e) => handleSubCategoryChange(path, "name", e.target.value)}
-                className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200 text-sm"
-                placeholder={`Enter ${level === 0 ? "sub category" : `level ${level + 1} category`} name`}
-                required
-              />
-            </div>
-
-            <div className="pt-3 border-t border-gray-100">
-              <button
-                type="button"
-                onClick={() => addSubCategory(path)}
-                className="inline-flex items-center gap-2 px-4 py-2 bg-indigo-600 text-white hover:bg-indigo-700 rounded-lg transition-colors duration-200 font-medium shadow-sm hover:shadow-md text-sm"
-              >
-                <Plus size={14} />
-                <span>Add Sub Category</span>
-              </button>
-            </div>
-          </div>
-        </div>
-
-        {subCategory.subCategories && subCategory.subCategories.length > 0 && (
-          <div className="ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
-            {subCategory.subCategories.map((nestedSub, index) => (
-              <SubCategoryItem key={`${uniqueKey}-${index}`} subCategory={nestedSub} path={[...path, index]} level={level + 1} />
-            ))}
-          </div>
-        )}
-      </div>
-    )
   }
 
   const renderPreviewCategories = (categories, level = 0) => {
@@ -397,7 +407,16 @@ const AddCategory = () => {
 
               <div className="space-y-4">
                 {subCategories.map((subCategory, index) => (
-                  <SubCategoryItem key={`sub-${index}`} subCategory={subCategory} path={[index]} level={0} />
+                  <SubCategoryItem
+                    key={`sub-${index}`}
+                    subCategory={subCategory}
+                    path={[index]}
+                    level={0}
+                    handleSubCategoryChange={handleSubCategoryChange}
+                    removeSubCategory={removeSubCategory}
+                    addSubCategory={addSubCategory}
+                    getSubCategoryNameAttribute={getSubCategoryNameAttribute}
+                  />
                 ))}
               </div>
             </div>

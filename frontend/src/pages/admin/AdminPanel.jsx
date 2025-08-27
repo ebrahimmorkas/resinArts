@@ -40,14 +40,14 @@ function AdminPanel() {
       {/* Your main content goes here */}
       <main className="w-screen my-8">
         {/* <AddProduct></AddProduct> */}
-        {/* <AddCategory></AddCategory> */}
+        <AddCategory></AddCategory>
         {/* <OrdersPanel></OrdersPanel> */}
         {/* <OrdersAccepted></OrdersAccepted> */}
         {/* <RestockPanel></RestockPanel> */}
         {/* <AllProducts></AllProducts> */}
         {/* <Orders></Orders> */}
         {/* <Users></Users> */}
-        <Discount></Discount>
+        {/* <Discount></Discount> */}
       </main>
     </div>
   )
