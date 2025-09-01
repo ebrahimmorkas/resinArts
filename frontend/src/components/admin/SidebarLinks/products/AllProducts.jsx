@@ -167,7 +167,7 @@ const setDataForSingleProductWithVariants = (product) => {
   if (error) return <div>Error</div>;
 
   // Restock Modal Component
-  const RestockModal = ({ product={}, onClose }) => {
+  const RestockModal = ({ product={}, onClose, selectedProducts=[], multipleToRestockInitial={} }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [stockTextfield, setStockTextfield] = useState("");
     const [stateVariableForDataForSingleProductWithVariants, setStateVariableForDataForSingleProductWithVariants] = useState({});
@@ -227,11 +227,11 @@ const setDataForSingleProductWithVariants = (product) => {
 // End of function that will update only stock of only one product with and without variants
 
 // Start of function for updating multiple stocks with both type of preoducts that is with and without variants.
-const handleUpdateMultipleStock = async () => {
+const handleUpdateMultipleStock = async (localMultipleToRestock) => {
   setIsLoading(true);
 
   try{
-    const res = await axios.post('http://localhost:3000/api/product/mass-restock', multipleProductsToRestock, {
+    const res = await axios.post('http://localhost:3000/api/product/mass-restock', localMultipleToRestock, {
       withCredentials: true,
     });
     if(res.status === 200) {
@@ -251,6 +251,7 @@ const handleUpdateMultipleStock = async () => {
 // Start of jsx for showing modal to restock multiple products with and without variants
     if (selectedProducts.length>0) {
       console.log("For multiple products")
+      const [localMultipleToRestock, setLocalMultipleToRestock] = useState(multipleToRestockInitial);
       return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -280,9 +281,9 @@ const handleUpdateMultipleStock = async () => {
               <p>Enter the quantity to update for size : {details.size.length} X {details.size.breadth} X {details.size.height}</p>
               <input 
   type="text" 
-  value={multipleProductsToRestock[product._id][variant._id][details._id][details.size._id]} 
+  value={localMultipleToRestock[product._id][variant._id][details._id][details.size._id]} 
   onChange={(e) => {
-    setMultipleProductsToRestock(prev => ({
+    setLocalMultipleToRestock(prev => ({
       ...prev,
       [product._id]: {
         ...prev[product._id],
@@ -313,9 +314,9 @@ const handleUpdateMultipleStock = async () => {
           <p>Current Quantity: {product.stock}</p>
           <input 
   type="text" 
-  value={multipleProductsToRestock[product._id]['stock']} 
+  value={localMultipleToRestock[product._id]['stock']} 
   onChange={(e) => {
-    setMultipleProductsToRestock(prev => ({
+    setLocalMultipleToRestock(prev => ({
       ...prev,
       [product._id]: {
         ...prev[product._id],
@@ -326,7 +327,7 @@ const handleUpdateMultipleStock = async () => {
 />
            </div>)
       })}
-      <button onClick={handleUpdateMultipleStock}>Update</button>
+      <button onClick={() => handleUpdateMultipleStock(localMultipleToRestock)}>Update</button>
   </div>
             </div>
           </div>
@@ -472,7 +473,7 @@ const handleUpdateMultipleStock = async () => {
   // End of restock modal
 
   // Staart of Revised Rate Modal component
-  const RevisedRateModal = ({ product={}, onClose }) => {
+  const RevisedRateModal = ({ product={}, onClose, selectedProducts=[], multipleForRevisedRateInitial={} }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [revisedRateTextfield, setRevisedRateTextfield] = useState("");
     const [discountStartDate, setDiscountStartDate] = useState(null);
@@ -540,11 +541,11 @@ const handleUpdateMultipleStock = async () => {
 // End of function that will update only price of only one product with and without variants
 
 // Start of function for updating multiple price with both type of preoducts that is with and without variants.
-const handleUpdateMultipleStock = async () => {
+const handleUpdateMultipleStock = async (localMultipleForRevisedRate) => {
   setIsLoading(true);
 
   try{
-    const res = await axios.post('http://localhost:3000/api/product/mass-revised-rate', multipleProductsForRevisedRate, {
+    const res = await axios.post('http://localhost:3000/api/product/mass-revised-rate', localMultipleForRevisedRate, {
       withCredentials: true,
     });
     if(res.status === 200) {
@@ -566,8 +567,8 @@ const handleUpdateMultipleStock = async () => {
 // UPDATED FUNCTIONS - Change thresholdQuantity to quantity
 
 // ADD DISCOUNT BULK PRICING SECTION
-const addDiscountBulkPricingSection = (productId, variantId = null, detailsId = null) => {
-  setMultipleProductsForRevisedRate(prev => ({
+const addDiscountBulkPricingSection = (setLocal, productId, variantId = null, detailsId = null) => {
+  setLocal(prev => ({
     ...prev,
     [productId]: {
       ...prev[productId],
@@ -593,8 +594,8 @@ const addDiscountBulkPricingSection = (productId, variantId = null, detailsId = 
 };
 
 // REMOVE DISCOUNT BULK PRICING SECTION
-const removeDiscountBulkPricingSection = (productId, index, variantId = null, detailsId = null) => {
-  setMultipleProductsForRevisedRate(prev => ({
+const removeDiscountBulkPricingSection = (setLocal, productId, index, variantId = null, detailsId = null) => {
+  setLocal(prev => ({
     ...prev,
     [productId]: {
       ...prev[productId],
@@ -614,8 +615,8 @@ const removeDiscountBulkPricingSection = (productId, index, variantId = null, de
 };
 
 // UPDATE DISCOUNT BULK PRICING VALUES
-const updateDiscountBulkPricing = (productId, index, field, value, variantId = null, detailsId = null) => {
-  setMultipleProductsForRevisedRate(prev => ({
+const updateDiscountBulkPricing = (setLocal, productId, index, field, value, variantId = null, detailsId = null) => {
+  setLocal(prev => ({
     ...prev,
     [productId]: {
       ...prev[productId],
@@ -639,11 +640,11 @@ const updateDiscountBulkPricing = (productId, index, field, value, variantId = n
 };
 
 // GET COUNT OF DISCOUNT BULK PRICING SECTIONS
-const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = null) => {
+const getDiscountBulkPricingCount = (local, productId, variantId = null, detailsId = null) => {
   if (variantId && detailsId) {
-    return multipleProductsForRevisedRate[productId]?.[variantId]?.[detailsId]?.discountBulkPricing?.length || 0;
+    return local[productId]?.[variantId]?.[detailsId]?.discountBulkPricing?.length || 0;
   } else {
-    return multipleProductsForRevisedRate[productId]?.discountBulkPricing?.length || 0;
+    return local[productId]?.discountBulkPricing?.length || 0;
   }
 };
 // End of functions for managing the discountBulkPricing (Currenlty for multiple products)
@@ -651,6 +652,7 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
 // Start of jsx for showing modal to restock multiple products with and without variants
    if (selectedProducts.length>0) {
       console.log("For multiple products")
+      const [localMultipleForRevisedRate, setLocalMultipleForRevisedRate] = useState(multipleForRevisedRateInitial);
       return (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-y-auto">
@@ -681,9 +683,9 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                               
                               <input 
                                 type="text" 
-                                value={multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.[details.size._id] || ''} 
+                                value={localMultipleForRevisedRate[product._id]?.[variant._id]?.[details._id]?.[details.size._id] || ''} 
                                 onChange={(e) => {
-                                  setMultipleProductsForRevisedRate(prev => ({
+                                  setLocalMultipleForRevisedRate(prev => ({
                                     ...prev,
                                     [product._id]: {
                                       ...prev[product._id],
@@ -703,9 +705,9 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                               <p>Discount start date</p>
                               <input 
                                 type="datetime-local" 
-                                value={multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.["discountStartDate"] || ""}
+                                value={localMultipleForRevisedRate[product._id]?.[variant._id]?.[details._id]?.["discountStartDate"] || ""}
                                 onChange={(e) => {
-                                  setMultipleProductsForRevisedRate(prev => ({
+                                  setLocalMultipleForRevisedRate(prev => ({
                                     ...prev,
                                     [product._id]: {
                                       ...prev[product._id],
@@ -724,9 +726,9 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                               <p>Discount end date</p>
                               <input 
                                 type="datetime-local" 
-                                value={multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.["discountEndDate"] || ""}
+                                value={localMultipleForRevisedRate[product._id]?.[variant._id]?.[details._id]?.["discountEndDate"] || ""}
                                 onChange={(e) => {
-                                  setMultipleProductsForRevisedRate(prev => ({
+                                  setLocalMultipleForRevisedRate(prev => ({
                                     ...prev,
                                     [product._id]: {
                                       ...prev[product._id],
@@ -743,9 +745,9 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                               /> 
 
                               <select 
-                                value={multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.["comeBackToOriginalPrice"] || ""}
+                                value={localMultipleForRevisedRate[product._id]?.[variant._id]?.[details._id]?.["comeBackToOriginalPrice"] || ""}
                                 onChange={(e) => {
-                                  setMultipleProductsForRevisedRate(prev => ({
+                                  setLocalMultipleForRevisedRate(prev => ({
                                     ...prev,
                                     [product._id]: {
                                       ...prev[product._id],
@@ -770,10 +772,10 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
 {/* DISCOUNT BULK PRICING SECTION FOR VARIANTS */}
 <div className="mt-4 p-3 bg-gray-100 rounded">
   <h4 className="font-bold mb-2">
-    Discount Bulk Pricing ({getDiscountBulkPricingCount(product._id, variant._id, details._id)} sections)
+    Discount Bulk Pricing ({getDiscountBulkPricingCount(localMultipleForRevisedRate, product._id, variant._id, details._id)} sections)
   </h4>
   
-  {(multipleProductsForRevisedRate[product._id]?.[variant._id]?.[details._id]?.discountBulkPricing || []).map((pricing, index) => (
+  {(localMultipleForRevisedRate[product._id]?.[variant._id]?.[details._id]?.discountBulkPricing || []).map((pricing, index) => (
     <div key={index} className="flex gap-2 mb-2 p-2 bg-white rounded border">
       <div className="flex-1">
         <label className="text-xs text-gray-600">Wholesale Price</label>
@@ -781,7 +783,7 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
           type="number"
           placeholder="e.g., 100"
           value={pricing.wholesalePrice}
-          onChange={(e) => updateDiscountBulkPricing(product._id, index, 'wholesalePrice', e.target.value, variant._id, details._id)}
+          onChange={(e) => updateDiscountBulkPricing(setLocalMultipleForRevisedRate, product._id, index, 'wholesalePrice', e.target.value, variant._id, details._id)}
           className="w-full p-1 border rounded"
         />
       </div>
@@ -791,12 +793,12 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
           type="number"
           placeholder="e.g., 12"
           value={pricing.quantity} // CHANGED: thresholdQuantity -> quantity
-          onChange={(e) => updateDiscountBulkPricing(product._id, index, 'quantity', e.target.value, variant._id, details._id)} // CHANGED: thresholdQuantity -> quantity
+          onChange={(e) => updateDiscountBulkPricing(setLocalMultipleForRevisedRate, product._id, index, 'quantity', e.target.value, variant._id, details._id)} // CHANGED: thresholdQuantity -> quantity
           className="w-full p-1 border rounded"
         />
       </div>
       <button 
-        onClick={() => removeDiscountBulkPricingSection(product._id, index, variant._id, details._id)}
+        onClick={() => removeDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id, index, variant._id, details._id)}
         className="px-2 py-1 bg-red-500 text-white rounded text-xs self-end"
       >
         Remove
@@ -805,7 +807,7 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
   ))}
   
   <button 
-    onClick={() => addDiscountBulkPricingSection(product._id, variant._id, details._id)}
+    onClick={() => addDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id, variant._id, details._id)}
     className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
   >
     Add Discount Bulk Pricing
@@ -826,9 +828,9 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                     
                     <input 
                       type="text" 
-                      value={multipleProductsForRevisedRate[product._id]?.['price'] || ''} 
+                      value={localMultipleForRevisedRate[product._id]?.['price'] || ''} 
                       onChange={(e) => {
-                        setMultipleProductsForRevisedRate(prev => ({
+                        setLocalMultipleForRevisedRate(prev => ({
                           ...prev,
                           [product._id]: {
                             ...prev[product._id],
@@ -842,9 +844,9 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                     <p>Discount start date</p>
                     <input 
                       type="datetime-local" 
-                      value={multipleProductsForRevisedRate[product._id]?.["discountStartDate"] || ""}
+                      value={localMultipleForRevisedRate[product._id]?.["discountStartDate"] || ""}
                       onChange={(e) => {
-                        setMultipleProductsForRevisedRate(prev => ({
+                        setLocalMultipleForRevisedRate(prev => ({
                           ...prev,
                           [product._id]: {
                             ...prev[product._id],
@@ -857,9 +859,9 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                     <p>Discount end date</p>
                     <input 
                       type="datetime-local" 
-                      value={multipleProductsForRevisedRate[product._id]?.["discountEndDate"] || ""}
+                      value={localMultipleForRevisedRate[product._id]?.["discountEndDate"] || ""}
                       onChange={(e) => {
-                        setMultipleProductsForRevisedRate(prev => ({
+                        setLocalMultipleForRevisedRate(prev => ({
                           ...prev,
                           [product._id]: {
                             ...prev[product._id],
@@ -870,9 +872,9 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                     /> 
 
                     <select 
-                      value={multipleProductsForRevisedRate[product._id]?.["comeBackToOriginalPrice"] || ""}
+                      value={localMultipleForRevisedRate[product._id]?.["comeBackToOriginalPrice"] || ""}
                       onChange={(e) => {
-                        setMultipleProductsForRevisedRate(prev => ({
+                        setLocalMultipleForRevisedRate(prev => ({
                           ...prev,
                           [product._id]: {
                             ...prev[product._id],
@@ -890,10 +892,10 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
 {/* DISCOUNT BULK PRICING SECTION FOR NON-VARIANTS */}
 <div className="mt-4 p-3 bg-gray-100 rounded">
   <h4 className="font-bold mb-2">
-    Discount Bulk Pricing ({getDiscountBulkPricingCount(product._id)} sections)
+    Discount Bulk Pricing ({getDiscountBulkPricingCount(localMultipleForRevisedRate, product._id)} sections)
   </h4>
   
-  {(multipleProductsForRevisedRate[product._id]?.discountBulkPricing || []).map((pricing, index) => (
+  {(localMultipleForRevisedRate[product._id]?.discountBulkPricing || []).map((pricing, index) => (
     <div key={index} className="flex gap-2 mb-2 p-2 bg-white rounded border">
       <div className="flex-1">
         <label className="text-xs text-gray-600">Wholesale Price</label>
@@ -901,7 +903,7 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
           type="number"
           placeholder="e.g., 150"
           value={pricing.wholesalePrice}
-          onChange={(e) => updateDiscountBulkPricing(product._id, index, 'wholesalePrice', e.target.value)}
+          onChange={(e) => updateDiscountBulkPricing(setLocalMultipleForRevisedRate, product._id, index, 'wholesalePrice', e.target.value)}
           className="w-full p-1 border rounded"
         />
       </div>
@@ -911,12 +913,12 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
           type="number"
           placeholder="e.g., 10"
           value={pricing.quantity} // CHANGED: thresholdQuantity -> quantity
-          onChange={(e) => updateDiscountBulkPricing(product._id, index, 'quantity', e.target.value)} // CHANGED: thresholdQuantity -> quantity
+          onChange={(e) => updateDiscountBulkPricing(setLocalMultipleForRevisedRate, product._id, index, 'quantity', e.target.value)} // CHANGED: thresholdQuantity -> quantity
           className="w-full p-1 border rounded"
         />
       </div>
       <button 
-        onClick={() => removeDiscountBulkPricingSection(product._id, index)}
+        onClick={() => removeDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id, index)}
         className="px-2 py-1 bg-red-500 text-white rounded text-xs self-end"
       >
         Remove
@@ -925,7 +927,7 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
   ))}
   
   <button 
-    onClick={() => addDiscountBulkPricingSection(product._id)}
+    onClick={() => addDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id)}
     className="mt-2 px-3 py-1 bg-blue-500 text-white rounded text-sm"
   >
     Add Discount Bulk Pricing
@@ -934,7 +936,7 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                     {/* End of bulk pricig section for witout variants */}
                   </div>)
                 })}
-                <button onClick={handleUpdateMultipleStock}>Update</button>
+                <button onClick={() => handleUpdateMultipleStock(localMultipleForRevisedRate)}>Update</button>
               </div>
             </div>
           </div>
@@ -1664,11 +1666,11 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
         />
       )}  */}
 
-      {showRestockModal && (selectedProducts.length > 0 ? <RestockModal onClose={() => setShowRestockModal(false)} /> : <RestockModal
+      {showRestockModal && (selectedProducts.length > 0 ? <RestockModal selectedProducts={selectedProducts} multipleToRestockInitial={multipleProductsToRestock} onClose={() => setShowRestockModal(false)} /> : <RestockModal
           product={restockProduct}
           onClose={() => setShowRestockModal(false)}
         />)}
-    {showRevisedRateModal && (selectedProducts.length > 0 ? <RevisedRateModal onClose={() => setShowRevisedRateModal(false)} /> : <RevisedRateModal
+    {showRevisedRateModal && (selectedProducts.length > 0 ? <RevisedRateModal selectedProducts={selectedProducts} multipleForRevisedRateInitial={multipleProductsForRevisedRate} onClose={() => setShowRevisedRateModal(false)} /> : <RevisedRateModal
           product={RevisedRateProduct}
           onClose={() => setShowRevisedRateModal(false)}
         />)}
