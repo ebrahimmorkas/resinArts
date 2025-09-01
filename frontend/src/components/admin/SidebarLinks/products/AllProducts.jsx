@@ -12,22 +12,11 @@ export default function AdminProductsPage() {
   const [restockProduct, setRestockProduct] = useState(null); // Changed to null
   // This will control the opening and closing of restock modal
   const [showRestockModal, setShowRestockModal] = useState(false);
-  const [stockTextfield, setStockTextfield] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
   const [multipleProductsToRestock, setMultipleProductsToRestock] = useState({});
-  const [stateVariableForDataForSingleProductWithVariants, setStateVariableForDataForSingleProductWithVariants] = useState({});
-
   // Starting of state variables for revised rate functionality
   const [showRevisedRateModal, setShowRevisedRateModal] = useState(false);
   const [multipleProductsForRevisedRate, setMultipleProductsForRevisedRate] = useState({});
   const [RevisedRateProduct, setRevisedRateProduct] = useState(null);
-  const [revisedRateTextfield, setRevisedRateTextfield] = useState("");
-  const [discountStartDate, setDiscountStartDate] = useState(null);
-  const [discountEndDate, setDiscountEndDate] = useState(null);
-  const [discountPrice, setDiscountPrice] = useState(null);
-  const [comeBackToOriginalPrice, setComeBackToOriginalPrice] = useState(null);
-  const [singleProductDiscountBulkPricing, setSingleProductDiscountBulkPricing] = useState([]);
-  const [stateVariableToReviseRateForSingleProductWithVariants, setStateVariableToReviseRateForSingleProductWithVariants] = useState({});
   // Ending of state variables for revised rate functionality
   
   // Start of useEffect that will handle the selection and deselection of products selected through checkbox and also update state variable mutipleProductsToRestock
@@ -172,10 +161,6 @@ const setDataForSingleProductWithVariants = (product) => {
   setStateVariableForDataForSingleProductWithVariants(dataForSingleProductWithVariants);
 }
 
-  useEffect(() => {
-    console.log("Single product")
-    console.log(stateVariableForDataForSingleProductWithVariants);
-  }, [stateVariableForDataForSingleProductWithVariants])
   
 
   if (loading) return <div>Loading the products</div>;
@@ -183,6 +168,9 @@ const setDataForSingleProductWithVariants = (product) => {
 
   // Restock Modal Component
   const RestockModal = ({ product={}, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [stockTextfield, setStockTextfield] = useState("");
+    const [stateVariableForDataForSingleProductWithVariants, setStateVariableForDataForSingleProductWithVariants] = useState({});
     // Validate stock input
     const isValidStock = stockTextfield !== "" && parseInt(stockTextfield) >= 0;
 
@@ -254,6 +242,8 @@ const handleUpdateMultipleStock = async () => {
     }
   } catch(err) {
     console.log("jfsdfgrfchwifcjwufhewruyfhqoidgwuydq;.ojdusi9qdwejhfyvctduqwgdsuqyedt6q" + err);
+  } finally {
+    setIsLoading(false);
   }
 };
 // End of function for updating multiple stocks with both type of preoducts that is with and without variants.
@@ -483,8 +473,15 @@ const handleUpdateMultipleStock = async () => {
 
   // Staart of Revised Rate Modal component
   const RevisedRateModal = ({ product={}, onClose }) => {
+    const [isLoading, setIsLoading] = useState(false);
+    const [revisedRateTextfield, setRevisedRateTextfield] = useState("");
+    const [discountStartDate, setDiscountStartDate] = useState(null);
+    const [discountEndDate, setDiscountEndDate] = useState(null);
+    const [comeBackToOriginalPrice, setComeBackToOriginalPrice] = useState(null);
+    const [singleProductDiscountBulkPricing, setSingleProductDiscountBulkPricing] = useState([]);
+    const [stateVariableToReviseRateForSingleProductWithVariants, setStateVariableToReviseRateForSingleProductWithVariants] = useState({});
     // Validate stock input
-    const isValidStock = stockTextfield !== "" && parseInt(stockTextfield) >= 0;
+    const isValidPrice = revisedRateTextfield !== "" && parseInt(revisedRateTextfield) >= 0;
 
 
     // Start of function that will update only price of only one product with and without variants
@@ -523,8 +520,8 @@ const handleUpdateMultipleStock = async () => {
 
     // Check if the toy store said “Okay!”
     if (res.status === 200 || res.status === 201) {
-      console.log(`Saved ${stockTextfield} toys for ${product.name}`);
-      setStockTextfield(""); // Clear the number box
+      console.log(`Saved ${revisedRateTextfield} toys for ${product.name}`);
+      setRevisedRateTextfield(""); // Clear the number box
       onClose(); // Close the toy box
     } else {
       // If the toy store said “No,” show a warning
@@ -558,6 +555,8 @@ const handleUpdateMultipleStock = async () => {
     }
   } catch(err) {
     console.log("jfsdfgrfchwifcjwufhewruyfhqoidgwuydq;.ojdusi9qdwejhfyvctduqwgdsuqyedt6q" + err);
+  } finally {
+    setIsLoading(false);
   }
 };
 // End of function for updating multiple price with both type of preoducts that is with and without variants.
@@ -1470,8 +1469,6 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                         </button>
                         <button className="bg-green-100 hover:bg-green-200 text-green-800 px-3 py-1 rounded-md text-xs font-medium transition-colors" onClick={() => {
                         setRevisedRateProduct(product);
-                        setStateVariableToReviseRateForSingleProductWithVariants({});
-                        setSingleProductDiscountBulkPricing([]);
                         setShowRevisedRateModal(true)
                         }}>
                           Add Revised Rate
@@ -1480,7 +1477,6 @@ const getDiscountBulkPricingCount = (productId, variantId = null, detailsId = nu
                           className="bg-purple-100 hover:bg-purple-200 text-purple-800 px-3 py-1 rounded-md text-xs font-medium transition-colors flex items-center gap-1" 
                           onClick={() => {
                             setRestockProduct(product);
-                            setStockTextfield(""); // Reset input when opening modal
                             setShowRestockModal(true);
                           }}
                         >
