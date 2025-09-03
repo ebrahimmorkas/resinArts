@@ -1,9 +1,8 @@
-import React, { useState, useEffect } from 'react'
-import Navbar from '../../components/admin/Navbar'
-import Sidebar from '../../components/admin/Sidebar'
+import React, { useState } from 'react';
+import { Routes, Route, useNavigate } from 'react-router-dom';
+import Navbar from '../../components/admin/Navbar';
+import Sidebar from '../../components/admin/Sidebar';
 import AddProduct from '../../components/admin/SidebarLinks/AddProduct';
-import axios from 'axios';
-import { useNavigate } from 'react-router-dom';
 import AddCategory from '../../components/admin/SidebarLinks/AddCategory';
 import OrdersPanel from '../../components/admin/SidebarLinks/orders/OrdersPanel';
 import OrdersAccepted from '../../components/admin/SidebarLinks/orders/OrdersAccepted';
@@ -16,9 +15,8 @@ import Discount from '../../components/admin/SidebarLinks/Discount/Discount';
 function AdminPanel() {
   // State to manage sidebar open/close
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [user, setUser] = useState(null);
   const navigate = useNavigate();
-  
+
   // Function to toggle sidebar
   const toggleSidebar = () => {
     setSidebarOpen(!sidebarOpen);
@@ -30,27 +28,33 @@ function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen bg-gray-50">
       {/* Pass the toggle function to Navbar */}
       <Navbar onMenuClick={toggleSidebar} isSidebarOpen={sidebarOpen} />
       
       {/* Pass the state and close function to Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       
-      {/* Your main content goes here */}
+      {/* Main content with routes */}
       <main className="w-screen my-8">
-        {/* <AddProduct></AddProduct> */}
-        {/* <AddCategory></AddCategory> */}
-        {/* <OrdersPanel></OrdersPanel> */}
-        {/* <OrdersAccepted></OrdersAccepted> */}
-        {/* <RestockPanel></RestockPanel> */}
-        <AllProducts></AllProducts>
-        {/* <Orders></Orders> */}
-        {/* <Users></Users> */}
-        {/* <Discount></Discount> */}
+        <Routes>
+          <Route index element={<Orders />} /> {/* Default route for /admin/panel */}
+          <Route path="dashboard" element={<div>Dashboard Component</div>} />
+          <Route path="products" element={<AllProducts />} />
+          <Route path="products/add" element={<AddProduct />} />
+          <Route path="products/categories" element={<AddCategory />} />
+          <Route path="orders" element={<Orders />} /> {/* Route for /admin/panel/orders */}
+          <Route path="orders/pending" element={<OrdersPanel />} />
+          <Route path="orders/completed" element={<OrdersAccepted />} />
+          <Route path="customers" element={<Users />} />
+          <Route path="discount" element={<Discount />} />
+          <Route path="products/restock" element={<RestockPanel />} />
+          {/* Add more routes for other menu items as needed */}
+          <Route path="*" element={<Orders />} /> {/* Fallback route */}
+        </Routes>
       </main>
     </div>
-  )
+  );
 }
 
-export default AdminPanel
+export default AdminPanel;
