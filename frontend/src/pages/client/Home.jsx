@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useContext } from "react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
-import  { Link } from 'react-router-dom';
+import { Link } from 'react-router-dom';
 import Orders from './Orders';
 
 import {
@@ -29,6 +29,7 @@ import {
 } from "lucide-react"
 import axios from "axios";
 import { AuthContext } from "../../../Context/AuthContext"
+import { DiscountContext } from "../../../Context/DiscountContext";
 
 const categories = [
   {
@@ -91,13 +92,16 @@ export default function Home() {
     getTotalItemsCount,
   } = useCart()
 
-
-  const handleCartCheckout = async (cartProducts) => {
+  const handleCartCheckout = async () => {
+    try {
       const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
-        withCredential: true,
+        withCredentials: true,
       });
-      
+      console.log("Checkout response:", res.data);
+    } catch (error) {
+      console.error("Checkout error:", error);
     }
+  }
 
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [selectedFilters, setSelectedFilters] = useState(["all"])
@@ -110,6 +114,7 @@ export default function Home() {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
+  const {discountData, loadingDiscount, loadingErrors, isDiscountAvailable} = useContext(DiscountContext);
 
   const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
   const { products, loading, error } = contextData
@@ -119,7 +124,7 @@ export default function Home() {
   const justArrivedRef = useRef(null)
   const restockedRef = useRef(null)
   const revisedRatesRef = useRef(null)
-  const {user} = useContext(AuthContext);
+  const { user } = useContext(AuthContext)
 
   // Auto-rotate banners
   useEffect(() => {
@@ -187,69 +192,90 @@ export default function Home() {
     return "N/A"
   }
 
-  const getDisplayPrice = (product, variant = null, sizeDetail = null) => {
-    // Check for discount at size level first
-    if (sizeDetail) {
-      if (isDiscountActive(product, variant, sizeDetail) && sizeDetail.discountPrice) {
-        return sizeDetail.discountPrice
-      }
-      if (sizeDetail.price) {
-        return sizeDetail.price
-      }
+  const getOriginalPrice = (product, variant = null, sizeDetail = null) => {
+    if (sizeDetail && sizeDetail.price) {
+      return parseFloat(sizeDetail.price) || 0;
     }
-
-    // Check for discount at product level
-    if (isDiscountActive(product) && product.discountPrice) {
-      return product.discountPrice
-    }
-
-    // Check variant level price
     if (variant && variant.price) {
-      return variant.price
+      return parseFloat(variant.price) || 0;
     }
-
-    // Check product level price
     if (product.price && product.price !== "" && product.price !== null) {
-      return product.price
+      return parseFloat(product.price) || 0;
     }
-
-    // If no price at top level, get from first variant's first size
     if (product.variants && product.variants.length > 0) {
-      const firstVariant = product.variants[0]
+      const firstVariant = product.variants[0];
       if (firstVariant.moreDetails && firstVariant.moreDetails.length > 0) {
-        return firstVariant.moreDetails[0].price || 0
+        return parseFloat(firstVariant.moreDetails[0].price) || 0;
+      }
+    }
+    return 0;
+  }
+
+  const getDisplayPrice = (product, variant = null, sizeDetail = null) => {
+    const originalPrice = getOriginalPrice(product, variant, sizeDetail);
+    let effectivePrice = originalPrice;
+
+    if (isDiscountActive(product, variant, sizeDetail)) {
+      if (sizeDetail && sizeDetail.discountPrice) {
+        effectivePrice = parseFloat(sizeDetail.discountPrice) || effectivePrice;
+      } else if (product.discountPrice) {
+        effectivePrice = parseFloat(product.discountPrice) || effectivePrice;
       }
     }
 
-    return 0
+    const discount = getApplicableDiscount(product);
+    if (discount) {
+      effectivePrice = effectivePrice * (1 - discount.discountPercentage / 100);
+    }
+
+    return parseFloat(effectivePrice.toFixed(2));
   }
 
   const getBulkPricing = (product, variant = null, sizeDetail = null) => {
-    // Check for discount bulk pricing at size level first
+    let bulkPricing = [];
+    
     if (sizeDetail) {
       if (isDiscountActive(product, variant, sizeDetail) && sizeDetail.discountBulkPricing) {
-        return sizeDetail.discountBulkPricing
+        bulkPricing = sizeDetail.discountBulkPricing;
+      } else if (sizeDetail.bulkPricingCombinations) {
+        bulkPricing = sizeDetail.bulkPricingCombinations;
       }
-      if (sizeDetail.bulkPricingCombinations) {
-        return sizeDetail.bulkPricingCombinations
+    } else if (isDiscountActive(product) && product.discountBulkPricing) {
+      bulkPricing = product.discountBulkPricing;
+    } else if (product.bulkPricing) {
+      bulkPricing = product.bulkPricing;
+    }
+
+    const discount = getApplicableDiscount(product);
+    if (discount) {
+      bulkPricing = bulkPricing.map(tier => ({
+        ...tier,
+        wholesalePrice: parseFloat((tier.wholesalePrice * (1 - discount.discountPercentage / 100)).toFixed(2))
+      }));
+    }
+
+    return bulkPricing;
+  }
+
+  const getApplicableDiscount = (product) => {
+    const now = new Date();
+    for (const discount of discountData) {
+      const start = new Date(discount.startDate);
+      const end = new Date(discount.endDate);
+      if (now >= start && now <= end && discount.isActive) {
+        if (discount.applicableToAll ||
+          (discount.selectedMainCategory && product.categoryPath?.includes(discount.selectedMainCategory)) ||
+          (discount.selectedSubCategory && product.categoryPath?.includes(discount.selectedSubCategory))
+        ) {
+          return discount;
+        }
       }
     }
-
-    // Check for discount bulk pricing at product level
-    if (isDiscountActive(product) && product.discountBulkPricing) {
-      return product.discountBulkPricing
-    }
-
-    // Return regular bulk pricing
-    if (product.bulkPricing) {
-      return product.bulkPricing
-    }
-
-    return []
+    return null;
   }
 
   const getProductBadge = (product, variant = null, sizeDetail = null) => {
-    if (isDiscountActive(product, variant, sizeDetail)) {
+    if (isDiscountActive(product, variant, sizeDetail) || getApplicableDiscount(product)) {
       return { text: "DISCOUNTED", color: "bg-red-500" }
     }
     if (isRecentlyRestocked(product, variant, sizeDetail)) {
@@ -258,12 +284,10 @@ export default function Home() {
     return { text: "NEW", color: "bg-blue-500" }
   }
 
-  // Generate cart key for variant-specific items
   const generateCartKey = (productId, colorName = null, sizeString = null) => {
     return `${productId}-${colorName || "default"}-${sizeString || "default"}`
   }
 
-  // Parse cart key to get product details
   const parseCartKey = (cartKey) => {
     const [productId, colorName, sizeString] = cartKey.split("-")
     return {
@@ -280,16 +304,17 @@ export default function Home() {
     const variant = product.variants?.find((v) => v.colorName === colorName)
     const sizeDetail = variant?.moreDetails?.find((md) => formatSize(md.size) === sizeString)
 
+    const originalPrice = getOriginalPrice(product, variant, sizeDetail);
+    const displayPrice = getDisplayPrice(product, variant, sizeDetail);
+
     const productData = {
       imageUrl: variant?.variantImage || product.image || "/placeholder.svg",
       productName: product.name,
       variantId: variant?._id || "",
       detailsId: sizeDetail?._id || "",
       sizeId: sizeDetail?.size?._id || "",
-      price: getDisplayPrice(product, variant, sizeDetail),
-      discountedPrice: isDiscountActive(product, variant, sizeDetail)
-        ? sizeDetail?.discountPrice || product.discountPrice
-        : null,
+      price: originalPrice,
+      discountedPrice: displayPrice < originalPrice ? displayPrice : null,
     }
 
     await addToCart(productId, colorName, sizeString, quantity, productData)
@@ -392,6 +417,8 @@ export default function Home() {
     window.open(whatsappUrl, "_blank")
   }
 
+  if(loadingDiscount) return <div>Loading Product</div>
+
   const ProductCard = ({ product }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
     const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null)
@@ -399,15 +426,28 @@ export default function Home() {
     const [addQuantity, setAddQuantity] = useState(1)
     const [showDetails, setShowDetails] = useState(false)
 
+    // Use ref to store initial selections to prevent resets
+    const initialVariantRef = useRef(product.variants?.[0] || null)
+    const initialSizeDetailRef = useRef(selectedVariant?.moreDetails?.[0] || null)
+
     useEffect(() => {
       if (selectedVariant && selectedVariant.moreDetails && selectedVariant.moreDetails.length > 0) {
-        setSelectedSizeDetail(selectedVariant.moreDetails[0])
+        if (!selectedSizeDetail || !selectedVariant.moreDetails.includes(selectedSizeDetail)) {
+          setSelectedSizeDetail(selectedVariant.moreDetails[0])
+        }
       }
-    }, [selectedVariant])
+    }, [selectedVariant, selectedSizeDetail])
 
     const badge = getProductBadge(product, selectedVariant, selectedSizeDetail)
-    const displayPrice = getDisplayPrice(product, selectedVariant, selectedSizeDetail)
-    const bulkPricing = getBulkPricing(product, selectedVariant, selectedSizeDetail)
+
+    const originalPrice = getOriginalPrice(product, selectedVariant, selectedSizeDetail);
+    const displayPrice = getDisplayPrice(product, selectedVariant, selectedSizeDetail);
+
+    const isDiscounted = displayPrice < originalPrice;
+    const strikePrice = isDiscounted ? originalPrice : null;
+
+    let bulkPricing = getBulkPricing(product, selectedVariant, selectedSizeDetail);
+    const isBulkDiscounted = isDiscountActive(product, selectedVariant, selectedSizeDetail) || getApplicableDiscount(product);
 
     const getVariantAndSizeCount = () => {
       const variantCount = product.variants?.length || 0
@@ -426,19 +466,16 @@ export default function Home() {
     const getCurrentImages = () => {
       const images = []
 
-      // Add variant image first
       if (selectedVariant && selectedVariant.variantImage) {
         images.push(selectedVariant.variantImage)
       } else if (product.image) {
         images.push(product.image)
       }
 
-      // Add additional images from size detail
       if (selectedSizeDetail && selectedSizeDetail.additionalImages) {
         images.push(...selectedSizeDetail.additionalImages)
       }
 
-      // Add additional images from product level
       if (product.additionalImages) {
         images.push(...product.additionalImages)
       }
@@ -452,9 +489,6 @@ export default function Home() {
     const handleVariantSelect = (variant) => {
       setSelectedVariant(variant)
       setCurrentImageIndex(0)
-      if (variant.moreDetails && variant.moreDetails.length > 0) {
-        setSelectedSizeDetail(variant.moreDetails[0])
-      }
     }
 
     const handleSizeSelect = (sizeDetail) => {
@@ -474,10 +508,8 @@ export default function Home() {
 
     const handleAddToCartWithQuantity = async () => {
       if (isSimpleProduct) {
-        // For simple products without variants
         await handleAddToCart(product._id, null, null, addQuantity)
       } else {
-        // For products with variants
         if (!selectedVariant || !selectedSizeDetail) return
         const sizeString = formatSize(selectedSizeDetail.size)
         await handleAddToCart(product._id, selectedVariant.colorName, sizeString, addQuantity)
@@ -571,12 +603,10 @@ export default function Home() {
           <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
 
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg font-bold text-gray-900">${displayPrice}</span>
-            {isDiscountActive(product, selectedVariant, selectedSizeDetail) &&
-              selectedSizeDetail?.price &&
-              selectedSizeDetail.price > displayPrice && (
-                <span className="text-sm text-gray-500 line-through">${selectedSizeDetail.price}</span>
-              )}
+            <span className="text-lg font-bold text-gray-900">${displayPrice.toFixed(2)}</span>
+            {strikePrice && (
+              <span className="text-sm text-gray-500 line-through">${strikePrice.toFixed(2)}</span>
+            )}
           </div>
 
           <div className="mb-2">
@@ -656,7 +686,7 @@ export default function Home() {
                   {bulkPricing.length > 0 && (
                     <div className="p-2 bg-gray-50 rounded-lg">
                       <p className="text-xs font-semibold text-gray-600 mb-1">
-                        {isDiscountActive(product, selectedVariant, selectedSizeDetail)
+                        {isBulkDiscounted
                           ? "Discounted Bulk Pricing:"
                           : "Bulk Pricing:"}
                       </p>
@@ -664,7 +694,7 @@ export default function Home() {
                         {bulkPricing.map((tier, index) => (
                           <div key={index} className="flex justify-between text-xs">
                             <span>{tier.quantity}+ pcs</span>
-                            <span className="font-semibold">${tier.wholesalePrice} each</span>
+                            <span className="font-semibold">${tier.wholesalePrice.toFixed(2)} each</span>
                           </div>
                         ))}
                       </div>
@@ -736,9 +766,45 @@ export default function Home() {
   const ProductModal = ({ product, onClose }) => {
     if (!product) return null
 
+    // Ref to manage scroll position
+    const modalRef = useRef(null)
+
+    // Prevent auto-scrolling and manage focus
+    useEffect(() => {
+      const modal = modalRef.current
+      if (modal) {
+        // Lock scroll position
+        modal.scrollTop = 0
+        modal.style.overflowY = 'auto'
+        modal.style.overscrollBehavior = 'contain'
+
+        // Prevent browser autofocus
+        const inputs = modal.querySelectorAll('input, button, select')
+        inputs.forEach((el) => el.setAttribute('tabindex', '-1'))
+
+        // Explicitly set focus to modal container to prevent browser auto-scroll
+        modal.focus()
+
+        // Add scroll lock listener
+        const handleScroll = (e) => {
+          if (modal.scrollTop !== 0) {
+            modal.scrollTop = 0
+            e.preventDefault()
+          }
+        }
+
+        modal.addEventListener('scroll', handleScroll)
+        return () => modal.removeEventListener('scroll', handleScroll)
+      }
+    }, [])
+
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div
+          ref={modalRef}
+          className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col focus:outline-none"
+          tabIndex="0"
+        >
           <div className="flex justify-between items-start p-6 pb-4 flex-shrink-0">
             <h2 className="text-2xl font-bold text-gray-800">{product.name}</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -752,12 +818,13 @@ export default function Home() {
                   src={product.variants?.[0]?.variantImage || product.image || "/placeholder.svg"}
                   alt={product.name}
                   className="w-full rounded-lg object-cover"
+                  style={{ maxHeight: '400px' }} // Prevent layout shift
                 />
               </div>
               <div>
                 <div className="flex items-center gap-2 mb-4">
                   <span className="text-2xl font-bold text-gray-900">
-                    ${getDisplayPrice(product, product.variants?.[0], product.variants?.[0]?.moreDetails?.[0])}
+                    ${getDisplayPrice(product, product.variants?.[0], product.variants?.[0]?.moreDetails?.[0]).toFixed(2)}
                   </span>
                 </div>
 
@@ -799,20 +866,51 @@ export default function Home() {
     const [localQuantityToAdd, setLocalQuantityToAdd] = useState(1)
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
+    // Ref to manage scroll position
+    const modalRef = useRef(null)
+
+    // Prevent auto-scrolling and manage focus
+    useEffect(() => {
+      const modal = modalRef.current
+      if (modal) {
+        // Lock scroll position
+        modal.scrollTop = 0
+        modal.style.overflowY = 'auto'
+        modal.style.overscrollBehavior = 'contain'
+
+        // Prevent browser autofocus
+        const inputs = modal.querySelectorAll('input, button, select')
+        inputs.forEach((el) => el.setAttribute('tabindex', '-1'))
+
+        // Explicitly set focus to modal container
+        modal.focus()
+
+        // Add scroll lock listener
+        const handleScroll = (e) => {
+          if (modal.scrollTop !== 0) {
+            modal.scrollTop = 0
+            e.preventDefault()
+          }
+        }
+
+        modal.addEventListener('scroll', handleScroll)
+        return () => modal.removeEventListener('scroll', handleScroll)
+      }
+    }, [])
+
     useEffect(() => {
       if (selectedVariant && selectedVariant.moreDetails && selectedVariant.moreDetails.length > 0) {
-        setSelectedSizeDetail(selectedVariant.moreDetails[0])
+        if (!selectedSizeDetail || !selectedVariant.moreDetails.includes(selectedSizeDetail)) {
+          setSelectedSizeDetail(selectedVariant.moreDetails[0])
+        }
       }
-    }, [selectedVariant])
+    }, [selectedVariant, selectedSizeDetail])
 
     if (!product) return null
 
     const handleVariantSelect = (variant) => {
       setSelectedVariant(variant)
       setCurrentImageIndex(0)
-      if (variant.moreDetails && variant.moreDetails.length > 0) {
-        setSelectedSizeDetail(variant.moreDetails[0])
-      }
     }
 
     const handleSizeSelect = (sizeDetail) => {
@@ -825,6 +923,7 @@ export default function Home() {
 
       const sizeString = formatSize(selectedSizeDetail.size)
       await handleAddToCart(product._id, selectedVariant.colorName, sizeString, localQuantityToAdd)
+      setLocalQuantityToAdd(1)
       onClose()
     }
 
@@ -853,7 +952,11 @@ export default function Home() {
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col">
+        <div
+          ref={modalRef}
+          className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col focus:outline-none"
+          tabIndex="0"
+        >
           <div className="flex justify-between items-start p-6 pb-4 flex-shrink-0">
             <h2 className="text-xl font-bold text-gray-800">Select Variants</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -867,6 +970,7 @@ export default function Home() {
                   src={currentImage || "/placeholder.svg"}
                   alt={`${product.name} - ${selectedVariant?.colorName || "default"} variant`}
                   className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+                  style={{ maxHeight: '200px' }} // Prevent layout shift
                   onClick={() => setSelectedImage(currentImage)}
                 />
 
@@ -900,7 +1004,7 @@ export default function Home() {
               </div>
 
               <h3 className="font-semibold text-lg">{product.name}</h3>
-              <p className="text-2xl font-bold text-blue-600">${displayPrice}</p>
+              <p className="text-2xl font-bold text-blue-600">${displayPrice.toFixed(2)}</p>
             </div>
 
             <div className="mb-6">
@@ -964,7 +1068,7 @@ export default function Home() {
                 <h4 className="font-semibold text-gray-800 mb-2">Selected Variant Details</h4>
                 <div className="space-y-1 text-sm">
                   <div>
-                    Price: <span className="font-semibold">${displayPrice}</span>
+                    Price: <span className="font-semibold">${displayPrice.toFixed(2)}</span>
                   </div>
                   <div>
                     Stock: <span className="font-semibold">{selectedSizeDetail.stock} available</span>
@@ -989,7 +1093,7 @@ export default function Home() {
                   {bulkPricing.map((tier, index) => (
                     <div key={index} className="flex justify-between text-sm">
                       <span>{tier.quantity}+ pieces</span>
-                      <span className="font-semibold">${tier.wholesalePrice} each</span>
+                      <span className="font-semibold">${tier.wholesalePrice.toFixed(2)} each</span>
                     </div>
                   ))}
                 </div>
@@ -1015,6 +1119,7 @@ export default function Home() {
                       value={localQuantityToAdd}
                       onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
                       className="w-16 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                      tabIndex="-1" // Prevent autofocus
                     />
                   </div>
 
@@ -1062,6 +1167,7 @@ export default function Home() {
             src={imageUrl || "/placeholder.svg"}
             alt="Full size product image"
             className="max-w-full max-h-full object-contain rounded-lg"
+            style={{ maxHeight: '80vh' }} // Prevent layout shift
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -1071,8 +1177,6 @@ export default function Home() {
 
   const getJustArrivedProducts = () => {
     return products.filter((product) => {
-      // You can add logic here to determine "just arrived" products
-      // For now, showing all products
       return true
     })
   }
@@ -1229,7 +1333,7 @@ export default function Home() {
                               ? `${item.colorName}, ${item.sizeString}`
                               : "Default variant"}
                           </p>
-                          <p className="text-blue-600 font-bold">${itemPrice}</p>
+                          <p className="text-blue-600 font-bold">${itemPrice.toFixed(2)}</p>
                         </div>
                         <div className="flex flex-col items-center space-y-2">
                           <div className="flex items-center space-x-2">
@@ -1280,9 +1384,7 @@ export default function Home() {
                     <button
                       className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200"
                       disabled={cartLoading}
-                      onClick={() => {
-                        handleCartCheckout(cartItems);
-                      }}
+                      onClick={handleCartCheckout}
                     >
                       {cartLoading ? "Processing..." : "Checkout"}
                     </button>

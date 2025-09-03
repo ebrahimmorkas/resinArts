@@ -69,7 +69,7 @@ app.use('/api/cart', authenticate, authorize(['user']), cartRoutes);
 app.use('/api/order', authenticate, orderRoutes);
 app.use('/api/user', authenticate, userRoutes);
 app.use('/api/free-cash', authenticate, authorize(['admin']), freeCashRoutes);
-app.use('/api/discount', authenticate, authorize(['admin']), discountRoutes);
+app.use('/api/discount', authenticate, discountRoutes);
 
 // Authenticated user info
 app.get('/api/auth/me', authenticate, async (req, res) => {

@@ -1,24 +1,17 @@
-Okay now I want to create the users table and the name of the page should be User.jsx.
-The design should be very modern. The design should take the 100% avaliable width. When the width of the table f users increases than the screen then the table should be scrolled and not the entiore screen.
-The tale should contain folowing columns:
-Sr No, Checkbox for selecting the user, name, email, phone, whatsapp, last active(This wil be date), Orders (Total no. of orders placed by the user), Actions. 
-The actions colum should contain the following button:
-Ban, delete, pay cash, change password. 
-When clicked on Ban and Delete the admin should be asked for confiration in a beautiful modal manner and not through boring alerts on webpage. 
-When clicked on Pay cash button then the following modal should be opened and it should contain the following fields:
-Cash Amount, Valid above RS, End date, and Pay cash button. Also show note saying if you do not enter the end date then you need to revoke cash manually. When clicked on changed password buton should be open and it should contain the following:
-Field for new password and change password button.
+Okay it worked well. 
+Now you see the banners (carousel) in the Home Page that keeps rotating. Now I want that image should be shown from backend. So in the backend you need to create the controller that can add the banner and delete the banner. In the Banner Model include the following. Image, Start date, end date, set as default. The same should be included in the form where we can add the banner. Create the route /fetcch-banners and in that all the banners should be displayed with the action button delete. Also include one more column in the table name isActive where we can see whether the banner is active or not.
+Give names of the files such as :
+Component: 
+Banner.jsx
+Controller:
+bannerController.js
+Model:
+Banner.js
+Routes:
+bannerRoutes.js. 
+Include the following routes with this name only.
+/add -> Ton add the banner and function name should be addBanner
+/fetch-banners -> To get all the banners in the tabular format and function name in controller shold be fetchBanners();
+/delete/id -> To delete the bannner and the name of the function in the controller should be deleteBanner().
 
-Add these filters for the users table in the dropdown manner.
-1. Active status :- When this is selected then show datepciker named last active before and apply filter button.
-2. Last order :- Last order before date show date picker and apply filter button.
-3. Orders :- When this is selected then show dropdown and its values should be 'Below' ,, 'Above' and textfield enter price and apply filter button.
-4. Free cash
-5. Date:- When this is selected then show datepicker where admin will enter dte and all the orders on that date will be displayed.
-
-Also show this additional buttons when multiple users are selected through checkbox and they are 'Send cash' and 'Revoke cash', 'Delete',. When multiple users are selected through checkbox then all the buttons in actions should be hidden. When Pay cash is clicked then same approach should be followed as in normal. When clcked on delete and revoke cash button then show warning and confirmation.
-
-Now when pay cash is clicked in normal scenario and admin actually pays cash to user then over there 'Pay cash' button should be changed to 'revoke cash',
-
-The table should be in form of pagination. The table should also contain the search bar and it should be functional.
-the design should be very beautifl and eye catching and responsive sothat it can work on laptops screens as well mobile screens. 
+Please implement the following and give me code. No need to implement the server.js
