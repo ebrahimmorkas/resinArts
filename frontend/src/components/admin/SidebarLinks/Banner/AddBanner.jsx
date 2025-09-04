@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import axios from 'axios';
 
 const AddBanner = () => {
@@ -12,6 +12,9 @@ const AddBanner = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  
+  // Ref for file input to reset it
+  const fileInputRef = useRef(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked, files } = e.target;
@@ -21,11 +24,31 @@ const AddBanner = () => {
     }));
   };
 
+  const resetForm = () => {
+    setFormData({
+      image: null,
+      startDate: '',
+      endDate: '',
+      isDefault: false,
+      isActive: true,
+    });
+    
+    // Reset file input
+    if (fileInputRef.current) {
+      fileInputRef.current.value = '';
+    }
+    
+    // Clear any existing messages
+    setError(null);
+    setSuccess(null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
     setError(null);
     setSuccess(null);
+    
     const data = new FormData();
     if (formData.image) data.append('image', formData.image);
     data.append('startDate', formData.startDate);
@@ -37,16 +60,16 @@ const AddBanner = () => {
       await axios.post('http://localhost:3000/api/banner/add', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
+      
       setSuccess('Banner added successfully!');
-      setFormData({
-        image: null,
-        startDate: '',
-        endDate: '',
-        isDefault: false,
-        isActive: true,
-      });
+      
+      // Reset form after successful submission
+      setTimeout(() => {
+        resetForm();
+      }, 1500); // Wait 1.5 seconds to show success message
+      
     } catch (err) {
-      setError('Failed to add banner');
+      setError(err.response?.data?.message || 'Failed to add banner');
       console.error(err);
     } finally {
       setLoading(false);
@@ -54,72 +77,127 @@ const AddBanner = () => {
   };
 
   return (
-    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-2xl">
+    <div className="max-w-md mx-auto mt-10 p-6 bg-white rounded-xl shadow-2xl relative">
       <h2 className="text-2xl font-bold mb-6 text-center text-indigo-700">Add New Banner</h2>
-      {error && <p className="text-red-500 mb-4 text-center">{error}</p>}
-      {success && <p className="text-green-500 mb-4 text-center">{success}</p>}
+      
+      {/* Success Message */}
+      {success && (
+        <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-md flex items-center justify-center">
+          <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+          </svg>
+          <p className="text-green-600 font-medium">{success}</p>
+        </div>
+      )}
+      
+      {/* Error Message */}
+      {error && (
+        <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
+          <p className="text-red-600 text-center">{error}</p>
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1">Image</label>
-          <input
-            type="file"
-            name="image"
-            onChange={handleChange}
-            required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
-            accept="image/*"
-          />
+          <label className="block text-sm font-medium mb-1 text-gray-700">Image</label>
+          <div className="relative">
+            <input
+              ref={fileInputRef}
+              type="file"
+              name="image"
+              onChange={handleChange}
+              required
+              disabled={loading}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              accept="image/*"
+            />
+            <svg className="absolute right-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+          </div>
         </div>
+        
         <div>
-          <label className="block text-sm font-medium mb-1">Start Date</label>
+          <label className="block text-sm font-medium mb-1 text-gray-700">Start Date</label>
           <input
             type="date"
             name="startDate"
             value={formData.startDate}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            disabled={loading}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
+        
         <div>
-          <label className="block text-sm font-medium mb-1">End Date</label>
+          <label className="block text-sm font-medium mb-1 text-gray-700">End Date</label>
           <input
             type="date"
             name="endDate"
             value={formData.endDate}
             onChange={handleChange}
             required
-            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            disabled={loading}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
+        
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
             name="isDefault"
             checked={formData.isDefault}
             onChange={handleChange}
-            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            disabled={loading}
+            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
           />
-          <label className="text-sm font-medium">Set as Default</label>
+          <label className="text-sm font-medium text-gray-700">Set as Default</label>
         </div>
+        
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
             name="isActive"
             checked={formData.isActive}
             onChange={handleChange}
-            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500"
+            disabled={loading}
+            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
           />
-          <label className="text-sm font-medium">Active</label>
+          <label className="text-sm font-medium text-gray-700">Active</label>
         </div>
+        
         <button
           type="submit"
           disabled={loading}
-          className="w-full bg-indigo-600 text-white py-2 rounded-md hover:bg-indigo-700 disabled:bg-gray-400 transition duration-200"
+          className="w-full bg-indigo-600 text-white py-2.5 rounded-md hover:bg-indigo-700 disabled:bg-indigo-400 disabled:cursor-not-allowed transition duration-200 flex items-center justify-center font-medium"
         >
-          {loading ? 'Adding...' : 'Add Banner'}
+          {loading ? (
+            <>
+              <svg className="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              Adding Banner...
+            </>
+          ) : (
+            'Add Banner'
+          )}
         </button>
       </form>
+      
+      {/* Loading Overlay */}
+      {loading && (
+        <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center rounded-xl">
+          <div className="text-center">
+            <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p className="text-sm text-gray-600">Uploading banner...</p>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
