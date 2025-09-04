@@ -110,7 +110,8 @@ export default function Home() {
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
   const {discountData, loadingDiscount, loadingErrors, isDiscountAvailable} = useContext(DiscountContext);
-  const { banners } = useContext(BannerContext);
+  const { banners, loadingBanner, Bannerserror } = useContext(BannerContext);
+  // const [currentBanner, setCurrentBanner] = useState(0);
 
   const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
   const { products, loading, error } = contextData
@@ -123,13 +124,19 @@ export default function Home() {
   const { user } = useContext(AuthContext)
 
   // Auto-rotate banners
+useEffect(() => {
+    if (banners.length > 1) { // Only rotate if there are multiple banners
+      const interval = setInterval(() => {
+        setCurrentBanner((prev) => (prev + 1) % banners.length);
+      }, 5000);
+      return () => clearInterval(interval);
+    }
+  }, [banners.length]);
+
+  // Reset current banner if banners change
   useEffect(() => {
-    console.log(user.id);
-    const interval = setInterval(() => {
-      setCurrentBanner((prev) => (prev + 1) % banners.length)
-    }, 5000)
-    return () => clearInterval(interval)
-  }, [banners.length])
+    setCurrentBanner(0);
+  }, [banners]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -1393,50 +1400,58 @@ export default function Home() {
       )}
 
       <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden w-full">
-        <div
-          className="flex transition-transform duration-500 ease-in-out h-full"
-          style={{ transform: `translateX(-${currentBanner * 100}%)` }}
-        >
-          {banners.map((banner, index) => (
-            <div key={index} className="w-full flex-shrink-0 relative">
-              <img
-                src={banner || "/placeholder.svg"}
-                alt={`Banner ${index + 1}`}
-                className="w-full h-full object-cover"
-              />
-              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-                <div className="text-center text-white">
-                  <h2 className="text-2xl sm:text-4xl font-bold mb-2">Special Offers</h2>
-                  <p className="text-lg sm:text-xl">Up to 50% Off on Selected Items</p>
-                </div>
+      <div
+        className="flex transition-transform duration-500 ease-in-out h-full"
+        style={{ transform: `translateX(-${currentBanner * 100}%)` }}
+      >
+        {banners.map((banner, index) => (
+          <div key={index} className="w-full flex-shrink-0 relative">
+            <img
+              src={banner}
+              alt={`Banner ${index + 1}`}
+              className="w-full h-full object-cover"
+              onError={(e) => {
+                console.error('Image failed to load:', banner);
+                e.target.src = "/placeholder.svg"; // Fallback image
+              }}
+            />
+            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+              <div className="text-center text-white">
               </div>
             </div>
-          ))}
-        </div>
-        <button
-          onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}
-          className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </button>
-        <button
-          onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}
-          className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
-        >
-          <ChevronRight className="h-6 w-6" />
-        </button>
-        <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-          {banners.map((_, index) => (
-            <button
-              key={index}
-              onClick={() => setCurrentBanner(index)}
-              className={`w-3 h-3 rounded-full transition-colors duration-200 ${
-                index === currentBanner ? "bg-white" : "bg-white/50"
-              }`}
-            />
-          ))}
-        </div>
+          </div>
+        ))}
       </div>
+
+      {/* Navigation buttons - only show if more than 1 banner */}
+      {banners.length > 1 && (
+        <>
+          <button
+            onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}
+            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
+          >
+            <ChevronLeft className="h-6 w-6" />
+          </button>
+          <button
+            onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}
+            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
+          >
+            <ChevronRight className="h-6 w-6" />
+          </button>
+          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+            {banners.map((_, index) => (
+              <button
+                key={index}
+                onClick={() => setCurrentBanner(index)}
+                className={`w-3 h-3 rounded-full transition-colors duration-200 ${
+                  index === currentBanner ? "bg-white" : "bg-white/50"
+                }`}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
 
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-12">

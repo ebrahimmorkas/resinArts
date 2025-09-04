@@ -1,5 +1,6 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useContext } from 'react';
 import axios from 'axios';
+import { BannerContext } from '../../../../../Context/BannerContext';
 
 const AddBanner = () => {
   const [formData, setFormData] = useState({
@@ -12,6 +13,9 @@ const AddBanner = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  
+  // Get fetchBanners function from context to refresh banners after adding
+  // const { fetchBanners } = useContext(BannerContext);
   
   // Ref for file input to reset it
   const fileInputRef = useRef(null);
@@ -59,9 +63,13 @@ const AddBanner = () => {
     try {
       await axios.post('http://localhost:3000/api/banner/add', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true, // Add this for authentication
       });
       
       setSuccess('Banner added successfully!');
+      
+      // Refresh banners in context to show new banner immediately
+      // fetchBanners();
       
       // Reset form after successful submission
       setTimeout(() => {
@@ -70,7 +78,7 @@ const AddBanner = () => {
       
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to add banner');
-      console.error(err);
+      console.error('Banner upload error:', err);
     } finally {
       setLoading(false);
     }
@@ -93,13 +101,18 @@ const AddBanner = () => {
       {/* Error Message */}
       {error && (
         <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
+          <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
           <p className="text-red-600 text-center">{error}</p>
         </div>
       )}
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-700">Image</label>
+          <label className="block text-sm font-medium mb-1 text-gray-700">
+            Image <span className="text-red-500">*</span>
+          </label>
           <div className="relative">
             <input
               ref={fileInputRef}
@@ -108,17 +121,20 @@ const AddBanner = () => {
               onChange={handleChange}
               required
               disabled={loading}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100"
               accept="image/*"
             />
             <svg className="absolute right-3 top-2.5 w-5 h-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
           </div>
+          <p className="text-xs text-gray-500 mt-1">Upload an image file (JPG, PNG, GIF)</p>
         </div>
         
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-700">Start Date</label>
+          <label className="block text-sm font-medium mb-1 text-gray-700">
+            Start Date <span className="text-red-500">*</span>
+          </label>
           <input
             type="date"
             name="startDate"
@@ -131,7 +147,9 @@ const AddBanner = () => {
         </div>
         
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-700">End Date</label>
+          <label className="block text-sm font-medium mb-1 text-gray-700">
+            End Date <span className="text-red-500">*</span>
+          </label>
           <input
             type="date"
             name="endDate"
@@ -139,6 +157,7 @@ const AddBanner = () => {
             onChange={handleChange}
             required
             disabled={loading}
+            min={formData.startDate} // Ensure end date is after start date
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
@@ -146,25 +165,47 @@ const AddBanner = () => {
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
+            id="isDefault"
             name="isDefault"
             checked={formData.isDefault}
             onChange={handleChange}
             disabled={loading}
             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
           />
-          <label className="text-sm font-medium text-gray-700">Set as Default</label>
+          <label htmlFor="isDefault" className="text-sm font-medium text-gray-700">
+            Set as Default Banner
+          </label>
+          <div className="group relative">
+            <svg className="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              Default banners are shown when no active banners are available
+            </div>
+          </div>
         </div>
         
         <div className="flex items-center space-x-2">
           <input
             type="checkbox"
+            id="isActive"
             name="isActive"
             checked={formData.isActive}
             onChange={handleChange}
             disabled={loading}
             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
           />
-          <label className="text-sm font-medium text-gray-700">Active</label>
+          <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
+            Active Banner
+          </label>
+          <div className="group relative">
+            <svg className="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
+              Only active banners are displayed on the website
+            </div>
+          </div>
         </div>
         
         <button
@@ -181,20 +222,26 @@ const AddBanner = () => {
               Adding Banner...
             </>
           ) : (
-            'Add Banner'
+            <>
+              <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+              </svg>
+              Add Banner
+            </>
           )}
         </button>
       </form>
       
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 bg-white bg-opacity-50 flex items-center justify-center rounded-xl">
-          <div className="text-center">
-            <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-2" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-xl z-10">
+          <div className="text-center bg-white p-6 rounded-lg shadow-lg">
+            <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p className="text-sm text-gray-600">Uploading banner...</p>
+            <p className="text-sm text-gray-600 font-medium">Uploading banner...</p>
+            <p className="text-xs text-gray-500 mt-1">Please wait while we process your image</p>
           </div>
         </div>
       )}
