@@ -11,6 +11,8 @@ import AllProducts from '../../components/admin/SidebarLinks/products/AllProduct
 import Orders from '../../components/admin/SidebarLinks/orders/Orders';
 import Users from '../../components/admin/SidebarLinks/users/Users';
 import Discount from '../../components/admin/SidebarLinks/Discount/Discount';
+import AddBanner from '../../components/admin/SidebarLinks/Banner/AddBanner';
+import AllBanners from '../../components/admin/SidebarLinks/Banner/AllBanners';
 
 function AdminPanel() {
   // State to manage sidebar open/close
@@ -49,6 +51,8 @@ function AdminPanel() {
           <Route path="customers" element={<Users />} />
           <Route path="discount" element={<Discount />} />
           <Route path="products/restock" element={<RestockPanel />} />
+          <Route path="banner/add" element={<AddBanner />} />
+          <Route path="banner/all" element={<AllBanners />} />
           {/* Add more routes for other menu items as needed */}
           <Route path="*" element={<Orders />} /> {/* Fallback route */}
         </Routes>

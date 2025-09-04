@@ -30,6 +30,7 @@ import {
 import axios from "axios";
 import { AuthContext } from "../../../Context/AuthContext"
 import { DiscountContext } from "../../../Context/DiscountContext";
+import { BannerContext } from "../../../Context/BannerContext";
 
 const categories = [
   {
@@ -67,12 +68,6 @@ const categories = [
     name: "Accessories",
     image: "https://images.unsplash.com/photo-1553062407984-6d7b8b5c8f7b?w=100&h=100&fit=crop",
   },
-]
-
-const banners = [
-  "https://images.unsplash.com/photo-1607082348824-0a96f2a4b9da?w=1200&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1556742049-0cfed4f6a45d?w=1200&h=400&fit=crop",
-  "https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=1200&h=400&fit=crop",
 ]
 
 export default function Home() {
@@ -115,6 +110,7 @@ export default function Home() {
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
   const {discountData, loadingDiscount, loadingErrors, isDiscountAvailable} = useContext(DiscountContext);
+  const { banners } = useContext(BannerContext);
 
   const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
   const { products, loading, error } = contextData
@@ -133,7 +129,7 @@ export default function Home() {
       setCurrentBanner((prev) => (prev + 1) % banners.length)
     }, 5000)
     return () => clearInterval(interval)
-  }, [])
+  }, [banners.length])
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -1405,7 +1401,7 @@ export default function Home() {
             <div key={index} className="w-full flex-shrink-0 relative">
               <img
                 src={banner || "/placeholder.svg"}
-                alt={`Festival Sale Banner ${index + 1}`}
+                alt={`Banner ${index + 1}`}
                 className="w-full h-full object-cover"
               />
               <div className="absolute inset-0 bg-black/20 flex items-center justify-center">

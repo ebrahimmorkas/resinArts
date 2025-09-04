@@ -154,7 +154,13 @@ const Sidebar = ({ isOpen, onClose }) => {
       label: 'Discount',
       icon: DollarSign,
       href: '/admin/panel/discount'
-    }
+    },
+    {
+      id: 'banner',
+      label: 'Banner',
+      icon: DollarSign,
+      href: '/admin/panel/banner'
+    },
   ];
 
   const bottomMenuItems = [
