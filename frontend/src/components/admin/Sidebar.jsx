@@ -159,7 +159,19 @@ const Sidebar = ({ isOpen, onClose }) => {
       id: 'banner',
       label: 'Banner',
       icon: DollarSign,
-      href: '/admin/panel/banner'
+      submenu: [
+        { id: 'all-banners', label: 'All banners', icon: List, href: '/admin/panel/banner/all' },
+        { id: 'add-banner', label: 'Add banner', icon: Plus, href: '/admin/panel/banner/add' },
+      ]
+    },
+    {
+      id: 'announcement',
+      label: 'Announcement',
+      icon: DollarSign,
+      submenu: [
+        { id: 'all-announcements', label: 'All Announcements', icon: List, href: '/admin/panel/announcement/all' },
+        { id: 'add-announcement', label: 'Add Announcement', icon: Plus, href: '/admin/panel/annoucement/add' },
+      ]
     },
   ];
 

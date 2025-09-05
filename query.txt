@@ -1,17 +1,26 @@
-Okay it worked well. 
-Now you see the banners (carousel) in the Home Page that keeps rotating. Now I want that image should be shown from backend. So in the backend you need to create the controller that can add the banner and delete the banner. In the Banner Model include the following. Image, Start date, end date, set as default. The same should be included in the form where we can add the banner. Create the route /fetcch-banners and in that all the banners should be displayed with the action button delete. Also include one more column in the table name isActive where we can see whether the banner is active or not.
-Give names of the files such as :
-Component: 
-Banner.jsx
-Controller:
-bannerController.js
-Model:
-Banner.js
-Routes:
-bannerRoutes.js. 
-Include the following routes with this name only.
-/add -> Ton add the banner and function name should be addBanner
-/fetch-banners -> To get all the banners in the tabular format and function name in controller shold be fetchBanners();
-/delete/id -> To delete the bannner and the name of the function in the controller should be deleteBanner().
+Okay done with this banner part. Now I want to create the announcemnets in the ame way but it will be simple. No image upload. Only text start date, end date and default. Make sure the announcements dont overlap in dates as only one announcement can be displayed. When there is one announcement added then the default one should not shown and it should be start seeing again after the end date. Also make sure that while adding the announcement only one announcemnet in total can be set as default announcement. 
+Now you need to create this files:
 
-Please implement the following and give me code. No need to implement the server.js
+Announcement.js (model).
+announcemnetController.js
+announcementRoutes.js
+AddAnnouncement.jsx.
+AllAnnouncemnets.jsx
+AnnouncementContext.jsx
+
+In AnouncementContext.jsx keeps the name of loading variable as loadingAnnouncement and for error variable keep the name as announcementError.
+
+You dont need to create the server.js.
+
+In AllAnnouncemnent.jsx display the table in tabular format. Show following fields 
+Sr no, text, start date end date, default ---> In this column show checkbox and the announcemnet which is default in database should be checked and disabled. When somone clicks on checkbox of different announcement then display the modal saying 'Are you sure you want to make this announcement as default' and display buttons such as Cancel, Update and when clicked on update the  announcemnet should be updated and set as default and the one which was already default should be removed from default.
+Actions column:-
+Inlcude button such as: Delete, Edit (Show in symbol format).
+When clicked the edit button then modal should be open with all the data such as text, start date, end date, and checkbox for making it default ---> When clicked on checkbox then same procedure should be followed as discussed above in default column.
+
+The API for backend should be : localhost:3000/api/announcement.
+/add ---> For adding the announcement, function in controller should be add()
+/all for getting all the announcement in the tabular format, function in controller should be fetchAnnouncements()
+/update/announcementID ---> For updating the announcement, function is controller should be updateAnnouncement()
+
+Please implement the following

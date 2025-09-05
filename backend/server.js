@@ -13,6 +13,7 @@ const userRoutes = require('./routes/userRoutes');
 const freeCashRoutes = require('./routes/freeCashRoutes');
 const discountRoutes = require('./routes/discountRoutes');
 const bannerRoutes = require('./routes/bannerRoutes');
+const announcementRoutes = require('./routes/announcementRoutes');
 const authenticate = require('./middlewares/authenticate');
 const authorize = require('./middlewares/authorize');
 const User = require('./models/User');
@@ -72,6 +73,7 @@ app.use('/api/user', authenticate, userRoutes);
 app.use('/api/free-cash', authenticate, authorize(['admin']), freeCashRoutes);
 app.use('/api/discount', authenticate, discountRoutes);
 app.use('/api/banner', authenticate, bannerRoutes);
+app.use('/api/announcement', authenticate, announcementRoutes);
 
 // Authenticated user info
 app.get('/api/auth/me', authenticate, async (req, res) => {

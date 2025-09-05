@@ -6,6 +6,7 @@ import { UserProvider } from '../Context/UserContext';
 import { CategoryProvider } from '../Context/CategoryContext';
 import { DiscountProvider } from '../Context/DiscountContext';
 import { BannerProvider } from '../Context/BannerContext';
+import { AnnouncementProvider } from '../Context/AnnouncementContext';
 // import User from '../../backend/models/User';
 
 const ConditionalProvider = ({children}) => {
@@ -25,6 +26,7 @@ const ConditionalProvider = ({children}) => {
 
     return (
         <ProductProvider>
+            <AnnouncementProvider>
             <BannerProvider>
                 <DiscountProvider>
             <CartProvider>
@@ -34,6 +36,7 @@ const ConditionalProvider = ({children}) => {
             </CartProvider>
             </DiscountProvider>
             </BannerProvider>
+            </AnnouncementProvider>
         </ProductProvider>
     )
 };
