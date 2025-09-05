@@ -31,6 +31,7 @@ import axios from "axios";
 import { AuthContext } from "../../../Context/AuthContext"
 import { DiscountContext } from "../../../Context/DiscountContext";
 import { BannerContext } from "../../../Context/BannerContext";
+import { AnnouncementContext } from "../../../Context/AnnouncementContext"
 
 const categories = [
   {
@@ -111,6 +112,7 @@ export default function Home() {
   const [selectedImage, setSelectedImage] = useState(null)
   const {discountData, loadingDiscount, loadingErrors, isDiscountAvailable} = useContext(DiscountContext);
   const { banners, loadingBanner, Bannerserror } = useContext(BannerContext);
+  const { announcement, loadingAnnouncement, announcementError } = useContext(AnnouncementContext);
   // const [currentBanner, setCurrentBanner] = useState(0);
 
   const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
@@ -1208,11 +1210,13 @@ useEffect(() => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 w-full">
-      <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center w-full">
-        <p className="text-sm font-medium">
-          🎉 Special Festival Sale - Up to 50% Off! Free Shipping on Orders Over $100
-        </p>
-      </div>
+      {!loadingAnnouncement && !announcementError && announcement && (
+  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center w-full">
+    <p className="text-sm font-medium">
+      {announcement}
+    </p>
+  </div>
+)}
 
       <nav className="bg-white shadow-lg sticky top-0 z-40 w-full">
         <div className="w-full px-4 sm:px-6 lg:px-8">
