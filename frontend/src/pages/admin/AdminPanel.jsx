@@ -55,7 +55,7 @@ function AdminPanel() {
           <Route path="discount" element={<Discount />} />
           <Route path="products/restock" element={<RestockPanel />} />
           <Route path="banner/add" element={<AddBanner />} />
-          <Route path="banner/a11" element={<AllBanners />} />
+          <Route path="banner/all" element={<AllBanners />} />
           <Route path="announcement/add" element={<AddAnnouncement />} />
           <Route path="announcement/all" element={<AllAnnouncement />} />
           {/* Add more routes for other menu items as needed */}

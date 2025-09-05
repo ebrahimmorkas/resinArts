@@ -170,7 +170,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       icon: DollarSign,
       submenu: [
         { id: 'all-announcements', label: 'All Announcements', icon: List, href: '/admin/panel/announcement/all' },
-        { id: 'add-announcement', label: 'Add Announcement', icon: Plus, href: '/admin/panel/annoucement/add' },
+        { id: 'add-announcement', label: 'Add Announcement', icon: Plus, href: '/admin/panel/announcement/add' },
       ]
     },
   ];
