@@ -17,10 +17,7 @@ const bannerSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  isActive: {
-    type: Boolean,
-    default: true
-  },
+  // Removed isActive field completely
   createdAt: {
     type: Date,
     default: Date.now

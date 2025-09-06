@@ -135,6 +135,58 @@ const fetchBanners = async (req, res) => {
   }
 };
 
+// NEW API: Update banner default status
+const updateBannerDefault = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { isDefault } = req.body;
+
+    console.log(`Updating banner ${id} default status to:`, isDefault);
+
+    // Find the banner first
+    const banner = await Banner.findById(id);
+    if (!banner) {
+      return res.status(404).json({ message: 'Banner not found' });
+    }
+
+    // If trying to remove default status, check if this is the only default banner
+    if (banner.isDefault && !isDefault) {
+      const defaultBannersCount = await Banner.countDocuments({ isDefault: true });
+      console.log('Current default banners count:', defaultBannersCount);
+      
+      if (defaultBannersCount <= 1) {
+        return res.status(400).json({ 
+          message: 'Cannot remove default status. At least one default banner must exist.',
+          error: 'LAST_DEFAULT_BANNER'
+        });
+      }
+    }
+
+    // Update the banner
+    const updatedBanner = await Banner.findByIdAndUpdate(
+      id,
+      { isDefault },
+      { new: true }
+    );
+
+    console.log('Banner default status updated successfully');
+
+    res.status(200).json({ 
+      message: isDefault 
+        ? 'Banner set as default successfully' 
+        : 'Default status removed successfully',
+      banner: updatedBanner
+    });
+
+  } catch (error) {
+    console.error('Error updating banner default status:', error);
+    res.status(500).json({ 
+      message: 'Error updating banner default status', 
+      error: error.message 
+    });
+  }
+};
+
 const deleteBanner = async (req, res) => {
   try {
     const { id } = req.params;
@@ -143,6 +195,19 @@ const deleteBanner = async (req, res) => {
     const banner = await Banner.findById(id);
     if (!banner) {
       return res.status(404).json({ message: 'Banner not found' });
+    }
+
+    // Check if this is a default banner and if it's the only default banner
+    if (banner.isDefault) {
+      const defaultBannersCount = await Banner.countDocuments({ isDefault: true });
+      console.log('Default banners count before deletion:', defaultBannersCount);
+      
+      if (defaultBannersCount <= 1) {
+        return res.status(400).json({ 
+          message: 'Cannot delete the last default banner. At least one default banner must exist.',
+          error: 'LAST_DEFAULT_BANNER_DELETE'
+        });
+      }
     }
 
     console.log('Deleting banner:', id);
@@ -177,5 +242,6 @@ const deleteBanner = async (req, res) => {
 module.exports = {
   addBanner: [upload.single('image'), addBanner],
   fetchBanners,
+  updateBannerDefault, // New API function
   deleteBanner
 };
