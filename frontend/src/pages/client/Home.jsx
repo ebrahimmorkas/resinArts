@@ -1,4 +1,3 @@
-
 "use client"
 
 import { useState, useEffect, useRef, useContext } from "react"
@@ -387,6 +386,18 @@ export default function Home() {
 
   // Filter main categories (those without a parent_category_id)
   const mainCategories = categories.filter(category => !category.parent_category_id);
+
+  // Sort products by price if price-low-to-high filter is selected
+  const sortProductsByPrice = (products) => {
+    if (selectedFilters.includes("price-low-to-high")) {
+      return [...products].sort((a, b) => {
+        const priceA = getDisplayPrice(a, a.variants?.[0], a.variants?.[0]?.moreDetails?.[0]);
+        const priceB = getDisplayPrice(b, b.variants?.[0], b.variants?.[0]?.moreDetails?.[0]);
+        return priceA - priceB;
+      });
+    }
+    return products;
+  };
 
   if (loadingDiscount || loadingCategories) return <div>Loading...</div>
   if (categoriesErrors) return <div>Error: {categoriesErrors}</div>
@@ -1138,31 +1149,34 @@ export default function Home() {
   }
 
   const getJustArrivedProducts = () => {
-    return products.filter((product) => {
+    const filteredProducts = products.filter((product) => {
       return true
-    })
+    });
+    return sortProductsByPrice(filteredProducts);
   }
 
   const getRestockedProducts = () => {
-    return products.filter((product) => {
+    const filteredProducts = products.filter((product) => {
       return (
         isRecentlyRestocked(product) ||
         product.variants?.some((variant) =>
           variant.moreDetails?.some((sizeDetail) => isRecentlyRestocked(product, variant, sizeDetail)),
         )
       )
-    })
+    });
+    return sortProductsByPrice(filteredProducts);
   }
 
   const getRevisedRatesProducts = () => {
-    return products.filter((product) => {
+    const filteredProducts = products.filter((product) => {
       return (
         isDiscountActive(product) ||
         product.variants?.some((variant) =>
           variant.moreDetails?.some((sizeDetail) => isDiscountActive(product, variant, sizeDetail)),
         )
       )
-    })
+    });
+    return sortProductsByPrice(filteredProducts);
   }
 
   return (
@@ -1463,6 +1477,7 @@ export default function Home() {
               { key: "just-arrived", label: "Just Arrived" },
               { key: "revised-rates", label: "Revised Rates" },
               { key: "restocked", label: "Restocked Items" },
+              { key: "price-low-to-high", label: "Price: Low to High" },
             ].map((filter) => (
               <button
                 key={filter.key}
@@ -1484,11 +1499,11 @@ export default function Home() {
           <section className="mb-12">
             <h2 className="text-2xl font-bold text-gray-800 mb-6">{selectedCategory}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-              {products
-                .filter((product) => product.categoryPath?.includes(selectedCategory))
-                .map((product) => (
-                  <ProductCard key={product._id} product={product} />
-                ))}
+              {sortProductsByPrice(
+                products.filter((product) => product.categoryPath?.includes(selectedCategory))
+              ).map((product) => (
+                <ProductCard key={product._id} product={product} />
+              ))}
             </div>
           </section>
         )}
@@ -1525,7 +1540,7 @@ export default function Home() {
         <section>
           <h2 className="text-2xl font-bold text-gray-800 mb-6">All Products</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-            {products.map((product) => (
+            {sortProductsByPrice(products).map((product) => (
               <ProductCard key={product._id} product={product} />
             ))}
           </div>
