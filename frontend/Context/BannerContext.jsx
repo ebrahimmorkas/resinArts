@@ -14,47 +14,45 @@ export const BannerProvider = ({ children }) => {
       setBannersError(null);
       
       const res = await axios.get('http://localhost:3000/api/banner/fetch-banners', {
-        withCredentials: true // Add this for authentication
+        withCredentials: true
       });
       
-      console.log('Raw banner data:', res.data); // Debug log
+      console.log('Raw banner data:', res.data);
       
       const now = new Date();
       
-      // Filter active banners first
-      let activeBanners = res.data.filter(banner => {
-        const isActive = banner.isActive;
+      // Simple filtering - just get banners that are in date range
+      let validBanners = res.data.filter(banner => {
         const startDate = new Date(banner.startDate);
         const endDate = new Date(banner.endDate);
         const isInDateRange = startDate <= now && endDate >= now;
         
         console.log(`Banner ${banner._id}:`, {
-          isActive,
           startDate: startDate.toDateString(),
           endDate: endDate.toDateString(),
           now: now.toDateString(),
           isInDateRange
         });
         
-        return isActive && isInDateRange;
+        return isInDateRange;
       });
       
-      console.log('Active banners:', activeBanners);
+      console.log('Valid banners in date range:', validBanners);
       
-      // If no active banners, get default banners
-      if (activeBanners.length === 0) {
-        activeBanners = res.data.filter(banner => banner.isDefault && banner.isActive);
-        console.log('Using default banners:', activeBanners);
+      // If no banners in date range, get default banners
+      if (validBanners.length === 0) {
+        validBanners = res.data.filter(banner => banner.isDefault);
+        console.log('Using default banners:', validBanners);
       }
       
-      // If still no banners, use all active banners regardless of date
-      if (activeBanners.length === 0) {
-        activeBanners = res.data.filter(banner => banner.isActive);
-        console.log('Using all active banners:', activeBanners);
+      // If still no banners, use all banners
+      if (validBanners.length === 0) {
+        validBanners = res.data;
+        console.log('Using all banners:', validBanners);
       }
       
       // Extract image URLs
-      const bannerImages = activeBanners.map(banner => banner.image);
+      const bannerImages = validBanners.map(banner => banner.image);
       console.log('Final banner images:', bannerImages);
       
       setBanners(bannerImages);
@@ -72,20 +70,20 @@ export const BannerProvider = ({ children }) => {
 
   useEffect(() => {
     fetchBanners();
-  }, []); // Remove the condition, always fetch on mount
+  }, []);
 
-  // Function to refetch banners (useful after adding new banners)
+  // Function to refetch banners (useful after adding/deleting banners)
   const refetchBanners = () => {
+    console.log('Refetching banners from context...');
     fetchBanners();
   };
 
   return (
     <BannerContext.Provider value={{ 
       banners, 
-      fetchBanners: refetchBanners, 
+      fetchBanners: refetchBanners,
       loadingBanners, 
-      bannersError,
-      fetchBanners
+      bannersError
     }}>
       {children}
     </BannerContext.Provider>

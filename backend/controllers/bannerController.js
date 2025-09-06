@@ -24,7 +24,7 @@ const addBanner = async (req, res) => {
   } : 'No file');
   
   try {
-    const { startDate, endDate, isDefault, isActive } = req.body;
+    const { startDate, endDate, isDefault } = req.body; // Removed isActive
     
     if (!req.file) {
       console.log('ERROR: No file uploaded');
@@ -59,20 +59,31 @@ const addBanner = async (req, res) => {
       uploadStream.end(req.file.buffer);
     });
 
+    // Check if this is the first banner in the database
+    const existingBannersCount = await Banner.countDocuments();
+    console.log('Existing banners count:', existingBannersCount);
+    
+    // If no existing banners, automatically set as default
+    const shouldBeDefault = existingBannersCount === 0 ? true : (isDefault === 'true' || isDefault === true);
+    console.log('Should be default:', shouldBeDefault);
+
     const newBanner = new Banner({
       image: uploadResult.secure_url,
       startDate: new Date(startDate),
       endDate: new Date(endDate),
-      isDefault: isDefault === 'true' || isDefault === true,
-      isActive: isActive === 'true' || isActive === true
+      isDefault: shouldBeDefault
+      // Removed isActive field completely
     });
 
     const savedBanner = await newBanner.save();
     console.log('Banner saved successfully');
 
     res.status(201).json({ 
-      message: 'Banner added successfully', 
-      banner: savedBanner 
+      message: existingBannersCount === 0 
+        ? 'Banner added successfully and set as default (first banner)' 
+        : 'Banner added successfully', 
+      banner: savedBanner,
+      autoSetDefault: existingBannersCount === 0
     });
 
   } catch (error) {
@@ -85,20 +96,37 @@ const addBanner = async (req, res) => {
   }
 };
 
-// Other functions remain the same...
 const fetchBanners = async (req, res) => {
   try {
     const now = new Date();
+    
+    // Find expired banners
     const expiredBanners = await Banner.find({ endDate: { $lt: now } });
     
-    for (const banner of expiredBanners) {
-      const urlParts = banner.image.split('/');
-      const fileName = urlParts[urlParts.length - 1].split('.')[0];
-      const publicId = `banners/${fileName}`;
-      await cloudinary.uploader.destroy(publicId).catch(err => console.error('Cloudinary delete error:', err));
-      await Banner.findByIdAndDelete(banner._id);
-    }
+    // Delete expired banners and their Cloudinary images in parallel
+    const deletePromises = expiredBanners.map(async (banner) => {
+      try {
+        // Extract public_id from Cloudinary URL
+        const urlParts = banner.image.split('/');
+        const fileName = urlParts[urlParts.length - 1].split('.')[0];
+        const publicId = `banners/${fileName}`;
+        
+        // Delete from Cloudinary (don't wait for this to complete)
+        cloudinary.uploader.destroy(publicId).catch(err => 
+          console.error('Cloudinary delete error for expired banner:', err)
+        );
+        
+        // Delete from database
+        await Banner.findByIdAndDelete(banner._id);
+      } catch (err) {
+        console.error('Error deleting expired banner:', banner._id, err);
+      }
+    });
 
+    // Wait for all deletions to complete
+    await Promise.all(deletePromises);
+
+    // Fetch all remaining banners (no active filtering)
     const banners = await Banner.find({}).sort({ createdAt: -1 });
     res.status(200).json(banners);
   } catch (error) {
@@ -110,21 +138,39 @@ const fetchBanners = async (req, res) => {
 const deleteBanner = async (req, res) => {
   try {
     const { id } = req.params;
+    
+    // Find the banner first
     const banner = await Banner.findById(id);
     if (!banner) {
       return res.status(404).json({ message: 'Banner not found' });
     }
 
+    console.log('Deleting banner:', id);
+    
+    // Extract public_id from Cloudinary URL for deletion
     const urlParts = banner.image.split('/');
     const fileName = urlParts[urlParts.length - 1].split('.')[0];
     const publicId = `banners/${fileName}`;
-    await cloudinary.uploader.destroy(publicId).catch(err => console.error('Cloudinary delete error:', err));
-
+    
+    // Delete from database first (faster response)
     await Banner.findByIdAndDelete(id);
-    res.status(200).json({ message: 'Banner deleted successfully' });
+    console.log('Banner deleted from database');
+
+    // Delete from Cloudinary asynchronously (don't block the response)
+    cloudinary.uploader.destroy(publicId)
+      .then(result => console.log('Cloudinary deletion result:', result))
+      .catch(err => console.error('Cloudinary delete error:', err));
+
+    res.status(200).json({ 
+      message: 'Banner deleted successfully',
+      deletedBanner: banner
+    });
   } catch (error) {
     console.error('Error deleting banner:', error.message);
-    res.status(500).json({ message: 'Error deleting banner', error: error.message });
+    res.status(500).json({ 
+      message: 'Error deleting banner', 
+      error: error.message 
+    });
   }
 };
 

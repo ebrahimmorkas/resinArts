@@ -17,7 +17,9 @@ const ConditionalProvider = ({children}) => {
             <ProductProvider>
                 <UserProvider>
                     <CategoryProvider>
+                        <BannerProvider>
                     {children}
+                        </BannerProvider>
                     </CategoryProvider>
                 </UserProvider>
             </ProductProvider>

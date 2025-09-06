@@ -7,15 +7,15 @@ const AddBanner = () => {
     image: null,
     startDate: '',
     endDate: '',
-    isDefault: false,
-    isActive: true
+    isDefault: false
+    // Removed isActive completely
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
   
   // Get fetchBanners function from context to refresh banners after adding
-  // const { fetchBanners } = useContext(BannerContext);
+  const { fetchBanners } = useContext(BannerContext);
   
   // Ref for file input to reset it
   const fileInputRef = useRef(null);
@@ -33,8 +33,8 @@ const AddBanner = () => {
       image: null,
       startDate: '',
       endDate: '',
-      isDefault: false,
-      isActive: true,
+      isDefault: false
+      // Removed isActive
     });
     
     // Reset file input
@@ -58,23 +58,30 @@ const AddBanner = () => {
     data.append('startDate', formData.startDate);
     data.append('endDate', formData.endDate);
     data.append('isDefault', formData.isDefault);
-    data.append('isActive', formData.isActive);
+    // Removed isActive from form data
 
     try {
-      await axios.post('http://localhost:3000/api/banner/add', data, {
+      const response = await axios.post('http://localhost:3000/api/banner/add', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
-        withCredentials: true, // Add this for authentication
+        withCredentials: true,
       });
       
-      setSuccess('Banner added successfully!');
+      // Check if banner was auto-set as default
+      const message = response.data.autoSetDefault 
+        ? 'Banner added successfully and automatically set as default (first banner)!'
+        : 'Banner added successfully!';
+      
+      setSuccess(message);
       
       // Refresh banners in context to show new banner immediately
-      // fetchBanners();
+      if (fetchBanners) {
+        fetchBanners();
+      }
       
       // Reset form after successful submission
       setTimeout(() => {
         resetForm();
-      }, 1500); // Wait 1.5 seconds to show success message
+      }, 2000);
       
     } catch (err) {
       setError(err.response?.data?.message || 'Failed to add banner');
@@ -91,20 +98,20 @@ const AddBanner = () => {
       {/* Success Message */}
       {success && (
         <div className="mb-4 p-3 bg-green-100 border border-green-300 rounded-md flex items-center justify-center">
-          <svg className="w-5 h-5 text-green-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-5 h-5 text-green-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
           </svg>
-          <p className="text-green-600 font-medium">{success}</p>
+          <p className="text-green-600 font-medium text-sm">{success}</p>
         </div>
       )}
       
       {/* Error Message */}
       {error && (
-        <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md">
-          <svg className="w-5 h-5 text-red-600 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div className="mb-4 p-3 bg-red-100 border border-red-300 rounded-md flex items-center">
+          <svg className="w-5 h-5 text-red-600 mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
           </svg>
-          <p className="text-red-600 text-center">{error}</p>
+          <p className="text-red-600 text-sm">{error}</p>
         </div>
       )}
       
@@ -157,7 +164,7 @@ const AddBanner = () => {
             onChange={handleChange}
             required
             disabled={loading}
-            min={formData.startDate} // Ensure end date is after start date
+            min={formData.startDate}
             className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:bg-gray-100 disabled:cursor-not-allowed"
           />
         </div>
@@ -175,38 +182,12 @@ const AddBanner = () => {
           <label htmlFor="isDefault" className="text-sm font-medium text-gray-700">
             Set as Default Banner
           </label>
-          <div className="group relative">
-            <svg className="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-              Default banners are shown when no active banners are available
-            </div>
-          </div>
         </div>
+        <p className="text-xs text-gray-500 ml-6">
+          Default banners are shown when no active banners are available. First banner is automatically set as default.
+        </p>
         
-        <div className="flex items-center space-x-2">
-          <input
-            type="checkbox"
-            id="isActive"
-            name="isActive"
-            checked={formData.isActive}
-            onChange={handleChange}
-            disabled={loading}
-            className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
-          />
-          <label htmlFor="isActive" className="text-sm font-medium text-gray-700">
-            Active Banner
-          </label>
-          <div className="group relative">
-            <svg className="w-4 h-4 text-gray-400 cursor-help" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <div className="absolute bottom-6 left-1/2 transform -translate-x-1/2 bg-black text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap">
-              Only active banners are displayed on the website
-            </div>
-          </div>
-        </div>
+        {/* Removed Active Banner checkbox completely */}
         
         <button
           type="submit"
@@ -234,14 +215,17 @@ const AddBanner = () => {
       
       {/* Loading Overlay */}
       {loading && (
-        <div className="absolute inset-0 bg-white bg-opacity-75 flex items-center justify-center rounded-xl z-10">
-          <div className="text-center bg-white p-6 rounded-lg shadow-lg">
-            <svg className="animate-spin h-8 w-8 text-indigo-600 mx-auto mb-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+        <div className="absolute inset-0 bg-white bg-opacity-80 flex items-center justify-center rounded-xl z-20">
+          <div className="text-center bg-white p-6 rounded-lg shadow-lg border">
+            <svg className="animate-spin h-10 w-10 text-indigo-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
             </svg>
-            <p className="text-sm text-gray-600 font-medium">Uploading banner...</p>
-            <p className="text-xs text-gray-500 mt-1">Please wait while we process your image</p>
+            <p className="text-lg text-gray-700 font-semibold mb-2">Uploading Banner</p>
+            <p className="text-sm text-gray-500">Please wait while we process your image...</p>
+            <div className="mt-3 w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-indigo-600 h-2 rounded-full animate-pulse" style={{width: '70%'}}></div>
+            </div>
           </div>
         </div>
       )}
