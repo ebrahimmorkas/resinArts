@@ -1,3 +1,4 @@
+
 "use client"
 
 import { useState, useEffect, useRef, useContext } from "react"
@@ -5,7 +6,7 @@ import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
 import { Link } from 'react-router-dom';
 import Orders from './Orders';
-
+import { CategoryContext } from "../../../Context/CategoryContext";
 import {
   Search,
   User,
@@ -32,44 +33,6 @@ import { AuthContext } from "../../../Context/AuthContext"
 import { DiscountContext } from "../../../Context/DiscountContext";
 import { BannerContext } from "../../../Context/BannerContext";
 import { AnnouncementContext } from "../../../Context/AnnouncementContext"
-
-const categories = [
-  {
-    id: 1,
-    name: "Electronics",
-    image: "https://images.unsplash.com/photo-1498049794561-7780e7231661?w=100&h=100&fit=crop",
-  },
-  {
-    id: 2,
-    name: "Clothing",
-    image: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=100&h=100&fit=crop",
-  },
-  {
-    id: 3,
-    name: "Home & Garden",
-    image: "https://images.unsplash.com/photo-1586023492125-27b2c8ce0db2?w=100&h=100&fit=crop",
-  },
-  { id: 4, name: "Sports", image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=100&h=100&fit=crop" },
-  { id: 5, name: "Books", image: "https://images.unsplash.com/photo-1481627834876-b7833e8f5570?w=100&h=100&fit=crop" },
-  { id: 6, name: "Beauty", image: "https://images.unsplash.com/photo-1596462502278-27bfdc403348?w=100&h=100&fit=crop" },
-  { id: 7, name: "Toys", image: "https://images.unsplash.com/photo-1558877385-1c2d7b8e8b8b?w=100&h=100&fit=crop" },
-  {
-    id: 8,
-    name: "Automotive",
-    image: "https://images.unsplash.com/photo-1549317661-bd32c8ce0db2?w=100&h=100&fit=crop",
-  },
-  {
-    id: 9,
-    name: "Jewelry",
-    image: "https://images.unsplash.com/photo-1515562141207-7a88fb7d3138?w=100&h=100&fit=crop",
-  },
-  { id: 10, name: "Kitchen", image: "https://images.unsplash.com/photo-1556909114-f6e7ad7d3136?w=100&h=100&fit=crop" },
-  {
-    id: 11,
-    name: "Accessories",
-    image: "https://images.unsplash.com/photo-1553062407984-6d7b8b5c8f7b?w=100&h=100&fit=crop",
-  },
-]
 
 export default function Home() {
   const {
@@ -110,10 +73,10 @@ export default function Home() {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
-  const {discountData, loadingDiscount, loadingErrors, isDiscountAvailable} = useContext(DiscountContext);
+  const { discountData, loadingDiscount, loadingErrors, isDiscountAvailable } = useContext(DiscountContext);
   const { banners, loadingBanner, Bannerserror } = useContext(BannerContext);
   const { announcement, loadingAnnouncement, announcementError } = useContext(AnnouncementContext);
-  // const [currentBanner, setCurrentBanner] = useState(0);
+  const { categories, loadingCategories, categoriesErrors } = useContext(CategoryContext);
 
   const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
   const { products, loading, error } = contextData
@@ -126,8 +89,8 @@ export default function Home() {
   const { user } = useContext(AuthContext)
 
   // Auto-rotate banners
-useEffect(() => {
-    if (banners.length > 1) { // Only rotate if there are multiple banners
+  useEffect(() => {
+    if (banners.length > 1) {
       const interval = setInterval(() => {
         setCurrentBanner((prev) => (prev + 1) % banners.length);
       }, 5000);
@@ -334,10 +297,10 @@ useEffect(() => {
   }
 
   const handleCategoryClick = (category) => {
-    if (selectedCategory === category.name) {
+    if (selectedCategory === category.categoryName) {
       setSelectedCategory(null)
     } else {
-      setSelectedCategory(category.name)
+      setSelectedCategory(category.categoryName)
     }
   }
 
@@ -354,7 +317,7 @@ useEffect(() => {
         })
       } else {
         setShowCategoryFilter(true)
-        setSelectedCategory("Electronics")
+        setSelectedCategory(mainCategories[0]?.categoryName || null) // Set first main category
         setSelectedFilters((prev) => {
           const newFilters = prev.filter((f) => f !== "all")
           return [...newFilters, "category"]
@@ -422,7 +385,11 @@ useEffect(() => {
     window.open(whatsappUrl, "_blank")
   }
 
-  if(loadingDiscount) return <div>Loading Product</div>
+  // Filter main categories (those without a parent_category_id)
+  const mainCategories = categories.filter(category => !category.parent_category_id);
+
+  if (loadingDiscount || loadingCategories) return <div>Loading...</div>
+  if (categoriesErrors) return <div>Error: {categoriesErrors}</div>
 
   const ProductCard = ({ product }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -778,19 +745,15 @@ useEffect(() => {
     useEffect(() => {
       const modal = modalRef.current
       if (modal) {
-        // Lock scroll position
         modal.scrollTop = 0
         modal.style.overflowY = 'auto'
         modal.style.overscrollBehavior = 'contain'
 
-        // Prevent browser autofocus
         const inputs = modal.querySelectorAll('input, button, select')
         inputs.forEach((el) => el.setAttribute('tabindex', '-1'))
 
-        // Explicitly set focus to modal container to prevent browser auto-scroll
         modal.focus()
 
-        // Add scroll lock listener
         const handleScroll = (e) => {
           if (modal.scrollTop !== 0) {
             modal.scrollTop = 0
@@ -823,7 +786,7 @@ useEffect(() => {
                   src={product.variants?.[0]?.variantImage || product.image || "/placeholder.svg"}
                   alt={product.name}
                   className="w-full rounded-lg object-cover"
-                  style={{ maxHeight: '400px' }} // Prevent layout shift
+                  style={{ maxHeight: '400px' }}
                 />
               </div>
               <div>
@@ -871,26 +834,20 @@ useEffect(() => {
     const [localQuantityToAdd, setLocalQuantityToAdd] = useState(1)
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
-    // Ref to manage scroll position
     const modalRef = useRef(null)
 
-    // Prevent auto-scrolling and manage focus
     useEffect(() => {
       const modal = modalRef.current
       if (modal) {
-        // Lock scroll position
         modal.scrollTop = 0
         modal.style.overflowY = 'auto'
         modal.style.overscrollBehavior = 'contain'
 
-        // Prevent browser autofocus
         const inputs = modal.querySelectorAll('input, button, select')
         inputs.forEach((el) => el.setAttribute('tabindex', '-1'))
 
-        // Explicitly set focus to modal container
         modal.focus()
 
-        // Add scroll lock listener
         const handleScroll = (e) => {
           if (modal.scrollTop !== 0) {
             modal.scrollTop = 0
@@ -975,7 +932,7 @@ useEffect(() => {
                   src={currentImage || "/placeholder.svg"}
                   alt={`${product.name} - ${selectedVariant?.colorName || "default"} variant`}
                   className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
-                  style={{ maxHeight: '200px' }} // Prevent layout shift
+                  style={{ maxHeight: '200px' }}
                   onClick={() => setSelectedImage(currentImage)}
                 />
 
@@ -1076,7 +1033,7 @@ useEffect(() => {
                     Price: <span className="font-semibold">${displayPrice.toFixed(2)}</span>
                   </div>
                   <div>
-                    Stock: <span className="font-semibold">{selectedSizeDetail.stock} available</span>
+                    Stock: <span className="font-semibold">${selectedSizeDetail.stock} available</span>
                   </div>
                   {selectedSizeDetail.optionalDetails?.map((detail, index) => (
                     <div key={index}>
@@ -1124,7 +1081,7 @@ useEffect(() => {
                       value={localQuantityToAdd}
                       onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
                       className="w-16 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      tabIndex="-1" // Prevent autofocus
+                      tabIndex="-1"
                     />
                   </div>
 
@@ -1172,7 +1129,7 @@ useEffect(() => {
             src={imageUrl || "/placeholder.svg"}
             alt="Full size product image"
             className="max-w-full max-h-full object-contain rounded-lg"
-            style={{ maxHeight: '80vh' }} // Prevent layout shift
+            style={{ maxHeight: '80vh' }}
             onClick={(e) => e.stopPropagation()}
           />
         </div>
@@ -1211,12 +1168,12 @@ useEffect(() => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 w-full">
       {!loadingAnnouncement && !announcementError && announcement && (
-  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center w-full">
-    <p className="text-sm font-medium">
-      {announcement}
-    </p>
-  </div>
-)}
+        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center w-full">
+          <p className="text-sm font-medium">
+            {announcement}
+          </p>
+        </div>
+      )}
 
       <nav className="bg-white shadow-lg sticky top-0 z-40 w-full">
         <div className="w-full px-4 sm:px-6 lg:px-8">
@@ -1292,7 +1249,6 @@ useEffect(() => {
         </div>
       </nav>
 
-      {/* Cart Sidebar */}
       {isCartOpen && (
         <div className="fixed inset-0 z-50">
           <div className="absolute inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
@@ -1404,82 +1360,81 @@ useEffect(() => {
       )}
 
       <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden w-full">
-      <div
-        className="flex transition-transform duration-500 ease-in-out h-full"
-        style={{ transform: `translateX(-${currentBanner * 100}%)` }}
-      >
-        {banners.map((banner, index) => (
-          <div key={index} className="w-full flex-shrink-0 relative">
-            <img
-              src={banner}
-              alt={`Banner ${index + 1}`}
-              className="w-full h-full object-cover"
-              onError={(e) => {
-                console.error('Image failed to load:', banner);
-                e.target.src = "/placeholder.svg"; // Fallback image
-              }}
-            />
-            <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
-              <div className="text-center text-white">
+        <div
+          className="flex transition-transform duration-500 ease-in-out h-full"
+          style={{ transform: `translateX(-${currentBanner * 100}%)` }}
+        >
+          {banners.map((banner, index) => (
+            <div key={index} className="w-full flex-shrink-0 relative">
+              <img
+                src={banner}
+                alt={`Banner ${index + 1}`}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  console.error('Image failed to load:', banner);
+                  e.target.src = "/placeholder.svg";
+                }}
+              />
+              <div className="absolute inset-0 bg-black/20 flex items-center justify-center">
+                <div className="text-center text-white">
+                </div>
               </div>
             </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
 
-      {/* Navigation buttons - only show if more than 1 banner */}
-      {banners.length > 1 && (
-        <>
-          <button
-            onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}
-            className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
-          >
-            <ChevronLeft className="h-6 w-6" />
-          </button>
-          <button
-            onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}
-            className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
-          >
-            <ChevronRight className="h-6 w-6" />
-          </button>
-          <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
-            {banners.map((_, index) => (
-              <button
-                key={index}
-                onClick={() => setCurrentBanner(index)}
-                className={`w-3 h-3 rounded-full transition-colors duration-200 ${
-                  index === currentBanner ? "bg-white" : "bg-white/50"
-                }`}
-              />
-            ))}
-          </div>
-        </>
-      )}
-    </div>
+        {banners.length > 1 && (
+          <>
+            <button
+              onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
+            >
+              <ChevronLeft className="h-6 w-6" />
+            </button>
+            <button
+              onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
+            >
+              <ChevronRight className="h-6 w-6" />
+            </button>
+            <div className="absolute bottom-4 left-1/2 transform -translate-x-1/2 flex space-x-2">
+              {banners.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentBanner(index)}
+                  className={`w-3 h-3 rounded-full transition-colors duration-200 ${
+                    index === currentBanner ? "bg-white" : "bg-white/50"
+                  }`}
+                />
+              ))}
+            </div>
+          </>
+        )}
+      </div>
 
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-12">
           <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Categories</h2>
           <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
-            {categories.slice(0, 10).map((category) => (
+            {mainCategories.slice(0, 10).map((category) => (
               <div
-                key={category.id}
+                key={category._id}
                 onClick={() => handleCategoryClick(category)}
                 className={`text-center cursor-pointer group transition-all duration-200 ${
-                  selectedCategory === category.name ? "transform scale-105" : ""
+                  selectedCategory === category.categoryName ? "transform scale-105" : ""
                 }`}
               >
                 <div
                   className={`w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-lg flex items-center justify-center mb-2 mx-auto group-hover:shadow-xl transition-all duration-300 overflow-hidden relative ${
-                    selectedCategory === category.name ? "ring-4 ring-blue-500 shadow-xl" : ""
+                    selectedCategory === category.categoryName ? "ring-4 ring-blue-500 shadow-xl" : ""
                   }`}
                 >
                   <img
                     src={category.image || "/placeholder.svg"}
-                    alt={`${category.name} category`}
+                    alt={`${category.categoryName} category`}
                     className="w-full h-full object-cover rounded-full"
                   />
-                  {selectedCategory === category.name && (
+                  {selectedCategory === category.categoryName && (
                     <div className="absolute inset-0 bg-blue-500/20 rounded-full flex items-center justify-center">
                       <Check className="w-6 h-6 text-blue-600 bg-white rounded-full p-1" />
                     </div>
@@ -1487,12 +1442,12 @@ useEffect(() => {
                 </div>
                 <p
                   className={`text-xs sm:text-sm font-medium transition-colors duration-200 text-center leading-tight px-1 ${
-                    selectedCategory === category.name
+                    selectedCategory === category.categoryName
                       ? "text-blue-600 font-bold"
                       : "text-gray-700 group-hover:text-blue-600"
                   }`}
                 >
-                  {category.name}
+                  {category.categoryName}
                 </p>
               </div>
             ))}

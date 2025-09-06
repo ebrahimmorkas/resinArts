@@ -65,7 +65,7 @@ app.get('/api/user/profile', authenticate, async (req, res) => {
 });
 
 // Admin routes (protected by authenticate and authorize)
-app.use('/api/category', authenticate, authorize(['admin']), categoryRoutes);
+app.use('/api/category', authenticate, categoryRoutes);
 app.use('/api/product', authenticate, productRoutes);
 app.use('/api/cart', authenticate, authorize(['user']), cartRoutes);
 app.use('/api/order', authenticate, orderRoutes);
