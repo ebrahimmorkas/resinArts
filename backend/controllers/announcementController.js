@@ -160,8 +160,14 @@ exports.updateAnnouncement = async (req, res) => {
     // Prepare update data
     let updateData = { text, isDefault };
 
-    // Only update dates if it's not currently a default announcement
-    if (!currentAnnouncement.isDefault) {
+    // If setting as default, skip date validations and don't update dates
+    if (isDefault && !currentAnnouncement.isDefault) {
+      // Just making it default, keep existing dates
+      await Announcement.updateMany({ _id: { $ne: id }, isDefault: true }, { isDefault: false });
+      updateData.startDate = currentAnnouncement.startDate;
+      updateData.endDate = currentAnnouncement.endDate;
+    } else if (!currentAnnouncement.isDefault) {
+      // Only update dates if it's not currently a default announcement
       // Validate dates
       if (new Date(startDate) >= new Date(endDate)) {
         return res.status(400).json({ 
@@ -169,12 +175,36 @@ exports.updateAnnouncement = async (req, res) => {
         });
       }
       
+      // Check for overlapping announcements (only for non-default)
+      if (!isDefault) {
+        const overlappingAnnouncement = await Announcement.findOne({
+          _id: { $ne: id }, // Exclude current announcement
+          isDefault: false,
+          $or: [
+            { startDate: { $lte: new Date(startDate) }, endDate: { $gte: new Date(startDate) } },
+            { startDate: { $lte: new Date(endDate) }, endDate: { $gte: new Date(endDate) } },
+            { startDate: { $gte: new Date(startDate) }, endDate: { $lte: new Date(endDate) } }
+          ]
+        });
+
+        if (overlappingAnnouncement) {
+          return res.status(400).json({ 
+            message: 'Announcement dates overlap with existing announcement',
+            conflictingDates: {
+              start: overlappingAnnouncement.startDate,
+              end: overlappingAnnouncement.endDate,
+              text: overlappingAnnouncement.text
+            }
+          });
+        }
+      }
+      
       updateData.startDate = startDate;
       updateData.endDate = endDate;
     }
 
-    // If setting as default, remove default from others
-    if (isDefault) {
+    // If setting as default (and wasn't default before), remove default from others
+    if (isDefault && !currentAnnouncement.isDefault) {
       await Announcement.updateMany({ _id: { $ne: id }, isDefault: true }, { isDefault: false });
     }
 
@@ -195,10 +225,21 @@ exports.updateAnnouncement = async (req, res) => {
 exports.deleteAnnouncement = async (req, res) => {
   try {
     const { id } = req.params;
-    const announcement = await Announcement.findByIdAndDelete(id);
+    
+    // Check if the announcement exists and if it's default
+    const announcement = await Announcement.findById(id);
     if (!announcement) {
       return res.status(404).json({ message: 'Announcement not found' });
     }
+    
+    // Prevent deletion of default announcement
+    if (announcement.isDefault) {
+      return res.status(400).json({ 
+        message: 'Cannot delete the default announcement. Please set another announcement as default first.' 
+      });
+    }
+    
+    await Announcement.findByIdAndDelete(id);
     res.status(200).json({ message: 'Announcement deleted successfully' });
   } catch (error) {
     res.status(500).json({ 

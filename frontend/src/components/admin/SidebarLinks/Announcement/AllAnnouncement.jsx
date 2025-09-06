@@ -274,14 +274,63 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
     startDate: initialData.startDate.slice(0, 10),
     endDate: initialData.endDate.slice(0, 10)
   });
+  const [error, setError] = useState(null);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
     setFormData(prev => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    // Clear error when user starts typing
+    if (error) setError(null);
   };
 
-  const handleFormSubmit = (e) => {
+  const handleFormSubmit = async (e) => {
     e.preventDefault();
+    setError(null);
+
+    // If making it default, skip date validations
+    if (formData.isDefault && !initialData.isDefault) {
+      onSubmit(formData);
+      return;
+    }
+
+    // Date validation for non-default announcements or existing default (text only changes)
+    if (!formData.isDefault || initialData.isDefault) {
+      // Validate dates only if not currently default (dates can be edited)
+      if (!initialData.isDefault) {
+        if (new Date(formData.startDate) >= new Date(formData.endDate)) {
+          setError('Start date must be before end date');
+          return;
+        }
+
+        // Check for overlapping announcements
+        try {
+          const response = await axios.get('http://localhost:3000/api/announcement/all');
+          const announcements = response.data;
+          
+          const overlapping = announcements.find(ann => 
+            ann._id !== initialData._id && // Exclude current announcement
+            !ann.isDefault && // Only check non-default announcements
+            (
+              // New announcement starts within existing range
+              (new Date(ann.startDate) <= new Date(formData.startDate) && new Date(ann.endDate) >= new Date(formData.startDate)) ||
+              // New announcement ends within existing range
+              (new Date(ann.startDate) <= new Date(formData.endDate) && new Date(ann.endDate) >= new Date(formData.endDate)) ||
+              // New announcement completely covers existing range
+              (new Date(formData.startDate) <= new Date(ann.startDate) && new Date(formData.endDate) >= new Date(ann.endDate))
+            )
+          );
+
+          if (overlapping) {
+            setError(`Announcement dates overlap with existing announcement: "${overlapping.text}"`);
+            return;
+          }
+        } catch (err) {
+          setError('Error checking for overlapping announcements');
+          return;
+        }
+      }
+    }
+
     onSubmit(formData);
   };
 
@@ -289,6 +338,12 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
 
   return (
     <form onSubmit={handleFormSubmit} className="space-y-4">
+      {error && (
+        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+          {error}
+        </div>
+      )}
+      
       <div>
         <label className="block text-sm font-medium mb-1">Text</label>
         <textarea 
@@ -347,9 +402,15 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
           name="isDefault" 
           checked={formData.isDefault} 
           onChange={handleChange}
-          className="mr-2"
+          disabled={isDefault}
+          className={`mr-2 ${isDefault ? 'cursor-not-allowed' : 'cursor-pointer'}`}
         />
-        <label className="text-sm font-medium">Set as Default</label>
+        <label className={`text-sm font-medium ${isDefault ? 'text-gray-500' : ''}`}>
+          Set as Default
+        </label>
+        {isDefault && (
+          <span className="text-xs text-gray-500 ml-2">(Cannot uncheck default)</span>
+        )}
       </div>
       
       <div className="flex space-x-3 pt-4">
