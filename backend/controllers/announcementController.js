@@ -125,13 +125,13 @@ exports.addWithOverride = async (req, res) => {
 
     await newAnnouncement.save();
     res.status(201).json({ 
-      message: 'Announcement added successfully', 
+      message: 'Announcement added successfully with override', 
       announcement: newAnnouncement 
     });
 
   } catch (error) {
     res.status(500).json({ 
-      message: 'Error adding announcement', 
+      message: 'Error adding announcement with override', 
       error: error.message 
     });
   }
@@ -151,19 +151,44 @@ exports.updateAnnouncement = async (req, res) => {
     const { id } = req.params;
     const { text, startDate, endDate, isDefault } = req.body;
 
+    // Get current announcement to check if it's default
+    const currentAnnouncement = await Announcement.findById(id);
+    if (!currentAnnouncement) {
+      return res.status(404).json({ message: 'Announcement not found' });
+    }
+
+    // Prepare update data
+    let updateData = { text, isDefault };
+
+    // Only update dates if it's not currently a default announcement
+    if (!currentAnnouncement.isDefault) {
+      // Validate dates
+      if (new Date(startDate) >= new Date(endDate)) {
+        return res.status(400).json({ 
+          message: 'Start date must be before end date' 
+        });
+      }
+      
+      updateData.startDate = startDate;
+      updateData.endDate = endDate;
+    }
+
+    // If setting as default, remove default from others
     if (isDefault) {
       await Announcement.updateMany({ _id: { $ne: id }, isDefault: true }, { isDefault: false });
     }
 
-    const updatedAnnouncement = await Announcement.findByIdAndUpdate(id, { text, startDate, endDate, isDefault }, { new: true });
+    const updatedAnnouncement = await Announcement.findByIdAndUpdate(id, updateData, { new: true });
 
-    if (!updatedAnnouncement) {
-      return res.status(404).json({ message: 'Announcement not found' });
-    }
-
-    res.status(200).json({ message: 'Announcement updated successfully', announcement: updatedAnnouncement });
+    res.status(200).json({ 
+      message: 'Announcement updated successfully', 
+      announcement: updatedAnnouncement 
+    });
   } catch (error) {
-    res.status(500).json({ message: 'Error updating announcement', error: error.message });
+    res.status(500).json({ 
+      message: 'Error updating announcement', 
+      error: error.message 
+    });
   }
 };
 
@@ -176,6 +201,9 @@ exports.deleteAnnouncement = async (req, res) => {
     }
     res.status(200).json({ message: 'Announcement deleted successfully' });
   } catch (error) {
-    res.status(500).json({ message: 'Error deleting announcement', error: error.message });
+    res.status(500).json({ 
+      message: 'Error deleting announcement', 
+      error: error.message 
+    });
   }
 };
