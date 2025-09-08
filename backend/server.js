@@ -70,7 +70,7 @@ app.use('/api/product', authenticate, productRoutes);
 app.use('/api/cart', authenticate, authorize(['user']), cartRoutes);
 app.use('/api/order', authenticate, orderRoutes);
 app.use('/api/user', authenticate, userRoutes);
-app.use('/api/free-cash', authenticate, authorize(['admin']), freeCashRoutes);
+app.use('/api/free-cash', authenticate, freeCashRoutes);
 app.use('/api/discount', authenticate, discountRoutes);
 app.use('/api/banner', authenticate, bannerRoutes);
 app.use('/api/announcement', authenticate, announcementRoutes);

@@ -7,6 +7,8 @@ import { CategoryProvider } from '../Context/CategoryContext';
 import { DiscountProvider } from '../Context/DiscountContext';
 import { BannerProvider } from '../Context/BannerContext';
 import { AnnouncementProvider } from '../Context/AnnouncementContext';
+import { FreeCashProvider } from '../Context/FreeCashContext';
+
 // import User from '../../backend/models/User';
 
 const ConditionalProvider = ({children}) => {
@@ -14,7 +16,9 @@ const ConditionalProvider = ({children}) => {
 
     if(user?.role === "admin") {
         return(
+            
             <ProductProvider>
+                <FreeCashProvider>
                 <UserProvider>
                     <CategoryProvider>
                         <BannerProvider>
@@ -22,12 +26,14 @@ const ConditionalProvider = ({children}) => {
                         </BannerProvider>
                     </CategoryProvider>
                 </UserProvider>
+                </FreeCashProvider>
             </ProductProvider>
         );
     }
 
     return (
         <ProductProvider>
+           <FreeCashProvider>
             <AnnouncementProvider>
             <BannerProvider>
                 <DiscountProvider>
@@ -39,6 +45,7 @@ const ConditionalProvider = ({children}) => {
             </DiscountProvider>
             </BannerProvider>
             </AnnouncementProvider>
+            </FreeCashProvider>
         </ProductProvider>
     )
 };

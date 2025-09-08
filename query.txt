@@ -1,26 +1,1164 @@
-Okay done with this banner part. Now I want to create the announcemnets in the ame way but it will be simple. No image upload. Only text start date, end date and default. Make sure the announcements dont overlap in dates as only one announcement can be displayed. When there is one announcement added then the default one should not shown and it should be start seeing again after the end date. Also make sure that while adding the announcement only one announcemnet in total can be set as default announcement. 
-Now you need to create this files:
+1. FreecashContext:
+// Context/FreeCashContext.js
+import { createContext, useState, useEffect, useContext } from 'react';
+import axios from 'axios';
+import { AuthContext } from './AuthContext';
 
-Announcement.js (model).
-announcemnetController.js
-announcementRoutes.js
-AddAnnouncement.jsx.
-AllAnnouncemnets.jsx
-AnnouncementContext.jsx
+export const FreeCashContext = createContext();
 
-In AnouncementContext.jsx keeps the name of loading variable as loadingAnnouncement and for error variable keep the name as announcementError.
+export const FreeCashProvider = ({ children }) => {
+  const [loadingFreeCash, setLoadingFreeCash] = useState(false);
+  const [freeCashErrors, setFreeCashErrors] = useState(null);
+  const [freeCash, setFreeCash] = useState(null); // Stores available free cash
+  const { user } = useContext(AuthContext);
 
-You dont need to create the server.js.
+  // Fetch free cash eligibility
+  const checkFreeCashEligibility = async () => {
+    if (!user?.id) return;
 
-In AllAnnouncemnent.jsx display the table in tabular format. Show following fields 
-Sr no, text, start date end date, default ---> In this column show checkbox and the announcemnet which is default in database should be checked and disabled. When somone clicks on checkbox of different announcement then display the modal saying 'Are you sure you want to make this announcement as default' and display buttons such as Cancel, Update and when clicked on update the  announcemnet should be updated and set as default and the one which was already default should be removed from default.
-Actions column:-
-Inlcude button such as: Delete, Edit (Show in symbol format).
-When clicked the edit button then modal should be open with all the data such as text, start date, end date, and checkbox for making it default ---> When clicked on checkbox then same procedure should be followed as discussed above in default column.
+    // Check localStorage first
+    const cachedFreeCash = localStorage.getItem(`freeCash_${user.id}`);
+    if (cachedFreeCash) {
+      setFreeCash(JSON.parse(cachedFreeCash));
+      return;
+    }
 
-The API for backend should be : localhost:3000/api/announcement.
-/add ---> For adding the announcement, function in controller should be add()
-/all for getting all the announcement in the tabular format, function in controller should be fetchAnnouncements()
-/update/announcementID ---> For updating the announcement, function is controller should be updateAnnouncement()
+    setLoadingFreeCash(true);
+    try {
+      const res = await axios.get('http://localhost:3000/api/free-cash/check-eligibility', {
+        withCredentials: true,
+      });
+      setFreeCash(res.data.freeCash || null);
+      setFreeCashErrors(null);
+      if (res.data.freeCash) {
+        localStorage.setItem(`freeCash_${user.id}`, JSON.stringify(res.data.freeCash));
+      }
+    } catch (err) {
+      setFreeCashErrors(err.response?.data?.message || 'Error fetching free cash');
+      setFreeCash(null);
+    } finally {
+      setLoadingFreeCash(false);
+    }
+  };
 
-Please implement the following
+  // Clear free cash cache on order placement or logout
+  const clearFreeCashCache = () => {
+    if (user?.id) {
+      localStorage.removeItem(`freeCash_${user.id}`);
+      setFreeCash(null);
+    }
+  };
+
+  // Fetch free cash when user logs in
+  useEffect(() => {
+    if (user?.id) {
+      checkFreeCashEligibility();
+    }
+  }, [user?.id]);
+
+  return (
+    <FreeCashContext.Provider
+      value={{
+        loadingFreeCash,
+        setLoadingFreeCash,
+        freeCashErrors,
+        setFreeCashErrors,
+        freeCash,
+        checkFreeCashEligibility,
+        clearFreeCashCache,
+      }}
+    >
+      {children}
+    </FreeCashContext.Provider>
+  );
+};
+
+I have created this file on my Own but I dont know whether it is right or wrong you see I will also provide you AuthContext.jsx, server.js, authenticate.js middleware below
+
+2. freeCashRoutes.js:
+const express = require('express'); 
+const router = express.Router();
+const {addFreeCash} = require('../controllers/freeCashController');
+
+router.post('/add', addFreeCash);
+
+module.exports =  router
+
+3. freeCashController.js:
+const FreeCash = require('../models/FreeCash');
+const {findUserById} = require('./userController');
+const {findCategoryById, findSubCategoryById} = require('./categoryController');
+
+const addFreeCash = async (req, res) => {
+    try {
+        const {cashForm, userID} = req.body;
+
+        if(!userID) {
+            return res.status(400).json({message: "Invalid user ID"});
+        }
+
+        const user  = await findUserById(userID);
+        if(!user) {
+            return res.status(400).json({message: "User not found"})
+        }
+
+        if(cashForm. selectedMainCategory == "" && cashForm.validForAllProducts == false) {
+            return res.satus(400).json({message: "Invalid main category ID"});
+        }
+
+        const mainCategory = await findCategoryById(cashForm.selectedMainCategory);
+        if(!mainCategory) {
+            return res.status(400).json({message: "Main category not found"});
+        }
+
+        if(cashForm.selectedSubCategory == "") {
+            return res.status(400).json({message: "Invalid sub category ID"});
+        }
+
+        const subCategory = await findSubCategoryById(cashForm.selectedSubCategory);
+        if(!subCategory) {
+            return res.status(400).json({message: "Sub category not found"});
+        }
+
+       if (
+  !cashForm.amount || isNaN(Number(cashForm.amount)) || Number(cashForm.amount) <= 0 ||
+  !cashForm.validAbove || isNaN(Number(cashForm.validAbove)) || Number(cashForm.validAbove) <= 0
+) {
+  return res.status(400).json({ message: "Please fill all the fields properly" });
+}
+
+        // verything all right proceed adding
+        try {
+            const newFreeCash = new FreeCash({user_id: user._id, end_date: new Date(cashForm.endDate), amount: cashForm.amount, valid_above_amount: cashForm.validAbove, category: cashForm.selectedMainCategory, sub_category: cashForm.selectedSubCategory, is_cash_applied_on__all_products: cashForm.validForAllProducts});
+            await newFreeCash.save();
+
+            return res.status(200).json({message: `Free cash generated successfully for ${user.first_name} ${user.last_name}`})
+        } catch(error) {
+            return res.status(400).json({message: "Problem while generating free cash"});
+        }
+    } catch(error) {
+        return res.status(500).json({meessage: "Internal server error"});
+    }
+}
+
+module.exports = {addFreeCash};
+
+4. FreeCash.js:
+const mongoose = require('mongoose');
+
+const freeCashSchema = mongoose.Schema({
+    user_id: {
+        required: true,
+        type: mongoose.Types.ObjectId,
+    },
+    start_date: {
+        required: false,
+        type: Date,
+        default: Date.now(),
+    },
+    end_date: {
+        required: false,
+        type: Date,
+        default: null,
+    },
+    amount: {
+        required: true,
+        type: Number,
+    },
+    valid_above_amount: {
+        requried: false,
+        type: Number,
+        default: 0,
+    },
+    category: {
+        required: false,
+        type: mongoose.Types.ObjectId,
+        default: null,
+    },
+    sub_category: {
+        required: false,
+        type: mongoose.Types.ObjectId,
+        default: null
+    },
+    is_cash_applied_on__all_products: {
+        required: false,
+        type: Boolean,
+        default: false
+    },
+    is_cash_used: {
+        required: false,
+        type: Boolean,
+        default: false
+    },
+    cash_used_date: {
+        required: false,
+        type: Date,
+        default: null,
+    },
+    is_cash_expired: {
+        required: false,
+        type: Boolean,
+        default: false,
+    }
+});
+
+module.exports = mongoose.model('FreeCash', freeCashSchema);
+
+6. CartContext.jsx:
+"use client"
+
+import { createContext, useContext, useState, useEffect } from "react"
+import axios from "axios"
+
+const CartContext = createContext()
+
+export const useCart = () => {
+  const context = useContext(CartContext)
+  if (!context) {
+    throw new Error("useCart must be used within a CartProvider")
+  }
+  return context
+}
+
+export const CartProvider = ({ children }) => {
+  const [cartItems, setCartItems] = useState({})
+  const [isCartOpen, setIsCartOpen] = useState(false)
+  const [applyFreeCash, setApplyFreeCash] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState(null)
+
+  axios.defaults.withCredentials = true
+
+  // Load cart from backend on component mount
+  useEffect(() => {
+    fetchCartFromBackend()
+  }, [])
+
+  // Fetch cart items from backend
+  const fetchCartFromBackend = async () => {
+    try {
+      setLoading(true)
+      const response = await axios.get("http://localhost:3000/api/cart", {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (response.status === 200) {
+        const cartData = response.data
+        // Convert backend cart data to frontend format
+        const formattedCart = {}
+        cartData.forEach((item) => {
+          const cartKey = `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`
+          formattedCart[cartKey] = {
+            productId: item.product_id,
+            variantName: item.variant_name || null,
+            sizeString: item.size || null,
+            quantity: item.quantity,
+            price: item.price,
+            discountedPrice: item.discounted_price,
+            imageUrl: item.image_url,
+            productName: item.product_name,
+            variantId: item.variant_id,
+            detailsId: item.details_id,
+            sizeId: item.size_id,
+            cashApplied: item.cash_applied,
+            userId: item.user_id
+          }
+        })
+        setCartItems(formattedCart)
+      }
+    } catch (err) {
+      setError("Failed to load cart")
+      console.error("Error fetching cart:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Add item to cart (both frontend and backend)
+  const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
+    try {
+      setLoading(true)
+      const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`
+
+      const cartItemData = {
+        image_url: productData.imageUrl,
+        product_id: productId,
+        product_name: productData.productName,
+        quantity: quantity,
+        price: productData.price,
+        cash_applied: applyFreeCash,
+        discounted_price: productData.discountedPrice || productData.price,
+      }
+
+      // Only add variant fields if they exist and are not empty
+      if (productData.variantId && productData.variantId !== "") {
+        cartItemData.variant_id = productData.variantId
+      }
+      if (productData.detailsId && productData.detailsId !== "") {
+        cartItemData.details_id = productData.detailsId
+      }
+      if (productData.sizeId && productData.sizeId !== "") {
+        cartItemData.size_id = productData.sizeId
+      }
+      if (colorName && colorName !== "") {
+        cartItemData.variant_name = colorName
+      }
+      if (sizeString && sizeString !== "") {
+        cartItemData.size = sizeString
+      }
+
+      const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      })
+
+      if (response.status === 200 || response.status === 201) {
+        // Update frontend state
+        setCartItems((prev) => ({
+          ...prev,
+          [cartKey]: {
+            productId,
+            colorName: colorName || null,
+            sizeString: sizeString || null,
+            quantity: (prev[cartKey]?.quantity || 0) + quantity,
+            price: productData.price,
+            discountedPrice: productData.discountedPrice || productData.price,
+            imageUrl: productData.imageUrl,
+            productName: productData.productName,
+            variantId: productData.variantId,
+            detailsId: productData.detailsId,
+            sizeId: productData.sizeId,
+            cashApplied: applyFreeCash,
+          },
+        }))
+      } else {
+        throw new Error("Failed to add item to cart")
+      }
+    } catch (err) {
+      setError("Failed to add item to cart")
+      console.error("Error adding to cart:", err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Update item quantity
+  const updateQuantity = async (cartKey, change) => {
+    try {
+      const item = cartItems[cartKey]
+      if (!item) return
+
+      const newQuantity = item.quantity + change
+
+      if (newQuantity <= 0) {
+        await removeFromCart(cartKey)
+        return
+      }
+
+      const response = await axios.put(
+        "http://localhost:3000/api/cart",
+        {
+          product_id: item.productId,
+          variant_name: item.colorName,
+          size: item.sizeString,
+          quantity: newQuantity,
+        },
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        },
+      )
+
+      if (response.status === 200) {
+        setCartItems((prev) => ({
+          ...prev,
+          [cartKey]: {
+            ...prev[cartKey],
+            quantity: newQuantity,
+          },
+        }))
+      }
+    } catch (err) {
+      setError("Failed to update quantity")
+      console.error("Error updating quantity:", err)
+    }
+  }
+
+  // Remove item from cart
+  const removeFromCart = async (cartKey) => {
+    try {
+      const item = cartItems[cartKey]
+      if (!item) return
+
+      const response = await axios.delete("http://localhost:3000/api/cart", {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: {
+          product_id: item.productId,
+          variant_name: item.colorName,
+          size: item.sizeString,
+        },
+      })
+
+      if (response.status === 200) {
+        setCartItems((prev) => {
+          const newCart = { ...prev }
+          delete newCart[cartKey]
+          return newCart
+        })
+      }
+    } catch (err) {
+      setError("Failed to remove item")
+      console.error("Error removing from cart:", err)
+    }
+  }
+
+  // Calculate cart total
+  const getCartTotal = () => {
+    const total = Object.values(cartItems).reduce((sum, item) => {
+      const price = item.discountedPrice || item.price
+      return sum + price * item.quantity
+    }, 0)
+
+    return applyFreeCash ? Math.max(0, total - 150) : total
+  }
+
+  // Get unique items count
+  const getUniqueCartItemsCount = () => {
+    return Object.keys(cartItems).length
+  }
+
+  // Get total items count
+  const getTotalItemsCount = () => {
+    return Object.values(cartItems).reduce((sum, item) => sum + item.quantity, 0)
+  }
+
+  const value = {
+    cartItems,
+    isCartOpen,
+    setIsCartOpen,
+    applyFreeCash,
+    setApplyFreeCash,
+    loading,
+    error,
+    addToCart,
+    updateQuantity,
+    removeFromCart,
+    getCartTotal,
+    getUniqueCartItemsCount,
+    getTotalItemsCount,
+    fetchCartFromBackend,
+  }
+
+  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
+}
+
+7. orderRoutes.js:
+const authenticate = require('../middlewares/authenticate');
+const authorize = require('../middlewares/authorize');
+const express = require('express');
+const router = express.Router();
+const {placeOrder, fetchOrders, shippingPriceUpdate, handleStatusChange, editOrder} = require('../controllers/orderController');
+
+router.post('/place-order', authenticate, authorize(['user']), placeOrder);
+router.get('/all', authenticate, authorize(['admin']), fetchOrders);
+router.post('/shipping-price-update', authenticate, authorize(['admin']), shippingPriceUpdate);
+router.post('/status-change', authenticate, authorize(['admin']), handleStatusChange);
+router.post('/edit-order/:orderId', authenticate, authorize(['admin']), editOrder);
+
+module.exports = router;
+
+8. orderController.js:
+const Product = require('../models/Product');
+const Order = require('../models/Order');
+const User = require('../models/User');
+const sendEmail = require('../utils/sendEmail');
+
+// Function to check whether the order exists or not
+const findOrder = async (orderId) => {
+    try {
+        const order = await Order.findById(orderId);
+        if(order) {
+            return order;
+        } else {
+            return null;
+        }
+    } catch (error) {
+        throw error;
+    }
+}
+
+const findUser = async (userId) => {
+    const user = await User.findById(userId);
+    if(user) {
+        return user;
+    } else {
+        return null;
+    }
+}
+
+const findProduct = async (productId) => {
+    const product = await Product.findById(productId);
+    if(product) {
+        return product;
+    } else {
+        return null;
+    }
+}
+
+// Function to add the order
+const placeOrder = async (req, res) => {
+    try {
+        const cartItems = Object.values(req.body);
+        console.log(cartItems);
+        
+        // Validate input
+        if (!cartItems || cartItems.length === 0) {
+            return res.status(400).json({
+                success: false,
+                message: "Cart is empty"
+            });
+        }
+
+        // ✅ Get user ONCE - all items belong to same user
+        const userId = cartItems[0]?.userId;
+        if (!userId) {
+            return res.status(400).json({
+                success: false,
+                message: "No user ID provided"
+            });
+        }
+
+        const user = await User.findById(userId);
+        if (!user) {
+            return res.status(404).json({
+                success: false,
+                message: "User not found"
+            });
+        }
+
+        const errors = [];
+        const ordersToAdd = [];
+
+        // ✅ Process each cart item (no redundant user checks)
+        for (const cartData of cartItems) {
+            try {
+                const product = await Product.findById(cartData.productId);
+                if (!product) {
+                    errors.push(`Product not found for id ${cartData.productId}`);
+                    continue; // ✅ Skip invalid item, process others
+                }
+
+                if (cartData.variantId) {
+                    // Product with variants - MUST have size and details
+                    const variant = product.variants.find(v => v._id.toString() === cartData.variantId);
+                    if (!variant) {
+                        errors.push(`Variant ${cartData.variantName || 'Unknown'} not found for product ${cartData.productName}`);
+                        continue;
+                    }
+
+                    // Validate size exists (mandatory for variants)
+                    if (!cartData.sizeId) {
+                        errors.push(`Size is required for variant ${cartData.variantName} of product ${cartData.productName}`);
+                        continue;
+                    }
+
+                    let sizeFound = false;
+                    for (const variantItem of product.variants) {
+                        if (variantItem._id.toString() === cartData.variantId) {
+                            for (const detail of variantItem.moreDetails) {
+                                if (detail._id.toString() === cartData.detailsId && 
+                                    detail.size._id.toString() === cartData.sizeId) {
+                                    sizeFound = true;
+                                    break;
+                                }
+                            }
+                            break;
+                        }
+                    }
+
+                    if (!sizeFound) {
+                        errors.push(`Size ${cartData.sizeString || 'Unknown'} not found in variant ${cartData.variantName} for product ${cartData.productName}`);
+                        continue;
+                    }
+
+                    // Add order with variant and size (both mandatory)
+                    ordersToAdd.push({
+                        image_url: cartData.imageUrl,
+                        product_id: cartData.productId,
+                        product_name: cartData.productName,
+                        variant_id: cartData.variantId,
+                        variant_name: cartData.variantName,
+                        size_id: cartData.sizeId,
+                        size: cartData.sizeString,
+                        quantity: cartData.quantity,
+                        price: cartData.price,
+                        total: cartData.price * cartData.quantity,
+                    });
+                } else {
+                    // Product without variants (no variants = no sizes = no details)
+                    ordersToAdd.push({
+                        image_url: cartData.imageUrl,
+                        product_id: cartData.productId,
+                        product_name: cartData.productName,
+                        quantity: cartData.quantity,
+                        price: cartData.price,
+                        total: cartData.price * cartData.quantity,
+                    });
+                }
+
+            } catch (itemError) {
+                console.error('Error processing cart item:', itemError);
+                errors.push(`Error processing product ${cartData.productId}: ${itemError.message}`);
+                continue; // ✅ Continue processing other items
+            }
+        }
+
+        // ✅ Create order if we have valid items
+        if (ordersToAdd.length > 0) {
+            const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.total, 0);
+
+            const newOrder = new Order({
+                user_id: req.user.id, // From auth middleware
+                user_name: `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.trim(),
+                email: user.email,
+                phone_number: user.phone_number,
+                whatsapp_number: user.whatsapp_number,
+                orderedProducts: ordersToAdd,
+                price: totalPrice,
+            });
+
+            await newOrder.save();
+
+            // ✅ Success response (even if some items had errors)
+            return res.status(201).json({
+                success: true,
+                message: "Order placed successfully",
+                order: {
+                    id: newOrder._id,
+                    totalPrice: totalPrice,
+                    itemCount: ordersToAdd.length,
+                    validItems: ordersToAdd.length,
+                    totalItems: cartItems.length
+                },
+                warnings: errors.length > 0 ? {
+                    message: `${errors.length} items could not be processed`,
+                    details: errors
+                } : undefined
+            });
+        } else {
+            // ✅ No valid items to order
+            return res.status(400).json({
+                success: false,
+                message: "No valid items to order. All items have errors.",
+                errors: errors
+            });
+        }
+
+    } catch (error) {
+        console.error('Order placement error:', error);
+        return res.status(500).json({
+            success: false,
+            message: "Internal server error while placing order",
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
+    }
+};
+
+// Function to fetch all the orders
+const fetchOrders = async (req, res) => {
+    console.log("Request received for fetching orders");
+    try {
+        const orders = await Order.find();
+        if(orders) {
+            // console.log(orders);
+            return res.status(200).json({message: "Success", orders});
+        } else {
+            return res.status(400).json({message: "No orders found"});
+        }
+    } catch(error) {
+        return res.status(500).json({message: "Internal server error"});
+    }
+};
+
+// Function where admin will update the shiping price
+const shippingPriceUpdate = async (req, res) => {
+    // console.log(req.body);
+    try {
+        const {shippingPriceValue, orderId, email} = req.body;
+        const order = await Order.findById(orderId);
+        if(order) {
+            // Order with this ID is present
+            console.log(order)
+            // Checking the input
+            if(parseInt(shippingPriceValue) > 0) {
+                // Input is proper
+
+                // Updating the order
+                try {
+                    const totalPrice = order.price + parseInt(shippingPriceValue);
+                    const updatedOrder = await Order.findByIdAndUpdate(
+                        orderId,
+                         {
+                            shipping_price: shippingPriceValue,
+                            total_price: totalPrice,
+                            status: "Accepted",
+                        },
+                    
+                    {
+                        new: true,
+                        runValidators: true
+                    }
+                    );
+                    // console.log(email)
+                    try {
+                        await sendEmail(email, "Accepted", `Your order has been accepted for id ${orderId}`)
+                    } catch(error) {
+                        console.log("Error in sending email");
+                    } finally {
+                        return res.status(200).json({message: "Shipping price updated"});
+                    }
+                } catch(error) {
+                    // Prolem while updating the order
+                    return res.status(400).json({message: "Problem while updating the order"});
+                }
+            } else {
+                // Input is not proper
+                return res.status(400).json({message: "Input is not proper"})
+            }
+        } else {
+            // Order with this id is not present
+            return res.status(400).json({message: "Product not found"})
+        }
+    } catch(error) {
+        return res.status(500).json({message: `Internal server error ${error}`});
+    }
+}
+
+// Function to handle status
+const handleStatusChange = async (req, res) => {
+    // console.log(req.body);
+    try {
+    const {status, orderId} = req.body;
+
+    const statuses = ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"];
+
+    // Check whether the received status is valid
+    if(statuses.includes(status)) {
+
+    // Checking whether the order exists or not
+    const order = await findOrder(orderId);
+    // checking whether user exists or not
+    const user = await findUser(order.user_id)
+    if(order) {
+        // Order is present
+
+        // Checking whether user exists or not
+        if(user) {
+            console.log("Updting")
+            // Start the updating process
+            let paymentStatus = "Payment Pending";
+            if(status === "Confirm") {
+                paymentStatus = "Paid"
+            }
+            const updatedOrder = await Order.findByIdAndUpdate(
+                orderId,
+                {
+                    status: status, 
+                    payment_status: paymentStatus
+                },
+                {
+                    new: true,
+                    runValidators: true
+                }
+            )
+
+            // Sending the email
+            try {
+                // console.log("try email")
+                switch(status) {
+                    case "Rejected":
+                    sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
+                    break;
+
+                    case "Confirm":
+                        sendEmail(user.email, status, `We have successfully received your payment for order ${orderId}. Your order will be delivered soon`);
+                        break;
+                    
+                        case "Dispatched":
+                            sendEmail(user.email, status, `Your order ${orderId} has been successfully dispatched`);
+                            break;
+                }
+            } catch (error) {
+                // console.log("catch email")
+                console.log("Error in sending email");
+            } finally {
+                // console.log("Finally email")
+                return res.status(200).json({message: "Rejected successfully"});
+            }
+        } else {
+            // User does not exist
+            return res.status(400).json({message: "User not found"})
+        }
+    } else {
+        // Order is not present
+        return res.status(400).json({message: "Order not found"})        
+    }
+} else {
+    return res.status(400).json({message: "Invalid status"});
+}
+} catch(error) {
+    return res.status(500).json({message: "Internal server error"});
+}
+}
+
+// Function to edit the order that is quantity and price
+const editOrder = async (req, res) => {
+    // console.log(req.body);
+    try {
+        const {products} = req.body;
+        const {orderId} = req.params;
+        const order = await findOrder(orderId);
+        const user = await findUser(order.user_id);
+        if(order) {
+            console.log(products[0]);
+            if(user) {
+                const prices = [];
+                for (const prod of products) {
+                    const product = await findProduct(prod.product_id);
+                    if(!product) {
+                        return res.status(400).json({message: "Product not found"})
+                    } else {
+                        prices.push(prod.total);
+                    }
+                }
+                const price = prices.reduce((accumulator, current) => accumulator + current, 0);
+                const totalPrice = price + order.shipping_price;
+                try {
+                    const updatedProduct = await Order.findByIdAndUpdate(
+                        order._id,
+                        {
+                            orderedProducts: products,
+                            price: price,
+                            total_price: totalPrice
+                        },
+                        {
+                            new: true,
+                            runValidators: true
+                        }
+                    );
+
+                    try {
+                        // console.log("Sending email");
+                        sendEmail(user.email, `Updation of order ${order._id}`, `Your total price is ${updatedProduct.total_price}`);
+                    } catch(error) {
+                        console.log("Problem in sending email");
+                    } finally {
+                        return res.status(200).json({message: "Product edited successfully"});
+                    }
+                } catch(error) {
+                    return res.status(400).json({message: `Problem while updating the order ${error}`});
+                }
+            } else {
+                return res.status(400).json({message: "User not found"});
+            }
+        } else {
+            return res.status(400).json({message: "Order not found"});
+        }
+    } catch (error) {
+        return res.status(500).json({message: "Internal server error"});
+    }
+}
+
+module.exports = {
+    placeOrder,
+    fetchOrders,
+    shippingPriceUpdate,
+    handleStatusChange,
+    editOrder,
+};
+
+9. Order.js:
+const mongoose = require('mongoose');
+
+const orderedProductSchema = new mongoose.Schema({
+    image_url: {
+        type: String,
+        required: true,
+    },
+  product_id: {
+    type: mongoose.Types.ObjectId,
+    required: true,
+  },
+  product_name: {
+    type: String,
+    required: true,
+  },
+  variant_id: {
+    type: mongoose.Types.ObjectId,
+  },
+  variant_name: {
+    type: String,
+    required: false
+  },
+  size_id: {
+    type: mongoose.Types.ObjectId,
+  },
+  size: {
+    type: String,
+    required: false
+  },
+  quantity: {
+    type: Number,
+    required: true,
+  },
+  price: {
+    type: Number,
+    required: true,
+  },
+  total: {
+    type: Number,
+    required: true,
+  }
+}, { _id: false });
+
+const orderSchema = mongoose.Schema({
+    user_id: {
+        type: mongoose.Types.ObjectId,
+        required: true,
+    },
+    user_name: {
+        type: String,
+        required: true,
+    },
+    email: {
+        type: String,
+        required: true,
+    },
+    phone_number: {
+        type: String,
+        required: true,
+    },
+    whatsapp_number: {
+        type: String,
+        required: true,
+    },
+    orderedProducts: [orderedProductSchema],
+    status: {
+        type: String,
+        enum: ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"],
+        required: true,
+        default: "Pending",
+    },
+    cash_applied: {
+        type: String,
+        // enum: ["yes", "no"],
+        required: false,
+    },
+    price: {
+        type: Number,
+        required: true,
+    },
+    shipping_price: {
+      type: Number,
+      default: 0
+    },
+    total_price: {
+        type: String,
+        required: false,
+        default: "Pending",
+    },
+    payment_status: {
+      type: String,
+      required: true,
+      enum: ['Paid', 'Payment Pending'],
+      default: "Payment Pending",
+    }
+});
+
+module.exports = mongoose.model('Order', orderSchema);
+
+10 User.js
+You are asking for updating free cash balance but I want that you update it in FreeCash model itslef as the amount is stored in this model only.
+
+Now also if you need User.js for any other reasons then say me I will provide you the files. Further if you need any file then say me dont make any assumptions just ask me I will provide you the file.
+
+11 AuthContext.jsx:
+import { useContext, useState, useEffect, Children, createContext } from 'react';
+import axios from 'axios';
+
+export const AuthContext = createContext();
+
+export const AuthProvider = ({children}) => {
+    const [user, setUser] = useState(null);
+    const [loading, setLoading] = useState(true);
+
+     useEffect(() => {
+    const checkLogin = async() => {
+      try {
+        const res = await axios.get(
+          'http://localhost:3000/api/auth/me',
+          {withCredentials: true},
+        );
+        console.log("You are logged in")
+        setUser(res.data.user)
+      } catch(err) {
+        setUser(null);
+        // navigate('/auth/login');
+      } finally {
+        setLoading(false);
+      }
+
+    }
+    checkLogin();
+  }, [])
+
+  return(
+    <AuthContext.Provider value={{ user, setUser, loading }}>
+        {children}
+    </AuthContext.Provider>
+  )
+}
+
+12. server.js:
+const express = require('express');
+const mongoose = require('mongoose');
+const cors = require('cors');
+require('dotenv').config();
+const cookieParser = require('cookie-parser');
+const path = require('path');
+const authRoutes = require('./routes/authRoutes');
+const categoryRoutes = require('./routes/categoryRoutes');
+const productRoutes = require('./routes/productRoutes');
+const cartRoutes = require('./routes/cartRoutes');
+const orderRoutes = require('./routes/orderRoutes');
+const userRoutes = require('./routes/userRoutes');
+const freeCashRoutes = require('./routes/freeCashRoutes');
+const discountRoutes = require('./routes/discountRoutes');
+const bannerRoutes = require('./routes/bannerRoutes');
+const announcementRoutes = require('./routes/announcementRoutes');
+const authenticate = require('./middlewares/authenticate');
+const authorize = require('./middlewares/authorize');
+const User = require('./models/User');
+const morgan = require('morgan');
+
+const app = express();
+
+// Middleware
+// app.use(morgan('dev')); // Request logging for debugging
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
+app.use(cookieParser());
+app.use(
+  cors({
+    origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Configurable frontend origin
+    credentials: true, // Allow cookies
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+);
+
+// Serve static files for uploads
+// app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
+
+// MongoDB Connection
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log('Connected to MongoDB'))
+  .catch((err) => {
+    console.error('MongoDB connection error:', err);
+    process.exit(1); // Exit on connection failure
+  });
+
+// Routes
+// Authentication routes (login, signup, logout)
+app.use('/api/auth', authRoutes);
+
+// User routes (if any, e.g., profile management)
+app.get('/api/user/profile', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({ message: 'User profile', user });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Admin routes (protected by authenticate and authorize)
+app.use('/api/category', authenticate, categoryRoutes);
+app.use('/api/product', authenticate, productRoutes);
+app.use('/api/cart', authenticate, authorize(['user']), cartRoutes);
+app.use('/api/order', authenticate, orderRoutes);
+app.use('/api/user', authenticate, userRoutes);
+app.use('/api/free-cash', authenticate, authorize(['admin']), freeCashRoutes);
+app.use('/api/discount', authenticate, discountRoutes);
+app.use('/api/banner', authenticate, bannerRoutes);
+app.use('/api/announcement', authenticate, announcementRoutes);
+
+// Authenticated user info
+app.get('/api/auth/me', authenticate, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('-password');
+    if (!user) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+    res.json({
+      message: 'User logged in',
+      user: {
+        id: user._id,
+        name: user.name,
+        role: user.role,
+        email: user.email, // Include additional fields as needed
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+// Global error handling middleware
+app.use((err, req, res, next) => {
+  console.error('Error:', err.stack);
+  res.status(500).json({ message: 'Something went wrong!' });
+});
+
+// Start server
+const PORT = process.env.PORT || 3000;
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
+
+13. authenticate.js (middleware):
+const jwt = require('jsonwebtoken');
+require('dotenv').config();
+
+const authenticate = (req, res, next) => {
+    const token = req.cookies.token;
+    if(!token) {
+        console.log("From authetnticate " + token);
+        return res.status(401).json({message: 'Please Login to continue blah'});
+    }
+
+    try {
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        req.user = decoded;
+        next();
+    } catch(err) {
+            console.log("From authetnticate catch" + token);
+        return res.status(401).json({message: "Please Login to continue blah blah"});
+    }
+}
+
+module.exports = authenticate;
+
+This are the files. Now also if you need more files from just say me I will provide you the files. If you dont need any files then start generating the code or else provide the file names to upload. Make sure you dont change anything as backend is already implemented. Also make sure that usr can place order only this free cash has been remaining in making order without free cash the order is working very well so consider all this and whichever code you update give me full updated code instead of just part you update

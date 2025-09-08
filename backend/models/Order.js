@@ -5,40 +5,45 @@ const orderedProductSchema = new mongoose.Schema({
         type: String,
         required: true,
     },
-  product_id: {
-    type: mongoose.Types.ObjectId,
-    required: true,
-  },
-  product_name: {
-    type: String,
-    required: true,
-  },
-  variant_id: {
-    type: mongoose.Types.ObjectId,
-  },
-  variant_name: {
-    type: String,
-    required: false
-  },
-  size_id: {
-    type: mongoose.Types.ObjectId,
-  },
-  size: {
-    type: String,
-    required: false
-  },
-  quantity: {
-    type: Number,
-    required: true,
-  },
-  price: {
-    type: Number,
-    required: true,
-  },
-  total: {
-    type: Number,
-    required: true,
-  }
+    product_id: {
+        type: mongoose.Types.ObjectId,
+        required: true,
+    },
+    product_name: {
+        type: String,
+        required: true,
+    },
+    variant_id: {
+        type: mongoose.Types.ObjectId,
+    },
+    variant_name: {
+        type: String,
+        required: false,
+    },
+    size_id: {
+        type: mongoose.Types.ObjectId,
+    },
+    size: {
+        type: String,
+        required: false,
+    },
+    quantity: {
+        type: Number,
+        required: true,
+    },
+    price: {
+        type: Number,
+        required: true,
+    },
+    total: {
+        type: Number,
+        required: true,
+    },
+    cash_applied: {
+        type: Number,
+        required: false,
+        default: 0,
+    },
 }, { _id: false });
 
 const orderSchema = mongoose.Schema({
@@ -70,8 +75,10 @@ const orderSchema = mongoose.Schema({
         default: "Pending",
     },
     cash_applied: {
-        type: String,
-        // enum: ["yes", "no"],
+        type: {
+            amount: { type: Number, required: true },
+            freeCashId: { type: mongoose.Types.ObjectId, required: true },
+        },
         required: false,
     },
     price: {
@@ -79,8 +86,8 @@ const orderSchema = mongoose.Schema({
         required: true,
     },
     shipping_price: {
-      type: Number,
-      default: 0
+        type: Number,
+        default: 0,
     },
     total_price: {
         type: String,
@@ -88,11 +95,11 @@ const orderSchema = mongoose.Schema({
         default: "Pending",
     },
     payment_status: {
-      type: String,
-      required: true,
-      enum: ['Paid', 'Payment Pending'],
-      default: "Payment Pending",
-    }
+        type: String,
+        required: true,
+        enum: ['Paid', 'Payment Pending'],
+        default: "Payment Pending",
+    },
 });
 
 module.exports = mongoose.model('Order', orderSchema);

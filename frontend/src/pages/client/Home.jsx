@@ -6,6 +6,7 @@ import { useCart } from "../../../Context/CartContext"
 import { Link } from 'react-router-dom';
 import Orders from './Orders';
 import { CategoryContext } from "../../../Context/CategoryContext";
+import { FreeCashContext } from "../../../Context/FreeCashContext";
 import {
   Search,
   User,
@@ -50,12 +51,15 @@ export default function Home() {
     getTotalItemsCount,
   } = useCart()
 
+  const { freeCash, loadingFreeCash, freeCashErrors } = useContext(FreeCashContext);
+
   const handleCartCheckout = async () => {
     try {
       const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
         withCredentials: true,
       });
       console.log("Checkout response:", res.data);
+      setIsCartOpen(false); // Close cart modal after successful checkout
     } catch (error) {
       console.error("Checkout error:", error);
     }
@@ -316,7 +320,7 @@ export default function Home() {
         })
       } else {
         setShowCategoryFilter(true)
-        setSelectedCategory(mainCategories[0]?.categoryName || null) // Set first main category
+        setSelectedCategory(mainCategories[0]?.categoryName || null)
         setSelectedFilters((prev) => {
           const newFilters = prev.filter((f) => f !== "all")
           return [...newFilters, "category"]
@@ -399,8 +403,8 @@ export default function Home() {
     return products;
   };
 
-  if (loadingDiscount || loadingCategories) return <div>Loading...</div>
-  if (categoriesErrors) return <div>Error: {categoriesErrors}</div>
+  if (loadingDiscount || loadingCategories || loadingFreeCash) return <div>Loading...</div>
+  if (categoriesErrors || freeCashErrors) return <div>Error: {categoriesErrors || freeCashErrors}</div>
 
   const ProductCard = ({ product }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -1065,7 +1069,7 @@ export default function Home() {
                 <div className="space-y-2">
                   {bulkPricing.map((tier, index) => (
                     <div key={index} className="flex justify-between text-sm">
-                      <span>{tier.quantity}+ pieces</span>
+                      <span>{tier.quantity}+ pcs</span>
                       <span className="font-semibold">${tier.wholesalePrice.toFixed(2)} each</span>
                     </div>
                   ))}
@@ -1073,38 +1077,30 @@ export default function Home() {
               </div>
             )}
 
-            {selectedVariant && selectedSizeDetail && (
-              <div className="mb-4">
-                <h4 className="font-semibold mb-3">Quantity</h4>
-                <div className="flex items-center justify-center bg-blue-50 rounded-lg px-4 py-3 gap-4">
-                  <button
-                    onClick={() => setLocalQuantityToAdd(Math.max(1, localQuantityToAdd - 1))}
-                    className="p-2 hover:bg-blue-200 rounded-full text-blue-600"
-                  >
-                    <Minus className="w-4 h-4" />
-                  </button>
-
-                  <div className="flex items-center gap-2">
-                    <span className="text-sm text-gray-600">Qty:</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={localQuantityToAdd}
-                      onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
-                      className="w-16 px-2 py-1 text-center border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      tabIndex="-1"
-                    />
-                  </div>
-
-                  <button
-                    onClick={() => setLocalQuantityToAdd(localQuantityToAdd + 1)}
-                    className="p-2 hover:bg-blue-200 rounded-full text-blue-600"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                </div>
+            <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 mb-4">
+              <span className="text-sm text-gray-600">Quantity:</span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setLocalQuantityToAdd(Math.max(1, localQuantityToAdd - 1))}
+                  className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                >
+                  <Minus className="w-3 h-3" />
+                </button>
+                <input
+                  type="number"
+                  min="1"
+                  value={localQuantityToAdd}
+                  onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
+                  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
+                />
+                <button
+                  onClick={() => setLocalQuantityToAdd(localQuantityToAdd + 1)}
+                  className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                >
+                  <Plus className="w-3 h-3" />
+                </button>
               </div>
-            )}
+            </div>
 
             {!selectedVariant || !selectedSizeDetail ? (
               <div className="w-full bg-gray-100 text-gray-500 py-3 px-6 rounded-lg font-medium text-center">
@@ -1143,6 +1139,138 @@ export default function Home() {
             style={{ maxHeight: '80vh' }}
             onClick={(e) => e.stopPropagation()}
           />
+        </div>
+      </div>
+    )
+  }
+
+  const CartModal = () => {
+    const totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => sum + (item.cashApplied || 0), 0);
+
+    return (
+      <div className={`fixed inset-0 z-50 ${isCartOpen ? "block" : "hidden"}`}>
+        <div className="absolute inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
+        <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
+          <div className="p-6 h-full overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Shopping Cart</h2>
+              <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            {cartLoading && (
+              <div className="text-center py-8">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                <p className="text-gray-500 mt-2">Loading cart...</p>
+              </div>
+            )}
+            {cartError && (
+              <div className="text-center py-8">
+                <p className="text-red-500">{cartError}</p>
+              </div>
+            )}
+            {Object.keys(cartItems).length === 0 && !cartLoading ? (
+              <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+            ) : (
+              <div className="space-y-4">
+                {freeCash && (
+                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                    <label className="flex items-center space-x-2">
+                      <input
+                        type="checkbox"
+                        checked={applyFreeCash}
+                        onChange={(e) => setApplyFreeCash(e.target.checked)}
+                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      />
+                      <span className="text-sm text-gray-700">
+                        Apply Free Cash (${freeCash.amount.toFixed(2)} available)
+                      </span>
+                    </label>
+                    <p className="text-xs text-red-600 mt-1">
+                      Note: Free cash is single-use. Any unused amount will not be credited back.
+                    </p>
+                  </div>
+                )}
+                {Object.entries(cartItems).map(([cartKey, item]) => {
+                  const product = products.find((p) => p._id === item.productId)
+                  if (!product) return null
+
+                  const variant = product.variants?.find((v) => v.colorName === item.colorName)
+                  const itemPrice = item.discountedPrice || item.price
+
+                  return (
+                    <div key={cartKey} className="flex items-center space-x-4 p-4 border rounded-lg">
+                      <img
+                        src={item.imageUrl || "/placeholder.svg"}
+                        alt={item.productName}
+                        className="w-15 h-15 rounded-lg object-cover"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-medium text-sm">{item.productName}</h3>
+                        <p className="text-xs text-gray-500">
+                          {item.colorName && item.sizeString
+                            ? `${item.colorName}, ${item.sizeString}`
+                            : "Default variant"}
+                        </p>
+                        <p className="text-blue-600 font-bold">${itemPrice.toFixed(2)}</p>
+                        {item.cashApplied > 0 && (
+                          <p className="text-xs text-green-600">
+                            Free Cash Applied: ${item.cashApplied.toFixed(2)}
+                          </p>
+                        )}
+                      </div>
+                      <div className="flex flex-col items-center space-y-2">
+                        <div className="flex items-center space-x-2">
+                          <button
+                            onClick={() => handleUpdateQuantity(cartKey, -1)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                            disabled={cartLoading}
+                          >
+                            <Minus className="h-4 h-4" />
+                          </button>
+                          <span className="font-medium">{item.quantity}</span>
+                          <button
+                            onClick={() => handleUpdateQuantity(cartKey, 1)}
+                            className="p-1 hover:bg-gray-100 rounded"
+                            disabled={cartLoading}
+                          >
+                            <Plus className="h-4 h-4" />
+                          </button>
+                        </div>
+                        <button
+                          onClick={() => handleRemoveFromCart(cartKey)}
+                          className="p-1 text-red-500 hover:bg-red-500 rounded transition-colors"
+                          title="Remove from cart"
+                          disabled={cartLoading}
+                        >
+                          <Trash2 className="h-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  )
+                })}
+                <div className="border-t pt-4">
+                  {totalFreeCashApplied > 0 && (
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-green-600">Total Free Cash Applied:</span>
+                      <span className="text-sm font-semibold text-green-600">${totalFreeCashApplied.toFixed(2)}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center mb-4">
+                    <span className="font-bold">Total:</span>
+                    <span className="font-bold text-xl">${getCartTotal().toFixed(2)}</span>
+                  </div>
+                  <button
+                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200"
+                    disabled={cartLoading}
+                    onClick={handleCartCheckout}
+                  >
+                    {cartLoading ? "Processing..." : "Checkout"}
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     )
@@ -1263,115 +1391,7 @@ export default function Home() {
         </div>
       </nav>
 
-      {isCartOpen && (
-        <div className="fixed inset-0 z-50">
-          <div className="absolute inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
-          <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
-            <div className="p-6 h-full overflow-y-auto">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="text-xl font-bold">Shopping Cart</h2>
-                <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
-                  <X className="h-5 w-5" />
-                </button>
-              </div>
-              {cartLoading && (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="text-gray-500 mt-2">Loading cart...</p>
-                </div>
-              )}
-              {cartError && (
-                <div className="text-center py-8">
-                  <p className="text-red-500">{cartError}</p>
-                </div>
-              )}
-              {Object.keys(cartItems).length === 0 && !cartLoading ? (
-                <p className="text-gray-500 text-center py-8">Your cart is empty</p>
-              ) : (
-                <div className="space-y-4">
-                  {Object.entries(cartItems).map(([cartKey, item]) => {
-                    const product = products.find((p) => p._id === item.productId)
-                    if (!product) return null
-
-                    const variant = product.variants?.find((v) => v.colorName === item.colorName)
-                    const itemPrice = item.discountedPrice || item.price
-
-                    return (
-                      <div key={cartKey} className="flex items-center space-x-4 p-4 border rounded-lg">
-                        <img
-                          src={item.imageUrl || "/placeholder.svg"}
-                          alt={item.productName}
-                          className="w-15 h-15 rounded-lg object-cover"
-                        />
-                        <div className="flex-1">
-                          <h3 className="font-medium text-sm">{item.productName}</h3>
-                          <p className="text-xs text-gray-500">
-                            {item.colorName && item.sizeString
-                              ? `${item.colorName}, ${item.sizeString}`
-                              : "Default variant"}
-                          </p>
-                          <p className="text-blue-600 font-bold">${itemPrice.toFixed(2)}</p>
-                        </div>
-                        <div className="flex flex-col items-center space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <button
-                              onClick={() => handleUpdateQuantity(cartKey, -1)}
-                              className="p-1 hover:bg-gray-100 rounded"
-                              disabled={cartLoading}
-                            >
-                              <Minus className="h-4 w-4" />
-                            </button>
-                            <span className="font-medium">{item.quantity}</span>
-                            <button
-                              onClick={() => handleUpdateQuantity(cartKey, 1)}
-                              className="p-1 hover:bg-gray-100 rounded"
-                              disabled={cartLoading}
-                            >
-                              <Plus className="h-4 w-4" />
-                            </button>
-                          </div>
-                          <button
-                            onClick={() => handleRemoveFromCart(cartKey)}
-                            className="p-1 text-red-500 hover:bg-red-500 rounded transition-colors"
-                            title="Remove from cart"
-                            disabled={cartLoading}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                  <div className="border-t pt-4">
-                    <div className="mb-4">
-                      <label className="flex items-center space-x-2">
-                        <input
-                          type="checkbox"
-                          checked={applyFreeCash}
-                          onChange={(e) => setApplyFreeCash(e.target.checked)}
-                          className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        />
-                        <span className="text-sm text-gray-700">Apply ₹150 free cash</span>
-                      </label>
-                    </div>
-                    <div className="flex justify-between items-center mb-4">
-                      <span className="font-bold">Total:</span>
-                      <span className="font-bold text-xl">${getCartTotal().toFixed(2)}</span>
-                    </div>
-                    <button
-                      className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200"
-                      disabled={cartLoading}
-                      onClick={handleCartCheckout}
-                    >
-                      {cartLoading ? "Processing..." : "Checkout"}
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <CartModal />
 
       <div className="relative h-64 sm:h-80 lg:h-96 overflow-hidden w-full">
         <div

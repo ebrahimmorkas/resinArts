@@ -8,7 +8,7 @@ const freeCashSchema = mongoose.Schema({
     start_date: {
         required: false,
         type: Date,
-        default: Date.now(),
+        default: Date.now, // Fixed: removed () from Date.now
     },
     end_date: {
         required: false,
@@ -20,7 +20,7 @@ const freeCashSchema = mongoose.Schema({
         type: Number,
     },
     valid_above_amount: {
-        requried: false,
+        required: false, // Fixed: typo from "requried"
         type: Number,
         default: 0,
     },

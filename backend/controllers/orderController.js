@@ -2,6 +2,8 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
+const FreeCash = require('../models/FreeCash');
+// const sendEmail = require('../utils/sendEmail');
 
 // Function to check whether the order exists or not
 const findOrder = async (orderId) => {
@@ -39,22 +41,18 @@ const findProduct = async (productId) => {
 const placeOrder = async (req, res) => {
     try {
         const cartItems = Object.values(req.body);
-        console.log(cartItems);
-        
-        // Validate input
         if (!cartItems || cartItems.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: "Cart is empty"
+                message: "Cart is empty",
             });
         }
 
-        // ✅ Get user ONCE - all items belong to same user
         const userId = cartItems[0]?.userId;
         if (!userId) {
             return res.status(400).json({
                 success: false,
-                message: "No user ID provided"
+                message: "No user ID provided",
             });
         }
 
@@ -62,31 +60,50 @@ const placeOrder = async (req, res) => {
         if (!user) {
             return res.status(404).json({
                 success: false,
-                message: "User not found"
+                message: "User not found",
             });
         }
 
         const errors = [];
         const ordersToAdd = [];
+        let totalFreeCashApplied = 0;
+        let freeCashId = null;
 
-        // ✅ Process each cart item (no redundant user checks)
+        const freeCash = await FreeCash.findOne({
+            user_id: userId,
+            is_cash_used: false,
+            is_cash_expired: false,
+            start_date: { $lte: new Date() },
+            end_date: { $gte: new Date() },
+        });
+
         for (const cartData of cartItems) {
             try {
                 const product = await Product.findById(cartData.productId);
                 if (!product) {
                     errors.push(`Product not found for id ${cartData.productId}`);
-                    continue; // ✅ Skip invalid item, process others
+                    continue;
+                }
+
+                let cashApplied = cartData.cash_applied || cartData.cashApplied || 0;
+                if (freeCash && cashApplied > 0) {
+                    const isEligible = isFreeCashEligible(product, cartData, freeCash);
+                    if (!isEligible) {
+                        errors.push(`Free cash not eligible for product ${cartData.productName}`);
+                        cashApplied = 0;
+                    } else {
+                        totalFreeCashApplied += cashApplied;
+                        freeCashId = freeCash._id;
+                    }
                 }
 
                 if (cartData.variantId) {
-                    // Product with variants - MUST have size and details
-                    const variant = product.variants.find(v => v._id.toString() === cartData.variantId);
+                    const variant = product.variants.find((v) => v._id.toString() === cartData.variantId);
                     if (!variant) {
                         errors.push(`Variant ${cartData.variantName || 'Unknown'} not found for product ${cartData.productName}`);
                         continue;
                     }
 
-                    // Validate size exists (mandatory for variants)
                     if (!cartData.sizeId) {
                         errors.push(`Size is required for variant ${cartData.variantName} of product ${cartData.productName}`);
                         continue;
@@ -96,8 +113,10 @@ const placeOrder = async (req, res) => {
                     for (const variantItem of product.variants) {
                         if (variantItem._id.toString() === cartData.variantId) {
                             for (const detail of variantItem.moreDetails) {
-                                if (detail._id.toString() === cartData.detailsId && 
-                                    detail.size._id.toString() === cartData.sizeId) {
+                                if (
+                                    detail._id.toString() === cartData.detailsId &&
+                                    detail.size._id.toString() === cartData.sizeId
+                                ) {
                                     sizeFound = true;
                                     break;
                                 }
@@ -111,7 +130,6 @@ const placeOrder = async (req, res) => {
                         continue;
                     }
 
-                    // Add order with variant and size (both mandatory)
                     ordersToAdd.push({
                         image_url: cartData.imageUrl,
                         product_id: cartData.productId,
@@ -123,9 +141,9 @@ const placeOrder = async (req, res) => {
                         quantity: cartData.quantity,
                         price: cartData.price,
                         total: cartData.price * cartData.quantity,
+                        cash_applied: cashApplied,
                     });
                 } else {
-                    // Product without variants (no variants = no sizes = no details)
                     ordersToAdd.push({
                         image_url: cartData.imageUrl,
                         product_id: cartData.productId,
@@ -133,63 +151,75 @@ const placeOrder = async (req, res) => {
                         quantity: cartData.quantity,
                         price: cartData.price,
                         total: cartData.price * cartData.quantity,
+                        cash_applied: cashApplied,
                     });
                 }
-
             } catch (itemError) {
                 console.error('Error processing cart item:', itemError);
                 errors.push(`Error processing product ${cartData.productId}: ${itemError.message}`);
-                continue; // ✅ Continue processing other items
+                continue;
             }
         }
 
-        // ✅ Create order if we have valid items
         if (ordersToAdd.length > 0) {
             const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.total, 0);
+            const finalPrice = Math.max(0, totalPrice - totalFreeCashApplied);
 
-            const newOrder = new Order({
-                user_id: req.user.id, // From auth middleware
+            const orderData = {
+                user_id: req.user.id,
                 user_name: `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.trim(),
                 email: user.email,
                 phone_number: user.phone_number,
                 whatsapp_number: user.whatsapp_number,
                 orderedProducts: ordersToAdd,
-                price: totalPrice,
-            });
+                price: finalPrice,
+            };
 
+            if (totalFreeCashApplied > 0 && freeCashId) {
+                orderData.cash_applied = { amount: totalFreeCashApplied, freeCashId };
+                await FreeCash.findByIdAndUpdate(freeCashId, { is_cash_used: true, cash_used_date: new Date() });
+                try {
+                    await sendEmail(
+                        user.email,
+                        "Free Cash Applied",
+                        `Your free cash of $${totalFreeCashApplied} has been applied to your order. Note: Free cash is single-use and any remaining amount is not credited back.`
+                    );
+                } catch (emailError) {
+                    console.error("Error sending free cash email:", emailError);
+                }
+            }
+
+            const newOrder = new Order(orderData);
             await newOrder.save();
 
-            // ✅ Success response (even if some items had errors)
             return res.status(201).json({
                 success: true,
                 message: "Order placed successfully",
                 order: {
                     id: newOrder._id,
-                    totalPrice: totalPrice,
+                    totalPrice: finalPrice,
                     itemCount: ordersToAdd.length,
                     validItems: ordersToAdd.length,
-                    totalItems: cartItems.length
+                    totalItems: cartItems.length,
                 },
                 warnings: errors.length > 0 ? {
                     message: `${errors.length} items could not be processed`,
-                    details: errors
-                } : undefined
+                    details: errors,
+                } : undefined,
             });
         } else {
-            // ✅ No valid items to order
             return res.status(400).json({
                 success: false,
                 message: "No valid items to order. All items have errors.",
-                errors: errors
+                errors: errors,
             });
         }
-
     } catch (error) {
         console.error('Order placement error:', error);
         return res.status(500).json({
             success: false,
             message: "Internal server error while placing order",
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
         });
     }
 };
@@ -399,10 +429,62 @@ const editOrder = async (req, res) => {
     }
 }
 
+const isFreeCashEligible = (product, cartData, freeCash) => {
+    if (!freeCash) return false;
+    
+    const now = new Date();
+    if (
+        freeCash.is_cash_used ||
+        freeCash.is_cash_expired ||
+        now < new Date(freeCash.start_date) ||
+        now > new Date(freeCash.end_date)
+    ) {
+        return false;
+    }
+
+    // Calculate item total - use correct property names
+    const itemPrice = cartData.discountedPrice || cartData.price;
+    const itemTotal = itemPrice * cartData.quantity;
+    
+    if (itemTotal < freeCash.valid_above_amount) {
+        return false;
+    }
+
+    // If applicable to all products
+    if (freeCash.is_cash_applied_on__all_products) {
+        return true;
+    }
+
+    // Check category restrictions
+    if (freeCash.category) {
+        // Compare with product's mainCategory
+        const isMainCategoryMatch = product.mainCategory && 
+            (product.mainCategory.toString() === freeCash.category.toString() ||
+             product.mainCategory._id?.toString() === freeCash.category.toString());
+        
+        if (!isMainCategoryMatch) {
+            return false;
+        }
+
+        // If sub_category is specified, check it too
+        if (freeCash.sub_category) {
+            const isSubCategoryMatch = product.subCategory &&
+                (product.subCategory.toString() === freeCash.sub_category.toString() ||
+                 product.subCategory._id?.toString() === freeCash.sub_category.toString());
+            
+            if (!isSubCategoryMatch) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+};
 module.exports = {
     placeOrder,
     fetchOrders,
     shippingPriceUpdate,
     handleStatusChange,
     editOrder,
+    isFreeCashEligible,
 };

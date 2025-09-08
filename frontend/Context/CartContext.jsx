@@ -1,256 +1,403 @@
-"use client"
+"use client";
 
-import { createContext, useContext, useState, useEffect } from "react"
-import axios from "axios"
+import { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
+import { FreeCashContext } from "./FreeCashContext";
+import { ProductContext } from "./ProductContext";
 
-const CartContext = createContext()
+const CartContext = createContext();
 
 export const useCart = () => {
-  const context = useContext(CartContext)
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider")
-  }
-  return context
-}
+    const context = useContext(CartContext);
+    if (!context) {
+        throw new Error("useCart must be used within a CartProvider");
+    }
+    return context;
+};
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState({})
-  const [isCartOpen, setIsCartOpen] = useState(false)
-  const [applyFreeCash, setApplyFreeCash] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+    const [cartItems, setCartItems] = useState({});
+    const [isCartOpen, setIsCartOpen] = useState(false);
+    const [applyFreeCash, setApplyFreeCash] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const { freeCash } = useContext(FreeCashContext);
+    const { products } = useContext(ProductContext);
 
-  axios.defaults.withCredentials = true
+    axios.defaults.withCredentials = true;
 
-  // Load cart from backend on component mount
-  useEffect(() => {
-    fetchCartFromBackend()
-  }, [])
+    useEffect(() => {
+        fetchCartFromBackend();
+    }, []);
 
-  // Fetch cart items from backend
-  const fetchCartFromBackend = async () => {
-    try {
-      setLoading(true)
-      const response = await axios.get("http://localhost:3000/api/cart", {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+    // Recalculate cash applied when applyFreeCash changes
+    useEffect(() => {
+        if (freeCash && Object.keys(cartItems).length > 0) {
+            updateAllCashApplied();
+        }
+    }, [applyFreeCash, freeCash]);
 
-      if (response.status === 200) {
-        const cartData = response.data
-        // Convert backend cart data to frontend format
-        const formattedCart = {}
-        cartData.forEach((item) => {
-          const cartKey = `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`
-          formattedCart[cartKey] = {
-            productId: item.product_id,
-            variantName: item.variant_name || null,
-            sizeString: item.size || null,
-            quantity: item.quantity,
-            price: item.price,
-            discountedPrice: item.discounted_price,
-            imageUrl: item.image_url,
-            productName: item.product_name,
-            variantId: item.variant_id,
-            detailsId: item.details_id,
-            sizeId: item.size_id,
-            cashApplied: item.cash_applied,
-            userId: item.user_id
-          }
-        })
-        setCartItems(formattedCart)
-      }
-    } catch (err) {
-      setError("Failed to load cart")
-      console.error("Error fetching cart:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+    const fetchCartFromBackend = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get("http://localhost:3000/api/cart", {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
 
-  // Add item to cart (both frontend and backend)
-  const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
-    try {
-      setLoading(true)
-      const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`
+            if (response.status === 200) {
+                const cartData = response.data;
+                const formattedCart = {};
+                cartData.forEach((item) => {
+                    const cartKey = `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`;
+                    formattedCart[cartKey] = {
+                        productId: item.product_id,
+                        variantName: item.variant_name || null,
+                        sizeString: item.size || null,
+                        quantity: item.quantity,
+                        price: item.price,
+                        discountedPrice: item.discounted_price,
+                        imageUrl: item.image_url,
+                        productName: item.product_name,
+                        variantId: item.variant_id,
+                        detailsId: item.details_id,
+                        sizeId: item.size_id,
+                        cashApplied: item.cash_applied || 0,
+                        userId: item.user_id,
+                    };
+                });
+                setCartItems(formattedCart);
+            }
+        } catch (err) {
+            setError("Failed to load cart");
+            console.error("Error fetching cart:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      const cartItemData = {
-        image_url: productData.imageUrl,
-        product_id: productId,
-        product_name: productData.productName,
-        quantity: quantity,
-        price: productData.price,
-        cash_applied: applyFreeCash,
-        discounted_price: productData.discountedPrice || productData.price,
-      }
+    const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
+        try {
+            setLoading(true);
+            const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
 
-      // Only add variant fields if they exist and are not empty
-      if (productData.variantId && productData.variantId !== "") {
-        cartItemData.variant_id = productData.variantId
-      }
-      if (productData.detailsId && productData.detailsId !== "") {
-        cartItemData.details_id = productData.detailsId
-      }
-      if (productData.sizeId && productData.sizeId !== "") {
-        cartItemData.size_id = productData.sizeId
-      }
-      if (colorName && colorName !== "") {
-        cartItemData.variant_name = colorName
-      }
-      if (sizeString && sizeString !== "") {
-        cartItemData.size = sizeString
-      }
+            let cashApplied = 0;
+            if (applyFreeCash && freeCash) {
+                const product = products.find((p) => p._id === productId);
+                if (product) {
+                    const mockCartData = {
+                        ...productData,
+                        quantity: quantity,
+                        discountedPrice: productData.discountedPrice || productData.price
+                    };
+                    
+                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
+                        const itemTotal = mockCartData.discountedPrice * quantity;
+                        cashApplied = Math.min(freeCash.amount, itemTotal);
+                    }
+                }
+            }
 
-      const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+            const cartItemData = {
+                image_url: productData.imageUrl,
+                product_id: productId,
+                product_name: productData.productName,
+                quantity: quantity,
+                price: productData.price,
+                cash_applied: cashApplied,
+                discounted_price: productData.discountedPrice || productData.price,
+            };
 
-      if (response.status === 200 || response.status === 201) {
-        // Update frontend state
-        setCartItems((prev) => ({
-          ...prev,
-          [cartKey]: {
-            productId,
-            colorName: colorName || null,
-            sizeString: sizeString || null,
-            quantity: (prev[cartKey]?.quantity || 0) + quantity,
-            price: productData.price,
-            discountedPrice: productData.discountedPrice || productData.price,
-            imageUrl: productData.imageUrl,
-            productName: productData.productName,
-            variantId: productData.variantId,
-            detailsId: productData.detailsId,
-            sizeId: productData.sizeId,
-            cashApplied: applyFreeCash,
-          },
-        }))
-      } else {
-        throw new Error("Failed to add item to cart")
-      }
-    } catch (err) {
-      setError("Failed to add item to cart")
-      console.error("Error adding to cart:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
+            if (productData.variantId && productData.variantId !== "") {
+                cartItemData.variant_id = productData.variantId;
+            }
+            if (productData.detailsId && productData.detailsId !== "") {
+                cartItemData.details_id = productData.detailsId;
+            }
+            if (productData.sizeId && productData.sizeId !== "") {
+                cartItemData.size_id = productData.sizeId;
+            }
+            if (colorName && colorName !== "") {
+                cartItemData.variant_name = colorName;
+            }
+            if (sizeString && sizeString !== "") {
+                cartItemData.size = sizeString;
+            }
 
-  // Update item quantity
-  const updateQuantity = async (cartKey, change) => {
-    try {
-      const item = cartItems[cartKey]
-      if (!item) return
+            const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
 
-      const newQuantity = item.quantity + change
+            if (response.status === 200 || response.status === 201) {
+                setCartItems((prev) => ({
+                    ...prev,
+                    [cartKey]: {
+                        productId,
+                        variantName: colorName || null,
+                        sizeString: sizeString || null,
+                        quantity: (prev[cartKey]?.quantity || 0) + quantity,
+                        price: productData.price,
+                        discountedPrice: productData.discountedPrice || productData.price,
+                        imageUrl: productData.imageUrl,
+                        productName: productData.productName,
+                        variantId: productData.variantId,
+                        detailsId: productData.detailsId,
+                        sizeId: productData.sizeId,
+                        cashApplied,
+                    },
+                }));
+            } else {
+                throw new Error("Failed to add item to cart");
+            }
+        } catch (err) {
+            setError("Failed to add item to cart");
+            console.error("Error adding to cart:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-      if (newQuantity <= 0) {
-        await removeFromCart(cartKey)
-        return
-      }
+    const updateQuantity = async (cartKey, change) => {
+        try {
+            const item = cartItems[cartKey];
+            if (!item) return;
 
-      const response = await axios.put(
-        "http://localhost:3000/api/cart",
-        {
-          product_id: item.productId,
-          variant_name: item.colorName,
-          size: item.sizeString,
-          quantity: newQuantity,
-        },
-        {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      )
+            const newQuantity = item.quantity + change;
 
-      if (response.status === 200) {
-        setCartItems((prev) => ({
-          ...prev,
-          [cartKey]: {
-            ...prev[cartKey],
-            quantity: newQuantity,
-          },
-        }))
-      }
-    } catch (err) {
-      setError("Failed to update quantity")
-      console.error("Error updating quantity:", err)
-    }
-  }
+            if (newQuantity <= 0) {
+                await removeFromCart(cartKey);
+                return;
+            }
 
-  // Remove item from cart
-  const removeFromCart = async (cartKey) => {
-    try {
-      const item = cartItems[cartKey]
-      if (!item) return
+            let cashApplied = 0;
+            if (applyFreeCash && freeCash) {
+                const product = products.find((p) => p._id === item.productId);
+                if (product) {
+                    const mockCartData = {
+                        ...item,
+                        quantity: newQuantity,
+                        discountedPrice: item.discountedPrice || item.price
+                    };
+                    
+                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
+                        const itemTotal = mockCartData.discountedPrice * newQuantity;
+                        cashApplied = Math.min(freeCash.amount, itemTotal);
+                    }
+                }
+            }
 
-      const response = await axios.delete("http://localhost:3000/api/cart", {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        data: {
-          product_id: item.productId,
-          variant_name: item.colorName,
-          size: item.sizeString,
-        },
-      })
+            const response = await axios.put(
+                "http://localhost:3000/api/cart",
+                {
+                    product_id: item.productId,
+                    variant_name: item.variantName,
+                    size: item.sizeString,
+                    quantity: newQuantity,
+                    cash_applied: cashApplied,
+                },
+                {
+                    withCredentials: true,
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                },
+            );
 
-      if (response.status === 200) {
-        setCartItems((prev) => {
-          const newCart = { ...prev }
-          delete newCart[cartKey]
-          return newCart
-        })
-      }
-    } catch (err) {
-      setError("Failed to remove item")
-      console.error("Error removing from cart:", err)
-    }
-  }
+            if (response.status === 200) {
+                setCartItems((prev) => ({
+                    ...prev,
+                    [cartKey]: {
+                        ...prev[cartKey],
+                        quantity: newQuantity,
+                        cashApplied,
+                    },
+                }));
+            }
+        } catch (err) {
+            setError("Failed to update quantity");
+            console.error("Error updating quantity:", err);
+        }
+    };
 
-  // Calculate cart total
-  const getCartTotal = () => {
-    const total = Object.values(cartItems).reduce((sum, item) => {
-      const price = item.discountedPrice || item.price
-      return sum + price * item.quantity
-    }, 0)
+    const removeFromCart = async (cartKey) => {
+        try {
+            const item = cartItems[cartKey];
+            if (!item) return;
 
-    return applyFreeCash ? Math.max(0, total - 150) : total
-  }
+            const response = await axios.delete("http://localhost:3000/api/cart", {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                data: {
+                    product_id: item.productId,
+                    variant_name: item.variantName,
+                    size: item.sizeString,
+                },
+            });
 
-  // Get unique items count
-  const getUniqueCartItemsCount = () => {
-    return Object.keys(cartItems).length
-  }
+            if (response.status === 200) {
+                setCartItems((prev) => {
+                    const newCart = { ...prev };
+                    delete newCart[cartKey];
+                    return newCart;
+                });
+            }
+        } catch (err) {
+            setError("Failed to remove item");
+            console.error("Error removing from cart:", err);
+        }
+    };
 
-  // Get total items count
-  const getTotalItemsCount = () => {
-    return Object.values(cartItems).reduce((sum, item) => sum + item.quantity, 0)
-  }
+    const isFreeCashEligible = (product, item, freeCash) => {
+        if (!freeCash) return false;
 
-  const value = {
-    cartItems,
-    isCartOpen,
-    setIsCartOpen,
-    applyFreeCash,
-    setApplyFreeCash,
-    loading,
-    error,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    getCartTotal,
-    getUniqueCartItemsCount,
-    getTotalItemsCount,
-    fetchCartFromBackend,
-  }
+        const now = new Date();
+        if (
+            freeCash.is_cash_used ||
+            freeCash.is_cash_expired ||
+            now < new Date(freeCash.start_date) ||
+            now > new Date(freeCash.end_date)
+        ) {
+            return false;
+        }
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
-}
+        // Use correct property name
+        const itemPrice = item.discountedPrice || item.price;
+        const itemTotal = itemPrice * item.quantity;
+        
+        if (itemTotal < freeCash.valid_above_amount) {
+            return false;
+        }
+
+        if (freeCash.is_cash_applied_on__all_products) {
+            return true;
+        }
+
+        // Check category restrictions
+        if (freeCash.category) {
+            const isMainCategoryMatch = product.mainCategory && 
+                (product.mainCategory.toString() === freeCash.category.toString() ||
+                 product.mainCategory._id?.toString() === freeCash.category.toString());
+            
+            if (!isMainCategoryMatch) {
+                return false;
+            }
+
+            if (freeCash.sub_category) {
+                const isSubCategoryMatch = product.subCategory &&
+                    (product.subCategory.toString() === freeCash.sub_category.toString() ||
+                     product.subCategory._id?.toString() === freeCash.sub_category.toString());
+                
+                if (!isSubCategoryMatch) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    };
+
+    // Update cash applied for all items when applyFreeCash changes
+    const updateAllCashApplied = async () => {
+        const updatedItems = {};
+        let hasChanges = false;
+
+        for (const [cartKey, item] of Object.entries(cartItems)) {
+            let cashApplied = 0;
+            
+            if (applyFreeCash && freeCash) {
+                const product = products.find((p) => p._id === item.productId);
+                if (product && isFreeCashEligible(product, item, freeCash)) {
+                    const itemTotal = (item.discountedPrice || item.price) * item.quantity;
+                    cashApplied = Math.min(freeCash.amount, itemTotal);
+                }
+            }
+
+            if (cashApplied !== item.cashApplied) {
+                hasChanges = true;
+                updatedItems[cartKey] = { ...item, cashApplied };
+
+                // Update on backend
+                try {
+                    await axios.put(
+                        "http://localhost:3000/api/cart",
+                        {
+                            product_id: item.productId,
+                            variant_name: item.variantName,
+                            size: item.sizeString,
+                            quantity: item.quantity,
+                            cash_applied: cashApplied,
+                        },
+                        {
+                            withCredentials: true,
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                        }
+                    );
+                } catch (error) {
+                    console.error("Error updating cash applied for item:", error);
+                }
+            } else {
+                updatedItems[cartKey] = item;
+            }
+        }
+
+        if (hasChanges) {
+            setCartItems(updatedItems);
+        }
+    };
+
+    const getCartTotal = () => {
+        let total = Object.values(cartItems).reduce((sum, item) => {
+            const price = item.discountedPrice || item.price;
+            return sum + price * item.quantity;
+        }, 0);
+
+        let totalFreeCashApplied = 0;
+        if (applyFreeCash && freeCash) {
+            totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => {
+                const product = products.find((p) => p._id === item.productId);
+                if (product && isFreeCashEligible(product, item, freeCash)) {
+                    return sum + (item.cashApplied || 0);
+                }
+                return sum;
+            }, 0);
+        }
+
+        return Math.max(0, total - totalFreeCashApplied);
+    };
+
+    const getUniqueCartItemsCount = () => {
+        return Object.keys(cartItems).length;
+    };
+
+    const getTotalItemsCount = () => {
+        return Object.values(cartItems).reduce((sum, item) => sum + item.quantity, 0);
+    };
+
+    const value = {
+        cartItems,
+        isCartOpen,
+        setIsCartOpen,
+        applyFreeCash,
+        setApplyFreeCash,
+        loading,
+        error,
+        addToCart,
+        updateQuantity,
+        removeFromCart,
+        getCartTotal,
+        getUniqueCartItemsCount,
+        getTotalItemsCount,
+        fetchCartFromBackend,
+    };
+
+    return <CartContext.Provider value={value}>{children}</CartContext.Provider>
+};
