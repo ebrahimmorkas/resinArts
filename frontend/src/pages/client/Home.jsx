@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef, useContext } from "react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Orders from './Orders';
 import { CategoryContext } from "../../../Context/CategoryContext";
 import { FreeCashContext } from "../../../Context/FreeCashContext";
@@ -54,22 +54,29 @@ export default function Home() {
 
   const { freeCash, loadingFreeCash, freeCashErrors, clearFreeCashCache, checkFreeCashEligibility } = useContext(FreeCashContext);
 
+  const navigate = useNavigate();
+
   const handleCartCheckout = async () => {
-    try {
-      const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
-        withCredentials: true,
-      });
-      console.log("Checkout response:", res.data);
-      if (res.status === 201) {
-        await clearCart(); // Clear cart after successful order
-        clearFreeCashCache(); // Clear free cash cache
-        await checkFreeCashEligibility(); // Refresh free cash state
-        setIsCartOpen(false); // Close cart modal
-      }
-    } catch (error) {
-      console.error("Checkout error:", error);
+  try {
+    if (!user?.id) {
+      console.error("User not logged in");
+      return;
     }
-}
+    const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
+      withCredentials: true,
+    });
+    console.log("Checkout response:", res.data);
+    if (res.status === 201) {
+      await clearCart(); // Clear cart after successful order
+      clearFreeCashCache(); // Clear free cash cache
+      await checkFreeCashEligibility(); // Refresh free cash state
+      // navigate(`/orders/${user.id}`); // Redirect to orders page
+      setIsCartOpen(false); // Close cart modal
+    }
+  } catch (error) {
+    console.error("Checkout error:", error);
+  }
+};
 
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [selectedFilters, setSelectedFilters] = useState(["all"])
