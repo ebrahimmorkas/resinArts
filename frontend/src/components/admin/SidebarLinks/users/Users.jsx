@@ -1,107 +1,20 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useContext } from "react"
 import {
-  Search,
-  Filter,
-  Ban,
-  Trash2,
-  DollarSign,
-  Key,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  AlertTriangle,
-  UsersIcon,
-  Phone,
-  Mail,
-  MessageCircle,
-  Clock,
-  ShoppingBag,
-  Gift,
-  RefreshCw,
+  Search, Filter, Ban, Trash2, DollarSign, Key, ChevronLeft, ChevronRight, X, AlertTriangle,
+  UsersIcon, Phone, Mail, MessageCircle, Clock, ShoppingBag, Gift, RefreshCw,
 } from "lucide-react";
-import { useContext } from "react";
 import { UserContext } from "../../../../../Context/UserContext";
 import axios from "axios";
 
-// Mock users data
-const mockUsers = [
-  {
-    id: 1,
-    name: "John Doe",
-    email: "john.doe@example.com",
-    phone: "+1234567890",
-    whatsapp: "+1234567890",
-    lastActive: "2024-01-15",
-    orders: 12,
-    status: "active",
-    hasCash: false,
-    cashAmount: 0,
-    joinDate: "2023-06-15",
-  },
-  {
-    id: 2,
-    name: "Jane Smith",
-    email: "jane.smith@example.com",
-    phone: "+1234567891",
-    whatsapp: "+1234567891",
-    lastActive: "2024-01-14",
-    orders: 8,
-    status: "active",
-    hasCash: true,
-    cashAmount: 50,
-    joinDate: "2023-08-20",
-  },
-  {
-    id: 3,
-    name: "Mike Johnson",
-    email: "mike.johnson@example.com",
-    phone: "+1234567892",
-    whatsapp: "+1234567892",
-    lastActive: "2024-01-10",
-    orders: 25,
-    status: "banned",
-    hasCash: false,
-    cashAmount: 0,
-    joinDate: "2023-03-10",
-  },
-  {
-    id: 4,
-    name: "Sarah Wilson",
-    email: "sarah.wilson@example.com",
-    phone: "+1234567893",
-    whatsapp: "+1234567893",
-    lastActive: "2024-01-12",
-    orders: 5,
-    status: "active",
-    hasCash: true,
-    cashAmount: 25,
-    joinDate: "2023-11-05",
-  },
-  {
-    id: 5,
-    name: "David Brown",
-    email: "david.brown@example.com",
-    phone: "+1234567894",
-    whatsapp: "+1234567894",
-    lastActive: "2024-01-08",
-    orders: 18,
-    status: "active",
-    hasCash: false,
-    cashAmount: 0,
-    joinDate: "2023-05-22",
-  },
-]
-
 export default function Users() {
-  const {users, loadingUsers, userErrors} = useContext(UserContext);
-  // const [usersToDisplay, setUsersToDisplay] = useState(mockUsers)
-  const [searchQuery, setSearchQuery] = useState("")
-  const [selectedUsers, setSelectedUsers] = useState([])
-  const [currentPage, setCurrentPage] = useState(1)
-  const [showFilters, setShowFilters] = useState(false)
-  const [activeFilter, setActiveFilter] = useState("")
+  const {users, loadingUsers, usersError, refetchUsers} = useContext(UserContext);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [showFilters, setShowFilters] = useState(false);
+  const [activeFilter, setActiveFilter] = useState("");
   const [filterValues, setFilterValues] = useState({
     lastActiveBefore: "",
     lastOrderBefore: "",
@@ -115,187 +28,169 @@ export default function Users() {
   const [subCategories, setSubCategories] = useState([]);
   const [selectedSubCategory, setSelectedSubCategory] = useState("");
   const [loadingCategories, setLoadingcategories] = useState(true);
-  const [categoriesFetchingError, setCategoriesFetchingError]  = useState("");
-  const [noSubCategories, setNoSubCategories] = useState("");
+  const [categoriesFetchingError, setCategoriesFetchingError] = useState("");
+  const [noSubCategories, setNoSubCategories] = useState(false);
   const [subCategoriesError, setSubCategoriesError] = useState("");
 
-  useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
-
-        if(res.status === 200) {
-          setLoadingcategories(false);
-          setCategories(res.data.categories)
-          console.log(res.data.categories);
-          setLoadingcategories(false);
-          setCategoriesFetchingError("");
-        }
-      } catch(error) {
-        setCategoriesFetchingError("Cannot fetch categories");
-        console.log(error);
-        console.log("Something went wrong while fetching categories");
-      } finally {
-        setLoadingcategories(false);
-      }
-    };
-
-    fetchCategories();
-  }, [])
-
-  useEffect(() => {
-    const updateMainCategory = () => {
-      // setMainCategories()
-      const maincategories = categories.filter(category => category.parent_category_id === null);
-      // console.log(maincategories);
-      setMainCategories(maincategories);
-    };
-    updateMainCategory();
-  }, [categories])
-
-
   // Modal states
-  const [showBanModal, setShowBanModal] = useState(false)
-  const [showDeleteModal, setShowDeleteModal] = useState(false)
-  const [showCashModal, setShowCashModal] = useState(false)
-  const [showPasswordModal, setShowPasswordModal] = useState(false)
-  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
-  const [showRevokeCashModal, setShowRevokeCashModal] = useState(false)
+  const [showBanModal, setShowBanModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [showCashModal, setShowCashModal] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
+  const [showRevokeCashModal, setShowRevokeCashModal] = useState(false);
   const [mainCategoryError, setMainCategoryError] = useState("");
   const [isFreeCashValidForAllProducts, setIsFreeCashValidForAllProducts] = useState(false);
   
-
-  const [selectedUser, setSelectedUser] = useState(null)
+  const [selectedUser, setSelectedUser] = useState(null);
   const [cashForm, setCashForm] = useState({
     amount: "",
     validAbove: "",
     endDate: "",
     selectedMainCategory: "",
     selectedSubCategory: "",
-    validForAllProducts: false
-  })
-  const [newPassword, setNewPassword] = useState("")
+    validForAllProducts: false,
+  });
+  const [newPassword, setNewPassword] = useState("");
 
-  const usersPerPage = 10
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
+        if (res.status === 200) {
+          setCategories(res.data.categories);
+          setLoadingcategories(false);
+          setCategoriesFetchingError("");
+        }
+      } catch (error) {
+        setCategoriesFetchingError("Cannot fetch categories");
+        console.error("Category fetch error:", error);
+        setLoadingcategories(false);
+      }
+    };
+    fetchCategories();
+  }, []);
+
+  useEffect(() => {
+    const updateMainCategory = () => {
+      const maincategories = categories.filter(category => category.parent_category_id === null);
+      setMainCategories(maincategories);
+    };
+    updateMainCategory();
+  }, [categories]);
+
+  const usersPerPage = 10;
 
   // Filter users based on search and filters
   const filteredUsers = users.filter((user) => {
-    // console.log(user)
     const matchesSearch =
       user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.phone.includes(searchQuery)
+      user.phone.includes(searchQuery);
 
-    // Apply active filters
     if (activeFilter === "active-status" && filterValues.lastActiveBefore) {
-      const lastActiveDate = new Date(user.lastActive)
-      const filterDate = new Date(filterValues.lastActiveBefore)
-      if (lastActiveDate >= filterDate) return false
+      const lastActiveDate = new Date(user.lastActive);
+      const filterDate = new Date(filterValues.lastActiveBefore);
+      if (lastActiveDate >= filterDate) return false;
     }
 
     if (activeFilter === "last-order" && filterValues.lastOrderBefore) {
-      // This would need actual last order date from backend
-      // For now, using lastActive as placeholder
-      const lastOrderDate = new Date(user.lastActive)
-      const filterDate = new Date(filterValues.lastOrderBefore)
-      if (lastOrderDate >= filterDate) return false
+      const lastOrderDate = new Date(user.lastActive);
+      const filterDate = new Date(filterValues.lastOrderBefore);
+      if (lastOrderDate >= filterDate) return false;
     }
 
     if (activeFilter === "orders" && filterValues.ordersAmount) {
-      const amount = Number.parseInt(filterValues.ordersAmount)
-      if (filterValues.ordersType === "below" && user.orders >= amount) return false
-      if (filterValues.ordersType === "above" && user.orders <= amount) return false
+      const amount = Number.parseInt(filterValues.ordersAmount);
+      if (filterValues.ordersType === "below" && user.orders >= amount) return false;
+      if (filterValues.ordersType === "above" && user.orders <= amount) return false;
     }
 
     if (activeFilter === "free-cash") {
-      if (!user.hasCash) return false
+      if (!user.hasCash) return false;
     }
 
     if (activeFilter === "date" && filterValues.selectedDate) {
-      // This would filter by join date or specific date
-      const userDate = new Date(user.joinDate)
-      const filterDate = new Date(filterValues.selectedDate)
-      if (userDate.toDateString() !== filterDate.toDateString()) return false
+      const userDate = new Date(user.joinDate);
+      const filterDate = new Date(filterValues.selectedDate);
+      if (userDate.toDateString() !== filterDate.toDateString()) return false;
     }
 
-    return matchesSearch
-  })
+    return matchesSearch;
+  });
 
   // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage)
-  const startIndex = (currentPage - 1) * usersPerPage
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage)
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
+  const startIndex = (currentPage - 1) * usersPerPage;
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage);
 
-  // Handle user selection
+  // Handlers (unchanged except for below)
   const handleUserSelect = (userId) => {
-    setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
-  }
+    setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
+  };
 
   const handleSelectAll = () => {
     if (selectedUsers.length === paginatedUsers.length) {
-      setSelectedUsers([])
+      setSelectedUsers([]);
     } else {
-      setSelectedUsers(paginatedUsers.map((user) => user.id))
+      setSelectedUsers(paginatedUsers.map((user) => user.id));
     }
-  }
+  };
 
-  // Action handlers
   const handleBanUser = (user) => {
-    setSelectedUser(user)
-    setShowBanModal(true)
-  }
+    setSelectedUser(user);
+    setShowBanModal(true);
+  };
 
   const handleDeleteUser = (user) => {
-    setSelectedUser(user)
-    setShowDeleteModal(true)
-  }
+    setSelectedUser(user);
+    setShowDeleteModal(true);
+  };
 
   const handlePayCash = (user) => {
-    setSelectedUser(user)
-    setShowCashModal(true)
-  }
+    setSelectedUser(user);
+    setShowCashModal(true);
+  };
 
   const handleChangePassword = (user) => {
-    setSelectedUser(user)
-    setShowPasswordModal(true)
-  }
+    setSelectedUser(user);
+    setShowPasswordModal(true);
+  };
 
   const handleRevokeCash = (user) => {
-    setSelectedUser(user)
-    setShowRevokeCashModal(true)
-  }
+    setSelectedUser(user);
+    setShowRevokeCashModal(true);
+  };
 
-  // Bulk actions
   const handleBulkSendCash = () => {
-    setShowCashModal(true)
-  }
+    setShowCashModal(true);
+  };
 
   const handleBulkRevokeCash = () => {
-    setShowRevokeCashModal(true)
-  }
+    setShowRevokeCashModal(true);
+  };
 
   const handleBulkDelete = () => {
-    setShowBulkDeleteModal(true)
-  }
+    setShowBulkDeleteModal(true);
+  };
 
-  // Confirm actions
   const confirmBan = () => {
-    setUsers((prev) => prev.map((user) => (user.id === selectedUser.id ? { ...user, status: "banned" } : user)))
-    setShowBanModal(false)
-    setSelectedUser(null)
-  }
+    setUsers((prev) => prev.map((user) => (user.id === selectedUser.id ? { ...user, status: "banned" } : user)));
+    setShowBanModal(false);
+    setSelectedUser(null);
+  };
 
   const confirmDelete = () => {
     if (selectedUser) {
-      setUsers((prev) => prev.filter((user) => user.id !== selectedUser.id))
+      setUsers((prev) => prev.filter((user) => user.id !== selectedUser.id));
     } else {
-      setUsers((prev) => prev.filter((user) => !selectedUsers.includes(user.id)))
-      setSelectedUsers([])
+      setUsers((prev) => prev.filter((user) => !selectedUsers.includes(user.id)));
+      setSelectedUsers([]);
     }
-    setShowDeleteModal(false)
-    setShowBulkDeleteModal(false)
-    setSelectedUser(null)
-  }
+    setShowDeleteModal(false);
+    setShowBulkDeleteModal(false);
+    setSelectedUser(null);
+  };
 
   const confirmPayCash = () => {
     if (selectedUser) {
@@ -303,7 +198,7 @@ export default function Users() {
         prev.map((user) =>
           user.id === selectedUser.id ? { ...user, hasCash: true, cashAmount: Number.parseInt(cashForm.amount) } : user,
         ),
-      )
+      );
     } else {
       setUsers((prev) =>
         prev.map((user) =>
@@ -311,130 +206,174 @@ export default function Users() {
             ? { ...user, hasCash: true, cashAmount: Number.parseInt(cashForm.amount) }
             : user,
         ),
-      )
-      setSelectedUsers([])
+      );
+      setSelectedUsers([]);
     }
-    setShowCashModal(false)
-    setCashForm({ amount: "", validAbove: "", endDate: "" })
-    setSelectedUser(null)
-  }
+    setShowCashModal(false);
+    setCashForm({ amount: "", validAbove: "", endDate: "", selectedMainCategory: "", selectedSubCategory: "", validForAllProducts: false });
+    setSelectedUser(null);
+  };
 
   const confirmRevokeCash = () => {
     if (selectedUser) {
       setUsers((prev) =>
         prev.map((user) => (user.id === selectedUser.id ? { ...user, hasCash: false, cashAmount: 0 } : user)),
-      )
+      );
     } else {
       setUsers((prev) =>
         prev.map((user) => (selectedUsers.includes(user.id) ? { ...user, hasCash: false, cashAmount: 0 } : user)),
-      )
-      setSelectedUsers([])
+      );
+      setSelectedUsers([]);
     }
-    setShowRevokeCashModal(false)
-    setSelectedUser(null)
-  }
+    setShowRevokeCashModal(false);
+    setSelectedUser(null);
+  };
 
   const confirmChangePassword = () => {
-    // Here you would make API call to change password
-    console.log(`Changing password for user ${selectedUser.id} to: ${newPassword}`)
-    setShowPasswordModal(false)
-    setNewPassword("")
-    setSelectedUser(null)
-  }
+    console.log(`Changing password for user ${selectedUser.id} to: ${newPassword}`);
+    setShowPasswordModal(false);
+    setNewPassword("");
+    setSelectedUser(null);
+  };
 
   const applyFilter = () => {
-    setCurrentPage(1)
-    setShowFilters(false)
-  }
+    setCurrentPage(1);
+    setShowFilters(false);
+  };
 
   const clearFilters = () => {
-    setActiveFilter("")
+    setActiveFilter("");
     setFilterValues({
       lastActiveBefore: "",
       lastOrderBefore: "",
       ordersType: "below",
       ordersAmount: "",
       selectedDate: "",
-    })
-    setShowFilters(false)
-  }
+    });
+    setShowFilters(false);
+  };
 
   const handleMainCategoryChange = (e) => {
-    const categoryID = e.target.value;
-    const category = categories.find(cat => cat._id.toString() === categoryID);
+    const categoryID = e.target.value.trim();
     setNoSubCategories(false);
     setSubCategoriesError("");
     setMainCategoryError("");
-    if(!category) {
-      setMainCategoryError("Selected Category Not Found");
+    if (!categoryID) {
+      setMainCategoryError("Please select a main category");
+      return;
+    }
+    const category = categories.find(cat => cat._id.toString() === categoryID);
+    if (!category) {
+      setMainCategoryError("Selected category not found");
       return;
     }
     const sub_categories = categories.filter(cat => cat.parent_category_id === categoryID);
-    if(sub_categories.length === 0) {
+    if (sub_categories.length === 0) {
       setNoSubCategories(true);
-      return;
     }
-    // console.log(sub_categories);
     setSelectedMainCategory(category._id);
     setSubCategories(sub_categories);
     setCashForm((prev) => ({
       ...prev,
-      selectedMainCategory: e.target.value,
-      selectedSubCategory: ""
-    }))
+      selectedMainCategory: category._id,
+      selectedSubCategory: "",
+    }));
   };
 
   const handleSubCategoriesChange = (e) => {
+    const categoryID = e.target.value.trim();
     setNoSubCategories(false);
     setMainCategoryError("");
     setSubCategoriesError("");
-    const categoryID = e.target.value;
+    if (!categoryID) {
+      setSubCategoriesError("Please select a sub-category or leave empty");
+      return;
+    }
     const category = categories.find(cat => cat._id.toString() === categoryID);
-    if(!category) {
-      setSubCategoriesError("Selected Sub category Not Found");
+    if (!category) {
+      setSubCategoriesError("Selected sub-category not found");
       return;
     }
-
-    const sub_categories = categories.filter(cat => cat.parent_category_id === categoryID);
-    if(sub_categories.length === 0) {
-      setNoSubCategories(true);
-      return;
-    }
-
-    setSubCategories(sub_categories);
     setSelectedSubCategory(category._id);
     setCashForm((prev) => ({
       ...prev,
-      selectedSubCategory: e.target.value
-    }))
+      selectedSubCategory: category._id,
+    }));
   };
 
   const handleCashModalFormSubmit = async (e) => {
     e.preventDefault();
-    console.log('Form Submitted');
-    console.log(cashForm);
+    if (!selectedUser?._id) {
+      alert("No user selected");
+      return;
+    }
+
+    // Clean form data
+    const cleanedCashForm = {
+      amount: cashForm.amount.toString().trim(),
+      validAbove: cashForm.validAbove.toString().trim() || "0",
+      endDate: cashForm.endDate.trim() || "",
+      selectedMainCategory: isFreeCashValidForAllProducts ? "" : cashForm.selectedMainCategory.trim(),
+      selectedSubCategory: isFreeCashValidForAllProducts ? "" : cashForm.selectedSubCategory.trim(),
+      validForAllProducts: isFreeCashValidForAllProducts,
+    };
+
+    // Client-side validation
+    const amountNum = parseFloat(cleanedCashForm.amount);
+    if (isNaN(amountNum) || amountNum <= 0) {
+      alert("Amount must be a positive number");
+      return;
+    }
+    if (!isFreeCashValidForAllProducts && !cleanedCashForm.selectedMainCategory) {
+      alert("Please select a main category when not valid for all products");
+      return;
+    }
+
+    console.log("Submitting cleaned form:", cleanedCashForm);
     try {
-      const res = await axios.post('http://localhost:3000/api/free-cash/add', {cashForm, userID: selectedUser._id}, {withCredentials: true});
-      if(res.status === 200) {
-        console.log("Success");
+      const res = await axios.post('http://localhost:3000/api/free-cash/add', 
+        { cashForm: cleanedCashForm, userID: selectedUser._id }, 
+        { withCredentials: true }
+      );
+      if (res.status === 200) {
+        console.log("Success:", res.data.message);
+        // Refetch users to update UI
+        await refetchUsers();
+        // Reset form and states
+        setShowCashModal(false);
+        setCashForm({ 
+          amount: "", 
+          validAbove: "", 
+          endDate: "", 
+          selectedMainCategory: "", 
+          selectedSubCategory: "", 
+          validForAllProducts: false 
+        });
+        setIsFreeCashValidForAllProducts(false);
+        setSelectedMainCategory("");
+        setSelectedSubCategory("");
+        setSubCategories([]);
+        setSelectedUser(null);
+        setMainCategoryError("");
+        setSubCategoriesError("");
+        alert(res.data.message);
       }
     } catch (error) {
-      console.log(error);
-      console.log("Problem while adding the cash");
+      console.error("Submit error:", error.response?.data || error);
+      const errMsg = error.response?.data?.message || "Problem while adding the cash";
+      alert(errMsg);
     }
-  }
+  };
 
-  if(userErrors) return (<div>Error while fetching users</div>)
-if(loadingUsers) return(<div>Loading users</div>)
-  if(!users || users.length == 0) return (<div>No Users to display</div>)
+  if (usersError) return <div>Error while fetching users: {usersError}</div>;
+  if (loadingUsers) return <div>Loading users...</div>;
+  if (!users || users.length === 0) return <div>No users to display</div>;
 
-    const newUsers=users.filter((user) => user.role != "admin");
-    // console.log(newUsers)
+  const newUsers = users.filter((user) => user.role !== "admin");
 
   // Modal Components
   const ConfirmModal = ({ show, onClose, onConfirm, title, message, type = "danger" }) => {
-    if (!show) return null
-
+    if (!show) return null;
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -471,13 +410,11 @@ if(loadingUsers) return(<div>Loading users</div>)
           </div>
         </div>
       </div>
-    )
-  }
+    );
+  };
 
-  // Sarting of pay cash modal
-  const CashModal = ({ show, onClose, onConfirm, userID }) => {
-    if (!show) return null
-
+  const CashModal = ({ show, onClose, userID }) => {
+    if (!show) return null;
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -487,107 +424,147 @@ if(loadingUsers) return(<div>Loading users</div>)
               <X className="w-5 h-5" />
             </button>
           </div>
-        <form onSubmit={handleCashModalFormSubmit}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Cash Amount (₹)</label>
-              <input
-                type="number"
-                value={cashForm.amount}
-                onChange={(e) => setCashForm({ ...cashForm, amount: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Enter amount"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Valid Above ₹</label>
-              <input
-                type="number"
-                value={cashForm.validAbove}
-                onChange={(e) => setCashForm({ ...cashForm, validAbove: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                placeholder="Minimum order amount"
-              />
-            </div>
-
-            <div>
-              <input
-                type="checkbox"
-                checked={isFreeCashValidForAllProducts}
-                onChange={(e) => {
-                  isFreeCashValidForAllProducts ? setIsFreeCashValidForAllProducts(false) : setIsFreeCashValidForAllProducts(true)
-                  setCashForm({...cashForm, validForAllProducts: e.target.checked})
-                }}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <label className="block text-sm font-medium text-gray-700 mb-2">Valid for all products</label>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">Select Main Category</label>
-
-              {mainCategories.length == 0 ? (<span>Laoding main categories</span>) : (
-                <select name="" id="" onChange={handleMainCategoryChange} value={selectedMainCategory}>
-                  <option disabled value="">Select</option>
-                {mainCategories.map(category => <option key={category._id} value={category._id}>{category.categoryName}</option>)}
-              </select>
+          <form onSubmit={handleCashModalFormSubmit}>
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Cash Amount (₹)</label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  value={cashForm.amount}
+                  onChange={(e) => setCashForm({ ...cashForm, amount: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Enter amount"
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Valid Above ₹</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  value={cashForm.validAbove}
+                  onChange={(e) => setCashForm({ ...cashForm, validAbove: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="0 for no minimum"
+                />
+              </div>
+              <div>
+                <input
+                  type="checkbox"
+                  checked={isFreeCashValidForAllProducts}
+                  onChange={(e) => {
+                    const checked = e.target.checked;
+                    setIsFreeCashValidForAllProducts(checked);
+                    setCashForm({
+                      ...cashForm,
+                      validForAllProducts: checked,
+                      selectedMainCategory: checked ? "" : cashForm.selectedMainCategory,
+                      selectedSubCategory: checked ? "" : cashForm.selectedSubCategory,
+                    });
+                    if (checked) {
+                      setSelectedMainCategory("");
+                      setSelectedSubCategory("");
+                      setSubCategories([]);
+                      setMainCategoryError("");
+                      setSubCategoriesError("");
+                    }
+                  }}
+                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                />
+                <label className="ml-2 text-sm font-medium text-gray-700">Valid for all products</label>
+              </div>
+              {!isFreeCashValidForAllProducts && (
+                <div className="space-y-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Main Category</label>
+                  {loadingCategories ? (
+                    <span>Loading main categories...</span>
+                  ) : (
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      onChange={handleMainCategoryChange}
+                      value={selectedMainCategory}
+                      required
+                    >
+                      <option value="" disabled>Select Main Category</option>
+                      {mainCategories.map(category => (
+                        <option key={category._id} value={category._id}>
+                          {category.categoryName}
+                        </option>
+                      ))}
+                    </select>
+                  )}
+                  {mainCategoryError && <span className="text-red-500 text-xs">{mainCategoryError}</span>}
+                  {subCategories.length > 0 && (
+                    <>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Sub Category (Optional)</label>
+                      <select
+                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        onChange={handleSubCategoriesChange}
+                        value={selectedSubCategory}
+                      >
+                        <option value="" disabled>Select Sub Category</option>
+                        {subCategories.map(sub_category => (
+                          <option key={sub_category._id} value={sub_category._id}>
+                            {sub_category.categoryName}
+                          </option>
+                        ))}
+                      </select>
+                    </>
+                  )}
+                  {subCategories.length === 0 && selectedMainCategory && !noSubCategories && (
+                    <p className="text-sm text-gray-500">No sub-categories available.</p>
+                  )}
+                  {subCategoriesError && <span className="text-red-500 text-xs">{subCategoriesError}</span>}
+                </div>
               )}
-
-              {!mainCategoryError === "" && (<span>Category Not Found</span>)}
-
-              {subCategories.length == 0 ? (<span>Loading Sub categories</span>) : (
-                <select onChange={handleSubCategoriesChange} value={selectedSubCategory}>
-                  <option value="" disabled>Select</option>
-                  {!noSubCategories && subCategories.map(sub_category => <option key={sub_category._id} value={sub_category._id}>{sub_category.categoryName}</option>)}
-                </select>
+              {isFreeCashValidForAllProducts && (
+                <p className="text-sm text-gray-500 p-2 bg-gray-50 rounded">
+                  Valid for all products - category selection disabled.
+                </p>
               )}
-              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+                <input
+                  type="date"
+                  value={cashForm.endDate}
+                  onChange={(e) => setCashForm({ ...cashForm, endDate: e.target.value })}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="Leave empty for no expiry"
+                />
+              </div>
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> If you do not enter the end date, you need to revoke cash manually.
+                </p>
+              </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
-              <input
-                type="date"
-                value={cashForm.endDate}
-                onChange={(e) => setCashForm({ ...cashForm, endDate: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
+            <div className="flex gap-3 justify-end mt-6">
+              <button
+                type="button"
+                onClick={onClose}
+                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                disabled={!cashForm.amount || parseFloat(cashForm.amount) <= 0}
+                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                Pay Cash
+              </button>
             </div>
-
-            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-              <p className="text-sm text-yellow-800">
-                <strong>Note:</strong> If you do not enter the end date, you need to revoke cash manually.
-              </p>
-            </div>
-          
-          </div>
-
-          <div className="flex gap-3 justify-end mt-6">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              disabled={!cashForm.amount}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              Pay Cash
-            </button>
-          </div>
           </form>
         </div>
       </div>
-    )
-  }
-  // Ending of pay cash modal
+    );
+  };
 
   const PasswordModal = ({ show, onClose, onConfirm }) => {
-    if (!show) return null
-
+    if (!show) return null;
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -597,7 +574,6 @@ if(loadingUsers) return(<div>Loading users</div>)
               <X className="w-5 h-5" />
             </button>
           </div>
-
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
@@ -610,7 +586,6 @@ if(loadingUsers) return(<div>Loading users</div>)
               />
             </div>
           </div>
-
           <div className="flex gap-3 justify-end mt-6">
             <button
               onClick={onClose}
@@ -628,13 +603,11 @@ if(loadingUsers) return(<div>Loading users</div>)
           </div>
         </div>
       </div>
-    )
-  }
-  
+    );
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      {/* Header */}
       <div className="bg-white shadow-sm border-b">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
@@ -649,12 +622,9 @@ if(loadingUsers) return(<div>Loading users</div>)
           </div>
         </div>
       </div>
-
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-        {/* Search and Filters */}
         <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
           <div className="flex flex-col lg:flex-row gap-4">
-            {/* Search */}
             <div className="flex-1">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
@@ -667,8 +637,6 @@ if(loadingUsers) return(<div>Loading users</div>)
                 />
               </div>
             </div>
-
-            {/* Filter Button */}
             <div className="relative">
               <button
                 onClick={() => setShowFilters(!showFilters)}
@@ -678,8 +646,6 @@ if(loadingUsers) return(<div>Loading users</div>)
                 Filters
                 {activeFilter && <span className="ml-2 w-2 h-2 bg-blue-600 rounded-full"></span>}
               </button>
-
-              {/* Filter Dropdown */}
               {showFilters && (
                 <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-10">
                   <div className="p-4">
@@ -699,8 +665,6 @@ if(loadingUsers) return(<div>Loading users</div>)
                           <option value="date">Date</option>
                         </select>
                       </div>
-
-                      {/* Dynamic Filter Fields */}
                       {activeFilter === "active-status" && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Last Active Before</label>
@@ -712,7 +676,6 @@ if(loadingUsers) return(<div>Loading users</div>)
                           />
                         </div>
                       )}
-
                       {activeFilter === "last-order" && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Last Order Before</label>
@@ -724,7 +687,6 @@ if(loadingUsers) return(<div>Loading users</div>)
                           />
                         </div>
                       )}
-
                       {activeFilter === "orders" && (
                         <div className="space-y-3">
                           <div>
@@ -749,7 +711,6 @@ if(loadingUsers) return(<div>Loading users</div>)
                           </div>
                         </div>
                       )}
-
                       {activeFilter === "date" && (
                         <div>
                           <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
@@ -762,7 +723,6 @@ if(loadingUsers) return(<div>Loading users</div>)
                         </div>
                       )}
                     </div>
-
                     <div className="flex gap-2 mt-4">
                       <button
                         onClick={applyFilter}
@@ -782,8 +742,6 @@ if(loadingUsers) return(<div>Loading users</div>)
               )}
             </div>
           </div>
-
-          {/* Bulk Actions */}
           {selectedUsers.length > 0 && (
             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
               <div className="flex items-center justify-between">
@@ -815,8 +773,6 @@ if(loadingUsers) return(<div>Loading users</div>)
             </div>
           )}
         </div>
-
-        {/* Users Table */}
         <div className="bg-white rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1200px]">
@@ -973,8 +929,6 @@ if(loadingUsers) return(<div>Loading users</div>)
               </tbody>
             </table>
           </div>
-
-          {/* Empty State */}
           {paginatedUsers.length === 0 && (
             <div className="text-center py-12">
               <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
@@ -983,8 +937,6 @@ if(loadingUsers) return(<div>Loading users</div>)
             </div>
           )}
         </div>
-
-        {/* Pagination */}
         {totalPages > 1 && (
           <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
             <div className="flex items-center justify-between">
@@ -1001,10 +953,9 @@ if(loadingUsers) return(<div>Loading users</div>)
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Previous
                 </button>
-
                 <div className="flex space-x-1">
                   {[...Array(totalPages)].map((_, index) => {
-                    const page = index + 1
+                    const page = index + 1;
                     return (
                       <button
                         key={page}
@@ -1017,10 +968,9 @@ if(loadingUsers) return(<div>Loading users</div>)
                       >
                         {page}
                       </button>
-                    )
+                    );
                   })}
                 </div>
-
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
@@ -1034,8 +984,6 @@ if(loadingUsers) return(<div>Loading users</div>)
           </div>
         )}
       </div>
-
-      {/* Modals */}
       <ConfirmModal
         show={showBanModal}
         onClose={() => setShowBanModal(false)}
@@ -1044,7 +992,6 @@ if(loadingUsers) return(<div>Loading users</div>)
         message={`Are you sure you want to ban ${selectedUser?.name}? This action will restrict their access.`}
         type="warning"
       />
-
       <ConfirmModal
         show={showDeleteModal}
         onClose={() => setShowDeleteModal(false)}
@@ -1053,7 +1000,6 @@ if(loadingUsers) return(<div>Loading users</div>)
         message={`Are you sure you want to delete ${selectedUser?.name}? This action cannot be undone.`}
         type="danger"
       />
-
       <ConfirmModal
         show={showBulkDeleteModal}
         onClose={() => setShowBulkDeleteModal(false)}
@@ -1062,7 +1008,6 @@ if(loadingUsers) return(<div>Loading users</div>)
         message={`Are you sure you want to delete ${selectedUsers.length} selected users? This action cannot be undone.`}
         type="danger"
       />
-
       <ConfirmModal
         show={showRevokeCashModal}
         onClose={() => setShowRevokeCashModal(false)}
@@ -1075,14 +1020,12 @@ if(loadingUsers) return(<div>Loading users</div>)
         }
         type="warning"
       />
-
-      <CashModal show={showCashModal} onClose={() => setShowCashModal(false)} onConfirm={confirmPayCash} userID = {selectedUser._id}/>
-
+      <CashModal show={showCashModal} onClose={() => setShowCashModal(false)} userID={selectedUser?._id} />
       <PasswordModal
         show={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
         onConfirm={confirmChangePassword}
       />
     </div>
-  )
+  );
 }

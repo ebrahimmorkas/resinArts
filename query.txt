@@ -1,1153 +1,1203 @@
-I am developing e-commerce website using MERN stack. I am placing the orders thriugh cart located in Home.jsx. When user login the user can add the products in the cart and chekcout the cart to place order and the order is placed successfully and the cart becomes empty. ---> All work well till here. Now the prolem is that (User am still logged in) when user again adds the products in the cart and clicks the chckout button to place the order then the error arises in the console of the browser. 
-Error:
-:3000/api/order/place-order:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
-hook.js:608 Checkout error: AxiosErrorcode: "ERR_BAD_REQUEST"config: {transitional: {…}, adapter: Array(3), transformRequest: Array(1), transformResponse: Array(1), timeout: 0, …}message: "Request failed with status code 400"name: "AxiosError"request: XMLHttpRequest {onreadystatechange: null, readyState: 4, timeout: 0, withCredentials: true, upload: XMLHttpRequestUpload, …}response: config: {transitional: {…}, adapter: Array(3), transformRequest: Array(1), transformResponse: Array(1), timeout: 0, …}data: {success: false, message: 'No user ID provided'}headers: AxiosHeaders {content-length: '49', content-type: 'application/json; charset=utf-8'}request: XMLHttpRequest {onreadystatechange: null, readyState: 4, timeout: 0, withCredentials: true, upload: XMLHttpRequestUpload, …}status: 400statusText: "Bad Request"[[Prototype]]: Objectstatus: 400stack: "AxiosError: Request failed with status code 400\n    at settle (http://localhost:5173/node_modules/.vite/deps/axios.js?v=6a9a1269:1232:12)\n    at XMLHttpRequest.onloadend (http://localhost:5173/node_modules/.vite/deps/axios.js?v=6a9a1269:1564:7)\n    at Axios.request (http://localhost:5173/node_modules/.vite/deps/axios.js?v=6a9a1269:2122:41)\n    at async handleCartCheckout (http://localhost:5173/src/pages/client/Home.jsx?t=1757393262048:74:19)"[[Prototype]]: Error
-overrideMethod @ hook.js:608
+I have developed e-commerce website using MERN stack. I have implemented free cash functionlaity so that users can get discounts. The admin provides the free cash to users. The users can use this free cash in Cart which is located in Home.jsx. The user can use this cash while checkingg out the cart. The backend is also implemented propeprly and works fine for using the cash. The admin can eitehr provide free cash on all the products or on the specific category or sub categories. The process of providing free cash to users also works fine for the first time and this is the problem.
+Problem:
+The admin logins and navigates to http://localhost:5173/admin/panel/customers. This opens USers.jsx. In this file user can provide free cash to user. The admin provides the free cash to users. The user uses the free cash. THe admin again tries to provide the free cash and this is the palce where backend fails that menas in one login admin can provide free cash tio users only one time. Then admin need to refresh the Users.jsx and then cam provide free cash again one time and then again this error. That means the problem is on admin side only no frontend error. I will priovde you some if the files
 
-I will provide you certain files:
+Users.jsx:
+"use client"
 
-CartContext.js:
-"use client";
-
-import { createContext, useContext, useState, useEffect } from "react";
+import { useEffect, useState } from "react"
+import {
+  Search,
+  Filter,
+  Ban,
+  Trash2,
+  DollarSign,
+  Key,
+  ChevronLeft,
+  ChevronRight,
+  X,
+  AlertTriangle,
+  UsersIcon,
+  Phone,
+  Mail,
+  MessageCircle,
+  Clock,
+  ShoppingBag,
+  Gift,
+  RefreshCw,
+} from "lucide-react";
+import { useContext } from "react";
+import { UserContext } from "../../../../../Context/UserContext";
 import axios from "axios";
-import { FreeCashContext } from "./FreeCashContext";
-import { ProductContext } from "./ProductContext";
 
-const CartContext = createContext();
+export default function Users() {
+  const {users, loadingUsers, userErrors} = useContext(UserContext);
+  // const [usersToDisplay, setUsersToDisplay] = useState(mockUsers)
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedUsers, setSelectedUsers] = useState([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [showFilters, setShowFilters] = useState(false)
+  const [activeFilter, setActiveFilter] = useState("")
+  const [filterValues, setFilterValues] = useState({
+    lastActiveBefore: "",
+    lastOrderBefore: "",
+    ordersType: "below",
+    ordersAmount: "",
+    selectedDate: "",
+  });
+  const [categories, setCategories] = useState([]);
+  const [mainCategories, setMainCategories] = useState([]);
+  const [selectedMainCategory, setSelectedMainCategory] = useState("");
+  const [subCategories, setSubCategories] = useState([]);
+  const [selectedSubCategory, setSelectedSubCategory] = useState("");
+  const [loadingCategories, setLoadingcategories] = useState(true);
+  const [categoriesFetchingError, setCategoriesFetchingError]  = useState("");
+  const [noSubCategories, setNoSubCategories] = useState("");
+  const [subCategoriesError, setSubCategoriesError] = useState("");
 
-export const useCart = () => {
-    const context = useContext(CartContext);
-    if (!context) {
-        throw new Error("useCart must be used within a CartProvider");
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
+
+        if(res.status === 200) {
+          setLoadingcategories(false);
+          setCategories(res.data.categories)
+          console.log(res.data.categories);
+          setLoadingcategories(false);
+          setCategoriesFetchingError("");
+        }
+      } catch(error) {
+        setCategoriesFetchingError("Cannot fetch categories");
+        console.log(error);
+        console.log("Something went wrong while fetching categories");
+      } finally {
+        setLoadingcategories(false);
+      }
+    };
+
+    fetchCategories();
+  }, [])
+
+  useEffect(() => {
+    const updateMainCategory = () => {
+      // setMainCategories()
+      const maincategories = categories.filter(category => category.parent_category_id === null);
+      // console.log(maincategories);
+      setMainCategories(maincategories);
+    };
+    updateMainCategory();
+  }, [categories])
+
+
+  // Modal states
+  const [showBanModal, setShowBanModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showCashModal, setShowCashModal] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
+  const [showRevokeCashModal, setShowRevokeCashModal] = useState(false)
+  const [mainCategoryError, setMainCategoryError] = useState("");
+  const [isFreeCashValidForAllProducts, setIsFreeCashValidForAllProducts] = useState(false);
+  
+
+  const [selectedUser, setSelectedUser] = useState(null)
+  const [cashForm, setCashForm] = useState({
+    amount: "",
+    validAbove: "",
+    endDate: "",
+    selectedMainCategory: "",
+    selectedSubCategory: "",
+    validForAllProducts: false
+  })
+  const [newPassword, setNewPassword] = useState("")
+
+  const usersPerPage = 10
+
+  // Filter users based on search and filters
+  const filteredUsers = users.filter((user) => {
+    // console.log(user)
+    const matchesSearch =
+      user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      user.phone.includes(searchQuery)
+
+    // Apply active filters
+    if (activeFilter === "active-status" && filterValues.lastActiveBefore) {
+      const lastActiveDate = new Date(user.lastActive)
+      const filterDate = new Date(filterValues.lastActiveBefore)
+      if (lastActiveDate >= filterDate) return false
     }
-    return context;
-};
 
-export const CartProvider = ({ children }) => {
-    const [cartItems, setCartItems] = useState({});
-    const [isCartOpen, setIsCartOpen] = useState(false);
-    const [applyFreeCash, setApplyFreeCash] = useState(false);
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState(null);
-    const { freeCash } = useContext(FreeCashContext);
-    const { products } = useContext(ProductContext);
-
-    axios.defaults.withCredentials = true;
-
-    useEffect(() => {
-        fetchCartFromBackend();
-    }, []);
-
-    // Recalculate cash applied when applyFreeCash changes
-    useEffect(() => {
-        if (freeCash && Object.keys(cartItems).length > 0) {
-            updateAllCashApplied();
-        }
-    }, [applyFreeCash, freeCash]);
-
-    const fetchCartFromBackend = async () => {
-        try {
-            setLoading(true);
-            const response = await axios.get("http://localhost:3000/api/cart", {
-                withCredentials: true,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (response.status === 200) {
-                const cartData = response.data;
-                const formattedCart = {};
-                cartData.forEach((item) => {
-                    const cartKey = `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`;
-                    formattedCart[cartKey] = {
-                        productId: item.product_id,
-                        variantName: item.variant_name || null,
-                        sizeString: item.size || null,
-                        quantity: item.quantity,
-                        price: item.price,
-                        discountedPrice: item.discounted_price,
-                        imageUrl: item.image_url,
-                        productName: item.product_name,
-                        variantId: item.variant_id,
-                        detailsId: item.details_id,
-                        sizeId: item.size_id,
-                        cashApplied: item.cash_applied || 0,
-                        userId: item.user_id,
-                    };
-                });
-                setCartItems(formattedCart);
-            }
-        } catch (err) {
-            setError("Failed to load cart");
-            console.error("Error fetching cart:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
-        try {
-            setLoading(true);
-            const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
-
-            let cashApplied = 0;
-            if (applyFreeCash && freeCash) {
-                const product = products.find((p) => p._id === productId);
-                if (product) {
-                    const mockCartData = {
-                        ...productData,
-                        quantity: quantity,
-                        discountedPrice: productData.discountedPrice || productData.price
-                    };
-                    
-                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
-                        const itemTotal = mockCartData.discountedPrice * quantity;
-                        cashApplied = Math.min(freeCash.amount, itemTotal);
-                    }
-                }
-            }
-
-            const cartItemData = {
-                image_url: productData.imageUrl,
-                product_id: productId,
-                product_name: productData.productName,
-                quantity: quantity,
-                price: productData.price,
-                cash_applied: cashApplied,
-                discounted_price: productData.discountedPrice || productData.price,
-            };
-
-            if (productData.variantId && productData.variantId !== "") {
-                cartItemData.variant_id = productData.variantId;
-            }
-            if (productData.detailsId && productData.detailsId !== "") {
-                cartItemData.details_id = productData.detailsId;
-            }
-            if (productData.sizeId && productData.sizeId !== "") {
-                cartItemData.size_id = productData.sizeId;
-            }
-            if (colorName && colorName !== "") {
-                cartItemData.variant_name = colorName;
-            }
-            if (sizeString && sizeString !== "") {
-                cartItemData.size = sizeString;
-            }
-
-            const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
-                withCredentials: true,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (response.status === 200 || response.status === 201) {
-                setCartItems((prev) => ({
-                    ...prev,
-                    [cartKey]: {
-                        productId,
-                        variantName: colorName || null,
-                        sizeString: sizeString || null,
-                        quantity: (prev[cartKey]?.quantity || 0) + quantity,
-                        price: productData.price,
-                        discountedPrice: productData.discountedPrice || productData.price,
-                        imageUrl: productData.imageUrl,
-                        productName: productData.productName,
-                        variantId: productData.variantId,
-                        detailsId: productData.detailsId,
-                        sizeId: productData.sizeId,
-                        cashApplied,
-                    },
-                }));
-            } else {
-                throw new Error("Failed to add item to cart");
-            }
-        } catch (err) {
-            setError("Failed to add item to cart");
-            console.error("Error adding to cart:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const updateQuantity = async (cartKey, change) => {
-        try {
-            const item = cartItems[cartKey];
-            if (!item) return;
-
-            const newQuantity = item.quantity + change;
-
-            if (newQuantity <= 0) {
-                await removeFromCart(cartKey);
-                return;
-            }
-
-            let cashApplied = 0;
-            if (applyFreeCash && freeCash) {
-                const product = products.find((p) => p._id === item.productId);
-                if (product) {
-                    const mockCartData = {
-                        ...item,
-                        quantity: newQuantity,
-                        discountedPrice: item.discountedPrice || item.price
-                    };
-                    
-                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
-                        const itemTotal = mockCartData.discountedPrice * newQuantity;
-                        cashApplied = Math.min(freeCash.amount, itemTotal);
-                    }
-                }
-            }
-
-            const response = await axios.put(
-                "http://localhost:3000/api/cart",
-                {
-                    product_id: item.productId,
-                    variant_name: item.variantName,
-                    size: item.sizeString,
-                    quantity: newQuantity,
-                    cash_applied: cashApplied,
-                },
-                {
-                    withCredentials: true,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                },
-            );
-
-            if (response.status === 200) {
-                setCartItems((prev) => ({
-                    ...prev,
-                    [cartKey]: {
-                        ...prev[cartKey],
-                        quantity: newQuantity,
-                        cashApplied,
-                    },
-                }));
-            }
-        } catch (err) {
-            setError("Failed to update quantity");
-            console.error("Error updating quantity:", err);
-        }
-    };
-
-    const removeFromCart = async (cartKey) => {
-        try {
-            const item = cartItems[cartKey];
-            if (!item) return;
-
-            const response = await axios.delete("http://localhost:3000/api/cart", {
-                withCredentials: true,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                data: {
-                    product_id: item.productId,
-                    variant_name: item.variantName,
-                    size: item.sizeString,
-                },
-            });
-
-            if (response.status === 200) {
-                setCartItems((prev) => {
-                    const newCart = { ...prev };
-                    delete newCart[cartKey];
-                    return newCart;
-                });
-            }
-        } catch (err) {
-            setError("Failed to remove item");
-            console.error("Error removing from cart:", err);
-        }
-    };
-
-    const isFreeCashEligible = (product, item, freeCash) => {
-        if (!freeCash) return false;
-
-        const now = new Date();
-        if (
-            freeCash.is_cash_used ||
-            freeCash.is_cash_expired ||
-            now < new Date(freeCash.start_date) ||
-            now > new Date(freeCash.end_date)
-        ) {
-            return false;
-        }
-
-        // Use correct property name
-        const itemPrice = item.discountedPrice || item.price;
-        const itemTotal = itemPrice * item.quantity;
-        
-        if (itemTotal < freeCash.valid_above_amount) {
-            return false;
-        }
-
-        if (freeCash.is_cash_applied_on__all_products) {
-            return true;
-        }
-
-        // Check category restrictions
-        if (freeCash.category) {
-            const isMainCategoryMatch = product.mainCategory && 
-                (product.mainCategory.toString() === freeCash.category.toString() ||
-                 product.mainCategory._id?.toString() === freeCash.category.toString());
-            
-            if (!isMainCategoryMatch) {
-                return false;
-            }
-
-            if (freeCash.sub_category) {
-                const isSubCategoryMatch = product.subCategory &&
-                    (product.subCategory.toString() === freeCash.sub_category.toString() ||
-                     product.subCategory._id?.toString() === freeCash.sub_category.toString());
-                
-                if (!isSubCategoryMatch) {
-                    return false;
-                }
-            }
-        }
-
-        return true;
-    };
-
-    // Update cash applied for all items when applyFreeCash changes
-    const updateAllCashApplied = async () => {
-        const updatedItems = {};
-        let hasChanges = false;
-
-        for (const [cartKey, item] of Object.entries(cartItems)) {
-            let cashApplied = 0;
-            
-            if (applyFreeCash && freeCash) {
-                const product = products.find((p) => p._id === item.productId);
-                if (product && isFreeCashEligible(product, item, freeCash)) {
-                    const itemTotal = (item.discountedPrice || item.price) * item.quantity;
-                    cashApplied = Math.min(freeCash.amount, itemTotal);
-                }
-            }
-
-            if (cashApplied !== item.cashApplied) {
-                hasChanges = true;
-                updatedItems[cartKey] = { ...item, cashApplied };
-
-                // Update on backend
-                try {
-                    await axios.put(
-                        "http://localhost:3000/api/cart",
-                        {
-                            product_id: item.productId,
-                            variant_name: item.variantName,
-                            size: item.sizeString,
-                            quantity: item.quantity,
-                            cash_applied: cashApplied,
-                        },
-                        {
-                            withCredentials: true,
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                        }
-                    );
-                } catch (error) {
-                    console.error("Error updating cash applied for item:", error);
-                }
-            } else {
-                updatedItems[cartKey] = item;
-            }
-        }
-
-        if (hasChanges) {
-            setCartItems(updatedItems);
-        }
-    };
-
-    const getCartTotal = () => {
-        let total = Object.values(cartItems).reduce((sum, item) => {
-            const price = item.discountedPrice || item.price;
-            return sum + price * item.quantity;
-        }, 0);
-
-        let totalFreeCashApplied = 0;
-        if (applyFreeCash && freeCash) {
-            totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => {
-                const product = products.find((p) => p._id === item.productId);
-                if (product && isFreeCashEligible(product, item, freeCash)) {
-                    return sum + (item.cashApplied || 0);
-                }
-                return sum;
-            }, 0);
-        }
-
-        return Math.max(0, total - totalFreeCashApplied);
-    };
-
-    const getUniqueCartItemsCount = () => {
-        return Object.keys(cartItems).length;
-    };
-
-    const getTotalItemsCount = () => {
-        return Object.values(cartItems).reduce((sum, item) => sum + item.quantity, 0);
-    };
-
-    const clearCart = async () => {
-    try {
-        setLoading(true);
-        // Clear cart on backend
-        const response = await axios.delete("http://localhost:3000/api/cart/clear", {
-            withCredentials: true,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-
-        if (response.status === 200) {
-            // Clear cart on frontend
-            setCartItems({});
-            setApplyFreeCash(false); // Reset free cash checkbox
-        }
-    } catch (err) {
-        setError("Failed to clear cart");
-        console.error("Error clearing cart:", err);
-    } finally {
-        setLoading(false);
+    if (activeFilter === "last-order" && filterValues.lastOrderBefore) {
+      // This would need actual last order date from backend
+      // For now, using lastActive as placeholder
+      const lastOrderDate = new Date(user.lastActive)
+      const filterDate = new Date(filterValues.lastOrderBefore)
+      if (lastOrderDate >= filterDate) return false
     }
-};
 
-    const value = {
-    cartItems,
-    isCartOpen,
-    setIsCartOpen,
-    applyFreeCash,
-    setApplyFreeCash,
-    loading,
-    error,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    getCartTotal,
-    getUniqueCartItemsCount,
-    getTotalItemsCount,
-    fetchCartFromBackend,
-    clearCart,
-};
+    if (activeFilter === "orders" && filterValues.ordersAmount) {
+      const amount = Number.parseInt(filterValues.ordersAmount)
+      if (filterValues.ordersType === "below" && user.orders >= amount) return false
+      if (filterValues.ordersType === "above" && user.orders <= amount) return false
+    }
 
-    return <CartContext.Provider value={value}>{children}</CartContext.Provider>
-};
+    if (activeFilter === "free-cash") {
+      if (!user.hasCash) return false
+    }
 
-cartRoutes.js:
-const express = require("express")
-const Cart = require("../models/Cart") // Adjust path as needed
-const router = express.Router()
+    if (activeFilter === "date" && filterValues.selectedDate) {
+      // This would filter by join date or specific date
+      const userDate = new Date(user.joinDate)
+      const filterDate = new Date(filterValues.selectedDate)
+      if (userDate.toDateString() !== filterDate.toDateString()) return false
+    }
 
-// Middleware to check authentication
-const requireAuth = (req, res, next) => {
-  if (!req.user || !req.user.id) {
-    return res.status(401).json({ error: "Authentication required" })
+    return matchesSearch
+  })
+
+  // Pagination
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage)
+  const startIndex = (currentPage - 1) * usersPerPage
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage)
+
+  // Handle user selection
+  const handleUserSelect = (userId) => {
+    setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
   }
-  next()
+
+  const handleSelectAll = () => {
+    if (selectedUsers.length === paginatedUsers.length) {
+      setSelectedUsers([])
+    } else {
+      setSelectedUsers(paginatedUsers.map((user) => user.id))
+    }
+  }
+
+  // Action handlers
+  const handleBanUser = (user) => {
+    setSelectedUser(user)
+    setShowBanModal(true)
+  }
+
+  const handleDeleteUser = (user) => {
+    setSelectedUser(user)
+    setShowDeleteModal(true)
+  }
+
+  const handlePayCash = (user) => {
+    setSelectedUser(user)
+    setShowCashModal(true)
+  }
+
+  const handleChangePassword = (user) => {
+    setSelectedUser(user)
+    setShowPasswordModal(true)
+  }
+
+  const handleRevokeCash = (user) => {
+    setSelectedUser(user)
+    setShowRevokeCashModal(true)
+  }
+
+  // Bulk actions
+  const handleBulkSendCash = () => {
+    setShowCashModal(true)
+  }
+
+  const handleBulkRevokeCash = () => {
+    setShowRevokeCashModal(true)
+  }
+
+  const handleBulkDelete = () => {
+    setShowBulkDeleteModal(true)
+  }
+
+  // Confirm actions
+  const confirmBan = () => {
+    setUsers((prev) => prev.map((user) => (user.id === selectedUser.id ? { ...user, status: "banned" } : user)))
+    setShowBanModal(false)
+    setSelectedUser(null)
+  }
+
+  const confirmDelete = () => {
+    if (selectedUser) {
+      setUsers((prev) => prev.filter((user) => user.id !== selectedUser.id))
+    } else {
+      setUsers((prev) => prev.filter((user) => !selectedUsers.includes(user.id)))
+      setSelectedUsers([])
+    }
+    setShowDeleteModal(false)
+    setShowBulkDeleteModal(false)
+    setSelectedUser(null)
+  }
+
+  const confirmPayCash = () => {
+    if (selectedUser) {
+      setUsers((prev) =>
+        prev.map((user) =>
+          user.id === selectedUser.id ? { ...user, hasCash: true, cashAmount: Number.parseInt(cashForm.amount) } : user,
+        ),
+      )
+    } else {
+      setUsers((prev) =>
+        prev.map((user) =>
+          selectedUsers.includes(user.id)
+            ? { ...user, hasCash: true, cashAmount: Number.parseInt(cashForm.amount) }
+            : user,
+        ),
+      )
+      setSelectedUsers([])
+    }
+    setShowCashModal(false)
+    setCashForm({ amount: "", validAbove: "", endDate: "" })
+    setSelectedUser(null)
+  }
+
+  const confirmRevokeCash = () => {
+    if (selectedUser) {
+      setUsers((prev) =>
+        prev.map((user) => (user.id === selectedUser.id ? { ...user, hasCash: false, cashAmount: 0 } : user)),
+      )
+    } else {
+      setUsers((prev) =>
+        prev.map((user) => (selectedUsers.includes(user.id) ? { ...user, hasCash: false, cashAmount: 0 } : user)),
+      )
+      setSelectedUsers([])
+    }
+    setShowRevokeCashModal(false)
+    setSelectedUser(null)
+  }
+
+  const confirmChangePassword = () => {
+    // Here you would make API call to change password
+    console.log(`Changing password for user ${selectedUser.id} to: ${newPassword}`)
+    setShowPasswordModal(false)
+    setNewPassword("")
+    setSelectedUser(null)
+  }
+
+  const applyFilter = () => {
+    setCurrentPage(1)
+    setShowFilters(false)
+  }
+
+  const clearFilters = () => {
+    setActiveFilter("")
+    setFilterValues({
+      lastActiveBefore: "",
+      lastOrderBefore: "",
+      ordersType: "below",
+      ordersAmount: "",
+      selectedDate: "",
+    })
+    setShowFilters(false)
+  }
+
+  const handleMainCategoryChange = (e) => {
+    const categoryID = e.target.value;
+    const category = categories.find(cat => cat._id.toString() === categoryID);
+    setNoSubCategories(false);
+    setSubCategoriesError("");
+    setMainCategoryError("");
+    if(!category) {
+      setMainCategoryError("Selected Category Not Found");
+      return;
+    }
+    const sub_categories = categories.filter(cat => cat.parent_category_id === categoryID);
+    if(sub_categories.length === 0) {
+      setNoSubCategories(true);
+      return;
+    }
+    // console.log(sub_categories);
+    setSelectedMainCategory(category._id);
+    setSubCategories(sub_categories);
+    setCashForm((prev) => ({
+      ...prev,
+      selectedMainCategory: e.target.value,
+      selectedSubCategory: ""
+    }))
+  };
+
+  const handleSubCategoriesChange = (e) => {
+    setNoSubCategories(false);
+    setMainCategoryError("");
+    setSubCategoriesError("");
+    const categoryID = e.target.value;
+    const category = categories.find(cat => cat._id.toString() === categoryID);
+    if(!category) {
+      setSubCategoriesError("Selected Sub category Not Found");
+      return;
+    }
+
+    const sub_categories = categories.filter(cat => cat.parent_category_id === categoryID);
+    if(sub_categories.length === 0) {
+      setNoSubCategories(true);
+      return;
+    }
+
+    setSubCategories(sub_categories);
+    setSelectedSubCategory(category._id);
+    setCashForm((prev) => ({
+      ...prev,
+      selectedSubCategory: e.target.value
+    }))
+  };
+
+const handleCashModalFormSubmit = async (e) => {
+  e.preventDefault();
+  if (!selectedUser?._id) {  // Null check for selected user
+    alert("No user selected");
+    return;
+  }
+  console.log('Form Submitted');
+  console.log(cashForm);
+  try {
+    const res = await axios.post('http://localhost:3000/api/free-cash/add', {cashForm, userID: selectedUser._id}, {withCredentials: true});
+    if(res.status === 200) {
+      console.log("Success");
+      // Close modal after success (no onConfirm call)
+      setShowCashModal(false);
+      setCashForm({ amount: "", validAbove: "", endDate: "", selectedMainCategory: "", selectedSubCategory: "", validForAllProducts: false });  // Reset form
+      setSelectedUser(null);  // Clear selection
+      // Optionally refresh users list if needed (e.g., refetch from UserContext)
+    }
+  } catch (error) {
+    console.log(error);
+    console.log("Problem while adding the cash");
+  }
+};
+
+  if(userErrors) return (<div>Error while fetching users</div>)
+if(loadingUsers) return(<div>Loading users</div>)
+  if(!users || users.length == 0) return (<div>No Users to display</div>)
+
+    const newUsers=users.filter((user) => user.role != "admin");
+    // console.log(newUsers)
+
+  // Modal Components
+  const ConfirmModal = ({ show, onClose, onConfirm, title, message, type = "danger" }) => {
+    if (!show) return null
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-md w-full p-6">
+          <div className="flex items-center gap-4 mb-4">
+            <div
+              className={`p-3 rounded-full ${
+                type === "danger" ? "bg-red-100 text-red-600" : "bg-yellow-100 text-yellow-600"
+              }`}
+            >
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div>
+              <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+              <p className="text-gray-600 text-sm">{message}</p>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
+                type === "danger"
+                  ? "bg-red-600 hover:bg-red-700 text-white"
+                  : "bg-yellow-600 hover:bg-yellow-700 text-white"
+              }`}
+            >
+              Confirm
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  // Sarting of pay cash modal
+  const CashModal = ({ show, onClose, onConfirm, userID }) => {
+  if (!show) return null
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900">Pay Cash to User</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={handleCashModalFormSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cash Amount (₹)</label>
+              <input
+                type="number"
+                value={cashForm.amount}
+                onChange={(e) => setCashForm({ ...cashForm, amount: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter amount"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valid Above ₹</label>
+              <input
+                type="number"
+                value={cashForm.validAbove}
+                onChange={(e) => setCashForm({ ...cashForm, validAbove: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Minimum order amount"
+              />
+            </div>
+
+            <div>
+              <input
+                type="checkbox"
+                checked={isFreeCashValidForAllProducts}
+                onChange={(e) => {
+                  setIsFreeCashValidForAllProducts(e.target.checked)
+                  setCashForm({...cashForm, validForAllProducts: e.target.checked})
+                }}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label className="ml-2 text-sm font-medium text-gray-700">Valid for all products</label>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Select Main Category</label>
+              {mainCategories.length == 0 ? (<span>Loading main categories</span>) : (
+                <select name="" id="" onChange={handleMainCategoryChange} value={selectedMainCategory}>
+                  <option disabled value="">Select</option>
+                  {mainCategories.map(category => <option key={category._id} value={category._id}>{category.categoryName}</option>)}
+                </select>
+              )}
+              {mainCategoryError && (<span className="text-red-500 text-xs">{mainCategoryError}</span>)}
+
+              {subCategories.length == 0 ? (<span>Loading Sub categories</span>) : (
+                <select onChange={handleSubCategoriesChange} value={selectedSubCategory}>
+                  <option value="" disabled>Select</option>
+                  {!noSubCategories && subCategories.map(sub_category => <option key={sub_category._id} value={sub_category._id}>{sub_category.categoryName}</option>)}
+                </select>
+              )}
+              {subCategoriesError && (<span className="text-red-500 text-xs">{subCategoriesError}</span>)}
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+              <input
+                type="date"
+                value={cashForm.endDate}
+                onChange={(e) => setCashForm({ ...cashForm, endDate: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+            </div>
+
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> If you do not enter the end date, you need to revoke cash manually.
+              </p>
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end mt-6">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!cashForm.amount || !userID}  // ADD !userID check
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Pay Cash
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+  // Ending of pay cash modal
+
+  const PasswordModal = ({ show, onClose, onConfirm }) => {
+    if (!show) return null
+
+    return (
+      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+        <div className="bg-white rounded-xl max-w-md w-full p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
+            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">New Password</label>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter new password"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 justify-end mt-6">
+            <button
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={onConfirm}
+              disabled={!newPassword}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Change Password
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+  
+
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      {/* Header */}
+      <div className="bg-white shadow-sm border-b">
+        <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Users Management</h1>
+              <p className="text-gray-600">Manage and monitor user accounts</p>
+            </div>
+            <div className="flex items-center space-x-2 text-sm text-gray-600">
+              <UsersIcon className="w-4 h-4" />
+              <span>{filteredUsers.length} users found</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+        {/* Search and Filters */}
+        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+          <div className="flex flex-col lg:flex-row gap-4">
+            {/* Search */}
+            <div className="flex-1">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+                <input
+                  type="text"
+                  placeholder="Search users by name, email, or phone..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+            </div>
+
+            {/* Filter Button */}
+            <div className="relative">
+              <button
+                onClick={() => setShowFilters(!showFilters)}
+                className="inline-flex items-center px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+              >
+                <Filter className="w-5 h-5 mr-2" />
+                Filters
+                {activeFilter && <span className="ml-2 w-2 h-2 bg-blue-600 rounded-full"></span>}
+              </button>
+
+              {/* Filter Dropdown */}
+              {showFilters && (
+                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-10">
+                  <div className="p-4">
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Filter Type</label>
+                        <select
+                          value={activeFilter}
+                          onChange={(e) => setActiveFilter(e.target.value)}
+                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        >
+                          <option value="">Select Filter</option>
+                          <option value="active-status">Active Status</option>
+                          <option value="last-order">Last Order</option>
+                          <option value="orders">Orders Count</option>
+                          <option value="free-cash">Free Cash</option>
+                          <option value="date">Date</option>
+                        </select>
+                      </div>
+
+                      {/* Dynamic Filter Fields */}
+                      {activeFilter === "active-status" && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Last Active Before</label>
+                          <input
+                            type="date"
+                            value={filterValues.lastActiveBefore}
+                            onChange={(e) => setFilterValues({ ...filterValues, lastActiveBefore: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      )}
+
+                      {activeFilter === "last-order" && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Last Order Before</label>
+                          <input
+                            type="date"
+                            value={filterValues.lastOrderBefore}
+                            onChange={(e) => setFilterValues({ ...filterValues, lastOrderBefore: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      )}
+
+                      {activeFilter === "orders" && (
+                        <div className="space-y-3">
+                          <div>
+                            <label className="block text-sm font-medium text-gray-700 mb-2">Orders Count</label>
+                            <select
+                              value={filterValues.ordersType}
+                              onChange={(e) => setFilterValues({ ...filterValues, ordersType: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            >
+                              <option value="below">Below</option>
+                              <option value="above">Above</option>
+                            </select>
+                          </div>
+                          <div>
+                            <input
+                              type="number"
+                              placeholder="Enter count"
+                              value={filterValues.ordersAmount}
+                              onChange={(e) => setFilterValues({ ...filterValues, ordersAmount: e.target.value })}
+                              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {activeFilter === "date" && (
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-2">Select Date</label>
+                          <input
+                            type="date"
+                            value={filterValues.selectedDate}
+                            onChange={(e) => setFilterValues({ ...filterValues, selectedDate: e.target.value })}
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                          />
+                        </div>
+                      )}
+                    </div>
+
+                    <div className="flex gap-2 mt-4">
+                      <button
+                        onClick={applyFilter}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                      >
+                        Apply Filter
+                      </button>
+                      <button
+                        onClick={clearFilters}
+                        className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-2 px-4 rounded-lg font-medium transition-colors"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Bulk Actions */}
+          {selectedUsers.length > 0 && (
+            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+              <div className="flex items-center justify-between">
+                <span className="text-blue-800 font-medium">{selectedUsers.length} users selected</span>
+                <div className="flex gap-2">
+                  <button
+                    onClick={handleBulkSendCash}
+                    className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <Gift className="w-4 h-4 mr-2" />
+                    Send Cash
+                  </button>
+                  <button
+                    onClick={handleBulkRevokeCash}
+                    className="inline-flex items-center px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Revoke Cash
+                  </button>
+                  <button
+                    onClick={handleBulkDelete}
+                    className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Delete
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Users Table */}
+        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[1200px]">
+              <thead className="bg-gray-50 border-b border-gray-200">
+                <tr>
+                  <th className="px-6 py-4 text-left">
+                    <input
+                      type="checkbox"
+                      checked={selectedUsers.length === paginatedUsers.length && paginatedUsers.length > 0}
+                      onChange={handleSelectAll}
+                      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    />
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Sr No
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Name
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Email
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Phone
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    WhatsApp
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Last Active
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Orders
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {newUsers.map((user, index) => (
+                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4">
+                      <input
+                        type="checkbox"
+                        checked={selectedUsers.includes(user.id)}
+                        onChange={() => handleUserSelect(user.id)}
+                        className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                      />
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{startIndex + index + 1}</td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center text-white font-semibold">
+                          {user.first_name.charAt(0).toUpperCase()}
+                          {user.last_name.charAt(0).toUpperCase()}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{user.name}</div>
+                          <div className="flex items-center gap-2">
+                            {user.status === "banned" && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                Banned
+                              </span>
+                            )}
+                            {user.hasCash && (
+                              <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-green-100 text-green-800">
+                                ₹{user.cashAmount} Cash
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center text-sm text-gray-900">
+                        <Mail className="w-4 h-4 mr-2 text-gray-400" />
+                        {user.email}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center text-sm text-gray-900">
+                        <Phone className="w-4 h-4 mr-2 text-gray-400" />
+                        {user.phone_number}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center text-sm text-gray-900">
+                        <MessageCircle className="w-4 h-4 mr-2 text-green-500" />
+                        {user.whatsapp_number}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center text-sm text-gray-900">
+                        <Clock className="w-4 h-4 mr-2 text-gray-400" />
+                        {new Date(user.lastActive).toLocaleDateString()}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center text-sm font-semibold text-gray-900">
+                        <ShoppingBag className="w-4 h-4 mr-2 text-gray-400" />
+                        {user.orders}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      {selectedUsers.length > 0 ? (
+                        <span className="text-gray-400 text-sm">Bulk actions selected</span>
+                      ) : (
+                        <div className="flex space-x-2">
+                          <button
+                            onClick={() => handleBanUser(user)}
+                            disabled={user.status === "banned"}
+                            className="inline-flex items-center px-2 py-1 border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          >
+                            <Ban className="w-3 h-3 mr-1" />
+                            {user.status === "banned" ? "Banned" : "Ban"}
+                          </button>
+                          <button
+                            onClick={() => handleDeleteUser(user)}
+                            className="inline-flex items-center px-2 py-1 border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 rounded text-xs font-medium transition-colors"
+                          >
+                            <Trash2 className="w-3 h-3 mr-1" />
+                            Delete
+                          </button>
+                          {user.hasCash ? (
+                            <button
+                              onClick={() => handleRevokeCash(user)}
+                              className="inline-flex items-center px-2 py-1 border border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100 rounded text-xs font-medium transition-colors"
+                            >
+                              <RefreshCw className="w-3 h-3 mr-1" />
+                              Revoke
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handlePayCash(user)}
+                              className="inline-flex items-center px-2 py-1 border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 rounded text-xs font-medium transition-colors"
+                            >
+                              <DollarSign className="w-3 h-3 mr-1" />
+                              Pay Cash
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleChangePassword(user)}
+                            className="inline-flex items-center px-2 py-1 border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded text-xs font-medium transition-colors"
+                          >
+                            <Key className="w-3 h-3 mr-1" />
+                            Password
+                          </button>
+                        </div>
+                      )}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          {/* Empty State */}
+          {paginatedUsers.length === 0 && (
+            <div className="text-center py-12">
+              <UsersIcon className="mx-auto h-12 w-12 text-gray-400" />
+              <h3 className="mt-2 text-sm font-medium text-gray-900">No users found</h3>
+              <p className="mt-1 text-sm text-gray-500">Try adjusting your search or filter criteria.</p>
+            </div>
+          )}
+        </div>
+
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+            <div className="flex items-center justify-between">
+              <div className="text-sm text-gray-700">
+                Showing {startIndex + 1} to {Math.min(startIndex + usersPerPage, filteredUsers.length)} of{" "}
+                {filteredUsers.length} users
+              </div>
+              <div className="flex items-center space-x-2">
+                <button
+                  onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
+                  disabled={currentPage === 1}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
+                </button>
+
+                <div className="flex space-x-1">
+                  {[...Array(totalPages)].map((_, index) => {
+                    const page = index + 1
+                    return (
+                      <button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                          currentPage === page
+                            ? "bg-blue-600 text-white"
+                            : "text-gray-700 hover:bg-gray-50 border border-gray-300"
+                        }`}
+                      >
+                        {page}
+                      </button>
+                    )
+                  })}
+                </div>
+
+                <button
+                  onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
+                  disabled={currentPage === totalPages}
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                  <ChevronRight className="w-4 h-4 ml-1" />
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Modals */}
+      <ConfirmModal
+        show={showBanModal}
+        onClose={() => setShowBanModal(false)}
+        onConfirm={confirmBan}
+        title="Ban User"
+        message={`Are you sure you want to ban ${selectedUser?.name}? This action will restrict their access.`}
+        type="warning"
+      />
+
+      <ConfirmModal
+        show={showDeleteModal}
+        onClose={() => setShowDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title="Delete User"
+        message={`Are you sure you want to delete ${selectedUser?.name}? This action cannot be undone.`}
+        type="danger"
+      />
+
+      <ConfirmModal
+        show={showBulkDeleteModal}
+        onClose={() => setShowBulkDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title="Delete Users"
+        message={`Are you sure you want to delete ${selectedUsers.length} selected users? This action cannot be undone.`}
+        type="danger"
+      />
+
+      <ConfirmModal
+        show={showRevokeCashModal}
+        onClose={() => setShowRevokeCashModal(false)}
+        onConfirm={confirmRevokeCash}
+        title="Revoke Cash"
+        message={
+          selectedUser
+            ? `Are you sure you want to revoke ₹${selectedUser?.cashAmount} cash from ${selectedUser?.name}?`
+            : `Are you sure you want to revoke cash from ${selectedUsers.length} selected users?`
+        }
+        type="warning"
+      />
+
+      <CashModal show={showCashModal} onClose={() => setShowCashModal(false)} onConfirm={confirmPayCash} userID={selectedUser?._id} />
+
+      <PasswordModal
+        show={showPasswordModal}
+        onClose={() => setShowPasswordModal(false)}
+        onConfirm={confirmChangePassword}
+      />
+    </div>
+  )
 }
 
-// Apply authentication middleware to all routes
-router.use(requireAuth)
+FreeCash.js:
+const mongoose = require('mongoose');
 
-// GET /api/cart - Fetch all cart items for user
-router.get("/", async (req, res) => {
-  try {
-    const cartItems = await Cart.find({ user_id: req.user.id })
-    res.status(200).json(cartItems)
-  } catch (error) {
-    console.error("Error fetching cart:", error)
-    res.status(500).json({ error: "Failed to fetch cart items" })
-  }
-})
-
-// POST /api/cart - Add item to cart
-router.post("/", async (req, res) => {
-  try {
-    const {
-      image_url,
-      product_id,
-      variant_id,
-      details_id,
-      size_id,
-      product_name,
-      variant_name,
-      size,
-      quantity,
-      price,
-      cash_applied,
-      discounted_price,
-    } = req.body
-
-    const existingItem = await Cart.findOne({
-      user_id: req.user.id,
-      product_id,
-      variant_name: variant_name || null,
-      size: size || null,
-    })
-
-    if (existingItem) {
-      // Update quantity if item exists
-      existingItem.quantity += quantity
-      await existingItem.save()
-      res.status(200).json(existingItem)
-    } else {
-      const cartItemData = {
-        user_id: req.user.id,
-        image_url,
-        product_id,
-        product_name,
-        quantity,
-        price,
-        cash_applied,
-        discounted_price,
-      }
-
-      // Only add variant fields if they exist
-      if (variant_id) cartItemData.variant_id = variant_id
-      if (details_id) cartItemData.details_id = details_id
-      if (size_id) cartItemData.size_id = size_id
-      if (variant_name) cartItemData.variant_name = variant_name
-      if (size) cartItemData.size = size
-
-      const newCartItem = new Cart(cartItemData)
-      await newCartItem.save()
-      res.status(201).json(newCartItem)
-    }
-  } catch (error) {
-    console.error("Error adding to cart:", error)
-    res.status(500).json({ error: "Failed to add item to cart" })
-  }
-})
-
-// PUT /api/cart - Update item quantity
-router.put("/", async (req, res) => {
-  try {
-    const { product_id, variant_name, size, quantity } = req.body
-
-    const cartItem = await Cart.findOneAndUpdate(
-      {
-        user_id: req.user.id,
-        product_id,
-        variant_name,
-        size,
-      },
-      { quantity },
-      { new: true },
-    )
-
-    if (!cartItem) {
-      return res.status(404).json({ error: "Cart item not found" })
-    }
-
-    res.status(200).json(cartItem)
-  } catch (error) {
-    console.error("Error updating cart:", error)
-    res.status(500).json({ error: "Failed to update cart item" })
-  }
-})
-
-// DELETE /api/cart - Remove item from cart
-router.delete("/", async (req, res) => {
-  try {
-    const { product_id, variant_name, size } = req.body
-
-    const deletedItem = await Cart.findOneAndDelete({
-      user_id: req.user.id,
-      product_id,
-      variant_name,
-      size,
-    })
-
-    if (!deletedItem) {
-      return res.status(404).json({ error: "Cart item not found" })
-    }
-
-    res.status(200).json({ message: "Item removed from cart" })
-  } catch (error) {
-    console.error("Error removing from cart:", error)
-    res.status(500).json({ error: "Failed to remove item from cart" })
-  }
-})
-
-// DELETE /api/cart/clear - Clear entire cart
-router.delete("/clear", async (req, res) => {
-  try {
-    await Cart.deleteMany({ user_id: req.user.id })
-    res.status(200).json({ message: "Cart cleared successfully" })
-  } catch (error) {
-    console.error("Error clearing cart:", error)
-    res.status(500).json({ error: "Failed to clear cart" })
-  }
-})
-
-module.exports = router
-
-Cart.js:
-const mongoose = require("mongoose");
-
-const cartSchema = mongoose.Schema(
-    {
-        user_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: true,
-        },
-        image_url: {
-            type: String,
-            required: true,
-        },
-        product_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: true,
-        },
-        variant_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: false,
-            default: null,
-        },
-        details_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: false,
-            default: null,
-        },
-        size_id: {
-            type: mongoose.Schema.Types.ObjectId,
-            required: false,
-            default: null,
-        },
-        product_name: {
-            type: String,
-            required: true,
-        },
-        variant_name: {
-            type: String,
-            required: false,
-            default: null,
-        },
-        size: {
-            type: String,
-            required: false,
-            default: null,
-        },
-        quantity: {
-            type: Number,
-            required: true,
-            min: 1,
-        },
-        price: {
-            type: Number,
-            required: true,
-            min: 1,
-        },
-        cash_applied: {
-            type: Number,
-            required: false,
-            default: 0,
-        },
-        discounted_price: {
-            type: Number,
-            required: true,
-        },
+const freeCashSchema = mongoose.Schema({
+    user_id: {
+        required: true,
+        type: mongoose.Types.ObjectId,
     },
-    {
-        timestamps: true,
+    start_date: {
+        required: false,
+        type: Date,
+        default: Date.now, // Fixed: removed () from Date.now
     },
-);
+    end_date: {
+        required: false,
+        type: Date,
+        default: null,
+    },
+    amount: {
+        required: true,
+        type: Number,
+    },
+    valid_above_amount: {
+        required: false, // Fixed: typo from "requried"
+        type: Number,
+        default: 0,
+    },
+    category: {
+        required: false,
+        type: mongoose.Types.ObjectId,
+        default: null,
+    },
+    sub_category: {
+        required: false,
+        type: mongoose.Types.ObjectId,
+        default: null
+    },
+    is_cash_applied_on__all_products: {
+        required: false,
+        type: Boolean,
+        default: false
+    },
+    is_cash_used: {
+        required: false,
+        type: Boolean,
+        default: false
+    },
+    cash_used_date: {
+        required: false,
+        type: Date,
+        default: null,
+    },
+    is_cash_expired: {
+        required: false,
+        type: Boolean,
+        default: false,
+    }
+});
 
-module.exports = mongoose.model("Cart", cartSchema);
+module.exports = mongoose.model('FreeCash', freeCashSchema);
 
-orderController.js:
-const Product = require('../models/Product');
-const Order = require('../models/Order');
-const User = require('../models/User');
-const sendEmail = require('../utils/sendEmail');
+freeCashController.js:
 const FreeCash = require('../models/FreeCash');
-// const sendEmail = require('../utils/sendEmail');
+const { findUserById } = require('./userController');
+const { findCategoryById, findSubCategoryById } = require('./categoryController');
 
-// Function to check whether the order exists or not
-const findOrder = async (orderId) => {
+const addFreeCash = async (req, res) => {
     try {
-        const order = await Order.findById(orderId);
-        if(order) {
-            return order;
-        } else {
-            return null;
+        const { cashForm, userID } = req.body;
+
+        if (!userID) {
+            return res.status(400).json({ message: "Invalid user ID" });
+        }
+
+        const user = await findUserById(userID);
+        if (!user) {
+            return res.status(400).json({ message: "User not found" });
+        }
+
+        if (cashForm.selectedMainCategory === "" && cashForm.validForAllProducts === false) {
+            return res.status(400).json({ message: "Invalid main category ID" });
+        }
+
+        let mainCategory = null;
+        if (cashForm.selectedMainCategory) {
+            mainCategory = await findCategoryById(cashForm.selectedMainCategory);
+            if (!mainCategory) {
+                return res.status(400).json({ message: "Main category not found" });
+            }
+        }
+
+        let subCategory = null;
+        if (cashForm.selectedSubCategory) {
+            subCategory = await findSubCategoryById(cashForm.selectedSubCategory);
+            if (!subCategory) {
+                return res.status(400).json({ message: "Sub category not found" });
+            }
+        }
+
+        if (
+            !cashForm.amount ||
+            isNaN(Number(cashForm.amount)) ||
+            Number(cashForm.amount) <= 0 ||
+            !cashForm.validAbove ||
+            isNaN(Number(cashForm.validAbove)) ||
+            Number(cashForm.validAbove) < 0
+        ) {
+            return res.status(400).json({ message: "Please fill all the fields properly" });
+        }
+
+        try {
+            const newFreeCash = new FreeCash({
+                user_id: user._id,
+                end_date: new Date(cashForm.endDate),
+                amount: cashForm.amount,
+                valid_above_amount: cashForm.validAbove,
+                category: cashForm.selectedMainCategory || null,
+                sub_category: cashForm.selectedSubCategory || null,
+                is_cash_applied_on__all_products: cashForm.validForAllProducts,
+            });
+            await newFreeCash.save();
+
+            return res.status(200).json({
+                message: `Free cash generated successfully for ${user.first_name} ${user.last_name}`,
+            });
+        } catch (error) {
+            return res.status(400).json({ message: "Problem while generating free cash" });
         }
     } catch (error) {
-        throw error;
+        return res.status(500).json({ message: "Internal server error" });
     }
-}
+};
 
-const findUser = async (userId) => {
-    const user = await User.findById(userId);
-    if(user) {
-        return user;
-    } else {
-        return null;
-    }
-}
-
-const findProduct = async (productId) => {
-    const product = await Product.findById(productId);
-    if(product) {
-        return product;
-    } else {
-        return null;
-    }
-}
-
-// Function to add the order
-const placeOrder = async (req, res) => {
+const checkFreeCashEligibility = async (req, res) => {
     try {
-        const cartItems = Object.values(req.body);
-        if (!cartItems || cartItems.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Cart is empty",
-            });
-        }
-
-        const userId = cartItems[0]?.userId;
-        if (!userId) {
-            return res.status(400).json({
-                success: false,
-                message: "No user ID provided",
-            });
-        }
-
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found",
-            });
-        }
-
-        const errors = [];
-        const ordersToAdd = [];
-        let totalFreeCashApplied = 0;
-        let freeCashId = null;
+        const userId = req.user.id;
+        const now = new Date();
 
         const freeCash = await FreeCash.findOne({
             user_id: userId,
             is_cash_used: false,
             is_cash_expired: false,
-            start_date: { $lte: new Date() },
-            end_date: { $gte: new Date() },
+            start_date: { $lte: now },
+            end_date: { $gte: now },
         });
 
-        for (const cartData of cartItems) {
-            try {
-                const product = await Product.findById(cartData.productId);
-                if (!product) {
-                    errors.push(`Product not found for id ${cartData.productId}`);
-                    continue;
-                }
-
-                let cashApplied = cartData.cash_applied || cartData.cashApplied || 0;
-                if (freeCash && cashApplied > 0) {
-                    const isEligible = isFreeCashEligible(product, cartData, freeCash);
-                    if (!isEligible) {
-                        errors.push(`Free cash not eligible for product ${cartData.productName}`);
-                        cashApplied = 0;
-                    } else {
-                        totalFreeCashApplied += cashApplied;
-                        freeCashId = freeCash._id;
-                    }
-                }
-
-                if (cartData.variantId) {
-                    const variant = product.variants.find((v) => v._id.toString() === cartData.variantId);
-                    if (!variant) {
-                        errors.push(`Variant ${cartData.variantName || 'Unknown'} not found for product ${cartData.productName}`);
-                        continue;
-                    }
-
-                    if (!cartData.sizeId) {
-                        errors.push(`Size is required for variant ${cartData.variantName} of product ${cartData.productName}`);
-                        continue;
-                    }
-
-                    let sizeFound = false;
-                    for (const variantItem of product.variants) {
-                        if (variantItem._id.toString() === cartData.variantId) {
-                            for (const detail of variantItem.moreDetails) {
-                                if (
-                                    detail._id.toString() === cartData.detailsId &&
-                                    detail.size._id.toString() === cartData.sizeId
-                                ) {
-                                    sizeFound = true;
-                                    break;
-                                }
-                            }
-                            break;
-                        }
-                    }
-
-                    if (!sizeFound) {
-                        errors.push(`Size ${cartData.sizeString || 'Unknown'} not found in variant ${cartData.variantName} for product ${cartData.productName}`);
-                        continue;
-                    }
-
-                    ordersToAdd.push({
-                        image_url: cartData.imageUrl,
-                        product_id: cartData.productId,
-                        product_name: cartData.productName,
-                        variant_id: cartData.variantId,
-                        variant_name: cartData.variantName,
-                        size_id: cartData.sizeId,
-                        size: cartData.sizeString,
-                        quantity: cartData.quantity,
-                        price: cartData.price,
-                        total: cartData.price * cartData.quantity,
-                        cash_applied: cashApplied,
-                    });
-                } else {
-                    ordersToAdd.push({
-                        image_url: cartData.imageUrl,
-                        product_id: cartData.productId,
-                        product_name: cartData.productName,
-                        quantity: cartData.quantity,
-                        price: cartData.price,
-                        total: cartData.price * cartData.quantity,
-                        cash_applied: cashApplied,
-                    });
-                }
-            } catch (itemError) {
-                console.error('Error processing cart item:', itemError);
-                errors.push(`Error processing product ${cartData.productId}: ${itemError.message}`);
-                continue;
-            }
+        if (!freeCash) {
+            return res.status(200).json({ freeCash: null, message: "No valid free cash available" });
         }
 
-        if (ordersToAdd.length > 0) {
-            const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.total, 0);
-            const finalPrice = Math.max(0, totalPrice - totalFreeCashApplied);
-
-            const orderData = {
-                user_id: req.user.id,
-                user_name: `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.trim(),
-                email: user.email,
-                phone_number: user.phone_number,
-                whatsapp_number: user.whatsapp_number,
-                orderedProducts: ordersToAdd,
-                price: finalPrice,
-            };
-
-            if (totalFreeCashApplied > 0 && freeCashId) {
-                orderData.cash_applied = { amount: totalFreeCashApplied, freeCashId };
-                await FreeCash.findByIdAndUpdate(freeCashId, { is_cash_used: true, cash_used_date: new Date() });
-                try {
-                    await sendEmail(
-                        user.email,
-                        "Free Cash Applied",
-                        `Your free cash of $${totalFreeCashApplied} has been applied to your order. Note: Free cash is single-use and any remaining amount is not credited back.`
-                    );
-                } catch (emailError) {
-                    console.error("Error sending free cash email:", emailError);
-                }
-            }
-
-            const newOrder = new Order(orderData);
-            await newOrder.save();
-
-            return res.status(201).json({
-                success: true,
-                message: "Order placed successfully",
-                order: {
-                    id: newOrder._id,
-                    totalPrice: finalPrice,
-                    itemCount: ordersToAdd.length,
-                    validItems: ordersToAdd.length,
-                    totalItems: cartItems.length,
-                },
-                warnings: errors.length > 0 ? {
-                    message: `${errors.length} items could not be processed`,
-                    details: errors,
-                } : undefined,
-            });
-        } else {
-            return res.status(400).json({
-                success: false,
-                message: "No valid items to order. All items have errors.",
-                errors: errors,
-            });
-        }
+        return res.status(200).json({ freeCash, message: "Free cash found" });
     } catch (error) {
-        console.error('Order placement error:', error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error while placing order",
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        });
+        console.error("Error checking free cash eligibility:", error);
+        return res.status(500).json({ message: "Internal server error" });
     }
 };
 
-// Function to fetch all the orders
-const fetchOrders = async (req, res) => {
-    console.log("Request received for fetching orders");
-    try {
-        const orders = await Order.find();
-        if(orders) {
-            // console.log(orders);
-            return res.status(200).json({message: "Success", orders});
-        } else {
-            return res.status(400).json({message: "No orders found"});
-        }
-    } catch(error) {
-        return res.status(500).json({message: "Internal server error"});
-    }
-};
+module.exports = { addFreeCash, checkFreeCashEligibility };
 
-// Function where admin will update the shiping price
-const shippingPriceUpdate = async (req, res) => {
-    // console.log(req.body);
-    try {
-        const {shippingPriceValue, orderId, email} = req.body;
-        const order = await Order.findById(orderId);
-        if(order) {
-            // Order with this ID is present
-            console.log(order)
-            // Checking the input
-            if(parseInt(shippingPriceValue) > 0) {
-                // Input is proper
+freeCashRoutes.js:
+const express = require('express');
+const router = express.Router();
+const { addFreeCash, checkFreeCashEligibility } = require('../controllers/freeCashController');
+const authenticate = require('../middlewares/authenticate');
+const authorize = require('../middlewares/authorize');
 
-                // Updating the order
-                try {
-                    const totalPrice = order.price + parseInt(shippingPriceValue);
-                    const updatedOrder = await Order.findByIdAndUpdate(
-                        orderId,
-                         {
-                            shipping_price: shippingPriceValue,
-                            total_price: totalPrice,
-                            status: "Accepted",
-                        },
-                    
-                    {
-                        new: true,
-                        runValidators: true
-                    }
-                    );
-                    // console.log(email)
-                    try {
-                        await sendEmail(email, "Accepted", `Your order has been accepted for id ${orderId}`)
-                    } catch(error) {
-                        console.log("Error in sending email");
-                    } finally {
-                        return res.status(200).json({message: "Shipping price updated"});
-                    }
-                } catch(error) {
-                    // Prolem while updating the order
-                    return res.status(400).json({message: "Problem while updating the order"});
-                }
-            } else {
-                // Input is not proper
-                return res.status(400).json({message: "Input is not proper"})
-            }
-        } else {
-            // Order with this id is not present
-            return res.status(400).json({message: "Product not found"})
-        }
-    } catch(error) {
-        return res.status(500).json({message: `Internal server error ${error}`});
-    }
-}
+router.post('/add', authenticate, authorize(['admin']), addFreeCash);
+router.get('/check-eligibility', authenticate, authorize(['user']), checkFreeCashEligibility);
 
-// Function to handle status
-const handleStatusChange = async (req, res) => {
-    // console.log(req.body);
-    try {
-    const {status, orderId} = req.body;
+module.exports = router;
 
-    const statuses = ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"];
-
-    // Check whether the received status is valid
-    if(statuses.includes(status)) {
-
-    // Checking whether the order exists or not
-    const order = await findOrder(orderId);
-    // checking whether user exists or not
-    const user = await findUser(order.user_id)
-    if(order) {
-        // Order is present
-
-        // Checking whether user exists or not
-        if(user) {
-            console.log("Updting")
-            // Start the updating process
-            let paymentStatus = "Payment Pending";
-            if(status === "Confirm") {
-                paymentStatus = "Paid"
-            }
-            const updatedOrder = await Order.findByIdAndUpdate(
-                orderId,
-                {
-                    status: status, 
-                    payment_status: paymentStatus
-                },
-                {
-                    new: true,
-                    runValidators: true
-                }
-            )
-
-            // Sending the email
-            try {
-                // console.log("try email")
-                switch(status) {
-                    case "Rejected":
-                    sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
-                    break;
-
-                    case "Confirm":
-                        sendEmail(user.email, status, `We have successfully received your payment for order ${orderId}. Your order will be delivered soon`);
-                        break;
-                    
-                        case "Dispatched":
-                            sendEmail(user.email, status, `Your order ${orderId} has been successfully dispatched`);
-                            break;
-                }
-            } catch (error) {
-                // console.log("catch email")
-                console.log("Error in sending email");
-            } finally {
-                // console.log("Finally email")
-                return res.status(200).json({message: "Rejected successfully"});
-            }
-        } else {
-            // User does not exist
-            return res.status(400).json({message: "User not found"})
-        }
-    } else {
-        // Order is not present
-        return res.status(400).json({message: "Order not found"})        
-    }
-} else {
-    return res.status(400).json({message: "Invalid status"});
-}
-} catch(error) {
-    return res.status(500).json({message: "Internal server error"});
-}
-}
-
-// Function to edit the order that is quantity and price
-const editOrder = async (req, res) => {
-    // console.log(req.body);
-    try {
-        const {products} = req.body;
-        const {orderId} = req.params;
-        const order = await findOrder(orderId);
-        const user = await findUser(order.user_id);
-        if(order) {
-            console.log(products[0]);
-            if(user) {
-                const prices = [];
-                for (const prod of products) {
-                    const product = await findProduct(prod.product_id);
-                    if(!product) {
-                        return res.status(400).json({message: "Product not found"})
-                    } else {
-                        prices.push(prod.total);
-                    }
-                }
-                const price = prices.reduce((accumulator, current) => accumulator + current, 0);
-                const totalPrice = price + order.shipping_price;
-                try {
-                    const updatedProduct = await Order.findByIdAndUpdate(
-                        order._id,
-                        {
-                            orderedProducts: products,
-                            price: price,
-                            total_price: totalPrice
-                        },
-                        {
-                            new: true,
-                            runValidators: true
-                        }
-                    );
-
-                    try {
-                        // console.log("Sending email");
-                        sendEmail(user.email, `Updation of order ${order._id}`, `Your total price is ${updatedProduct.total_price}`);
-                    } catch(error) {
-                        console.log("Problem in sending email");
-                    } finally {
-                        return res.status(200).json({message: "Product edited successfully"});
-                    }
-                } catch(error) {
-                    return res.status(400).json({message: `Problem while updating the order ${error}`});
-                }
-            } else {
-                return res.status(400).json({message: "User not found"});
-            }
-        } else {
-            return res.status(400).json({message: "Order not found"});
-        }
-    } catch (error) {
-        return res.status(500).json({message: "Internal server error"});
-    }
-}
-
-const isFreeCashEligible = (product, cartData, freeCash) => {
-    if (!freeCash) return false;
-    
-    const now = new Date();
-    if (
-        freeCash.is_cash_used ||
-        freeCash.is_cash_expired ||
-        now < new Date(freeCash.start_date) ||
-        now > new Date(freeCash.end_date)
-    ) {
-        return false;
-    }
-
-    // Calculate item total - use correct property names
-    const itemPrice = cartData.discountedPrice || cartData.price;
-    const itemTotal = itemPrice * cartData.quantity;
-    
-    if (itemTotal < freeCash.valid_above_amount) {
-        return false;
-    }
-
-    // If applicable to all products
-    if (freeCash.is_cash_applied_on__all_products) {
-        return true;
-    }
-
-    // Check category restrictions
-    if (freeCash.category) {
-        // Compare with product's mainCategory
-        const isMainCategoryMatch = product.mainCategory && 
-            (product.mainCategory.toString() === freeCash.category.toString() ||
-             product.mainCategory._id?.toString() === freeCash.category.toString());
-        
-        if (!isMainCategoryMatch) {
-            return false;
-        }
-
-        // If sub_category is specified, check it too
-        if (freeCash.sub_category) {
-            const isSubCategoryMatch = product.subCategory &&
-                (product.subCategory.toString() === freeCash.sub_category.toString() ||
-                 product.subCategory._id?.toString() === freeCash.sub_category.toString());
-            
-            if (!isSubCategoryMatch) {
-                return false;
-            }
-        }
-    }
-
-    return true;
-};
-module.exports = {
-    placeOrder,
-    fetchOrders,
-    shippingPriceUpdate,
-    handleStatusChange,
-    editOrder,
-    isFreeCashEligible,
-};
-
-This are the files I have provided you now if you want more additional files then just say me the names of the files you need without any hesitation. I will provide you all the files. If you need files then dont generate any content first say the files names.
+i have provided yousome of the files. if you need more files then say me. If you need files then dont generate any ciode and say me the files names I will prtovide you all the required files.

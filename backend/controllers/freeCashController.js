@@ -5,6 +5,7 @@ const { findCategoryById, findSubCategoryById } = require('./categoryController'
 const addFreeCash = async (req, res) => {
     try {
         const { cashForm, userID } = req.body;
+        console.log('Received cashForm:', cashForm); // Debug log
 
         if (!userID) {
             return res.status(400).json({ message: "Invalid user ID" });
@@ -15,60 +16,83 @@ const addFreeCash = async (req, res) => {
             return res.status(400).json({ message: "User not found" });
         }
 
-        if (cashForm.selectedMainCategory === "" && cashForm.validForAllProducts === false) {
-            return res.status(400).json({ message: "Invalid main category ID" });
+        // Coerce and validate inputs
+        const amount = parseFloat(cashForm.amount);
+        const validAbove = parseFloat(cashForm.validAbove) || 0;
+        const isAllProducts = cashForm.validForAllProducts === true || cashForm.validForAllProducts === 'true';
+
+        if (isNaN(amount) || amount <= 0) {
+            return res.status(400).json({ message: "Amount must be a positive number" });
+        }
+        if (validAbove < 0 || isNaN(validAbove)) {
+            return res.status(400).json({ message: "Valid above amount must be non-negative" });
         }
 
-        let mainCategory = null;
-        if (cashForm.selectedMainCategory) {
-            mainCategory = await findCategoryById(cashForm.selectedMainCategory);
+        // Require main category if not all products
+        if (!isAllProducts && (!cashForm.selectedMainCategory || cashForm.selectedMainCategory.trim() === '')) {
+            return res.status(400).json({ message: "Main category required when not valid for all products" });
+        }
+
+        // Handle endDate
+        let endDate = null;
+        if (cashForm.endDate && cashForm.endDate.trim() !== '') {
+            const parsedDate = new Date(cashForm.endDate.trim());
+            if (isNaN(parsedDate.getTime())) {
+                return res.status(400).json({ message: "Invalid end date: Use YYYY-MM-DD format" });
+            }
+            endDate = parsedDate;
+        }
+
+        // Handle categories
+        let categoryId = null;
+        if (cashForm.selectedMainCategory && cashForm.selectedMainCategory.trim() !== '') {
+            const mainCategory = await findCategoryById(cashForm.selectedMainCategory.trim());
             if (!mainCategory) {
                 return res.status(400).json({ message: "Main category not found" });
             }
+            categoryId = mainCategory._id;
         }
 
-        let subCategory = null;
-        if (cashForm.selectedSubCategory) {
-            subCategory = await findSubCategoryById(cashForm.selectedSubCategory);
+        let subCategoryId = null;
+        if (cashForm.selectedSubCategory && cashForm.selectedSubCategory.trim() !== '') {
+            const subCategory = await findSubCategoryById(cashForm.selectedSubCategory.trim());
             if (!subCategory) {
                 return res.status(400).json({ message: "Sub category not found" });
             }
+            subCategoryId = subCategory._id;
         }
 
-        if (
-            !cashForm.amount ||
-            isNaN(Number(cashForm.amount)) ||
-            Number(cashForm.amount) <= 0 ||
-            !cashForm.validAbove ||
-            isNaN(Number(cashForm.validAbove)) ||
-            Number(cashForm.validAbove) < 0
-        ) {
-            return res.status(400).json({ message: "Please fill all the fields properly" });
-        }
+        // Save document
+        const newFreeCash = new FreeCash({
+            user_id: user._id,
+            start_date: new Date(),
+            end_date: endDate,
+            amount: amount,
+            valid_above_amount: validAbove,
+            category: categoryId,
+            sub_category: subCategoryId,
+            is_cash_applied_on__all_products: isAllProducts,
+            is_cash_used: false,
+            is_cash_expired: false,
+        });
 
-        try {
-            const newFreeCash = new FreeCash({
-                user_id: user._id,
-                end_date: new Date(cashForm.endDate),
-                amount: cashForm.amount,
-                valid_above_amount: cashForm.validAbove,
-                category: cashForm.selectedMainCategory || null,
-                sub_category: cashForm.selectedSubCategory || null,
-                is_cash_applied_on__all_products: cashForm.validForAllProducts,
-            });
-            await newFreeCash.save();
+        await newFreeCash.save();
 
-            return res.status(200).json({
-                message: `Free cash generated successfully for ${user.first_name} ${user.last_name}`,
-            });
-        } catch (error) {
-            return res.status(400).json({ message: "Problem while generating free cash" });
-        }
+        return res.status(200).json({
+            message: `Free cash generated successfully for ${user.first_name} ${user.last_name}`,
+            freeCashId: newFreeCash._id,
+        });
     } catch (error) {
+        console.error("Add Free Cash Error:", error); // Detailed backend log
+        if (error.name === 'ValidationError' || error.name === 'CastError') {
+            const errorMessage = Object.values(error.errors || {})[0]?.message || error.message;
+            return res.status(400).json({ message: `Free cash generation failed: ${errorMessage}` });
+        }
         return res.status(500).json({ message: "Internal server error" });
     }
 };
 
+// checkFreeCashEligibility unchanged
 const checkFreeCashEligibility = async (req, res) => {
     try {
         const userId = req.user.id;

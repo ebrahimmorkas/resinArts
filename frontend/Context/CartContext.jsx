@@ -21,21 +21,37 @@ export const CartProvider = ({ children }) => {
     const [applyFreeCash, setApplyFreeCash] = useState(false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
-    const { freeCash } = useContext(FreeCashContext);
+    
+    // Get contexts
+    const { freeCash, checkFreeCashEligibility } = useContext(FreeCashContext);
     const { products } = useContext(ProductContext);
 
     axios.defaults.withCredentials = true;
 
+    // Initial cart fetch
     useEffect(() => {
         fetchCartFromBackend();
     }, []);
 
-    // Recalculate cash applied when applyFreeCash changes
+    // When free cash context loads, check for eligibility and refresh cart
     useEffect(() => {
-        if (freeCash && Object.keys(cartItems).length > 0) {
+        if (freeCash !== null && Object.keys(cartItems).length > 0) {
+            // If free cash is available, enable the checkbox by default
+            if (freeCash && !freeCash.is_cash_used && !freeCash.is_cash_expired) {
+                setApplyFreeCash(true);
+            } else {
+                setApplyFreeCash(false);
+            }
             updateAllCashApplied();
         }
-    }, [applyFreeCash, freeCash]);
+    }, [freeCash]);
+
+    // Recalculate cash applied when applyFreeCash checkbox changes
+    useEffect(() => {
+        if (Object.keys(cartItems).length > 0) {
+            updateAllCashApplied();
+        }
+    }, [applyFreeCash]);
 
     const fetchCartFromBackend = async () => {
         try {
@@ -69,6 +85,11 @@ export const CartProvider = ({ children }) => {
                     };
                 });
                 setCartItems(formattedCart);
+                
+                // After loading cart, check for free cash availability
+                if (checkFreeCashEligibility) {
+                    await checkFreeCashEligibility();
+                }
             }
         } catch (err) {
             setError("Failed to load cart");
@@ -78,89 +99,89 @@ export const CartProvider = ({ children }) => {
         }
     };
 
-const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
-    try {
-        setLoading(true);
-        const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
+    const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
+        try {
+            setLoading(true);
+            const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
 
-        let cashApplied = 0;
-        if (applyFreeCash && freeCash) {
-            const product = products.find((p) => p._id === productId);
-            if (product) {
-                const mockCartData = {
-                    ...productData,
-                    quantity: quantity,
-                    discountedPrice: productData.discountedPrice || productData.price
-                };
-                
-                if (isFreeCashEligible(product, mockCartData, freeCash)) {
-                    const itemTotal = mockCartData.discountedPrice * quantity;
-                    cashApplied = Math.min(freeCash.amount, itemTotal);
+            let cashApplied = 0;
+            if (applyFreeCash && freeCash) {
+                const product = products.find((p) => p._id === productId);
+                if (product) {
+                    const mockCartData = {
+                        ...productData,
+                        quantity: quantity,
+                        discountedPrice: productData.discountedPrice || productData.price
+                    };
+                    
+                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
+                        const itemTotal = mockCartData.discountedPrice * quantity;
+                        cashApplied = Math.min(freeCash.amount, itemTotal);
+                    }
                 }
             }
-        }
 
-        const cartItemData = {
-            image_url: productData.imageUrl,
-            product_id: productId,
-            product_name: productData.productName,
-            quantity: quantity,
-            price: productData.price,
-            cash_applied: cashApplied,
-            discounted_price: productData.discountedPrice || productData.price,
-        };
+            const cartItemData = {
+                image_url: productData.imageUrl,
+                product_id: productId,
+                product_name: productData.productName,
+                quantity: quantity,
+                price: productData.price,
+                cash_applied: cashApplied,
+                discounted_price: productData.discountedPrice || productData.price,
+            };
 
-        if (productData.variantId && productData.variantId !== "") {
-            cartItemData.variant_id = productData.variantId;
-        }
-        if (productData.detailsId && productData.detailsId !== "") {
-            cartItemData.details_id = productData.detailsId;
-        }
-        if (productData.sizeId && productData.sizeId !== "") {
-            cartItemData.size_id = productData.sizeId;
-        }
-        if (colorName && colorName !== "") {
-            cartItemData.variant_name = colorName;
-        }
-        if (sizeString && sizeString !== "") {
-            cartItemData.size = sizeString;
-        }
+            if (productData.variantId && productData.variantId !== "") {
+                cartItemData.variant_id = productData.variantId;
+            }
+            if (productData.detailsId && productData.detailsId !== "") {
+                cartItemData.details_id = productData.detailsId;
+            }
+            if (productData.sizeId && productData.sizeId !== "") {
+                cartItemData.size_id = productData.sizeId;
+            }
+            if (colorName && colorName !== "") {
+                cartItemData.variant_name = colorName;
+            }
+            if (sizeString && sizeString !== "") {
+                cartItemData.size = sizeString;
+            }
 
-        const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
-            withCredentials: true,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
-
-        if (response.status === 200 || response.status === 201) {
-            setCartItems((prev) => ({
-                ...prev,
-                [cartKey]: {
-                    productId,
-                    variantName: colorName || null,
-                    sizeString: sizeString || null,
-                    quantity: (prev[cartKey]?.quantity || 0) + quantity,
-                    price: productData.price,
-                    discountedPrice: productData.discountedPrice || productData.price,
-                    imageUrl: productData.imageUrl,
-                    productName: productData.productName,
-                    variantId: productData.variantId,
-                    detailsId: productData.detailsId,
-                    sizeId: productData.sizeId,
-                    cashApplied,
+            const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
                 },
-            }));
-        } else {
-            throw new Error("Failed to add item to cart");
+            });
+
+            if (response.status === 200 || response.status === 201) {
+                setCartItems((prev) => ({
+                    ...prev,
+                    [cartKey]: {
+                        productId,
+                        variantName: colorName || null,
+                        sizeString: sizeString || null,
+                        quantity: (prev[cartKey]?.quantity || 0) + quantity,
+                        price: productData.price,
+                        discountedPrice: productData.discountedPrice || productData.price,
+                        imageUrl: productData.imageUrl,
+                        productName: productData.productName,
+                        variantId: productData.variantId,
+                        detailsId: productData.detailsId,
+                        sizeId: productData.sizeId,
+                        cashApplied,
+                    },
+                }));
+            } else {
+                throw new Error("Failed to add item to cart");
+            }
+        } catch (err) {
+            setError("Failed to add item to cart");
+            console.error("Error adding to cart:", err);
+        } finally {
+            setLoading(false);
         }
-    } catch (err) {
-        setError("Failed to add item to cart");
-        console.error("Error adding to cart:", err);
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
     const updateQuantity = async (cartKey, change) => {
         try {
@@ -305,17 +326,31 @@ const addToCart = async (productId, colorName, sizeString, quantity, productData
 
     // Update cash applied for all items when applyFreeCash changes
     const updateAllCashApplied = async () => {
+        if (!products || products.length === 0) {
+            console.warn("Products not loaded yet, skipping cash update");
+            return;
+        }
+
         const updatedItems = {};
         let hasChanges = false;
+        let remainingFreeCash = freeCash ? freeCash.amount : 0;
 
-        for (const [cartKey, item] of Object.entries(cartItems)) {
+        // Sort items by total value (descending) to prioritize higher value items
+        const sortedCartItems = Object.entries(cartItems).sort(([, itemA], [, itemB]) => {
+            const totalA = (itemA.discountedPrice || itemA.price) * itemA.quantity;
+            const totalB = (itemB.discountedPrice || itemB.price) * itemB.quantity;
+            return totalB - totalA;
+        });
+
+        for (const [cartKey, item] of sortedCartItems) {
             let cashApplied = 0;
             
-            if (applyFreeCash && freeCash) {
+            if (applyFreeCash && freeCash && remainingFreeCash > 0) {
                 const product = products.find((p) => p._id === item.productId);
                 if (product && isFreeCashEligible(product, item, freeCash)) {
                     const itemTotal = (item.discountedPrice || item.price) * item.quantity;
-                    cashApplied = Math.min(freeCash.amount, itemTotal);
+                    cashApplied = Math.min(remainingFreeCash, itemTotal);
+                    remainingFreeCash -= cashApplied;
                 }
             }
 
@@ -363,11 +398,7 @@ const addToCart = async (productId, colorName, sizeString, quantity, productData
         let totalFreeCashApplied = 0;
         if (applyFreeCash && freeCash) {
             totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => {
-                const product = products.find((p) => p._id === item.productId);
-                if (product && isFreeCashEligible(product, item, freeCash)) {
-                    return sum + (item.cashApplied || 0);
-                }
-                return sum;
+                return sum + (item.cashApplied || 0);
             }, 0);
         }
 
@@ -383,46 +414,46 @@ const addToCart = async (productId, colorName, sizeString, quantity, productData
     };
 
     const clearCart = async () => {
-    try {
-        setLoading(true);
-        // Clear cart on backend
-        const response = await axios.delete("http://localhost:3000/api/cart/clear", {
-            withCredentials: true,
-            headers: {
-                "Content-Type": "application/json",
-            },
-        });
+        try {
+            setLoading(true);
+            // Clear cart on backend
+            const response = await axios.delete("http://localhost:3000/api/cart/clear", {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
 
-        if (response.status === 200) {
-            // Clear cart on frontend
-            setCartItems({});
-            setApplyFreeCash(false); // Reset free cash checkbox
+            if (response.status === 200) {
+                // Clear cart on frontend
+                setCartItems({});
+                setApplyFreeCash(false); // Reset free cash checkbox
+            }
+        } catch (err) {
+            setError("Failed to clear cart");
+            console.error("Error clearing cart:", err);
+        } finally {
+            setLoading(false);
         }
-    } catch (err) {
-        setError("Failed to clear cart");
-        console.error("Error clearing cart:", err);
-    } finally {
-        setLoading(false);
-    }
-};
+    };
 
     const value = {
-    cartItems,
-    isCartOpen,
-    setIsCartOpen,
-    applyFreeCash,
-    setApplyFreeCash,
-    loading,
-    error,
-    addToCart,
-    updateQuantity,
-    removeFromCart,
-    getCartTotal,
-    getUniqueCartItemsCount,
-    getTotalItemsCount,
-    fetchCartFromBackend,
-    clearCart,
-};
+        cartItems,
+        isCartOpen,
+        setIsCartOpen,
+        applyFreeCash,
+        setApplyFreeCash,
+        loading,
+        error,
+        addToCart,
+        updateQuantity,
+        removeFromCart,
+        getCartTotal,
+        getUniqueCartItemsCount,
+        getTotalItemsCount,
+        fetchCartFromBackend,
+        clearCart,
+    };
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 };

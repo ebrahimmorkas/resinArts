@@ -12,7 +12,10 @@ export const FreeCashProvider = ({ children }) => {
 
   // Fetch free cash eligibility
   const checkFreeCashEligibility = async () => {
-    if (!user?.id) return;
+    if (!user?.id) {
+      setFreeCash(null);
+      return;
+    }
 
     setLoadingFreeCash(true);
     try {
@@ -22,14 +25,20 @@ export const FreeCashProvider = ({ children }) => {
           "Content-Type": "application/json",
         },
       });
-      setFreeCash(res.data.freeCash || null);
+      
+      const freeCashData = res.data.freeCash || null;
+      setFreeCash(freeCashData);
       setFreeCashErrors(null);
-      if (res.data.freeCash) {
-        localStorage.setItem(`freeCash_${user.id}`, JSON.stringify(res.data.freeCash));
+      
+      if (freeCashData) {
+        localStorage.setItem(`freeCash_${user.id}`, JSON.stringify(freeCashData));
+        console.log('Free cash found:', freeCashData);
       } else {
         localStorage.removeItem(`freeCash_${user.id}`);
+        console.log('No valid free cash available');
       }
     } catch (err) {
+      console.error('Error fetching free cash:', err);
       setFreeCashErrors(err.response?.data?.message || 'Error fetching free cash');
       setFreeCash(null);
       localStorage.removeItem(`freeCash_${user.id}`);
@@ -46,10 +55,30 @@ export const FreeCashProvider = ({ children }) => {
     }
   };
 
-  // Fetch free cash when user logs in or when explicitly triggered
+  // Load cached free cash on mount
   useEffect(() => {
     if (user?.id) {
+      const cachedFreeCash = localStorage.getItem(`freeCash_${user.id}`);
+      if (cachedFreeCash) {
+        try {
+          const parsedFreeCash = JSON.parse(cachedFreeCash);
+          // Verify it's still valid
+          const now = new Date();
+          if (!parsedFreeCash.is_cash_used && 
+              !parsedFreeCash.is_cash_expired &&
+              new Date(parsedFreeCash.end_date) >= now) {
+            setFreeCash(parsedFreeCash);
+          } else {
+            localStorage.removeItem(`freeCash_${user.id}`);
+          }
+        } catch (error) {
+          localStorage.removeItem(`freeCash_${user.id}`);
+        }
+      }
+      // Always check for fresh data
       checkFreeCashEligibility();
+    } else {
+      setFreeCash(null);
     }
   }, [user?.id]);
 
