@@ -49,9 +49,10 @@ export default function Home() {
     getCartTotal,
     getUniqueCartItemsCount,
     getTotalItemsCount,
+    clearCart,
   } = useCart()
 
-  const { freeCash, loadingFreeCash, freeCashErrors } = useContext(FreeCashContext);
+  const { freeCash, loadingFreeCash, freeCashErrors, clearFreeCashCache, checkFreeCashEligibility } = useContext(FreeCashContext);
 
   const handleCartCheckout = async () => {
     try {
@@ -59,11 +60,16 @@ export default function Home() {
         withCredentials: true,
       });
       console.log("Checkout response:", res.data);
-      setIsCartOpen(false); // Close cart modal after successful checkout
+      if (res.status === 201) {
+        await clearCart(); // Clear cart after successful order
+        clearFreeCashCache(); // Clear free cash cache
+        await checkFreeCashEligibility(); // Refresh free cash state
+        setIsCartOpen(false); // Close cart modal
+      }
     } catch (error) {
       console.error("Checkout error:", error);
     }
-  }
+}
 
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const [selectedFilters, setSelectedFilters] = useState(["all"])

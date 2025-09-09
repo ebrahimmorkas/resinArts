@@ -3,13 +3,12 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 const FreeCash = require('../models/FreeCash');
-// const sendEmail = require('../utils/sendEmail');
 
 // Function to check whether the order exists or not
 const findOrder = async (orderId) => {
     try {
         const order = await Order.findById(orderId);
-        if(order) {
+        if (order) {
             return order;
         } else {
             return null;
@@ -21,7 +20,7 @@ const findOrder = async (orderId) => {
 
 const findUser = async (userId) => {
     const user = await User.findById(userId);
-    if(user) {
+    if (user) {
         return user;
     } else {
         return null;
@@ -30,7 +29,7 @@ const findUser = async (userId) => {
 
 const findProduct = async (productId) => {
     const product = await Product.findById(productId);
-    if(product) {
+    if (product) {
         return product;
     } else {
         return null;
@@ -48,11 +47,12 @@ const placeOrder = async (req, res) => {
             });
         }
 
-        const userId = cartItems[0]?.userId;
+        // Use req.user.id from auth middleware instead of body
+        const userId = req.user.id;
         if (!userId) {
-            return res.status(400).json({
+            return res.status(401).json({
                 success: false,
-                message: "No user ID provided",
+                message: "Authentication required",
             });
         }
 
@@ -229,164 +229,130 @@ const fetchOrders = async (req, res) => {
     console.log("Request received for fetching orders");
     try {
         const orders = await Order.find();
-        if(orders) {
-            // console.log(orders);
-            return res.status(200).json({message: "Success", orders});
+        if (orders) {
+            return res.status(200).json({ message: "Success", orders });
         } else {
-            return res.status(400).json({message: "No orders found"});
+            return res.status(400).json({ message: "No orders found" });
         }
-    } catch(error) {
-        return res.status(500).json({message: "Internal server error"});
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error" });
     }
 };
 
-// Function where admin will update the shiping price
+// Function where admin will update the shipping price
 const shippingPriceUpdate = async (req, res) => {
-    // console.log(req.body);
     try {
-        const {shippingPriceValue, orderId, email} = req.body;
+        const { shippingPriceValue, orderId, email } = req.body;
         const order = await Order.findById(orderId);
-        if(order) {
-            // Order with this ID is present
-            console.log(order)
-            // Checking the input
-            if(parseInt(shippingPriceValue) > 0) {
-                // Input is proper
-
-                // Updating the order
+        if (order) {
+            if (parseInt(shippingPriceValue) > 0) {
                 try {
                     const totalPrice = order.price + parseInt(shippingPriceValue);
                     const updatedOrder = await Order.findByIdAndUpdate(
                         orderId,
-                         {
+                        {
                             shipping_price: shippingPriceValue,
                             total_price: totalPrice,
                             status: "Accepted",
                         },
-                    
-                    {
-                        new: true,
-                        runValidators: true
-                    }
+                        {
+                            new: true,
+                            runValidators: true
+                        }
                     );
-                    // console.log(email)
                     try {
-                        await sendEmail(email, "Accepted", `Your order has been accepted for id ${orderId}`)
-                    } catch(error) {
+                        await sendEmail(email, "Accepted", `Your order has been accepted for id ${orderId}`);
+                    } catch (error) {
                         console.log("Error in sending email");
                     } finally {
-                        return res.status(200).json({message: "Shipping price updated"});
+                        return res.status(200).json({ message: "Shipping price updated" });
                     }
-                } catch(error) {
-                    // Prolem while updating the order
-                    return res.status(400).json({message: "Problem while updating the order"});
+                } catch (error) {
+                    return res.status(400).json({ message: "Problem while updating the order" });
                 }
             } else {
-                // Input is not proper
-                return res.status(400).json({message: "Input is not proper"})
+                return res.status(400).json({ message: "Input is not proper" });
             }
         } else {
-            // Order with this id is not present
-            return res.status(400).json({message: "Product not found"})
+            return res.status(400).json({ message: "Product not found" });
         }
-    } catch(error) {
-        return res.status(500).json({message: `Internal server error ${error}`});
+    } catch (error) {
+        return res.status(500).json({ message: `Internal server error ${error}` });
     }
 }
 
 // Function to handle status
 const handleStatusChange = async (req, res) => {
-    // console.log(req.body);
     try {
-    const {status, orderId} = req.body;
+        const { status, orderId } = req.body;
+        const statuses = ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"];
 
-    const statuses = ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"];
+        if (statuses.includes(status)) {
+            const order = await findOrder(orderId);
+            const user = await findUser(order.user_id);
+            if (order) {
+                if (user) {
+                    let paymentStatus = "Payment Pending";
+                    if (status === "Confirm") {
+                        paymentStatus = "Paid";
+                    }
+                    const updatedOrder = await Order.findByIdAndUpdate(
+                        orderId,
+                        {
+                            status: status,
+                            payment_status: paymentStatus
+                        },
+                        {
+                            new: true,
+                            runValidators: true
+                        }
+                    );
 
-    // Check whether the received status is valid
-    if(statuses.includes(status)) {
-
-    // Checking whether the order exists or not
-    const order = await findOrder(orderId);
-    // checking whether user exists or not
-    const user = await findUser(order.user_id)
-    if(order) {
-        // Order is present
-
-        // Checking whether user exists or not
-        if(user) {
-            console.log("Updting")
-            // Start the updating process
-            let paymentStatus = "Payment Pending";
-            if(status === "Confirm") {
-                paymentStatus = "Paid"
-            }
-            const updatedOrder = await Order.findByIdAndUpdate(
-                orderId,
-                {
-                    status: status, 
-                    payment_status: paymentStatus
-                },
-                {
-                    new: true,
-                    runValidators: true
+                    try {
+                        switch (status) {
+                            case "Rejected":
+                                sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
+                                break;
+                            case "Confirm":
+                                sendEmail(user.email, status, `We have successfully received your payment for order ${orderId}. Your order will be delivered soon`);
+                                break;
+                            case "Dispatched":
+                                sendEmail(user.email, status, `Your order ${orderId} has been successfully dispatched`);
+                                break;
+                        }
+                    } catch (error) {
+                        console.log("Error in sending email");
+                    } finally {
+                        return res.status(200).json({ message: "Rejected successfully" });
+                    }
+                } else {
+                    return res.status(400).json({ message: "User not found" });
                 }
-            )
-
-            // Sending the email
-            try {
-                // console.log("try email")
-                switch(status) {
-                    case "Rejected":
-                    sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
-                    break;
-
-                    case "Confirm":
-                        sendEmail(user.email, status, `We have successfully received your payment for order ${orderId}. Your order will be delivered soon`);
-                        break;
-                    
-                        case "Dispatched":
-                            sendEmail(user.email, status, `Your order ${orderId} has been successfully dispatched`);
-                            break;
-                }
-            } catch (error) {
-                // console.log("catch email")
-                console.log("Error in sending email");
-            } finally {
-                // console.log("Finally email")
-                return res.status(200).json({message: "Rejected successfully"});
+            } else {
+                return res.status(400).json({ message: "Order not found" });
             }
         } else {
-            // User does not exist
-            return res.status(400).json({message: "User not found"})
+            return res.status(400).json({ message: "Invalid status" });
         }
-    } else {
-        // Order is not present
-        return res.status(400).json({message: "Order not found"})        
+    } catch (error) {
+        return res.status(500).json({ message: "Internal server error" });
     }
-} else {
-    return res.status(400).json({message: "Invalid status"});
-}
-} catch(error) {
-    return res.status(500).json({message: "Internal server error"});
-}
 }
 
 // Function to edit the order that is quantity and price
 const editOrder = async (req, res) => {
-    // console.log(req.body);
     try {
-        const {products} = req.body;
-        const {orderId} = req.params;
+        const { products } = req.body;
+        const { orderId } = req.params;
         const order = await findOrder(orderId);
         const user = await findUser(order.user_id);
-        if(order) {
-            console.log(products[0]);
-            if(user) {
+        if (order) {
+            if (user) {
                 const prices = [];
                 for (const prod of products) {
                     const product = await findProduct(prod.product_id);
-                    if(!product) {
-                        return res.status(400).json({message: "Product not found"})
+                    if (!product) {
+                        return res.status(400).json({ message: "Product not found" });
                     } else {
                         prices.push(prod.total);
                     }
@@ -408,24 +374,23 @@ const editOrder = async (req, res) => {
                     );
 
                     try {
-                        // console.log("Sending email");
                         sendEmail(user.email, `Updation of order ${order._id}`, `Your total price is ${updatedProduct.total_price}`);
-                    } catch(error) {
+                    } catch (error) {
                         console.log("Problem in sending email");
                     } finally {
-                        return res.status(200).json({message: "Product edited successfully"});
+                        return res.status(200).json({ message: "Product edited successfully" });
                     }
-                } catch(error) {
-                    return res.status(400).json({message: `Problem while updating the order ${error}`});
+                } catch (error) {
+                    return res.status(400).json({ message: `Problem while updating the order ${error}` });
                 }
             } else {
-                return res.status(400).json({message: "User not found"});
+                return res.status(400).json({ message: "User not found" });
             }
         } else {
-            return res.status(400).json({message: "Order not found"});
+            return res.status(400).json({ message: "Order not found" });
         }
     } catch (error) {
-        return res.status(500).json({message: "Internal server error"});
+        return res.status(500).json({ message: "Internal server error" });
     }
 }
 
@@ -442,7 +407,6 @@ const isFreeCashEligible = (product, cartData, freeCash) => {
         return false;
     }
 
-    // Calculate item total - use correct property names
     const itemPrice = cartData.discountedPrice || cartData.price;
     const itemTotal = itemPrice * cartData.quantity;
     
@@ -450,14 +414,11 @@ const isFreeCashEligible = (product, cartData, freeCash) => {
         return false;
     }
 
-    // If applicable to all products
     if (freeCash.is_cash_applied_on__all_products) {
         return true;
     }
 
-    // Check category restrictions
     if (freeCash.category) {
-        // Compare with product's mainCategory
         const isMainCategoryMatch = product.mainCategory && 
             (product.mainCategory.toString() === freeCash.category.toString() ||
              product.mainCategory._id?.toString() === freeCash.category.toString());
@@ -466,7 +427,6 @@ const isFreeCashEligible = (product, cartData, freeCash) => {
             return false;
         }
 
-        // If sub_category is specified, check it too
         if (freeCash.sub_category) {
             const isSubCategoryMatch = product.subCategory &&
                 (product.subCategory.toString() === freeCash.sub_category.toString() ||
@@ -480,6 +440,7 @@ const isFreeCashEligible = (product, cartData, freeCash) => {
 
     return true;
 };
+
 module.exports = {
     placeOrder,
     fetchOrders,

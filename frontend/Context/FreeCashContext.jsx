@@ -1,4 +1,3 @@
-// Context/FreeCashContext.js
 import { createContext, useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { AuthContext } from './AuthContext';
@@ -15,32 +14,31 @@ export const FreeCashProvider = ({ children }) => {
   const checkFreeCashEligibility = async () => {
     if (!user?.id) return;
 
-    // Check localStorage first
-    const cachedFreeCash = localStorage.getItem(`freeCash_${user.id}`);
-    if (cachedFreeCash) {
-      setFreeCash(JSON.parse(cachedFreeCash));
-      return;
-    }
-
     setLoadingFreeCash(true);
     try {
       const res = await axios.get('http://localhost:3000/api/free-cash/check-eligibility', {
         withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
       });
       setFreeCash(res.data.freeCash || null);
       setFreeCashErrors(null);
       if (res.data.freeCash) {
         localStorage.setItem(`freeCash_${user.id}`, JSON.stringify(res.data.freeCash));
+      } else {
+        localStorage.removeItem(`freeCash_${user.id}`);
       }
     } catch (err) {
       setFreeCashErrors(err.response?.data?.message || 'Error fetching free cash');
       setFreeCash(null);
+      localStorage.removeItem(`freeCash_${user.id}`);
     } finally {
       setLoadingFreeCash(false);
     }
   };
 
-  // Clear free cash cache on order placement or logout
+  // Clear free cash cache
   const clearFreeCashCache = () => {
     if (user?.id) {
       localStorage.removeItem(`freeCash_${user.id}`);
@@ -48,7 +46,7 @@ export const FreeCashProvider = ({ children }) => {
     }
   };
 
-  // Fetch free cash when user logs in
+  // Fetch free cash when user logs in or when explicitly triggered
   useEffect(() => {
     if (user?.id) {
       checkFreeCashEligibility();
@@ -71,4 +69,3 @@ export const FreeCashProvider = ({ children }) => {
     </FreeCashContext.Provider>
   );
 };
-

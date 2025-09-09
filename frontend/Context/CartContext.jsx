@@ -78,89 +78,89 @@ export const CartProvider = ({ children }) => {
         }
     };
 
-    const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
-        try {
-            setLoading(true);
-            const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
+const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
+    try {
+        setLoading(true);
+        const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
 
-            let cashApplied = 0;
-            if (applyFreeCash && freeCash) {
-                const product = products.find((p) => p._id === productId);
-                if (product) {
-                    const mockCartData = {
-                        ...productData,
-                        quantity: quantity,
-                        discountedPrice: productData.discountedPrice || productData.price
-                    };
-                    
-                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
-                        const itemTotal = mockCartData.discountedPrice * quantity;
-                        cashApplied = Math.min(freeCash.amount, itemTotal);
-                    }
+        let cashApplied = 0;
+        if (applyFreeCash && freeCash) {
+            const product = products.find((p) => p._id === productId);
+            if (product) {
+                const mockCartData = {
+                    ...productData,
+                    quantity: quantity,
+                    discountedPrice: productData.discountedPrice || productData.price
+                };
+                
+                if (isFreeCashEligible(product, mockCartData, freeCash)) {
+                    const itemTotal = mockCartData.discountedPrice * quantity;
+                    cashApplied = Math.min(freeCash.amount, itemTotal);
                 }
             }
-
-            const cartItemData = {
-                image_url: productData.imageUrl,
-                product_id: productId,
-                product_name: productData.productName,
-                quantity: quantity,
-                price: productData.price,
-                cash_applied: cashApplied,
-                discounted_price: productData.discountedPrice || productData.price,
-            };
-
-            if (productData.variantId && productData.variantId !== "") {
-                cartItemData.variant_id = productData.variantId;
-            }
-            if (productData.detailsId && productData.detailsId !== "") {
-                cartItemData.details_id = productData.detailsId;
-            }
-            if (productData.sizeId && productData.sizeId !== "") {
-                cartItemData.size_id = productData.sizeId;
-            }
-            if (colorName && colorName !== "") {
-                cartItemData.variant_name = colorName;
-            }
-            if (sizeString && sizeString !== "") {
-                cartItemData.size = sizeString;
-            }
-
-            const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
-                withCredentials: true,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            });
-
-            if (response.status === 200 || response.status === 201) {
-                setCartItems((prev) => ({
-                    ...prev,
-                    [cartKey]: {
-                        productId,
-                        variantName: colorName || null,
-                        sizeString: sizeString || null,
-                        quantity: (prev[cartKey]?.quantity || 0) + quantity,
-                        price: productData.price,
-                        discountedPrice: productData.discountedPrice || productData.price,
-                        imageUrl: productData.imageUrl,
-                        productName: productData.productName,
-                        variantId: productData.variantId,
-                        detailsId: productData.detailsId,
-                        sizeId: productData.sizeId,
-                        cashApplied,
-                    },
-                }));
-            } else {
-                throw new Error("Failed to add item to cart");
-            }
-        } catch (err) {
-            setError("Failed to add item to cart");
-            console.error("Error adding to cart:", err);
-        } finally {
-            setLoading(false);
         }
-    };
+
+        const cartItemData = {
+            image_url: productData.imageUrl,
+            product_id: productId,
+            product_name: productData.productName,
+            quantity: quantity,
+            price: productData.price,
+            cash_applied: cashApplied,
+            discounted_price: productData.discountedPrice || productData.price,
+        };
+
+        if (productData.variantId && productData.variantId !== "") {
+            cartItemData.variant_id = productData.variantId;
+        }
+        if (productData.detailsId && productData.detailsId !== "") {
+            cartItemData.details_id = productData.detailsId;
+        }
+        if (productData.sizeId && productData.sizeId !== "") {
+            cartItemData.size_id = productData.sizeId;
+        }
+        if (colorName && colorName !== "") {
+            cartItemData.variant_name = colorName;
+        }
+        if (sizeString && sizeString !== "") {
+            cartItemData.size = sizeString;
+        }
+
+        const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
+            withCredentials: true,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (response.status === 200 || response.status === 201) {
+            setCartItems((prev) => ({
+                ...prev,
+                [cartKey]: {
+                    productId,
+                    variantName: colorName || null,
+                    sizeString: sizeString || null,
+                    quantity: (prev[cartKey]?.quantity || 0) + quantity,
+                    price: productData.price,
+                    discountedPrice: productData.discountedPrice || productData.price,
+                    imageUrl: productData.imageUrl,
+                    productName: productData.productName,
+                    variantId: productData.variantId,
+                    detailsId: productData.detailsId,
+                    sizeId: productData.sizeId,
+                    cashApplied,
+                },
+            }));
+        } else {
+            throw new Error("Failed to add item to cart");
+        }
+    } catch (err) {
+        setError("Failed to add item to cart");
+        console.error("Error adding to cart:", err);
+    } finally {
+        setLoading(false);
+    }
+};
 
     const updateQuantity = async (cartKey, change) => {
         try {
@@ -382,22 +382,47 @@ export const CartProvider = ({ children }) => {
         return Object.values(cartItems).reduce((sum, item) => sum + item.quantity, 0);
     };
 
+    const clearCart = async () => {
+    try {
+        setLoading(true);
+        // Clear cart on backend
+        const response = await axios.delete("http://localhost:3000/api/cart/clear", {
+            withCredentials: true,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
+
+        if (response.status === 200) {
+            // Clear cart on frontend
+            setCartItems({});
+            setApplyFreeCash(false); // Reset free cash checkbox
+        }
+    } catch (err) {
+        setError("Failed to clear cart");
+        console.error("Error clearing cart:", err);
+    } finally {
+        setLoading(false);
+    }
+};
+
     const value = {
-        cartItems,
-        isCartOpen,
-        setIsCartOpen,
-        applyFreeCash,
-        setApplyFreeCash,
-        loading,
-        error,
-        addToCart,
-        updateQuantity,
-        removeFromCart,
-        getCartTotal,
-        getUniqueCartItemsCount,
-        getTotalItemsCount,
-        fetchCartFromBackend,
-    };
+    cartItems,
+    isCartOpen,
+    setIsCartOpen,
+    applyFreeCash,
+    setApplyFreeCash,
+    loading,
+    error,
+    addToCart,
+    updateQuantity,
+    removeFromCart,
+    getCartTotal,
+    getUniqueCartItemsCount,
+    getTotalItemsCount,
+    fetchCartFromBackend,
+    clearCart,
+};
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>
 };

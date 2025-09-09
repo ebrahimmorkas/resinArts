@@ -1,448 +1,421 @@
-1. FreecashContext:
-// Context/FreeCashContext.js
-import { createContext, useState, useEffect, useContext } from 'react';
-import axios from 'axios';
-import { AuthContext } from './AuthContext';
+I am developing e-commerce website using MERN stack. I am placing the orders thriugh cart located in Home.jsx. When user login the user can add the products in the cart and chekcout the cart to place order and the order is placed successfully and the cart becomes empty. ---> All work well till here. Now the prolem is that (User am still logged in) when user again adds the products in the cart and clicks the chckout button to place the order then the error arises in the console of the browser. 
+Error:
+:3000/api/order/place-order:1  Failed to load resource: the server responded with a status of 400 (Bad Request)
+hook.js:608 Checkout error: AxiosErrorcode: "ERR_BAD_REQUEST"config: {transitional: {…}, adapter: Array(3), transformRequest: Array(1), transformResponse: Array(1), timeout: 0, …}message: "Request failed with status code 400"name: "AxiosError"request: XMLHttpRequest {onreadystatechange: null, readyState: 4, timeout: 0, withCredentials: true, upload: XMLHttpRequestUpload, …}response: config: {transitional: {…}, adapter: Array(3), transformRequest: Array(1), transformResponse: Array(1), timeout: 0, …}data: {success: false, message: 'No user ID provided'}headers: AxiosHeaders {content-length: '49', content-type: 'application/json; charset=utf-8'}request: XMLHttpRequest {onreadystatechange: null, readyState: 4, timeout: 0, withCredentials: true, upload: XMLHttpRequestUpload, …}status: 400statusText: "Bad Request"[[Prototype]]: Objectstatus: 400stack: "AxiosError: Request failed with status code 400\n    at settle (http://localhost:5173/node_modules/.vite/deps/axios.js?v=6a9a1269:1232:12)\n    at XMLHttpRequest.onloadend (http://localhost:5173/node_modules/.vite/deps/axios.js?v=6a9a1269:1564:7)\n    at Axios.request (http://localhost:5173/node_modules/.vite/deps/axios.js?v=6a9a1269:2122:41)\n    at async handleCartCheckout (http://localhost:5173/src/pages/client/Home.jsx?t=1757393262048:74:19)"[[Prototype]]: Error
+overrideMethod @ hook.js:608
 
-export const FreeCashContext = createContext();
+I will provide you certain files:
 
-export const FreeCashProvider = ({ children }) => {
-  const [loadingFreeCash, setLoadingFreeCash] = useState(false);
-  const [freeCashErrors, setFreeCashErrors] = useState(null);
-  const [freeCash, setFreeCash] = useState(null); // Stores available free cash
-  const { user } = useContext(AuthContext);
+CartContext.js:
+"use client";
 
-  // Fetch free cash eligibility
-  const checkFreeCashEligibility = async () => {
-    if (!user?.id) return;
+import { createContext, useContext, useState, useEffect } from "react";
+import axios from "axios";
+import { FreeCashContext } from "./FreeCashContext";
+import { ProductContext } from "./ProductContext";
 
-    // Check localStorage first
-    const cachedFreeCash = localStorage.getItem(`freeCash_${user.id}`);
-    if (cachedFreeCash) {
-      setFreeCash(JSON.parse(cachedFreeCash));
-      return;
-    }
-
-    setLoadingFreeCash(true);
-    try {
-      const res = await axios.get('http://localhost:3000/api/free-cash/check-eligibility', {
-        withCredentials: true,
-      });
-      setFreeCash(res.data.freeCash || null);
-      setFreeCashErrors(null);
-      if (res.data.freeCash) {
-        localStorage.setItem(`freeCash_${user.id}`, JSON.stringify(res.data.freeCash));
-      }
-    } catch (err) {
-      setFreeCashErrors(err.response?.data?.message || 'Error fetching free cash');
-      setFreeCash(null);
-    } finally {
-      setLoadingFreeCash(false);
-    }
-  };
-
-  // Clear free cash cache on order placement or logout
-  const clearFreeCashCache = () => {
-    if (user?.id) {
-      localStorage.removeItem(`freeCash_${user.id}`);
-      setFreeCash(null);
-    }
-  };
-
-  // Fetch free cash when user logs in
-  useEffect(() => {
-    if (user?.id) {
-      checkFreeCashEligibility();
-    }
-  }, [user?.id]);
-
-  return (
-    <FreeCashContext.Provider
-      value={{
-        loadingFreeCash,
-        setLoadingFreeCash,
-        freeCashErrors,
-        setFreeCashErrors,
-        freeCash,
-        checkFreeCashEligibility,
-        clearFreeCashCache,
-      }}
-    >
-      {children}
-    </FreeCashContext.Provider>
-  );
-};
-
-I have created this file on my Own but I dont know whether it is right or wrong you see I will also provide you AuthContext.jsx, server.js, authenticate.js middleware below
-
-2. freeCashRoutes.js:
-const express = require('express'); 
-const router = express.Router();
-const {addFreeCash} = require('../controllers/freeCashController');
-
-router.post('/add', addFreeCash);
-
-module.exports =  router
-
-3. freeCashController.js:
-const FreeCash = require('../models/FreeCash');
-const {findUserById} = require('./userController');
-const {findCategoryById, findSubCategoryById} = require('./categoryController');
-
-const addFreeCash = async (req, res) => {
-    try {
-        const {cashForm, userID} = req.body;
-
-        if(!userID) {
-            return res.status(400).json({message: "Invalid user ID"});
-        }
-
-        const user  = await findUserById(userID);
-        if(!user) {
-            return res.status(400).json({message: "User not found"})
-        }
-
-        if(cashForm. selectedMainCategory == "" && cashForm.validForAllProducts == false) {
-            return res.satus(400).json({message: "Invalid main category ID"});
-        }
-
-        const mainCategory = await findCategoryById(cashForm.selectedMainCategory);
-        if(!mainCategory) {
-            return res.status(400).json({message: "Main category not found"});
-        }
-
-        if(cashForm.selectedSubCategory == "") {
-            return res.status(400).json({message: "Invalid sub category ID"});
-        }
-
-        const subCategory = await findSubCategoryById(cashForm.selectedSubCategory);
-        if(!subCategory) {
-            return res.status(400).json({message: "Sub category not found"});
-        }
-
-       if (
-  !cashForm.amount || isNaN(Number(cashForm.amount)) || Number(cashForm.amount) <= 0 ||
-  !cashForm.validAbove || isNaN(Number(cashForm.validAbove)) || Number(cashForm.validAbove) <= 0
-) {
-  return res.status(400).json({ message: "Please fill all the fields properly" });
-}
-
-        // verything all right proceed adding
-        try {
-            const newFreeCash = new FreeCash({user_id: user._id, end_date: new Date(cashForm.endDate), amount: cashForm.amount, valid_above_amount: cashForm.validAbove, category: cashForm.selectedMainCategory, sub_category: cashForm.selectedSubCategory, is_cash_applied_on__all_products: cashForm.validForAllProducts});
-            await newFreeCash.save();
-
-            return res.status(200).json({message: `Free cash generated successfully for ${user.first_name} ${user.last_name}`})
-        } catch(error) {
-            return res.status(400).json({message: "Problem while generating free cash"});
-        }
-    } catch(error) {
-        return res.status(500).json({meessage: "Internal server error"});
-    }
-}
-
-module.exports = {addFreeCash};
-
-4. FreeCash.js:
-const mongoose = require('mongoose');
-
-const freeCashSchema = mongoose.Schema({
-    user_id: {
-        required: true,
-        type: mongoose.Types.ObjectId,
-    },
-    start_date: {
-        required: false,
-        type: Date,
-        default: Date.now(),
-    },
-    end_date: {
-        required: false,
-        type: Date,
-        default: null,
-    },
-    amount: {
-        required: true,
-        type: Number,
-    },
-    valid_above_amount: {
-        requried: false,
-        type: Number,
-        default: 0,
-    },
-    category: {
-        required: false,
-        type: mongoose.Types.ObjectId,
-        default: null,
-    },
-    sub_category: {
-        required: false,
-        type: mongoose.Types.ObjectId,
-        default: null
-    },
-    is_cash_applied_on__all_products: {
-        required: false,
-        type: Boolean,
-        default: false
-    },
-    is_cash_used: {
-        required: false,
-        type: Boolean,
-        default: false
-    },
-    cash_used_date: {
-        required: false,
-        type: Date,
-        default: null,
-    },
-    is_cash_expired: {
-        required: false,
-        type: Boolean,
-        default: false,
-    }
-});
-
-module.exports = mongoose.model('FreeCash', freeCashSchema);
-
-6. CartContext.jsx:
-"use client"
-
-import { createContext, useContext, useState, useEffect } from "react"
-import axios from "axios"
-
-const CartContext = createContext()
+const CartContext = createContext();
 
 export const useCart = () => {
-  const context = useContext(CartContext)
-  if (!context) {
-    throw new Error("useCart must be used within a CartProvider")
-  }
-  return context
-}
+    const context = useContext(CartContext);
+    if (!context) {
+        throw new Error("useCart must be used within a CartProvider");
+    }
+    return context;
+};
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState({})
-  const [isCartOpen, setIsCartOpen] = useState(false)
-  const [applyFreeCash, setApplyFreeCash] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState(null)
+    const [cartItems, setCartItems] = useState({});
+    const [isCartOpen, setIsCartOpen] = useState(false);
+    const [applyFreeCash, setApplyFreeCash] = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState(null);
+    const { freeCash } = useContext(FreeCashContext);
+    const { products } = useContext(ProductContext);
 
-  axios.defaults.withCredentials = true
+    axios.defaults.withCredentials = true;
 
-  // Load cart from backend on component mount
-  useEffect(() => {
-    fetchCartFromBackend()
-  }, [])
+    useEffect(() => {
+        fetchCartFromBackend();
+    }, []);
 
-  // Fetch cart items from backend
-  const fetchCartFromBackend = async () => {
+    // Recalculate cash applied when applyFreeCash changes
+    useEffect(() => {
+        if (freeCash && Object.keys(cartItems).length > 0) {
+            updateAllCashApplied();
+        }
+    }, [applyFreeCash, freeCash]);
+
+    const fetchCartFromBackend = async () => {
+        try {
+            setLoading(true);
+            const response = await axios.get("http://localhost:3000/api/cart", {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (response.status === 200) {
+                const cartData = response.data;
+                const formattedCart = {};
+                cartData.forEach((item) => {
+                    const cartKey = `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`;
+                    formattedCart[cartKey] = {
+                        productId: item.product_id,
+                        variantName: item.variant_name || null,
+                        sizeString: item.size || null,
+                        quantity: item.quantity,
+                        price: item.price,
+                        discountedPrice: item.discounted_price,
+                        imageUrl: item.image_url,
+                        productName: item.product_name,
+                        variantId: item.variant_id,
+                        detailsId: item.details_id,
+                        sizeId: item.size_id,
+                        cashApplied: item.cash_applied || 0,
+                        userId: item.user_id,
+                    };
+                });
+                setCartItems(formattedCart);
+            }
+        } catch (err) {
+            setError("Failed to load cart");
+            console.error("Error fetching cart:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
+        try {
+            setLoading(true);
+            const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
+
+            let cashApplied = 0;
+            if (applyFreeCash && freeCash) {
+                const product = products.find((p) => p._id === productId);
+                if (product) {
+                    const mockCartData = {
+                        ...productData,
+                        quantity: quantity,
+                        discountedPrice: productData.discountedPrice || productData.price
+                    };
+                    
+                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
+                        const itemTotal = mockCartData.discountedPrice * quantity;
+                        cashApplied = Math.min(freeCash.amount, itemTotal);
+                    }
+                }
+            }
+
+            const cartItemData = {
+                image_url: productData.imageUrl,
+                product_id: productId,
+                product_name: productData.productName,
+                quantity: quantity,
+                price: productData.price,
+                cash_applied: cashApplied,
+                discounted_price: productData.discountedPrice || productData.price,
+            };
+
+            if (productData.variantId && productData.variantId !== "") {
+                cartItemData.variant_id = productData.variantId;
+            }
+            if (productData.detailsId && productData.detailsId !== "") {
+                cartItemData.details_id = productData.detailsId;
+            }
+            if (productData.sizeId && productData.sizeId !== "") {
+                cartItemData.size_id = productData.sizeId;
+            }
+            if (colorName && colorName !== "") {
+                cartItemData.variant_name = colorName;
+            }
+            if (sizeString && sizeString !== "") {
+                cartItemData.size = sizeString;
+            }
+
+            const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+
+            if (response.status === 200 || response.status === 201) {
+                setCartItems((prev) => ({
+                    ...prev,
+                    [cartKey]: {
+                        productId,
+                        variantName: colorName || null,
+                        sizeString: sizeString || null,
+                        quantity: (prev[cartKey]?.quantity || 0) + quantity,
+                        price: productData.price,
+                        discountedPrice: productData.discountedPrice || productData.price,
+                        imageUrl: productData.imageUrl,
+                        productName: productData.productName,
+                        variantId: productData.variantId,
+                        detailsId: productData.detailsId,
+                        sizeId: productData.sizeId,
+                        cashApplied,
+                    },
+                }));
+            } else {
+                throw new Error("Failed to add item to cart");
+            }
+        } catch (err) {
+            setError("Failed to add item to cart");
+            console.error("Error adding to cart:", err);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const updateQuantity = async (cartKey, change) => {
+        try {
+            const item = cartItems[cartKey];
+            if (!item) return;
+
+            const newQuantity = item.quantity + change;
+
+            if (newQuantity <= 0) {
+                await removeFromCart(cartKey);
+                return;
+            }
+
+            let cashApplied = 0;
+            if (applyFreeCash && freeCash) {
+                const product = products.find((p) => p._id === item.productId);
+                if (product) {
+                    const mockCartData = {
+                        ...item,
+                        quantity: newQuantity,
+                        discountedPrice: item.discountedPrice || item.price
+                    };
+                    
+                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
+                        const itemTotal = mockCartData.discountedPrice * newQuantity;
+                        cashApplied = Math.min(freeCash.amount, itemTotal);
+                    }
+                }
+            }
+
+            const response = await axios.put(
+                "http://localhost:3000/api/cart",
+                {
+                    product_id: item.productId,
+                    variant_name: item.variantName,
+                    size: item.sizeString,
+                    quantity: newQuantity,
+                    cash_applied: cashApplied,
+                },
+                {
+                    withCredentials: true,
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
+                },
+            );
+
+            if (response.status === 200) {
+                setCartItems((prev) => ({
+                    ...prev,
+                    [cartKey]: {
+                        ...prev[cartKey],
+                        quantity: newQuantity,
+                        cashApplied,
+                    },
+                }));
+            }
+        } catch (err) {
+            setError("Failed to update quantity");
+            console.error("Error updating quantity:", err);
+        }
+    };
+
+    const removeFromCart = async (cartKey) => {
+        try {
+            const item = cartItems[cartKey];
+            if (!item) return;
+
+            const response = await axios.delete("http://localhost:3000/api/cart", {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                data: {
+                    product_id: item.productId,
+                    variant_name: item.variantName,
+                    size: item.sizeString,
+                },
+            });
+
+            if (response.status === 200) {
+                setCartItems((prev) => {
+                    const newCart = { ...prev };
+                    delete newCart[cartKey];
+                    return newCart;
+                });
+            }
+        } catch (err) {
+            setError("Failed to remove item");
+            console.error("Error removing from cart:", err);
+        }
+    };
+
+    const isFreeCashEligible = (product, item, freeCash) => {
+        if (!freeCash) return false;
+
+        const now = new Date();
+        if (
+            freeCash.is_cash_used ||
+            freeCash.is_cash_expired ||
+            now < new Date(freeCash.start_date) ||
+            now > new Date(freeCash.end_date)
+        ) {
+            return false;
+        }
+
+        // Use correct property name
+        const itemPrice = item.discountedPrice || item.price;
+        const itemTotal = itemPrice * item.quantity;
+        
+        if (itemTotal < freeCash.valid_above_amount) {
+            return false;
+        }
+
+        if (freeCash.is_cash_applied_on__all_products) {
+            return true;
+        }
+
+        // Check category restrictions
+        if (freeCash.category) {
+            const isMainCategoryMatch = product.mainCategory && 
+                (product.mainCategory.toString() === freeCash.category.toString() ||
+                 product.mainCategory._id?.toString() === freeCash.category.toString());
+            
+            if (!isMainCategoryMatch) {
+                return false;
+            }
+
+            if (freeCash.sub_category) {
+                const isSubCategoryMatch = product.subCategory &&
+                    (product.subCategory.toString() === freeCash.sub_category.toString() ||
+                     product.subCategory._id?.toString() === freeCash.sub_category.toString());
+                
+                if (!isSubCategoryMatch) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    };
+
+    // Update cash applied for all items when applyFreeCash changes
+    const updateAllCashApplied = async () => {
+        const updatedItems = {};
+        let hasChanges = false;
+
+        for (const [cartKey, item] of Object.entries(cartItems)) {
+            let cashApplied = 0;
+            
+            if (applyFreeCash && freeCash) {
+                const product = products.find((p) => p._id === item.productId);
+                if (product && isFreeCashEligible(product, item, freeCash)) {
+                    const itemTotal = (item.discountedPrice || item.price) * item.quantity;
+                    cashApplied = Math.min(freeCash.amount, itemTotal);
+                }
+            }
+
+            if (cashApplied !== item.cashApplied) {
+                hasChanges = true;
+                updatedItems[cartKey] = { ...item, cashApplied };
+
+                // Update on backend
+                try {
+                    await axios.put(
+                        "http://localhost:3000/api/cart",
+                        {
+                            product_id: item.productId,
+                            variant_name: item.variantName,
+                            size: item.sizeString,
+                            quantity: item.quantity,
+                            cash_applied: cashApplied,
+                        },
+                        {
+                            withCredentials: true,
+                            headers: {
+                                "Content-Type": "application/json",
+                            },
+                        }
+                    );
+                } catch (error) {
+                    console.error("Error updating cash applied for item:", error);
+                }
+            } else {
+                updatedItems[cartKey] = item;
+            }
+        }
+
+        if (hasChanges) {
+            setCartItems(updatedItems);
+        }
+    };
+
+    const getCartTotal = () => {
+        let total = Object.values(cartItems).reduce((sum, item) => {
+            const price = item.discountedPrice || item.price;
+            return sum + price * item.quantity;
+        }, 0);
+
+        let totalFreeCashApplied = 0;
+        if (applyFreeCash && freeCash) {
+            totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => {
+                const product = products.find((p) => p._id === item.productId);
+                if (product && isFreeCashEligible(product, item, freeCash)) {
+                    return sum + (item.cashApplied || 0);
+                }
+                return sum;
+            }, 0);
+        }
+
+        return Math.max(0, total - totalFreeCashApplied);
+    };
+
+    const getUniqueCartItemsCount = () => {
+        return Object.keys(cartItems).length;
+    };
+
+    const getTotalItemsCount = () => {
+        return Object.values(cartItems).reduce((sum, item) => sum + item.quantity, 0);
+    };
+
+    const clearCart = async () => {
     try {
-      setLoading(true)
-      const response = await axios.get("http://localhost:3000/api/cart", {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
+        setLoading(true);
+        // Clear cart on backend
+        const response = await axios.delete("http://localhost:3000/api/cart/clear", {
+            withCredentials: true,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        });
 
-      if (response.status === 200) {
-        const cartData = response.data
-        // Convert backend cart data to frontend format
-        const formattedCart = {}
-        cartData.forEach((item) => {
-          const cartKey = `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`
-          formattedCart[cartKey] = {
-            productId: item.product_id,
-            variantName: item.variant_name || null,
-            sizeString: item.size || null,
-            quantity: item.quantity,
-            price: item.price,
-            discountedPrice: item.discounted_price,
-            imageUrl: item.image_url,
-            productName: item.product_name,
-            variantId: item.variant_id,
-            detailsId: item.details_id,
-            sizeId: item.size_id,
-            cashApplied: item.cash_applied,
-            userId: item.user_id
-          }
-        })
-        setCartItems(formattedCart)
-      }
+        if (response.status === 200) {
+            // Clear cart on frontend
+            setCartItems({});
+            setApplyFreeCash(false); // Reset free cash checkbox
+        }
     } catch (err) {
-      setError("Failed to load cart")
-      console.error("Error fetching cart:", err)
+        setError("Failed to clear cart");
+        console.error("Error clearing cart:", err);
     } finally {
-      setLoading(false)
+        setLoading(false);
     }
-  }
+};
 
-  // Add item to cart (both frontend and backend)
-  const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
-    try {
-      setLoading(true)
-      const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`
-
-      const cartItemData = {
-        image_url: productData.imageUrl,
-        product_id: productId,
-        product_name: productData.productName,
-        quantity: quantity,
-        price: productData.price,
-        cash_applied: applyFreeCash,
-        discounted_price: productData.discountedPrice || productData.price,
-      }
-
-      // Only add variant fields if they exist and are not empty
-      if (productData.variantId && productData.variantId !== "") {
-        cartItemData.variant_id = productData.variantId
-      }
-      if (productData.detailsId && productData.detailsId !== "") {
-        cartItemData.details_id = productData.detailsId
-      }
-      if (productData.sizeId && productData.sizeId !== "") {
-        cartItemData.size_id = productData.sizeId
-      }
-      if (colorName && colorName !== "") {
-        cartItemData.variant_name = colorName
-      }
-      if (sizeString && sizeString !== "") {
-        cartItemData.size = sizeString
-      }
-
-      const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-      })
-
-      if (response.status === 200 || response.status === 201) {
-        // Update frontend state
-        setCartItems((prev) => ({
-          ...prev,
-          [cartKey]: {
-            productId,
-            colorName: colorName || null,
-            sizeString: sizeString || null,
-            quantity: (prev[cartKey]?.quantity || 0) + quantity,
-            price: productData.price,
-            discountedPrice: productData.discountedPrice || productData.price,
-            imageUrl: productData.imageUrl,
-            productName: productData.productName,
-            variantId: productData.variantId,
-            detailsId: productData.detailsId,
-            sizeId: productData.sizeId,
-            cashApplied: applyFreeCash,
-          },
-        }))
-      } else {
-        throw new Error("Failed to add item to cart")
-      }
-    } catch (err) {
-      setError("Failed to add item to cart")
-      console.error("Error adding to cart:", err)
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  // Update item quantity
-  const updateQuantity = async (cartKey, change) => {
-    try {
-      const item = cartItems[cartKey]
-      if (!item) return
-
-      const newQuantity = item.quantity + change
-
-      if (newQuantity <= 0) {
-        await removeFromCart(cartKey)
-        return
-      }
-
-      const response = await axios.put(
-        "http://localhost:3000/api/cart",
-        {
-          product_id: item.productId,
-          variant_name: item.colorName,
-          size: item.sizeString,
-          quantity: newQuantity,
-        },
-        {
-          withCredentials: true,
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      )
-
-      if (response.status === 200) {
-        setCartItems((prev) => ({
-          ...prev,
-          [cartKey]: {
-            ...prev[cartKey],
-            quantity: newQuantity,
-          },
-        }))
-      }
-    } catch (err) {
-      setError("Failed to update quantity")
-      console.error("Error updating quantity:", err)
-    }
-  }
-
-  // Remove item from cart
-  const removeFromCart = async (cartKey) => {
-    try {
-      const item = cartItems[cartKey]
-      if (!item) return
-
-      const response = await axios.delete("http://localhost:3000/api/cart", {
-        withCredentials: true,
-        headers: {
-          "Content-Type": "application/json",
-        },
-        data: {
-          product_id: item.productId,
-          variant_name: item.colorName,
-          size: item.sizeString,
-        },
-      })
-
-      if (response.status === 200) {
-        setCartItems((prev) => {
-          const newCart = { ...prev }
-          delete newCart[cartKey]
-          return newCart
-        })
-      }
-    } catch (err) {
-      setError("Failed to remove item")
-      console.error("Error removing from cart:", err)
-    }
-  }
-
-  // Calculate cart total
-  const getCartTotal = () => {
-    const total = Object.values(cartItems).reduce((sum, item) => {
-      const price = item.discountedPrice || item.price
-      return sum + price * item.quantity
-    }, 0)
-
-    return applyFreeCash ? Math.max(0, total - 150) : total
-  }
-
-  // Get unique items count
-  const getUniqueCartItemsCount = () => {
-    return Object.keys(cartItems).length
-  }
-
-  // Get total items count
-  const getTotalItemsCount = () => {
-    return Object.values(cartItems).reduce((sum, item) => sum + item.quantity, 0)
-  }
-
-  const value = {
+    const value = {
     cartItems,
     isCartOpen,
     setIsCartOpen,
@@ -457,31 +430,241 @@ export const CartProvider = ({ children }) => {
     getUniqueCartItemsCount,
     getTotalItemsCount,
     fetchCartFromBackend,
-  }
+    clearCart,
+};
 
-  return <CartContext.Provider value={value}>{children}</CartContext.Provider>
+    return <CartContext.Provider value={value}>{children}</CartContext.Provider>
+};
+
+cartRoutes.js:
+const express = require("express")
+const Cart = require("../models/Cart") // Adjust path as needed
+const router = express.Router()
+
+// Middleware to check authentication
+const requireAuth = (req, res, next) => {
+  if (!req.user || !req.user.id) {
+    return res.status(401).json({ error: "Authentication required" })
+  }
+  next()
 }
 
-7. orderRoutes.js:
-const authenticate = require('../middlewares/authenticate');
-const authorize = require('../middlewares/authorize');
-const express = require('express');
-const router = express.Router();
-const {placeOrder, fetchOrders, shippingPriceUpdate, handleStatusChange, editOrder} = require('../controllers/orderController');
+// Apply authentication middleware to all routes
+router.use(requireAuth)
 
-router.post('/place-order', authenticate, authorize(['user']), placeOrder);
-router.get('/all', authenticate, authorize(['admin']), fetchOrders);
-router.post('/shipping-price-update', authenticate, authorize(['admin']), shippingPriceUpdate);
-router.post('/status-change', authenticate, authorize(['admin']), handleStatusChange);
-router.post('/edit-order/:orderId', authenticate, authorize(['admin']), editOrder);
+// GET /api/cart - Fetch all cart items for user
+router.get("/", async (req, res) => {
+  try {
+    const cartItems = await Cart.find({ user_id: req.user.id })
+    res.status(200).json(cartItems)
+  } catch (error) {
+    console.error("Error fetching cart:", error)
+    res.status(500).json({ error: "Failed to fetch cart items" })
+  }
+})
 
-module.exports = router;
+// POST /api/cart - Add item to cart
+router.post("/", async (req, res) => {
+  try {
+    const {
+      image_url,
+      product_id,
+      variant_id,
+      details_id,
+      size_id,
+      product_name,
+      variant_name,
+      size,
+      quantity,
+      price,
+      cash_applied,
+      discounted_price,
+    } = req.body
 
-8. orderController.js:
+    const existingItem = await Cart.findOne({
+      user_id: req.user.id,
+      product_id,
+      variant_name: variant_name || null,
+      size: size || null,
+    })
+
+    if (existingItem) {
+      // Update quantity if item exists
+      existingItem.quantity += quantity
+      await existingItem.save()
+      res.status(200).json(existingItem)
+    } else {
+      const cartItemData = {
+        user_id: req.user.id,
+        image_url,
+        product_id,
+        product_name,
+        quantity,
+        price,
+        cash_applied,
+        discounted_price,
+      }
+
+      // Only add variant fields if they exist
+      if (variant_id) cartItemData.variant_id = variant_id
+      if (details_id) cartItemData.details_id = details_id
+      if (size_id) cartItemData.size_id = size_id
+      if (variant_name) cartItemData.variant_name = variant_name
+      if (size) cartItemData.size = size
+
+      const newCartItem = new Cart(cartItemData)
+      await newCartItem.save()
+      res.status(201).json(newCartItem)
+    }
+  } catch (error) {
+    console.error("Error adding to cart:", error)
+    res.status(500).json({ error: "Failed to add item to cart" })
+  }
+})
+
+// PUT /api/cart - Update item quantity
+router.put("/", async (req, res) => {
+  try {
+    const { product_id, variant_name, size, quantity } = req.body
+
+    const cartItem = await Cart.findOneAndUpdate(
+      {
+        user_id: req.user.id,
+        product_id,
+        variant_name,
+        size,
+      },
+      { quantity },
+      { new: true },
+    )
+
+    if (!cartItem) {
+      return res.status(404).json({ error: "Cart item not found" })
+    }
+
+    res.status(200).json(cartItem)
+  } catch (error) {
+    console.error("Error updating cart:", error)
+    res.status(500).json({ error: "Failed to update cart item" })
+  }
+})
+
+// DELETE /api/cart - Remove item from cart
+router.delete("/", async (req, res) => {
+  try {
+    const { product_id, variant_name, size } = req.body
+
+    const deletedItem = await Cart.findOneAndDelete({
+      user_id: req.user.id,
+      product_id,
+      variant_name,
+      size,
+    })
+
+    if (!deletedItem) {
+      return res.status(404).json({ error: "Cart item not found" })
+    }
+
+    res.status(200).json({ message: "Item removed from cart" })
+  } catch (error) {
+    console.error("Error removing from cart:", error)
+    res.status(500).json({ error: "Failed to remove item from cart" })
+  }
+})
+
+// DELETE /api/cart/clear - Clear entire cart
+router.delete("/clear", async (req, res) => {
+  try {
+    await Cart.deleteMany({ user_id: req.user.id })
+    res.status(200).json({ message: "Cart cleared successfully" })
+  } catch (error) {
+    console.error("Error clearing cart:", error)
+    res.status(500).json({ error: "Failed to clear cart" })
+  }
+})
+
+module.exports = router
+
+Cart.js:
+const mongoose = require("mongoose");
+
+const cartSchema = mongoose.Schema(
+    {
+        user_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+        },
+        image_url: {
+            type: String,
+            required: true,
+        },
+        product_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: true,
+        },
+        variant_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: false,
+            default: null,
+        },
+        details_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: false,
+            default: null,
+        },
+        size_id: {
+            type: mongoose.Schema.Types.ObjectId,
+            required: false,
+            default: null,
+        },
+        product_name: {
+            type: String,
+            required: true,
+        },
+        variant_name: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        size: {
+            type: String,
+            required: false,
+            default: null,
+        },
+        quantity: {
+            type: Number,
+            required: true,
+            min: 1,
+        },
+        price: {
+            type: Number,
+            required: true,
+            min: 1,
+        },
+        cash_applied: {
+            type: Number,
+            required: false,
+            default: 0,
+        },
+        discounted_price: {
+            type: Number,
+            required: true,
+        },
+    },
+    {
+        timestamps: true,
+    },
+);
+
+module.exports = mongoose.model("Cart", cartSchema);
+
+orderController.js:
 const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
+const FreeCash = require('../models/FreeCash');
+// const sendEmail = require('../utils/sendEmail');
 
 // Function to check whether the order exists or not
 const findOrder = async (orderId) => {
@@ -519,22 +702,18 @@ const findProduct = async (productId) => {
 const placeOrder = async (req, res) => {
     try {
         const cartItems = Object.values(req.body);
-        console.log(cartItems);
-        
-        // Validate input
         if (!cartItems || cartItems.length === 0) {
             return res.status(400).json({
                 success: false,
-                message: "Cart is empty"
+                message: "Cart is empty",
             });
         }
 
-        // ✅ Get user ONCE - all items belong to same user
         const userId = cartItems[0]?.userId;
         if (!userId) {
             return res.status(400).json({
                 success: false,
-                message: "No user ID provided"
+                message: "No user ID provided",
             });
         }
 
@@ -542,31 +721,50 @@ const placeOrder = async (req, res) => {
         if (!user) {
             return res.status(404).json({
                 success: false,
-                message: "User not found"
+                message: "User not found",
             });
         }
 
         const errors = [];
         const ordersToAdd = [];
+        let totalFreeCashApplied = 0;
+        let freeCashId = null;
 
-        // ✅ Process each cart item (no redundant user checks)
+        const freeCash = await FreeCash.findOne({
+            user_id: userId,
+            is_cash_used: false,
+            is_cash_expired: false,
+            start_date: { $lte: new Date() },
+            end_date: { $gte: new Date() },
+        });
+
         for (const cartData of cartItems) {
             try {
                 const product = await Product.findById(cartData.productId);
                 if (!product) {
                     errors.push(`Product not found for id ${cartData.productId}`);
-                    continue; // ✅ Skip invalid item, process others
+                    continue;
+                }
+
+                let cashApplied = cartData.cash_applied || cartData.cashApplied || 0;
+                if (freeCash && cashApplied > 0) {
+                    const isEligible = isFreeCashEligible(product, cartData, freeCash);
+                    if (!isEligible) {
+                        errors.push(`Free cash not eligible for product ${cartData.productName}`);
+                        cashApplied = 0;
+                    } else {
+                        totalFreeCashApplied += cashApplied;
+                        freeCashId = freeCash._id;
+                    }
                 }
 
                 if (cartData.variantId) {
-                    // Product with variants - MUST have size and details
-                    const variant = product.variants.find(v => v._id.toString() === cartData.variantId);
+                    const variant = product.variants.find((v) => v._id.toString() === cartData.variantId);
                     if (!variant) {
                         errors.push(`Variant ${cartData.variantName || 'Unknown'} not found for product ${cartData.productName}`);
                         continue;
                     }
 
-                    // Validate size exists (mandatory for variants)
                     if (!cartData.sizeId) {
                         errors.push(`Size is required for variant ${cartData.variantName} of product ${cartData.productName}`);
                         continue;
@@ -576,8 +774,10 @@ const placeOrder = async (req, res) => {
                     for (const variantItem of product.variants) {
                         if (variantItem._id.toString() === cartData.variantId) {
                             for (const detail of variantItem.moreDetails) {
-                                if (detail._id.toString() === cartData.detailsId && 
-                                    detail.size._id.toString() === cartData.sizeId) {
+                                if (
+                                    detail._id.toString() === cartData.detailsId &&
+                                    detail.size._id.toString() === cartData.sizeId
+                                ) {
                                     sizeFound = true;
                                     break;
                                 }
@@ -591,7 +791,6 @@ const placeOrder = async (req, res) => {
                         continue;
                     }
 
-                    // Add order with variant and size (both mandatory)
                     ordersToAdd.push({
                         image_url: cartData.imageUrl,
                         product_id: cartData.productId,
@@ -603,9 +802,9 @@ const placeOrder = async (req, res) => {
                         quantity: cartData.quantity,
                         price: cartData.price,
                         total: cartData.price * cartData.quantity,
+                        cash_applied: cashApplied,
                     });
                 } else {
-                    // Product without variants (no variants = no sizes = no details)
                     ordersToAdd.push({
                         image_url: cartData.imageUrl,
                         product_id: cartData.productId,
@@ -613,63 +812,75 @@ const placeOrder = async (req, res) => {
                         quantity: cartData.quantity,
                         price: cartData.price,
                         total: cartData.price * cartData.quantity,
+                        cash_applied: cashApplied,
                     });
                 }
-
             } catch (itemError) {
                 console.error('Error processing cart item:', itemError);
                 errors.push(`Error processing product ${cartData.productId}: ${itemError.message}`);
-                continue; // ✅ Continue processing other items
+                continue;
             }
         }
 
-        // ✅ Create order if we have valid items
         if (ordersToAdd.length > 0) {
             const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.total, 0);
+            const finalPrice = Math.max(0, totalPrice - totalFreeCashApplied);
 
-            const newOrder = new Order({
-                user_id: req.user.id, // From auth middleware
+            const orderData = {
+                user_id: req.user.id,
                 user_name: `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.trim(),
                 email: user.email,
                 phone_number: user.phone_number,
                 whatsapp_number: user.whatsapp_number,
                 orderedProducts: ordersToAdd,
-                price: totalPrice,
-            });
+                price: finalPrice,
+            };
 
+            if (totalFreeCashApplied > 0 && freeCashId) {
+                orderData.cash_applied = { amount: totalFreeCashApplied, freeCashId };
+                await FreeCash.findByIdAndUpdate(freeCashId, { is_cash_used: true, cash_used_date: new Date() });
+                try {
+                    await sendEmail(
+                        user.email,
+                        "Free Cash Applied",
+                        `Your free cash of $${totalFreeCashApplied} has been applied to your order. Note: Free cash is single-use and any remaining amount is not credited back.`
+                    );
+                } catch (emailError) {
+                    console.error("Error sending free cash email:", emailError);
+                }
+            }
+
+            const newOrder = new Order(orderData);
             await newOrder.save();
 
-            // ✅ Success response (even if some items had errors)
             return res.status(201).json({
                 success: true,
                 message: "Order placed successfully",
                 order: {
                     id: newOrder._id,
-                    totalPrice: totalPrice,
+                    totalPrice: finalPrice,
                     itemCount: ordersToAdd.length,
                     validItems: ordersToAdd.length,
-                    totalItems: cartItems.length
+                    totalItems: cartItems.length,
                 },
                 warnings: errors.length > 0 ? {
                     message: `${errors.length} items could not be processed`,
-                    details: errors
-                } : undefined
+                    details: errors,
+                } : undefined,
             });
         } else {
-            // ✅ No valid items to order
             return res.status(400).json({
                 success: false,
                 message: "No valid items to order. All items have errors.",
-                errors: errors
+                errors: errors,
             });
         }
-
     } catch (error) {
         console.error('Order placement error:', error);
         return res.status(500).json({
             success: false,
             message: "Internal server error while placing order",
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined
+            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
         });
     }
 };
@@ -879,286 +1090,64 @@ const editOrder = async (req, res) => {
     }
 }
 
+const isFreeCashEligible = (product, cartData, freeCash) => {
+    if (!freeCash) return false;
+    
+    const now = new Date();
+    if (
+        freeCash.is_cash_used ||
+        freeCash.is_cash_expired ||
+        now < new Date(freeCash.start_date) ||
+        now > new Date(freeCash.end_date)
+    ) {
+        return false;
+    }
+
+    // Calculate item total - use correct property names
+    const itemPrice = cartData.discountedPrice || cartData.price;
+    const itemTotal = itemPrice * cartData.quantity;
+    
+    if (itemTotal < freeCash.valid_above_amount) {
+        return false;
+    }
+
+    // If applicable to all products
+    if (freeCash.is_cash_applied_on__all_products) {
+        return true;
+    }
+
+    // Check category restrictions
+    if (freeCash.category) {
+        // Compare with product's mainCategory
+        const isMainCategoryMatch = product.mainCategory && 
+            (product.mainCategory.toString() === freeCash.category.toString() ||
+             product.mainCategory._id?.toString() === freeCash.category.toString());
+        
+        if (!isMainCategoryMatch) {
+            return false;
+        }
+
+        // If sub_category is specified, check it too
+        if (freeCash.sub_category) {
+            const isSubCategoryMatch = product.subCategory &&
+                (product.subCategory.toString() === freeCash.sub_category.toString() ||
+                 product.subCategory._id?.toString() === freeCash.sub_category.toString());
+            
+            if (!isSubCategoryMatch) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+};
 module.exports = {
     placeOrder,
     fetchOrders,
     shippingPriceUpdate,
     handleStatusChange,
     editOrder,
+    isFreeCashEligible,
 };
 
-9. Order.js:
-const mongoose = require('mongoose');
-
-const orderedProductSchema = new mongoose.Schema({
-    image_url: {
-        type: String,
-        required: true,
-    },
-  product_id: {
-    type: mongoose.Types.ObjectId,
-    required: true,
-  },
-  product_name: {
-    type: String,
-    required: true,
-  },
-  variant_id: {
-    type: mongoose.Types.ObjectId,
-  },
-  variant_name: {
-    type: String,
-    required: false
-  },
-  size_id: {
-    type: mongoose.Types.ObjectId,
-  },
-  size: {
-    type: String,
-    required: false
-  },
-  quantity: {
-    type: Number,
-    required: true,
-  },
-  price: {
-    type: Number,
-    required: true,
-  },
-  total: {
-    type: Number,
-    required: true,
-  }
-}, { _id: false });
-
-const orderSchema = mongoose.Schema({
-    user_id: {
-        type: mongoose.Types.ObjectId,
-        required: true,
-    },
-    user_name: {
-        type: String,
-        required: true,
-    },
-    email: {
-        type: String,
-        required: true,
-    },
-    phone_number: {
-        type: String,
-        required: true,
-    },
-    whatsapp_number: {
-        type: String,
-        required: true,
-    },
-    orderedProducts: [orderedProductSchema],
-    status: {
-        type: String,
-        enum: ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"],
-        required: true,
-        default: "Pending",
-    },
-    cash_applied: {
-        type: String,
-        // enum: ["yes", "no"],
-        required: false,
-    },
-    price: {
-        type: Number,
-        required: true,
-    },
-    shipping_price: {
-      type: Number,
-      default: 0
-    },
-    total_price: {
-        type: String,
-        required: false,
-        default: "Pending",
-    },
-    payment_status: {
-      type: String,
-      required: true,
-      enum: ['Paid', 'Payment Pending'],
-      default: "Payment Pending",
-    }
-});
-
-module.exports = mongoose.model('Order', orderSchema);
-
-10 User.js
-You are asking for updating free cash balance but I want that you update it in FreeCash model itslef as the amount is stored in this model only.
-
-Now also if you need User.js for any other reasons then say me I will provide you the files. Further if you need any file then say me dont make any assumptions just ask me I will provide you the file.
-
-11 AuthContext.jsx:
-import { useContext, useState, useEffect, Children, createContext } from 'react';
-import axios from 'axios';
-
-export const AuthContext = createContext();
-
-export const AuthProvider = ({children}) => {
-    const [user, setUser] = useState(null);
-    const [loading, setLoading] = useState(true);
-
-     useEffect(() => {
-    const checkLogin = async() => {
-      try {
-        const res = await axios.get(
-          'http://localhost:3000/api/auth/me',
-          {withCredentials: true},
-        );
-        console.log("You are logged in")
-        setUser(res.data.user)
-      } catch(err) {
-        setUser(null);
-        // navigate('/auth/login');
-      } finally {
-        setLoading(false);
-      }
-
-    }
-    checkLogin();
-  }, [])
-
-  return(
-    <AuthContext.Provider value={{ user, setUser, loading }}>
-        {children}
-    </AuthContext.Provider>
-  )
-}
-
-12. server.js:
-const express = require('express');
-const mongoose = require('mongoose');
-const cors = require('cors');
-require('dotenv').config();
-const cookieParser = require('cookie-parser');
-const path = require('path');
-const authRoutes = require('./routes/authRoutes');
-const categoryRoutes = require('./routes/categoryRoutes');
-const productRoutes = require('./routes/productRoutes');
-const cartRoutes = require('./routes/cartRoutes');
-const orderRoutes = require('./routes/orderRoutes');
-const userRoutes = require('./routes/userRoutes');
-const freeCashRoutes = require('./routes/freeCashRoutes');
-const discountRoutes = require('./routes/discountRoutes');
-const bannerRoutes = require('./routes/bannerRoutes');
-const announcementRoutes = require('./routes/announcementRoutes');
-const authenticate = require('./middlewares/authenticate');
-const authorize = require('./middlewares/authorize');
-const User = require('./models/User');
-const morgan = require('morgan');
-
-const app = express();
-
-// Middleware
-// app.use(morgan('dev')); // Request logging for debugging
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
-app.use(cookieParser());
-app.use(
-  cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:5173', // Configurable frontend origin
-    credentials: true, // Allow cookies
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
-
-// Serve static files for uploads
-// app.use('/uploads', express.static(path.join(__dirname, 'Uploads')));
-
-// MongoDB Connection
-mongoose
-  .connect(process.env.MONGO_URI)
-  .then(() => console.log('Connected to MongoDB'))
-  .catch((err) => {
-    console.error('MongoDB connection error:', err);
-    process.exit(1); // Exit on connection failure
-  });
-
-// Routes
-// Authentication routes (login, signup, logout)
-app.use('/api/auth', authRoutes);
-
-// User routes (if any, e.g., profile management)
-app.get('/api/user/profile', authenticate, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.json({ message: 'User profile', user });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Admin routes (protected by authenticate and authorize)
-app.use('/api/category', authenticate, categoryRoutes);
-app.use('/api/product', authenticate, productRoutes);
-app.use('/api/cart', authenticate, authorize(['user']), cartRoutes);
-app.use('/api/order', authenticate, orderRoutes);
-app.use('/api/user', authenticate, userRoutes);
-app.use('/api/free-cash', authenticate, authorize(['admin']), freeCashRoutes);
-app.use('/api/discount', authenticate, discountRoutes);
-app.use('/api/banner', authenticate, bannerRoutes);
-app.use('/api/announcement', authenticate, announcementRoutes);
-
-// Authenticated user info
-app.get('/api/auth/me', authenticate, async (req, res) => {
-  try {
-    const user = await User.findById(req.user.id).select('-password');
-    if (!user) {
-      return res.status(404).json({ message: 'User not found' });
-    }
-    res.json({
-      message: 'User logged in',
-      user: {
-        id: user._id,
-        name: user.name,
-        role: user.role,
-        email: user.email, // Include additional fields as needed
-      },
-    });
-  } catch (err) {
-    res.status(500).json({ message: 'Server error' });
-  }
-});
-
-// Global error handling middleware
-app.use((err, req, res, next) => {
-  console.error('Error:', err.stack);
-  res.status(500).json({ message: 'Something went wrong!' });
-});
-
-// Start server
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
-
-13. authenticate.js (middleware):
-const jwt = require('jsonwebtoken');
-require('dotenv').config();
-
-const authenticate = (req, res, next) => {
-    const token = req.cookies.token;
-    if(!token) {
-        console.log("From authetnticate " + token);
-        return res.status(401).json({message: 'Please Login to continue blah'});
-    }
-
-    try {
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
-        req.user = decoded;
-        next();
-    } catch(err) {
-            console.log("From authetnticate catch" + token);
-        return res.status(401).json({message: "Please Login to continue blah blah"});
-    }
-}
-
-module.exports = authenticate;
-
-This are the files. Now also if you need more files from just say me I will provide you the files. If you dont need any files then start generating the code or else provide the file names to upload. Make sure you dont change anything as backend is already implemented. Also make sure that usr can place order only this free cash has been remaining in making order without free cash the order is working very well so consider all this and whichever code you update give me full updated code instead of just part you update
+This are the files I have provided you now if you want more additional files then just say me the names of the files you need without any hesitation. I will provide you all the files. If you need files then dont generate any content first say the files names.
