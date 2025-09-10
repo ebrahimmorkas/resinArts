@@ -70,7 +70,6 @@ export default function Home() {
       await clearCart(); // Clear cart after successful order
       clearFreeCashCache(); // Clear free cash cache
       await checkFreeCashEligibility(); // Refresh free cash state
-      // navigate(`/orders/${user.id}`); // Redirect to orders page
       setIsCartOpen(false); // Close cart modal
     }
   } catch (error) {
@@ -1159,6 +1158,8 @@ export default function Home() {
 
   const CartModal = () => {
     const totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => sum + (item.cashApplied || 0), 0);
+    const cartTotal = getCartTotal();
+    const isFreeCashDisabled = cartTotal < (freeCash?.valid_above_amount || 50);
 
     return (
       <div className={`fixed inset-0 z-50 ${isCartOpen ? "block" : "hidden"}`}>
@@ -1194,14 +1195,27 @@ export default function Home() {
                         checked={applyFreeCash}
                         onChange={(e) => setApplyFreeCash(e.target.checked)}
                         className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                        disabled={isFreeCashDisabled}
                       />
                       <span className="text-sm text-gray-700">
                         Apply Free Cash (${freeCash.amount.toFixed(2)} available)
                       </span>
                     </label>
-                    <p className="text-xs text-red-600 mt-1">
-                      Note: Free cash is single-use. Any unused amount will not be credited back.
+                    <p className="text-xs text-gray-600 mt-1">
+                      Free cash is valid above 50 RS
                     </p>
+                    <p className="text-xs text-gray-600 mt-1">
+                      Expires on: {new Intl.DateTimeFormat("en-GB", {
+  day: "2-digit",
+  month: "long",
+  year: "numeric",
+}).format(new Date(freeCash.end_date))}
+                    </p>
+                    {isFreeCashDisabled && (
+                      <p className="text-xs text-red-600 mt-1">
+                        Cart total must be at least 50 RS to apply free cash
+                      </p>
+                    )}
                   </div>
                 )}
                 {Object.entries(cartItems).map(([cartKey, item]) => {
@@ -1271,7 +1285,7 @@ export default function Home() {
                   )}
                   <div className="flex justify-between items-center mb-4">
                     <span className="font-bold">Total:</span>
-                    <span className="font-bold text-xl">${getCartTotal().toFixed(2)}</span>
+                    <span className="font-bold text-xl">${cartTotal.toFixed(2)}</span>
                   </div>
                   <button
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200"

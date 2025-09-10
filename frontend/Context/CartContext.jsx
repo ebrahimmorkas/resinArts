@@ -38,7 +38,7 @@ export const CartProvider = ({ children }) => {
         if (freeCash !== null && Object.keys(cartItems).length > 0) {
             // If free cash is available, enable the checkbox by default
             if (freeCash && !freeCash.is_cash_used && !freeCash.is_cash_expired) {
-                setApplyFreeCash(true);
+                setApplyFreeCash(false);
             } else {
                 setApplyFreeCash(false);
             }
@@ -276,53 +276,55 @@ export const CartProvider = ({ children }) => {
     };
 
     const isFreeCashEligible = (product, item, freeCash) => {
-        if (!freeCash) return false;
+  if (!freeCash) return false;
 
-        const now = new Date();
-        if (
-            freeCash.is_cash_used ||
-            freeCash.is_cash_expired ||
-            now < new Date(freeCash.start_date) ||
-            now > new Date(freeCash.end_date)
-        ) {
-            return false;
-        }
+  const now = new Date();
+  if (
+    freeCash.is_cash_used ||
+    freeCash.is_cash_expired ||
+    now < new Date(freeCash.start_date) ||
+    now > new Date(freeCash.end_date)
+  ) {
+    return false;
+  }
 
-        // Use correct property name
-        const itemPrice = item.discountedPrice || item.price;
-        const itemTotal = itemPrice * item.quantity;
-        
-        if (itemTotal < freeCash.valid_above_amount) {
-            return false;
-        }
+  // Calculate total cart value (excluding free cash applied)
+  const cartTotal = Object.values(cartItems).reduce((sum, cartItem) => {
+    const price = cartItem.discountedPrice || cartItem.price;
+    return sum + price * cartItem.quantity;
+  }, 0);
 
-        if (freeCash.is_cash_applied_on__all_products) {
-            return true;
-        }
+  if (cartTotal < freeCash.valid_above_amount) {
+    return false;
+  }
 
-        // Check category restrictions
-        if (freeCash.category) {
-            const isMainCategoryMatch = product.mainCategory && 
-                (product.mainCategory.toString() === freeCash.category.toString() ||
-                 product.mainCategory._id?.toString() === freeCash.category.toString());
-            
-            if (!isMainCategoryMatch) {
-                return false;
-            }
+  if (freeCash.is_cash_applied_on__all_products) {
+    return true;
+  }
 
-            if (freeCash.sub_category) {
-                const isSubCategoryMatch = product.subCategory &&
-                    (product.subCategory.toString() === freeCash.sub_category.toString() ||
-                     product.subCategory._id?.toString() === freeCash.sub_category.toString());
-                
-                if (!isSubCategoryMatch) {
-                    return false;
-                }
-            }
-        }
+  // Check category restrictions
+  if (freeCash.category) {
+    const isMainCategoryMatch = product.mainCategory && 
+      (product.mainCategory.toString() === freeCash.category.toString() ||
+       product.mainCategory._id?.toString() === freeCash.category.toString());
+    
+    if (!isMainCategoryMatch) {
+      return false;
+    }
 
-        return true;
-    };
+    if (freeCash.sub_category) {
+      const isSubCategoryMatch = product.subCategory &&
+        (product.subCategory.toString() === freeCash.sub_category.toString() ||
+         product.subCategory._id?.toString() === freeCash.sub_category.toString());
+      
+      if (!isSubCategoryMatch) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+};
 
     // Update cash applied for all items when applyFreeCash changes
     const updateAllCashApplied = async () => {
