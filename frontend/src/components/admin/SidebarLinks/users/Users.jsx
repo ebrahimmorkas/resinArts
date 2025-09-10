@@ -10,11 +10,11 @@ import axios from "axios";
 
 export default function Users() {
   const {users, loadingUsers, usersError, refetchUsers} = useContext(UserContext);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [selectedUsers, setSelectedUsers] = useState([]);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [showFilters, setShowFilters] = useState(false);
-  const [activeFilter, setActiveFilter] = useState("");
+  const [searchQuery, setSearchQuery] = useState("")
+  const [selectedUsers, setSelectedUsers] = useState([])
+  const [currentPage, setCurrentPage] = useState(1)
+  const [showFilters, setShowFilters] = useState(false)
+  const [activeFilter, setActiveFilter] = useState("")
   const [filterValues, setFilterValues] = useState({
     lastActiveBefore: "",
     lastOrderBefore: "",
@@ -22,175 +22,253 @@ export default function Users() {
     ordersAmount: "",
     selectedDate: "",
   });
-  const [categories, setCategories] = useState([]);
-  const [mainCategories, setMainCategories] = useState([]);
-  const [selectedMainCategory, setSelectedMainCategory] = useState("");
-  const [subCategories, setSubCategories] = useState([]);
-  const [selectedSubCategory, setSelectedSubCategory] = useState("");
-  const [loadingCategories, setLoadingcategories] = useState(true);
+  const [allCategoriesTree, setAllCategoriesTree] = useState([]); // Nested tree from /all
+  const [allCategoriesFlat, setAllCategoriesFlat] = useState([]); // Flattened for path lookup
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]); // [main_id, sub_id, ...]
+  const [categoryPath, setCategoryPath] = useState(""); // Path display
+  const [loadingCategories, setLoadingCategories] = useState(true);
   const [categoriesFetchingError, setCategoriesFetchingError] = useState("");
-  const [noSubCategories, setNoSubCategories] = useState(false);
-  const [subCategoriesError, setSubCategoriesError] = useState("");
+  const [mainCategoryError, setMainCategoryError] = useState("");
 
   // Modal states
-  const [showBanModal, setShowBanModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [showCashModal, setShowCashModal] = useState(false);
-  const [showPasswordModal, setShowPasswordModal] = useState(false);
-  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false);
-  const [showRevokeCashModal, setShowRevokeCashModal] = useState(false);
-  const [mainCategoryError, setMainCategoryError] = useState("");
+  const [showBanModal, setShowBanModal] = useState(false)
+  const [showDeleteModal, setShowDeleteModal] = useState(false)
+  const [showCashModal, setShowCashModal] = useState(false)
+  const [showPasswordModal, setShowPasswordModal] = useState(false)
+  const [showBulkDeleteModal, setShowBulkDeleteModal] = useState(false)
+  const [showRevokeCashModal, setShowRevokeCashModal] = useState(false)
   const [isFreeCashValidForAllProducts, setIsFreeCashValidForAllProducts] = useState(false);
   
-  const [selectedUser, setSelectedUser] = useState(null);
+  const [selectedUser, setSelectedUser] = useState(null)
   const [cashForm, setCashForm] = useState({
     amount: "",
     validAbove: "",
     endDate: "",
     selectedMainCategory: "",
     selectedSubCategory: "",
-    validForAllProducts: false,
-  });
-  const [newPassword, setNewPassword] = useState("");
+    validForAllProducts: false
+  })
+  const [newPassword, setNewPassword] = useState("")
 
+  // Fetch categories from /all (from AddProduct.jsx)
   useEffect(() => {
-    const fetchCategories = async () => {
-      try {
-        const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
-        if (res.status === 200) {
-          setCategories(res.data.categories);
-          setLoadingcategories(false);
-          setCategoriesFetchingError("");
-        }
-      } catch (error) {
-        setCategoriesFetchingError("Cannot fetch categories");
-        console.error("Category fetch error:", error);
-        setLoadingcategories(false);
+  const getCategories = async () => {
+    try {
+      const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
+      if (res.status === 200) {
+        const flatCats = res.data.categories;
+        const buildTree = (flatCats) => {
+          const tree = [];
+          const map = {};
+          flatCats.forEach(cat => {
+            map[cat._id] = { ...cat, subcategories: [] };
+          });
+          flatCats.forEach(cat => {
+            if (cat.parent_category_id === null) {
+              tree.push(map[cat._id]);
+            } else if (map[cat.parent_category_id]) {
+              map[cat.parent_category_id].subcategories.push(map[cat._id]);
+            }
+          });
+          return tree;
+        };
+        setAllCategoriesTree(buildTree(flatCats));
+        setAllCategoriesFlat(flattenCategories(flatCats));
+        setLoadingCategories(false);
+        setCategoriesFetchingError("");
       }
-    };
-    fetchCategories();
-  }, []);
+    } catch (error) {
+      setCategoriesFetchingError("Cannot fetch categories");
+      console.error("Category fetch error:", error);
+      setLoadingCategories(false);
+    }
+  };
+  getCategories();
+}, []);
 
+  // From AddProduct.jsx: Flatten categories for path
+  const flattenCategories = (categories, parentPath = "", parentId = null) => {
+    let flatList = []
+    categories.forEach((cat) => {
+      const currentPath = parentPath ? `${parentPath} > ${cat.categoryName}` : cat.categoryName
+      flatList.push({ ...cat, path: currentPath, parentId: parentId })
+      if (cat.subcategories && cat.subcategories.length > 0) {
+        flatList = flatList.concat(flattenCategories(cat.subcategories, currentPath, cat._id))
+      }
+    })
+    return flatList
+  }
+
+  // From AddProduct.jsx: Find category in tree
+  const findCategoryInTree = (categoryId, categories) => {
+    for (const cat of categories) {
+      if (cat._id === categoryId) {
+        return cat
+      }
+      if (cat.subcategories && cat.subcategories.length > 0) {
+        const found = findCategoryInTree(categoryId, cat.subcategories)
+        if (found) {
+          return found
+        }
+      }
+    }
+    return null
+  }
+
+  // From AddProduct.jsx: Update path
   useEffect(() => {
-    const updateMainCategory = () => {
-      const maincategories = categories.filter(category => category.parent_category_id === null);
-      setMainCategories(maincategories);
-    };
-    updateMainCategory();
-  }, [categories]);
+    const pathNames = selectedCategoryIds
+      .map((id) => allCategoriesFlat.find((cat) => cat._id === id)?.categoryName)
+      .filter(Boolean)
+    setCategoryPath(pathNames.join(" > "))
+  }, [selectedCategoryIds, allCategoriesFlat])
 
-  const usersPerPage = 10;
+  // From AddProduct.jsx: Handle category selection
+  const handleCategorySelect = (level, categoryId) => {
+    let newSelectedCategoryIds = [...selectedCategoryIds.slice(0, level), categoryId].filter(Boolean)
+    if (!categoryId) {
+      newSelectedCategoryIds = newSelectedCategoryIds.slice(0, level)
+    }
+    setSelectedCategoryIds(newSelectedCategoryIds)
+    const mainId = newSelectedCategoryIds[0] || ""
+    const subId = newSelectedCategoryIds.length > 1 ? newSelectedCategoryIds[newSelectedCategoryIds.length - 1] : ""
+    setCashForm((prev) => ({
+      ...prev,
+      selectedMainCategory: mainId,
+      selectedSubCategory: subId,
+    }));
+    setMainCategoryError("");
+  }
 
-  // Filter users based on search and filters
+  // Handle all-products checkbox
+  const handleAllProductsChange = (e) => {
+    const checked = e.target.checked;
+    setIsFreeCashValidForAllProducts(checked);
+    setCashForm((prev) => ({ ...prev, validForAllProducts: checked }));
+    if (checked) {
+      setSelectedCategoryIds([]);
+      setCategoryPath("");
+      setCashForm((prev) => ({
+        ...prev,
+        selectedMainCategory: "",
+        selectedSubCategory: "",
+      }));
+      setMainCategoryError("");
+    }
+  };
+
+  const usersPerPage = 10
+
+  // Filter users
   const filteredUsers = users.filter((user) => {
     const matchesSearch =
       user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.phone.includes(searchQuery);
+      user.phone.includes(searchQuery)
 
     if (activeFilter === "active-status" && filterValues.lastActiveBefore) {
-      const lastActiveDate = new Date(user.lastActive);
-      const filterDate = new Date(filterValues.lastActiveBefore);
-      if (lastActiveDate >= filterDate) return false;
+      const lastActiveDate = new Date(user.lastActive)
+      const filterDate = new Date(filterValues.lastActiveBefore)
+      if (lastActiveDate >= filterDate) return false
     }
 
     if (activeFilter === "last-order" && filterValues.lastOrderBefore) {
-      const lastOrderDate = new Date(user.lastActive);
-      const filterDate = new Date(filterValues.lastOrderBefore);
-      if (lastOrderDate >= filterDate) return false;
+      const lastOrderDate = new Date(user.lastActive)
+      const filterDate = new Date(filterValues.lastOrderBefore)
+      if (lastOrderDate >= filterDate) return false
     }
 
     if (activeFilter === "orders" && filterValues.ordersAmount) {
-      const amount = Number.parseInt(filterValues.ordersAmount);
-      if (filterValues.ordersType === "below" && user.orders >= amount) return false;
-      if (filterValues.ordersType === "above" && user.orders <= amount) return false;
+      const amount = Number.parseInt(filterValues.ordersAmount)
+      if (filterValues.ordersType === "below" && user.orders >= amount) return false
+      if (filterValues.ordersType === "above" && user.orders <= amount) return false
     }
 
     if (activeFilter === "free-cash") {
-      if (!user.hasCash) return false;
+      if (!user.hasCash) return false
     }
 
     if (activeFilter === "date" && filterValues.selectedDate) {
-      const userDate = new Date(user.joinDate);
-      const filterDate = new Date(filterValues.selectedDate);
-      if (userDate.toDateString() !== filterDate.toDateString()) return false;
+      const userDate = new Date(user.joinDate)
+      const filterDate = new Date(filterValues.selectedDate)
+      if (userDate.toDateString() !== filterDate.toDateString()) return false
     }
 
-    return matchesSearch;
-  });
+    return matchesSearch
+  })
 
   // Pagination
-  const totalPages = Math.ceil(filteredUsers.length / usersPerPage);
-  const startIndex = (currentPage - 1) * usersPerPage;
-  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage);
+  const totalPages = Math.ceil(filteredUsers.length / usersPerPage)
+  const startIndex = (currentPage - 1) * usersPerPage
+  const paginatedUsers = filteredUsers.slice(startIndex, startIndex + usersPerPage)
 
-  // Handlers (unchanged except for below)
+  // Handlers
   const handleUserSelect = (userId) => {
-    setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]));
-  };
+    setSelectedUsers((prev) => (prev.includes(userId) ? prev.filter((id) => id !== userId) : [...prev, userId]))
+  }
 
   const handleSelectAll = () => {
     if (selectedUsers.length === paginatedUsers.length) {
-      setSelectedUsers([]);
+      setSelectedUsers([])
     } else {
-      setSelectedUsers(paginatedUsers.map((user) => user.id));
+      setSelectedUsers(paginatedUsers.map((user) => user.id))
     }
-  };
+  }
 
   const handleBanUser = (user) => {
-    setSelectedUser(user);
-    setShowBanModal(true);
-  };
+    setSelectedUser(user)
+    setShowBanModal(true)
+  }
 
   const handleDeleteUser = (user) => {
-    setSelectedUser(user);
-    setShowDeleteModal(true);
-  };
+    setSelectedUser(user)
+    setShowDeleteModal(true)
+  }
 
   const handlePayCash = (user) => {
-    setSelectedUser(user);
-    setShowCashModal(true);
-  };
+    setSelectedUser(user)
+    setShowCashModal(true)
+  }
 
   const handleChangePassword = (user) => {
-    setSelectedUser(user);
-    setShowPasswordModal(true);
-  };
+    setSelectedUser(user)
+    setShowPasswordModal(true)
+  }
 
   const handleRevokeCash = (user) => {
-    setSelectedUser(user);
-    setShowRevokeCashModal(true);
-  };
+    setSelectedUser(user)
+    setShowRevokeCashModal(true)
+  }
 
   const handleBulkSendCash = () => {
-    setShowCashModal(true);
-  };
+    setShowCashModal(true)
+  }
 
   const handleBulkRevokeCash = () => {
-    setShowRevokeCashModal(true);
-  };
+    setShowRevokeCashModal(true)
+  }
 
   const handleBulkDelete = () => {
-    setShowBulkDeleteModal(true);
-  };
+    setShowBulkDeleteModal(true)
+  }
 
   const confirmBan = () => {
-    setUsers((prev) => prev.map((user) => (user.id === selectedUser.id ? { ...user, status: "banned" } : user)));
-    setShowBanModal(false);
-    setSelectedUser(null);
-  };
+    setUsers((prev) => prev.map((user) => (user.id === selectedUser.id ? { ...user, status: "banned" } : user)))
+    setShowBanModal(false)
+    setSelectedUser(null)
+  }
 
   const confirmDelete = () => {
     if (selectedUser) {
-      setUsers((prev) => prev.filter((user) => user.id !== selectedUser.id));
+      setUsers((prev) => prev.filter((user) => user.id !== selectedUser.id))
     } else {
-      setUsers((prev) => prev.filter((user) => !selectedUsers.includes(user.id)));
-      setSelectedUsers([]);
+      setUsers((prev) => prev.filter((user) => !selectedUsers.includes(user.id)))
+      setSelectedUsers([])
     }
-    setShowDeleteModal(false);
-    setShowBulkDeleteModal(false);
-    setSelectedUser(null);
-  };
+    setShowDeleteModal(false)
+    setShowBulkDeleteModal(false)
+    setSelectedUser(null)
+  }
 
   const confirmPayCash = () => {
     if (selectedUser) {
@@ -198,7 +276,7 @@ export default function Users() {
         prev.map((user) =>
           user.id === selectedUser.id ? { ...user, hasCash: true, cashAmount: Number.parseInt(cashForm.amount) } : user,
         ),
-      );
+      )
     } else {
       setUsers((prev) =>
         prev.map((user) =>
@@ -206,100 +284,52 @@ export default function Users() {
             ? { ...user, hasCash: true, cashAmount: Number.parseInt(cashForm.amount) }
             : user,
         ),
-      );
-      setSelectedUsers([]);
+      )
+      setSelectedUsers([])
     }
-    setShowCashModal(false);
-    setCashForm({ amount: "", validAbove: "", endDate: "", selectedMainCategory: "", selectedSubCategory: "", validForAllProducts: false });
-    setSelectedUser(null);
-  };
+    setShowCashModal(false)
+    setCashForm({ amount: "", validAbove: "", endDate: "", selectedMainCategory: "", selectedSubCategory: "", validForAllProducts: false })
+    setSelectedUser(null)
+  }
 
   const confirmRevokeCash = () => {
     if (selectedUser) {
       setUsers((prev) =>
         prev.map((user) => (user.id === selectedUser.id ? { ...user, hasCash: false, cashAmount: 0 } : user)),
-      );
+      )
     } else {
       setUsers((prev) =>
         prev.map((user) => (selectedUsers.includes(user.id) ? { ...user, hasCash: false, cashAmount: 0 } : user)),
-      );
-      setSelectedUsers([]);
+      )
+      setSelectedUsers([])
     }
-    setShowRevokeCashModal(false);
-    setSelectedUser(null);
-  };
+    setShowRevokeCashModal(false)
+    setSelectedUser(null)
+  }
 
   const confirmChangePassword = () => {
-    console.log(`Changing password for user ${selectedUser.id} to: ${newPassword}`);
-    setShowPasswordModal(false);
-    setNewPassword("");
-    setSelectedUser(null);
-  };
+    console.log(`Changing password for user ${selectedUser.id} to: ${newPassword}`)
+    setShowPasswordModal(false)
+    setNewPassword("")
+    setSelectedUser(null)
+  }
 
   const applyFilter = () => {
-    setCurrentPage(1);
-    setShowFilters(false);
-  };
+    setCurrentPage(1)
+    setShowFilters(false)
+  }
 
   const clearFilters = () => {
-    setActiveFilter("");
+    setActiveFilter("")
     setFilterValues({
       lastActiveBefore: "",
       lastOrderBefore: "",
       ordersType: "below",
       ordersAmount: "",
       selectedDate: "",
-    });
-    setShowFilters(false);
-  };
-
-  const handleMainCategoryChange = (e) => {
-    const categoryID = e.target.value.trim();
-    setNoSubCategories(false);
-    setSubCategoriesError("");
-    setMainCategoryError("");
-    if (!categoryID) {
-      setMainCategoryError("Please select a main category");
-      return;
-    }
-    const category = categories.find(cat => cat._id.toString() === categoryID);
-    if (!category) {
-      setMainCategoryError("Selected category not found");
-      return;
-    }
-    const sub_categories = categories.filter(cat => cat.parent_category_id === categoryID);
-    if (sub_categories.length === 0) {
-      setNoSubCategories(true);
-    }
-    setSelectedMainCategory(category._id);
-    setSubCategories(sub_categories);
-    setCashForm((prev) => ({
-      ...prev,
-      selectedMainCategory: category._id,
-      selectedSubCategory: "",
-    }));
-  };
-
-  const handleSubCategoriesChange = (e) => {
-    const categoryID = e.target.value.trim();
-    setNoSubCategories(false);
-    setMainCategoryError("");
-    setSubCategoriesError("");
-    if (!categoryID) {
-      setSubCategoriesError("Please select a sub-category or leave empty");
-      return;
-    }
-    const category = categories.find(cat => cat._id.toString() === categoryID);
-    if (!category) {
-      setSubCategoriesError("Selected sub-category not found");
-      return;
-    }
-    setSelectedSubCategory(category._id);
-    setCashForm((prev) => ({
-      ...prev,
-      selectedSubCategory: category._id,
-    }));
-  };
+    })
+    setShowFilters(false)
+  }
 
   const handleCashModalFormSubmit = async (e) => {
     e.preventDefault();
@@ -308,7 +338,6 @@ export default function Users() {
       return;
     }
 
-    // Clean form data
     const cleanedCashForm = {
       amount: cashForm.amount.toString().trim(),
       validAbove: cashForm.validAbove.toString().trim() || "0",
@@ -318,14 +347,13 @@ export default function Users() {
       validForAllProducts: isFreeCashValidForAllProducts,
     };
 
-    // Client-side validation
     const amountNum = parseFloat(cleanedCashForm.amount);
     if (isNaN(amountNum) || amountNum <= 0) {
       alert("Amount must be a positive number");
       return;
     }
     if (!isFreeCashValidForAllProducts && !cleanedCashForm.selectedMainCategory) {
-      alert("Please select a main category when not valid for all products");
+      setMainCategoryError("Please select a main category when not valid for all products");
       return;
     }
 
@@ -337,9 +365,7 @@ export default function Users() {
       );
       if (res.status === 200) {
         console.log("Success:", res.data.message);
-        // Refetch users to update UI
         await refetchUsers();
-        // Reset form and states
         setShowCashModal(false);
         setCashForm({ 
           amount: "", 
@@ -350,12 +376,10 @@ export default function Users() {
           validForAllProducts: false 
         });
         setIsFreeCashValidForAllProducts(false);
-        setSelectedMainCategory("");
-        setSelectedSubCategory("");
-        setSubCategories([]);
+        setSelectedCategoryIds([]);
+        setCategoryPath("");
         setSelectedUser(null);
         setMainCategoryError("");
-        setSubCategoriesError("");
         alert(res.data.message);
       }
     } catch (error) {
@@ -365,6 +389,78 @@ export default function Users() {
     }
   };
 
+  // From AddProduct.jsx: Render dynamic category dropdowns with exact same logic
+  const renderCategoryDropdowns = () => {
+    const dropdowns = []
+
+    // Main Category Dropdown (Level 0)
+    const mainCategoryOptions = allCategoriesTree.filter((cat) => !cat.parentCategoryId && !cat.parent_category_id)
+    dropdowns.push(
+      <div key={`category-dropdown-0`} className="space-y-2">
+        <label htmlFor={`category-level-0`} className="block text-sm font-medium text-gray-700 mb-1">
+          Main Category
+        </label>
+        <div className="relative">
+          <select
+            id={`category-level-0`}
+            value={selectedCategoryIds[0] || ""}
+            onChange={(e) => handleCategorySelect(0, e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
+          >
+            <option value="">Select main category</option>
+            {mainCategoryOptions.map((cat) => (
+              <option key={cat._id} value={cat._id}>
+                {cat.categoryName}
+              </option>
+            ))}
+          </select>
+          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+            </svg>
+          </div>
+        </div>
+      </div>,
+    )
+
+    // Sub Category Dropdown (Dynamic, always refers to the next level based on the last selected category)
+    const lastSelectedCategoryId = selectedCategoryIds[selectedCategoryIds.length - 1]
+    const lastSelectedCategoryInTree = findCategoryInTree(lastSelectedCategoryId, allCategoriesTree)
+    const subCategoryOptions = lastSelectedCategoryInTree ? lastSelectedCategoryInTree.subcategories || [] : []
+
+    if (selectedCategoryIds.length > 0 && subCategoryOptions.length > 0) {
+      dropdowns.push(
+        <div key={`category-dropdown-sub`} className="space-y-2">
+          <label htmlFor={`category-level-sub`} className="block text-sm font-medium text-gray-700 mb-1">
+            Sub Category
+          </label>
+          <div className="relative">
+            <select
+              id={`category-level-sub`}
+              value={selectedCategoryIds[selectedCategoryIds.length] || ""} // This will be empty initially for the next level
+              onChange={(e) => handleCategorySelect(selectedCategoryIds.length, e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
+            >
+              <option value="">Select sub category</option>
+              {subCategoryOptions.map((cat) => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.categoryName}
+                </option>
+              ))}
+            </select>
+            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+              </svg>
+            </div>
+          </div>
+        </div>,
+      )
+    }
+
+    return <div className="space-y-4">{dropdowns}</div>
+  }
+
   if (usersError) return <div>Error while fetching users: {usersError}</div>;
   if (loadingUsers) return <div>Loading users...</div>;
   if (!users || users.length === 0) return <div>No users to display</div>;
@@ -373,7 +469,7 @@ export default function Users() {
 
   // Modal Components
   const ConfirmModal = ({ show, onClose, onConfirm, title, message, type = "danger" }) => {
-    if (!show) return null;
+    if (!show) return null
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -410,14 +506,14 @@ export default function Users() {
           </div>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   const CashModal = ({ show, onClose, userID }) => {
-    if (!show) return null;
+    if (!show) return null
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900">Pay Cash to User</h3>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -455,69 +551,52 @@ export default function Users() {
                 <input
                   type="checkbox"
                   checked={isFreeCashValidForAllProducts}
-                  onChange={(e) => {
-                    const checked = e.target.checked;
-                    setIsFreeCashValidForAllProducts(checked);
-                    setCashForm({
-                      ...cashForm,
-                      validForAllProducts: checked,
-                      selectedMainCategory: checked ? "" : cashForm.selectedMainCategory,
-                      selectedSubCategory: checked ? "" : cashForm.selectedSubCategory,
-                    });
-                    if (checked) {
-                      setSelectedMainCategory("");
-                      setSelectedSubCategory("");
-                      setSubCategories([]);
-                      setMainCategoryError("");
-                      setSubCategoriesError("");
-                    }
-                  }}
+                  onChange={handleAllProductsChange}
                   className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                 />
                 <label className="ml-2 text-sm font-medium text-gray-700">Valid for all products</label>
               </div>
               {!isFreeCashValidForAllProducts && (
                 <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Main Category</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Category Hierarchy</label>
                   {loadingCategories ? (
-                    <span>Loading main categories...</span>
+                    <span>Loading categories...</span>
+                  ) : categoriesFetchingError ? (
+                    <span className="text-red-500 text-sm">{categoriesFetchingError}</span>
                   ) : (
-                    <select
-                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      onChange={handleMainCategoryChange}
-                      value={selectedMainCategory}
-                      required
-                    >
-                      <option value="" disabled>Select Main Category</option>
-                      {mainCategories.map(category => (
-                        <option key={category._id} value={category._id}>
-                          {category.categoryName}
-                        </option>
-                      ))}
-                    </select>
+                    <div className="space-y-3">
+                      {renderCategoryDropdowns()}
+                      {categoryPath && (
+                        <div className="text-sm text-gray-600 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                          Category Path:{" "}
+                          {selectedCategoryIds.map((id, index) => {
+                            const category = allCategoriesFlat.find((cat) => cat._id === id)
+                            if (!category) return null
+                            return (
+                              <span key={id}>
+                                <button
+                                  type="button"
+                                  onClick={() => setSelectedCategoryIds(selectedCategoryIds.slice(0, index + 1))}
+                                  className="font-medium text-blue-700 hover:underline"
+                                >
+                                  {category.categoryName}
+                                </button>
+                                {index < selectedCategoryIds.length - 1 && <span className="mx-1">{" > "}</span>}
+                              </span>
+                            )
+                          })}
+                          <div className="text-xs text-gray-500 mt-1">
+                            {selectedCategoryIds.length === 1
+                              ? "Applies to main category and all its sub-levels"
+                              : "Applies to selected sub-category and its sub-levels"}
+                          </div>
+                        </div>
+                      )}
+                    </div>
                   )}
-                  {mainCategoryError && <span className="text-red-500 text-xs">{mainCategoryError}</span>}
-                  {subCategories.length > 0 && (
-                    <>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Select Sub Category (Optional)</label>
-                      <select
-                        className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        onChange={handleSubCategoriesChange}
-                        value={selectedSubCategory}
-                      >
-                        <option value="" disabled>Select Sub Category</option>
-                        {subCategories.map(sub_category => (
-                          <option key={sub_category._id} value={sub_category._id}>
-                            {sub_category.categoryName}
-                          </option>
-                        ))}
-                      </select>
-                    </>
+                  {mainCategoryError && (
+                    <span className="text-red-500 text-xs">{mainCategoryError}</span>
                   )}
-                  {subCategories.length === 0 && selectedMainCategory && !noSubCategories && (
-                    <p className="text-sm text-gray-500">No sub-categories available.</p>
-                  )}
-                  {subCategoriesError && <span className="text-red-500 text-xs">{subCategoriesError}</span>}
                 </div>
               )}
               {isFreeCashValidForAllProducts && (
@@ -560,11 +639,11 @@ export default function Users() {
           </form>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   const PasswordModal = ({ show, onClose, onConfirm }) => {
-    if (!show) return null;
+    if (!show) return null
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white rounded-xl max-w-md w-full p-6">
@@ -603,8 +682,8 @@ export default function Users() {
           </div>
         </div>
       </div>
-    );
-  };
+    )
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
