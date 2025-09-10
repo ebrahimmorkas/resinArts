@@ -103,7 +103,10 @@ const checkFreeCashEligibility = async (req, res) => {
             is_cash_used: false,
             is_cash_expired: false,
             start_date: { $lte: now },
-            end_date: { $gte: now },
+            $or: [
+                { end_date: { $gte: now } },
+                { end_date: null },
+            ],
         });
 
         if (!freeCash) {

@@ -283,7 +283,7 @@ export const CartProvider = ({ children }) => {
     freeCash.is_cash_used ||
     freeCash.is_cash_expired ||
     now < new Date(freeCash.start_date) ||
-    now > new Date(freeCash.end_date)
+    (freeCash.end_date && now > new Date(freeCash.end_date))
   ) {
     return false;
   }

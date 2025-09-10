@@ -74,7 +74,10 @@ const placeOrder = async (req, res) => {
             is_cash_used: false,
             is_cash_expired: false,
             start_date: { $lte: new Date() },
-            end_date: { $gte: new Date() },
+            $or: [
+                { end_date: { $gte: new Date() } },
+                { end_date: null },
+            ],
         });
 
         for (const cartData of cartItems) {
@@ -402,7 +405,7 @@ const isFreeCashEligible = (product, cartData, freeCash) => {
         freeCash.is_cash_used ||
         freeCash.is_cash_expired ||
         now < new Date(freeCash.start_date) ||
-        now > new Date(freeCash.end_date)
+        (freeCash.end_date && now > new Date(freeCash.end_date))
     ) {
         return false;
     }
