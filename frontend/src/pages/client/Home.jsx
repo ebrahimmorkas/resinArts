@@ -1156,152 +1156,201 @@ export default function Home() {
     )
   }
 
-  const CartModal = () => {
-    const totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => sum + (item.cashApplied || 0), 0);
-    const cartTotal = getCartTotal();
-    const isFreeCashDisabled = cartTotal < (freeCash?.valid_above_amount || 50);
+const CartModal = () => {
+  const { products } = useContext(ProductContext);
+  const { categories } = useContext(CategoryContext);
+  const totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => sum + (item.cashApplied || 0), 0);
+  const cartTotal = getCartTotal();
+  const validAboveAmount = freeCash?.valid_above_amount || 50;
+  const isAllProducts = freeCash?.is_cash_applied_on__all_products || false;
+  
+  // Fetch category and subcategory names using their IDs
+  const category = freeCash?.category ? categories.find(cat => cat._id.toString() === freeCash.category.toString()) : null;
+  const subCategory = freeCash?.sub_category ? categories.find(cat => cat._id.toString() === freeCash.sub_category.toString()) : null;
+  const categoryName = category?.categoryName || null;
+  const subCategoryName = subCategory?.categoryName || null;
+  
+  const endDateFormatted = freeCash?.end_date
+    ? new Intl.DateTimeFormat("en-GB", {
+        day: "2-digit",
+        month: "long",
+        year: "numeric",
+      }).format(new Date(freeCash.end_date))
+    : "No expiry";
 
-    return (
-      <div className={`fixed inset-0 z-50 ${isCartOpen ? "block" : "hidden"}`}>
-        <div className="absolute inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
-        <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
-          <div className="p-6 h-full overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">Shopping Cart</h2>
-              <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
-                <X className="h-5 w-5" />
-              </button>
+  // Check if cart has at least one eligible product for category restrictions
+  const hasEligibleProduct = Object.values(cartItems).some((item) => {
+    if (isAllProducts) return true;
+    const product = products.find((p) => p._id === item.productId);
+    if (!product) return false;
+
+    // Compare category IDs
+    const isMainCategoryMatch = category && product.mainCategory && 
+      product.mainCategory.toString() === freeCash.category.toString();
+    const isSubCategoryMatch = !subCategory || (product.subCategory && 
+      product.subCategory.toString() === freeCash.sub_category.toString());
+
+    return isMainCategoryMatch && isSubCategoryMatch;
+  });
+
+  const isFreeCashDisabled = cartTotal < validAboveAmount || (!isAllProducts && !hasEligibleProduct);
+
+  return (
+    <div className={`fixed inset-0 z-50 ${isCartOpen ? "block" : "hidden"}`}>
+      <div className="absolute inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
+      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
+        <div className="p-6 h-full overflow-y-auto">
+          <div className="flex justify-between items-center mb-6">
+            <h2 className="text-xl font-bold">Shopping Cart</h2>
+            <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+          {cartLoading && (
+            <div className="text-center py-8">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-500 mt-2">Loading cart...</p>
             </div>
-            {cartLoading && (
-              <div className="text-center py-8">
-                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                <p className="text-gray-500 mt-2">Loading cart...</p>
-              </div>
-            )}
-            {cartError && (
-              <div className="text-center py-8">
-                <p className="text-red-500">{cartError}</p>
-              </div>
-            )}
-            {Object.keys(cartItems).length === 0 && !cartLoading ? (
-              <p className="text-gray-500 text-center py-8">Your cart is empty</p>
-            ) : (
-              <div className="space-y-4">
-                {freeCash && (
-                  <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                    <label className="flex items-center space-x-2">
-                      <input
-                        type="checkbox"
-                        checked={applyFreeCash}
-                        onChange={(e) => setApplyFreeCash(e.target.checked)}
-                        className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                        disabled={isFreeCashDisabled}
-                      />
-                      <span className="text-sm text-gray-700">
-                        Apply Free Cash (${freeCash.amount.toFixed(2)} available)
-                      </span>
-                    </label>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Free cash is valid above 50 RS
-                    </p>
-                    <p className="text-xs text-gray-600 mt-1">
-                      Expires on: {new Intl.DateTimeFormat("en-GB", {
-  day: "2-digit",
-  month: "long",
-  year: "numeric",
-}).format(new Date(freeCash.end_date))}
-                    </p>
-                    {isFreeCashDisabled && (
-                      <p className="text-xs text-red-600 mt-1">
-                        Cart total must be at least 50 RS to apply free cash
+          )}
+          {cartError && (
+            <div className="text-center py-8">
+              <p className="text-red-500">{cartError}</p>
+            </div>
+          )}
+          {Object.keys(cartItems).length === 0 && !cartLoading ? (
+            <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+          ) : (
+            <div className="space-y-4">
+              {freeCash && (
+                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={applyFreeCash}
+                      onChange={(e) => setApplyFreeCash(e.target.checked)}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      disabled={isFreeCashDisabled}
+                    />
+                    <span className="text-sm text-gray-700">
+                      Apply Free Cash (₹{freeCash.amount.toFixed(2)} available)
+                    </span>
+                  </label>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Free cash is valid above ₹{validAboveAmount}
+                  </p>
+                  {!isAllProducts && (
+                    <>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Main Category: {categoryName || "Specific category"}
                       </p>
-                    )}
-                  </div>
-                )}
-                {Object.entries(cartItems).map(([cartKey, item]) => {
-                  const product = products.find((p) => p._id === item.productId)
-                  if (!product) return null
-
-                  const variant = product.variants?.find((v) => v.colorName === item.colorName)
-                  const itemPrice = item.discountedPrice || item.price
-
-                  return (
-                    <div key={cartKey} className="flex items-center space-x-4 p-4 border rounded-lg">
-                      <img
-                        src={item.imageUrl || "/placeholder.svg"}
-                        alt={item.productName}
-                        className="w-15 h-15 rounded-lg object-cover"
-                      />
-                      <div className="flex-1">
-                        <h3 className="font-medium text-sm">{item.productName}</h3>
-                        <p className="text-xs text-gray-500">
-                          {item.colorName && item.sizeString
-                            ? `${item.colorName}, ${item.sizeString}`
-                            : "Default variant"}
+                      {subCategoryName && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          Sub Category: {subCategoryName}
                         </p>
-                        <p className="text-blue-600 font-bold">${itemPrice.toFixed(2)}</p>
-                        {item.cashApplied > 0 && (
-                          <p className="text-xs text-green-600">
-                            Free Cash Applied: ${item.cashApplied.toFixed(2)}
-                          </p>
-                        )}
-                      </div>
-                      <div className="flex flex-col items-center space-y-2">
-                        <div className="flex items-center space-x-2">
-                          <button
-                            onClick={() => handleUpdateQuantity(cartKey, -1)}
-                            className="p-1 hover:bg-gray-100 rounded"
-                            disabled={cartLoading}
-                          >
-                            <Minus className="h-4 h-4" />
-                          </button>
-                          <span className="font-medium">{item.quantity}</span>
-                          <button
-                            onClick={() => handleUpdateQuantity(cartKey, 1)}
-                            className="p-1 hover:bg-gray-100 rounded"
-                            disabled={cartLoading}
-                          >
-                            <Plus className="h-4 h-4" />
-                          </button>
-                        </div>
+                      )}
+                    </>
+                  )}
+                  {isAllProducts && (
+                    <p className="text-xs text-gray-600 mt-1">
+                      Eligible for: All products
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-600 mt-1">Expires on: {endDateFormatted}</p>
+                  {isFreeCashDisabled && (
+                    <p className="text-xs text-red-600 mt-1">
+                      {cartTotal < validAboveAmount
+                        ? `Cart total must be at least ₹${validAboveAmount} to apply free cash`
+                        : !hasEligibleProduct
+                        ? `No products in cart match the eligible ${categoryName ? `category "${categoryName}"` : "category"}${subCategoryName ? ` and subcategory "${subCategoryName}"` : ""}`
+                        : ""}
+                    </p>
+                  )}
+                </div>
+              )}
+              {Object.entries(cartItems).map(([cartKey, item]) => {
+                const product = products.find((p) => p._id === item.productId);
+                if (!product) return null;
+
+                const variant = product.variants?.find((v) => v.colorName === item.colorName);
+                const itemPrice = item.discountedPrice || item.price;
+
+                return (
+                  <div key={cartKey} className="flex items-center space-x-4 p-4 border rounded-lg">
+                    <img
+                      src={item.imageUrl || "/placeholder.svg"}
+                      alt={item.productName}
+                      className="w-15 h-15 rounded-lg object-cover"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium text-sm">{item.productName}</h3>
+                      <p className="text-xs text-gray-500">
+                        {item.colorName && item.sizeString
+                          ? `${item.colorName}, ${item.sizeString}`
+                          : "Default variant"}
+                      </p>
+                      <p className="text-blue-600 font-bold">₹{itemPrice.toFixed(2)}</p>
+                      {item.cashApplied > 0 && (
+                        <p className="text-xs text-green-600">
+                          Free Cash Applied: ₹{item.cashApplied.toFixed(2)}
+                        </p>
+                      )}
+                    </div>
+                    <div className="flex flex-col items-center space-y-2">
+                      <div className="flex items-center space-x-2">
                         <button
-                          onClick={() => handleRemoveFromCart(cartKey)}
-                          className="p-1 text-red-500 hover:bg-red-500 rounded transition-colors"
-                          title="Remove from cart"
+                          onClick={() => handleUpdateQuantity(cartKey, -1)}
+                          className="p-1 hover:bg-gray-100 rounded"
                           disabled={cartLoading}
                         >
-                          <Trash2 className="h-4 h-4" />
+                          <Minus className="h-4 w-4" />
+                        </button>
+                        <span className="font-medium">{item.quantity}</span>
+                        <button
+                          onClick={() => handleUpdateQuantity(cartKey, 1)}
+                          className="p-1 hover:bg-gray-100 rounded"
+                          disabled={cartLoading}
+                        >
+                          <Plus className="h-4 w-4" />
                         </button>
                       </div>
+                      <button
+                        onClick={() => handleRemoveFromCart(cartKey)}
+                        className="p-1 text-red-500 hover:bg-red-500 rounded transition-colors"
+                        title="Remove from cart"
+                        disabled={cartLoading}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
                     </div>
-                  )
-                })}
-                <div className="border-t pt-4">
-                  {totalFreeCashApplied > 0 && (
-                    <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-green-600">Total Free Cash Applied:</span>
-                      <span className="text-sm font-semibold text-green-600">${totalFreeCashApplied.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between items-center mb-4">
-                    <span className="font-bold">Total:</span>
-                    <span className="font-bold text-xl">${cartTotal.toFixed(2)}</span>
                   </div>
-                  <button
-                    className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200"
-                    disabled={cartLoading}
-                    onClick={handleCartCheckout}
-                  >
-                    {cartLoading ? "Processing..." : "Checkout"}
-                  </button>
+                );
+              })}
+              <div className="border-t pt-4">
+                {totalFreeCashApplied > 0 && (
+                  <div className="flex justify-between items-center mb-2">
+                    <span className="text-sm text-green-600">Total Free Cash Applied:</span>
+                    <span className="text-sm font-semibold text-green-600">₹{totalFreeCashApplied.toFixed(2)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between items-center mb-4">
+                  <span className="font-bold">Total:</span>
+                  <span className="font-bold text-xl">₹{cartTotal.toFixed(2)}</span>
                 </div>
+                <button
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200"
+                  disabled={cartLoading}
+                  onClick={handleCartCheckout}
+                >
+                  {cartLoading ? "Processing..." : "Checkout"}
+                </button>
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
-    )
-  }
+    </div>
+  );
+};
 
   const getJustArrivedProducts = () => {
     const filteredProducts = products.filter((product) => {
