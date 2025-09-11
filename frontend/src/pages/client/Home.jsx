@@ -101,6 +101,7 @@ export default function Home() {
   const justArrivedRef = useRef(null)
   const restockedRef = useRef(null)
   const revisedRatesRef = useRef(null)
+  const outOfStockRef = useRef(null)
   const { user } = useContext(AuthContext)
 
   // Auto-rotate banners
@@ -173,6 +174,30 @@ export default function Home() {
     return restockDate >= twoDaysAgo && restockDate <= now
   }
 
+  const isOutOfStock = (product) => {
+    if (!product.hasVariants) {
+      return product.stock === 0;
+    } else {
+      return product.variants.every((variant) => {
+        if (variant.commonStock !== undefined) {
+          return variant.commonStock === 0;
+        } else {
+          return variant.moreDetails.every((detail) => detail.stock === 0);
+        }
+      });
+    }
+  }
+
+  const isOutOfStockForBadge = (product, variant = null, sizeDetail = null) => {
+    if (sizeDetail) {
+      return sizeDetail.stock === 0;
+    }
+    if (variant && variant.commonStock !== undefined) {
+      return variant.commonStock === 0;
+    }
+    return product.stock === 0;
+  }
+
   const formatSize = (sizeObj) => {
     if (!sizeObj) return "N/A"
     if (typeof sizeObj === "string") return sizeObj
@@ -187,8 +212,8 @@ export default function Home() {
     if (sizeDetail && sizeDetail.price) {
       return parseFloat(sizeDetail.price) || 0;
     }
-    if (variant && variant.price) {
-      return parseFloat(variant.price) || 0;
+    if (variant && variant.commonPrice) {
+      return parseFloat(variant.commonPrice) || 0;
     }
     if (product.price && product.price !== "" && product.price !== null) {
       return parseFloat(product.price) || 0;
@@ -266,10 +291,14 @@ export default function Home() {
   }
 
   const getProductBadge = (product, variant = null, sizeDetail = null) => {
+    if (isOutOfStockForBadge(product, variant, sizeDetail)) {
+      return { text: "Out of Stock", color: "bg-red-500" }
+    }
     if (isDiscountActive(product, variant, sizeDetail)) {
       return { text: "Revised Rate", color: "bg-orange-500" }
-    } else if (getApplicableDiscount(product)) {
-      return { text: "Discounted", color: "bg-red-500" }
+    }
+    if (getApplicableDiscount(product)) {
+      return { text: "DISCOUNTED", color: "bg-red-500" }
     }
     if (isRecentlyRestocked(product, variant, sizeDetail)) {
       return { text: "Restocked", color: "bg-green-500" }
@@ -375,6 +404,8 @@ export default function Home() {
         setTimeout(() => restockedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
       } else if (filter === "revised-rates") {
         setTimeout(() => revisedRatesRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+      } else if (filter === "out-of-stock") {
+        setTimeout(() => outOfStockRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
       }
     }
   }
@@ -431,7 +462,7 @@ export default function Home() {
   if (loadingDiscount || loadingCategories || loadingFreeCash) return <div>Loading...</div>
   if (categoriesErrors || freeCashErrors) return <div>Error: {categoriesErrors || freeCashErrors}</div>
 
-  const ProductCard = ({ product }) => {
+  const ProductCard = ({ product, forcedBadge = null }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
     const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null)
     const [selectedSizeDetail, setSelectedSizeDetail] = useState(selectedVariant?.moreDetails?.[0] || null)
@@ -450,7 +481,7 @@ export default function Home() {
       }
     }, [selectedVariant, selectedSizeDetail])
 
-    const badge = getProductBadge(product, selectedVariant, selectedSizeDetail)
+    const badge = forcedBadge || getProductBadge(product, selectedVariant, selectedSizeDetail)
 
     const originalPrice = getOriginalPrice(product, selectedVariant, selectedSizeDetail);
     const displayPrice = getDisplayPrice(product, selectedVariant, selectedSizeDetail);
@@ -528,6 +559,8 @@ export default function Home() {
       }
       setAddQuantity(1)
     }
+
+    const currentStock = selectedSizeDetail ? selectedSizeDetail.stock : (selectedVariant ? selectedVariant.commonStock : product.stock) || 0
 
     return (
       <div className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group w-full">
@@ -625,7 +658,7 @@ export default function Home() {
 
           <div className="mb-2">
             <span className="text-xs text-gray-600">
-              Stock: {selectedSizeDetail?.stock || product.stock || 0} available
+              Stock: {currentStock} available
             </span>
           </div>
 
@@ -766,7 +799,7 @@ export default function Home() {
 
             <button
               onClick={handleAddToCartWithQuantity}
-              disabled={hasVariants && (!selectedVariant || !selectedSizeDetail)}
+              disabled={hasVariants && (!selectedVariant || !selectedSizeDetail) || currentStock === 0}
               className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200"
             >
               Add {addQuantity} to Cart
@@ -1136,7 +1169,8 @@ export default function Home() {
             ) : (
               <button
                 onClick={handleAddToCartFromModal}
-                className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+                disabled={selectedSizeDetail.stock === 0}
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
               >
                 Add {localQuantityToAdd} to Cart - {selectedVariant.colorName}, {formatSize(selectedSizeDetail.size)}
               </button>
@@ -1368,33 +1402,57 @@ const CartModal = () => {
 };
 
   const getJustArrivedProducts = () => {
-    const filteredProducts = products.filter((product) => isNew(product));
+    const filteredProducts = products.filter((product) => isNew(product) && !isOutOfStock(product));
     return sortProductsByPrice(filteredProducts);
   }
 
   const getRestockedProducts = () => {
-    const filteredProducts = products.filter((product) => {
-      return (
+    const filteredProducts = products.filter((product) => !isOutOfStock(product) && (
         isRecentlyRestocked(product) ||
         product.variants?.some((variant) =>
           variant.moreDetails?.some((sizeDetail) => isRecentlyRestocked(product, variant, sizeDetail)),
         )
-      )
-    });
+      ));
     return sortProductsByPrice(filteredProducts);
   }
 
   const getRevisedRatesProducts = () => {
-    const filteredProducts = products.filter((product) => {
-      return (
+    const filteredProducts = products.filter((product) => !isOutOfStock(product) && (
         isDiscountActive(product) ||
         product.variants?.some((variant) =>
           variant.moreDetails?.some((sizeDetail) => isDiscountActive(product, variant, sizeDetail)),
         )
-      )
-    });
+      ));
     return sortProductsByPrice(filteredProducts);
   }
+
+  const getOutOfStockProducts = () => {
+    const filteredProducts = products.filter(isOutOfStock);
+    return sortProductsByPrice(filteredProducts);
+  }
+
+  const filterOptions = [
+    { key: "all", label: "All Products" },
+    { key: "category", label: "Shop by Category" },
+  ];
+
+  if (getJustArrivedProducts().length > 0) {
+    filterOptions.push({ key: "just-arrived", label: "Just Arrived" });
+  }
+
+  if (getRevisedRatesProducts().length > 0) {
+    filterOptions.push({ key: "revised-rates", label: "Revised Rates" });
+  }
+
+  if (getRestockedProducts().length > 0) {
+    filterOptions.push({ key: "restocked", label: "Restocked Items" });
+  }
+
+  if (getOutOfStockProducts().length > 0) {
+    filterOptions.push({ key: "out-of-stock", label: "Out of Stock" });
+  }
+
+  filterOptions.push({ key: "price-low-to-high", label: "Price: Low to High" });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 w-full">
@@ -1580,14 +1638,7 @@ const CartModal = () => {
         <section className="mb-8">
           <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Filters</h2>
           <div className="flex flex-wrap gap-3 justify-center">
-            {[
-              { key: "all", label: "All Products" },
-              { key: "category", label: "Shop by Category" },
-              { key: "just-arrived", label: "Just Arrived" },
-              { key: "revised-rates", label: "Revised Rates" },
-              { key: "restocked", label: "Restocked Items" },
-              { key: "price-low-to-high", label: "Price: Low to High" },
-            ].map((filter) => (
+            {filterOptions.map((filter) => (
               <button
                 key={filter.key}
                 onClick={() => handleFilterChange(filter.key)}
@@ -1624,7 +1675,7 @@ const CartModal = () => {
               {getJustArrivedProducts()
                 .slice(0, 10)
                 .map((product) => (
-                  <ProductCard key={`just-arrived-${product._id}`} product={product} />
+                  <ProductCard key={`just-arrived-${product._id}`} product={product} forcedBadge={{ text: "New", color: "bg-blue-500" }} />
                 ))}
             </div>
           </section>
@@ -1635,7 +1686,7 @@ const CartModal = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Restocked Items</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {getRestockedProducts().map((product) => (
-                <ProductCard key={`restocked-${product._id}`} product={product} />
+                <ProductCard key={`restocked-${product._id}`} product={product} forcedBadge={{ text: "Restocked", color: "bg-green-500" }} />
               ))}
             </div>
           </section>
@@ -1646,7 +1697,18 @@ const CartModal = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-6">Revised Rates</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {getRevisedRatesProducts().map((product) => (
-                <ProductCard key={`revised-rates-${product._id}`} product={product} />
+                <ProductCard key={`revised-rates-${product._id}`} product={product} forcedBadge={{ text: "Revised Rate", color: "bg-orange-500" }} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        {getOutOfStockProducts().length > 0 && (
+          <section className="mb-12" ref={outOfStockRef}>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Out of Stock</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {getOutOfStockProducts().map((product) => (
+                <ProductCard key={`out-of-stock-${product._id}`} product={product} forcedBadge={{ text: "Out of Stock", color: "bg-red-500" }} />
               ))}
             </div>
           </section>

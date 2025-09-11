@@ -1,19 +1,9 @@
-I am developing e-commerce using MERN stack. I have created the Home.jsx on which the products can be seen. In Home there are several sections but I am going to talk with you about three sections that I want to make functional. The three sections about which I am talking are: 1. Just Arrived 2. Restocked Items 3. Revised Rate.
-Just Arrived section changes:
-I want that when admin adds the new product then that product should be seen in 'Just arrived' section for the three days starting from the date at which the product aas added. When the product is displayed in this setion then the badge should be displayed (Badges are already dispayed on product cards) 'new'. After three days it should be removed from this section and badge as well.
-Restocked Items section:
-Admin can restock the items. I want that when admin restocks the items then that product should be displayed in the Restocked item section for two days starting from the date at which the produyct was restocked. When product is restocked then 'Restock' Badge should be displayed. After two days the item should be removed from this section.
-Revised Rate section:
-Admin can revise the price of product if he want to give some discount. Now when giving discount the admin sets the start date and the end date. So I want that when admin revises the price then all the products whose price has ben revised should be seen inside this section. The product should remain in this section for the time period decided by the admin. When admin revises the rate of the product then the badge on the product should bve seen as 'Revised Rate' Make sure there another discount as well which is already implemented in Home.jsx. DOnt mess with it. This discount and that discount which is already implemented are totally two different things so dont mixed it up and tere's no redundancy in discount.
+Okay out of stock worked that is filter was apply when product was out of stock only but there are still some problems.
+1. Out of stock badge not displayed in out of stock section.
+2. I told you about priroty but if product is in restocked item section and the rate of that product is revised as well so in restocked item section show restocked badge only, in revised rate section show revised badge only but in All product section follow the priority that is 1. Out of stcok 2. Revised Rate 3. Restocked 4. New
 
-Badges Priority:
-1. Revised Rate
-2. Restocked 
-3. New
-
-In my current code these section are already created but not working and are always displayed even when there are no product in these section. Update the code so that these section only displays when there are relevant product in these sections.
-
-Home.jsx:
+3. Now when certain item was restocked or its rate was revised and now it is out of stock so aty that time display that product only in out of stcok section and in no otehr section it should displayed even if it is eligible.
+Current Home.jsx:
 "use client"
 
 import { useState, useEffect, useRef, useContext } from "react"
@@ -117,6 +107,7 @@ export default function Home() {
   const justArrivedRef = useRef(null)
   const restockedRef = useRef(null)
   const revisedRatesRef = useRef(null)
+  const outOfStockRef = useRef(null)
   const { user } = useContext(AuthContext)
 
   // Auto-rotate banners
@@ -164,6 +155,14 @@ export default function Home() {
     return now >= startDate && now <= endDate
   }
 
+  const isNew = (product) => {
+    if (!product.createdAt) return false;
+    const createdDate = new Date(product.createdAt);
+    const now = new Date();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    return createdDate >= threeDaysAgo && createdDate <= now;
+  }
+
   const isRecentlyRestocked = (product, variant = null, sizeDetail = null) => {
     let lastRestockedAt
 
@@ -177,8 +176,18 @@ export default function Home() {
 
     const restockDate = new Date(lastRestockedAt)
     const now = new Date()
-    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
-    return restockDate >= threeDaysAgo && restockDate <= now
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
+    return restockDate >= twoDaysAgo && restockDate <= now
+  }
+
+  const isOutOfStock = (product) => {
+    if (!product.hasVariants) {
+      return product.stock === 0;
+    } else {
+      return product.variants.some((variant) =>
+        variant.moreDetails.some((detail) => detail.stock === 0)
+      );
+    }
   }
 
   const formatSize = (sizeObj) => {
@@ -274,13 +283,18 @@ export default function Home() {
   }
 
   const getProductBadge = (product, variant = null, sizeDetail = null) => {
-    if (isDiscountActive(product, variant, sizeDetail) || getApplicableDiscount(product)) {
-      return { text: "DISCOUNTED", color: "bg-red-500" }
+    if (isDiscountActive(product, variant, sizeDetail)) {
+      return { text: "Revised Rate", color: "bg-orange-500" }
+    } else if (getApplicableDiscount(product)) {
+      return { text: "Discounted", color: "bg-red-500" }
     }
     if (isRecentlyRestocked(product, variant, sizeDetail)) {
-      return { text: "RESTOCKED", color: "bg-green-500" }
+      return { text: "Restocked", color: "bg-green-500" }
     }
-    return { text: "NEW", color: "bg-blue-500" }
+    if (isNew(product)) {
+      return { text: "New", color: "bg-blue-500" }
+    }
+    return null
   }
 
   const generateCartKey = (productId, colorName = null, sizeString = null) => {
@@ -378,6 +392,8 @@ export default function Home() {
         setTimeout(() => restockedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
       } else if (filter === "revised-rates") {
         setTimeout(() => revisedRatesRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+      } else if (filter === "out-of-stock") {
+        setTimeout(() => outOfStockRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
       }
     }
   }
@@ -576,9 +592,11 @@ export default function Home() {
             )}
           </div>
 
-          <div className="absolute top-2 left-2">
-            <span className={`px-2 py-1 text-xs font-bold rounded-full text-white ${badge.color}`}>{badge.text}</span>
-          </div>
+          {badge && (
+            <div className="absolute top-2 left-2">
+              <span className={`px-2 py-1 text-xs font-bold rounded-full text-white ${badge.color}`}>{badge.text}</span>
+            </div>
+          )}
 
           <div className="absolute top-2 right-2 flex items-center gap-2">
             <button
@@ -1369,9 +1387,7 @@ const CartModal = () => {
 };
 
   const getJustArrivedProducts = () => {
-    const filteredProducts = products.filter((product) => {
-      return true
-    });
+    const filteredProducts = products.filter((product) => isNew(product));
     return sortProductsByPrice(filteredProducts);
   }
 
@@ -1398,6 +1414,34 @@ const CartModal = () => {
     });
     return sortProductsByPrice(filteredProducts);
   }
+
+  const getOutOfStockProducts = () => {
+    const filteredProducts = products.filter(isOutOfStock);
+    return sortProductsByPrice(filteredProducts);
+  }
+
+  const filterOptions = [
+    { key: "all", label: "All Products" },
+    { key: "category", label: "Shop by Category" },
+  ];
+
+  if (getJustArrivedProducts().length > 0) {
+    filterOptions.push({ key: "just-arrived", label: "Just Arrived" });
+  }
+
+  if (getRevisedRatesProducts().length > 0) {
+    filterOptions.push({ key: "revised-rates", label: "Revised Rates" });
+  }
+
+  if (getRestockedProducts().length > 0) {
+    filterOptions.push({ key: "restocked", label: "Restocked Items" });
+  }
+
+  if (getOutOfStockProducts().length > 0) {
+    filterOptions.push({ key: "out-of-stock", label: "Out of Stock" });
+  }
+
+  filterOptions.push({ key: "price-low-to-high", label: "Price: Low to High" });
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 w-full">
@@ -1583,14 +1627,7 @@ const CartModal = () => {
         <section className="mb-8">
           <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Filters</h2>
           <div className="flex flex-wrap gap-3 justify-center">
-            {[
-              { key: "all", label: "All Products" },
-              { key: "category", label: "Shop by Category" },
-              { key: "just-arrived", label: "Just Arrived" },
-              { key: "revised-rates", label: "Revised Rates" },
-              { key: "restocked", label: "Restocked Items" },
-              { key: "price-low-to-high", label: "Price: Low to High" },
-            ].map((filter) => (
+            {filterOptions.map((filter) => (
               <button
                 key={filter.key}
                 onClick={() => handleFilterChange(filter.key)}
@@ -1620,34 +1657,51 @@ const CartModal = () => {
           </section>
         )}
 
-        <section className="mb-12" ref={justArrivedRef}>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Just Arrived</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {getJustArrivedProducts()
-              .slice(0, 10)
-              .map((product) => (
-                <ProductCard key={`just-arrived-${product._id}`} product={product} />
+        {getJustArrivedProducts().length > 0 && (
+          <section className="mb-12" ref={justArrivedRef}>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Just Arrived</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {getJustArrivedProducts()
+                .slice(0, 10)
+                .map((product) => (
+                  <ProductCard key={`just-arrived-${product._id}`} product={product} />
+                ))}
+            </div>
+          </section>
+        )}
+
+        {getRestockedProducts().length > 0 && (
+          <section className="mb-12" ref={restockedRef}>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Restocked Items</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {getRestockedProducts().map((product) => (
+                <ProductCard key={`restocked-${product._id}`} product={product} />
               ))}
-          </div>
-        </section>
+            </div>
+          </section>
+        )}
 
-        <section className="mb-12" ref={restockedRef}>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Restocked Items</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {getRestockedProducts().map((product) => (
-              <ProductCard key={`restocked-${product._id}`} product={product} />
-            ))}
-          </div>
-        </section>
+        {getRevisedRatesProducts().length > 0 && (
+          <section className="mb-12" ref={revisedRatesRef}>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Revised Rates</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {getRevisedRatesProducts().map((product) => (
+                <ProductCard key={`revised-rates-${product._id}`} product={product} />
+              ))}
+            </div>
+          </section>
+        )}
 
-        <section className="mb-12" ref={revisedRatesRef}>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Revised Rates</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {getRevisedRatesProducts().map((product) => (
-              <ProductCard key={`revised-rates-${product._id}`} product={product} />
-            ))}
-          </div>
-        </section>
+        {getOutOfStockProducts().length > 0 && (
+          <section className="mb-12" ref={outOfStockRef}>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Out of Stock</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {getOutOfStockProducts().map((product) => (
+                <ProductCard key={`out-of-stock-${product._id}`} product={product} />
+              ))}
+            </div>
+          </section>
+        )}
 
         <section>
           <h2 className="text-2xl font-bold text-gray-800 mb-6">All Products</h2>
@@ -1737,804 +1791,3 @@ const CartModal = () => {
     </div>
   )
 }
-
-productController.js: ----> (Only providing relevant functions):
-const fetchProducts = async (req, res) => {
-  try {
-    const products = await Product.find();
-    return res.status(200).json({
-      products
-    });
-  } catch (err) {
-    console.log("Error in fetching the products");
-    return res.status(500).json({message: 'Internal server error'});
-  }
-}
-
-// Function that will restock products that are single. (Both condition that is variants and non-variant product will be handled over here)
-const restock = async (req, res) => {
-  console.log("Request received")
-  try {
-    const { productId, updatedStock, productData } = req.body;
-
-    if(Object.keys(productData).length === 0) {
-      console.log("Request received for product without variants")
-// The product does not have any variants
-    // Validate input
-    if (!productId || typeof updatedStock !== "number") {
-      return res.status(400).json({ message: "Invalid input data" });
-    }
-
-    // Find the product
-    const product = await Product.findById(productId);
-    if (!product) {
-      return res.status(404).json({ message: "Product not found" });
-    }
-
-    // Calculate new stock
-    const newStock = product.stock + updatedStock;
-
-    // Update product
-    const updatedProduct = await Product.findByIdAndUpdate(
-      productId,
-      { $set: { stock: newStock } },
-      { new: true }
-    );
-
-    return res.status(200).json({
-      message: "Stock updated successfully",
-      product: updatedProduct
-    });
-  } else {
-    // The product have variants
-    console.log("Request received for product with variants")
-    const product = await Product.findById(productId)
-    if(!product) {
-      return res.status(400).json({message: "Product not found"});
-    }
-
-    console.log(productData)
-    Object.entries(productData).forEach(([variantID, variantData]) => {
-      console.log(variantID)
-      console.log(variantData)
-
-      Object.entries(variantData).forEach(([detailsID, detailsData]) => {
-        console.log(detailsID)
-        console.log(detailsData)
-
-        Object.entries(detailsData).forEach(([sizeID, stockData]) => {
-          console.log(sizeID)
-          console.log(stockData)
-          const s_id = new mongoose.Types.ObjectId(sizeID);
-          if(stockData === "") {
-              // console.log("Empty data")
-
-              // Nothing has been filled in stock field
-            } else {
-              // console.log("Heres some data");
-
-              // Theere some data in stock field
-              // Implement update logic
-              product.variants.forEach((variant) => {
-                variant.moreDetails.forEach(async (details) => {
-                  if(details.size._id.toString() === s_id.toString()) {
-                    console.log("IDs matched")
-                    console.log(details.stock)
-                    const oldStock = parseInt(details.stock);
-                    const newStock = parseInt(stockData);
-                    const updatedStock = oldStock + newStock;
-                    try {
-                    const updatedProduct = await Product.updateOne(
-                      {_id: product._id},
-                      { $set: {
-                        "variants.$[v].moreDetails.$[md].stock": updatedStock,
-                        "variants.$[v].moreDetails.$[md].lastRestockedAt": new Date()
-                      } },
-                      {
-                        arrayFilters: [
-                          {"v._id": variantID},
-                          {"md._id": detailsID}
-                        ]
-                      }
-                    )
-                    return res.status(200).json({message: "Product Updated successfully"});
-                  } catch(error) {
-                    return res.status(500).json({message: "There was problem while updating data"})
-                  }
-                  } else {
-                    console.log('IDs mismatch');
-                    console.log(details.size._id)
-                    console.log(typeof(details.size._id))
-                    console.log(s_id)
-                    console.log(typeof(s_id))
-                  }
-                })
-                // console.log(variant)
-              })
-            }
-        });
-      })
-    })
-  }
-
-  } catch (error) {
-    console.error("Restock error:", error);
-    return res.status(500).json({ message: "Internal Server Error" });
-  }
-};
-
-// Start of function to mass restock
-const massRestock = (req, res) => {
-  // console.log(req.body);
-  const data = req.body;
-  // console.log(typeof(data));
-  try{
-    Object.entries(data).forEach(async ([productID, productData]) => {
-      console.log(productID);
-      console.log("Product data starts here")
-      console.log(productData);
-      console.log("Product data ends here")
-      console.log(typeof(productData))
-
-      const product = await Product.findById(productID);
-      if(product) {
-      if(product.hasVariants) {
-        const p_id = new mongoose.Types.ObjectId(productID);
-        Object.entries(productData).forEach(([variantID, variantData]) => {
-          const v_id = new mongoose.Types.ObjectId(variantID);
-          console.log("Variant data starts here")
-          console.log(variantData);
-          console.log("Variant data ends here")
-
-          Object.entries(variantData).forEach(([detailsID, detailsData]) => {
-            const details_id = new mongoose.Types.ObjectId(detailsID);
-            console.log("details data starts here")
-            console.log(detailsData)
-            console.log(typeof(detailsData))
-            console.log("details data ends here")
-
-            Object.entries(detailsData).forEach(([sizeID, stockData]) => {
-              const s_id = new mongoose.Types.ObjectId(sizeID);
-              console.log("Stock data starts here")
-              console.log(stockData);
-              console.log(typeof(stockData));
-              console.log("Stock data ends here")
-               if(stockData === "") {
-              // console.log("Empty data")
-
-              // Nothing has been filled in stock field
-            } else {
-              // console.log("Heres some data");
-
-              // Theere some data in stock field
-              // Implement update logic
-              product.variants.forEach((variant) => {
-                variant.moreDetails.forEach(async (details) => {
-                  if(details.size._id.toString() === s_id.toString()) {
-                    console.log("IDs matched")
-                    console.log(details.stock)
-                    const oldStock = parseInt(details.stock);
-                    const newStock = parseInt(stockData);
-                    const updatedStock = oldStock + newStock;
-                    try {
-                    const updatedProduct = await Product.updateOne(
-                      {_id: product._id},
-                      { $set: {
-                        "variants.$[v].moreDetails.$[md].stock": updatedStock,
-                        "variants.$[v].moreDetails.$[md].lastRestockedAt": new Date()
-                      } },
-                      {
-                        arrayFilters: [
-                          {"v._id": variantID},
-                          {"md._id": detailsID}
-                        ]
-                      }
-                    )
-
-                    // return res.status(200).json({message: "Product updated successfully"})
-                  } catch(error) {
-                    return res.status(500).json({message: "There was problem while updating data"})
-                  }
-                  } else {
-                    console.log('IDs mismatch');
-                    console.log(details.size._id)
-                    console.log(typeof(details.size._id))
-                    console.log(s_id)
-                    console.log(typeof(s_id))
-                  }
-                })
-                // console.log(variant)
-              })
-            }
-            })
-            
-
-           
-          })
-        })
-      } else {
-        // Product does not have any variants
-          console.log(productData)
-          console.log(typeof(productData))
-          Object.values(productData).forEach(async (stock) => {
-            console.log(stock);
-            try {
-            const updatedStock = parseInt(product.stock) + parseInt(stock);
-            const updatedProduct = await Product.findByIdAndUpdate(
-      productID,
-      { $set: { stock: updatedStock,
-        lastRestockedAt: new Date()
-       } },
-      { new: true }
-    );
-  } catch(error) {
-    return res.status(500).json({message: "Could not update product"})
-  }
-          })
-      }
-      }else {
-        console.log(`Product not found for ID: ${productID}`);
-      }
-    })
-  } catch(error) {
-    console.log(error);
-  }
-}
-// End of function to mass restock
-
-// Start of function for revising rate for multiple products
-const massRevisedRate = (req, res) => {
-  console.log("Revised rate request received")
-  console.log(req.body);
-  const data = req.body;
-  
-  try {
-    // Use Promise.all to properly handle async operations
-    const updatePromises = Object.entries(data).map(async ([productID, productData]) => {
-      console.log(productID);
-      console.log("Product data starts here")
-      console.log(productData);
-      console.log("Product data ends here")
-
-      const product = await Product.findById(productID);
-      if (!product) {
-        console.log(`Product not found for ID: ${productID}`);
-        return { success: false, productID, error: "Product not found" };
-      }
-
-      if (product.hasVariants) {
-        // Handle products with variants
-        const variantUpdatePromises = Object.entries(productData).map(async ([variantID, variantData]) => {
-          console.log("Variant data starts here")
-          console.log(variantData);
-          console.log("Variant data ends here")
-
-          const detailsUpdatePromises = Object.entries(variantData).map(async ([detailsID, detailsData]) => {
-            console.log("details data starts here")
-            console.log(detailsData)
-            console.log("details data ends here")
-
-            // Extract discount/pricing data INCLUDING discountBulkPricing
-            const { 
-              discountStartDate, 
-              discountEndDate, 
-              discountPrice, 
-              comeBackToOriginalPrice,
-              discountBulkPricing,
-              ...sizeData 
-            } = detailsData;
-
-            // Process only the size data (ObjectId keys)
-            const sizeUpdatePromises = Object.entries(sizeData).map(async ([sizeID, priceData]) => {
-              if (!mongoose.Types.ObjectId.isValid(sizeID)) {
-                console.log(`Invalid ObjectId: ${sizeID}, skipping...`);
-                return { success: false, error: "Invalid ObjectId" };
-              }
-
-              const s_id = new mongoose.Types.ObjectId(sizeID);
-              console.log("Price data starts here")
-              console.log(priceData);
-              console.log("Price data ends here")
-
-              if (priceData === "" || !priceData) {
-                console.log("Empty price data, skipping...");
-                return { success: true, skipped: true };
-              }
-
-              // Find the specific variant and details to get current price
-              const variant = product.variants.find(v => v._id.toString() === variantID);
-              if (!variant) {
-                console.log("Variant not found");
-                return { success: false, error: "Variant not found" };
-              }
-
-              const details = variant.moreDetails.find(md => md._id.toString() === detailsID);
-              if (!details) {
-                console.log("Details not found");
-                return { success: false, error: "Details not found" };
-              }
-
-              const sizeDetail = details.size._id.toString() === s_id.toString() ? details : null;
-              if (!sizeDetail) {
-                console.log("Size detail not found");
-                return { success: false, error: "Size detail not found" };
-              }
-
-              const oldPrice = parseFloat(sizeDetail.price);
-              const newDiscountPrice = parseFloat(priceData);
-
-              // Validation: discount price should be less than original price
-              if (newDiscountPrice >= oldPrice) {
-                console.log("Discounted price cannot be greater than or equal to original price");
-                return { success: false, error: "Invalid discount price" };
-              }
-
-              try {
-                console.log("Updating the product");
-                
-                // Prepare update object
-                let updateObj = {
-                  "variants.$[v].moreDetails.$[md].discountPrice": newDiscountPrice,
-                };
-
-                // Add other discount fields if they exist
-                if (discountStartDate) {
-                  updateObj["variants.$[v].moreDetails.$[md].discountStartDate"] = new Date(discountStartDate);
-                }
-                if (discountEndDate) {
-                  updateObj["variants.$[v].moreDetails.$[md].discountEndDate"] = new Date(discountEndDate);
-                }
-                if (comeBackToOriginalPrice !== null && comeBackToOriginalPrice !== undefined) {
-                  const shouldComeBack = comeBackToOriginalPrice === 'yes';
-                  updateObj["variants.$[v].moreDetails.$[md].comeBackToOriginalPrice"] = shouldComeBack;
-                  
-                  // If comeBackToOriginalPrice is false (no), update the actual price as well
-                  if (!shouldComeBack) {
-                    updateObj["variants.$[v].moreDetails.$[md].price"] = newDiscountPrice;
-                    
-                    // 🎯 NEW TWIST: Update bulkPricing with discountBulkPricing when comeBackToOriginal is No
-                    if (discountBulkPricing && Array.isArray(discountBulkPricing)) {
-                      const validBulkPricing = discountBulkPricing.filter(item => 
-                        item.wholesalePrice !== '' && item.quantity !== ''
-                      );
-                      updateObj["variants.$[v].moreDetails.$[md].bulkPricingCombinations"] = validBulkPricing;
-                    }
-                  }
-                }
-
-                // Always store discountBulkPricing
-                if (discountBulkPricing && Array.isArray(discountBulkPricing)) {
-                  const validDiscountBulkPricing = discountBulkPricing.filter(item => 
-                    item.wholesalePrice !== '' && item.quantity !== ''
-                  );
-                  updateObj["variants.$[v].moreDetails.$[md].discountBulkPricing"] = validDiscountBulkPricing;
-                }
-
-                const updatedProduct = await Product.updateOne(
-                  { _id: product._id },
-                  { $set: updateObj },
-                  {
-                    arrayFilters: [
-                      { "v._id": new mongoose.Types.ObjectId(variantID) },
-                      { "md._id": new mongoose.Types.ObjectId(detailsID) }
-                    ]
-                  }
-                );
-
-                return { success: true, updated: updatedProduct.modifiedCount > 0 };
-
-              } catch (error) {
-                console.error("Error updating variant product:", error);
-                return { success: false, error: error.message };
-              }
-            });
-
-            const sizeResults = await Promise.all(sizeUpdatePromises);
-            return { success: true, sizeResults };
-          });
-
-          const detailsResults = await Promise.all(detailsUpdatePromises);
-          return { success: true, detailsResults };
-        });
-
-        const variantResults = await Promise.all(variantUpdatePromises);
-        return { success: true, productID, variantResults };
-
-      } else {
-        // Handle products without variants
-        console.log("Processing product without variants");
-        console.log(productData);
-
-        // Extract discount/pricing data for non-variant products INCLUDING discountBulkPricing
-        const { 
-          discountStartDate, 
-          discountEndDate, 
-          discountPrice, 
-          comeBackToOriginalPrice,
-          discountBulkPricing,
-          ...priceData 
-        } = productData;
-
-        // Get the actual price value (should be the only remaining key)
-        const priceValues = Object.values(priceData).filter(val => val !== "");
-        
-        if (priceValues.length === 0) {
-          console.log("No price data to update");
-          return { success: true, skipped: true };
-        }
-
-        const newDiscountPrice = parseFloat(priceValues[0]);
-        const oldPrice = parseFloat(product.price);
-
-        // Validation: discount price should be less than original price
-        if (newDiscountPrice >= oldPrice) {
-          console.log("Discounted price cannot be greater than or equal to original price");
-          return { success: false, error: "Invalid discount price" };
-        }
-
-        try {
-          let updateObj = {
-            discountPrice: newDiscountPrice
-          };
-
-          // Add other discount fields if they exist
-          if (discountStartDate) {
-            updateObj.discountStartDate = new Date(discountStartDate);
-          }
-          if (discountEndDate) {
-            updateObj.discountEndDate = new Date(discountEndDate);
-          }
-          if (comeBackToOriginalPrice !== null && comeBackToOriginalPrice !== undefined) {
-            const shouldComeBack = comeBackToOriginalPrice === 'yes';
-            updateObj.comeBackToOriginalPrice = shouldComeBack;
-            
-            // If comeBackToOriginalPrice is false (no), update the actual price as well
-            if (!shouldComeBack) {
-              updateObj.price = newDiscountPrice;
-              
-              // 🎯 NEW TWIST: Update bulkPricing with discountBulkPricing when comeBackToOriginal is No
-              if (discountBulkPricing && Array.isArray(discountBulkPricing)) {
-                const validBulkPricing = discountBulkPricing.filter(item => 
-                  item.wholesalePrice !== '' && item.quantity !== ''
-                );
-                updateObj.bulkPricing = validBulkPricing;
-              }
-            }
-          }
-
-          // Always store discountBulkPricing
-          if (discountBulkPricing && Array.isArray(discountBulkPricing)) {
-            const validDiscountBulkPricing = discountBulkPricing.filter(item => 
-              item.wholesalePrice !== '' && item.quantity !== ''
-            );
-            updateObj.discountBulkPricing = validDiscountBulkPricing;
-          }
-
-          const updatedProduct = await Product.findByIdAndUpdate(
-            productID,
-            { $set: updateObj },
-            { new: true }
-          );
-
-          return { success: true, productID, updated: !!updatedProduct };
-
-        } catch (error) {
-          console.error("Error updating non-variant product:", error);
-          return { success: false, error: error.message };
-        }
-      }
-    });
-
-    // Wait for all updates to complete
-    Promise.all(updatePromises)
-      .then(results => {
-        const failures = results.filter(r => !r.success);
-        if (failures.length > 0) {
-          console.error("Some updates failed:", failures);
-          return res.status(400).json({ 
-            message: "Some products failed to update", 
-            failures 
-          });
-        }
-        
-        console.log("All products updated successfully");
-        return res.status(200).json({ 
-          message: "Mass revised rate update completed successfully",
-          results 
-        });
-      })
-      .catch(error => {
-        console.error("Error in mass revised rate:", error);
-        return res.status(500).json({ 
-          message: "Error processing mass revised rate",
-          error: error.message 
-        });
-      });
-
-  } catch (error) {
-    console.error("Error in mass revised rate:", error);
-    return res.status(500).json({ 
-      message: "Error processing mass revised rate",
-      error: error.message 
-    });
-  }
-}
-// End of function for revising rate for multiple 
-
-// Start of function that will handle the product without being checked
-const revisedRate = async (req, res) => {
-  console.log("Request received");
-  const {productId, updatedPrice, discountStartDate, discountEndDate, discountPrice, comeBackToOriginalPrice, discountBulkPricing, productData} = req.body;
-  if(Object.keys(productData).length === 0) {
-    console.log("Without varianst")
-    // Updation logic for single product without variants
-    const product = await Product.findById(productId);
-    if(product) {
-      console.log("Product found")
-      // Checking if the discount price entered is greater than the original price store in db.
-      if(parseInt(product.price <= discountPrice)) {
-        console.log("Discount price is greater")
-        return res.status(400).json({message: "Discount price cannot be greater than original price"});
-      } else {
-        console.log("Discount price is smaller")
-        console.log()
-        try {
-          if(comeBackToOriginalPrice === 'yes') {
-            console.log("Selected yes")
-            const updatedProduct = await Product.findByIdAndUpdate(
-              productId,
-              {
-                $set: {
-                  discountPrice,
-                  discountStartDate,
-                  discountEndDate,
-                  discountBulkPricing,
-                  comeBackToOriginalPrice: true,
-                }
-              },
-              {new: true}
-            )
-            console.log("Rate Revised Successfully");
-            return res.status(200).json({message: "Rate revised successfully"});
-          } else {
-            console.log("Selected no");
-            // Change the original price as well
-            const updatedProduct = await Product.findByIdAndUpdate(
-              productId,
-              {
-                $set: {
-                  discountPrice,
-                  discountStartDate,
-                  discountEndDate,
-                  discountBulkPricing,
-                  comeBackToOriginalPrice: false,
-                  price: discountPrice,
-                  bulkPricing: discountBulkPricing
-                }
-              },
-              {new: true}
-            )
-
-            console.log("Rate Revised Successfully");
-            return res.status(200).json({message: "Rate revised successfully"});
-          }
-        } catch(err) {
-          console.log("Something went wrong");
-          console.log(err);
-          return res.status(400).json({message: "Revising rate failed"})
-        }
-      }
-    } else {
-      return res.status(400).json({message: "product with this ID not found"})
-    }
-  } else {
-    // Updation logic for single product with variants
-    // console.log("With variants")
-    // console.log(req.body)
-    const {productId, productData} = req.body;
-    const errors = [];
-    const product = await Product.findById(productId);
-    if(product) {
-Object.entries(productData).forEach(([variantId, variantData]) => {
-  console.log(variantData)
-      Object.entries(variantData).forEach(([detailsId, detailsData]) => {
-        // console.log(detailsData.discountPrice);
-        console.log(detailsData);
-
-        // Checking if the discount price entered is less than the original price
-        product.variants.map((variant) => {
-          variant.moreDetails.map(async (details) => {
-            if(details._id.toString() === detailsId.toString()) {
-              if(parseInt(details.price) <= detailsData.discountPrice) {
-                console.log("Discout price is greater")
-                errors.push({variantId, detailsId, message: "Discount price is greater"});
-              } else {
-                console.log("Discount price is smaller");
-                console.log(detailsId)
-
-                // Checking is comeBackToOriginal is true or false
-                if(detailsData.comeBackToOriginalPrice === 'yes') {
-                  // Dont update price and bulk pricing sizes
-                  try {
-                    const updatedProduct = await Product.updateOne(
-                      {
-                        _id: productId
-                      }, 
-                      {
-                        $set: {
-                          "variants.$[v].moreDetails.$[md].discountPrice": detailsData.discountPrice,
-                          "variants.$[v].moreDetails.$[md].discountStartDate": detailsData.discountStartDate,
-                          "variants.$[v].moreDetails.$[md].discountEndDate": detailsData.discountEndDate,
-                          "variants.$[v].moreDetails.$[md].comeBackToOriginalPrice": detailsData.comeBackToOriginalPrice,
-                          "variants.$[v].moreDetails.$[md].discountBulkPricing": detailsData.bulkPricing,
-                        }
-                      },
-                       {
-                        arrayFilters: [
-                          {"v._id": variantId},
-                          {"md._id": detailsId}
-                        ]
-                      }
-                    )
-                  } catch(err) {
-                    console.log(err)
-                    return res.status(400).json({message: "There was problem while udating the product"});
-                  }
-                } else {
-                  // Update the price and bulk pricing with discountPrice and discountBulkPricing
-                  try {
-                    const updatedProduct = await Product.updateOne(
-                      {
-                        _id: productId
-                      }, 
-                      {
-                        $set: {
-                          "variants.$[v].moreDetails.$[md].discountPrice": detailsData.discountPrice,
-                          "variants.$[v].moreDetails.$[md].discountStartDate": detailsData.discountStartDate,
-                          "variants.$[v].moreDetails.$[md].discountEndDate": detailsData.discountEndDate,
-                          "variants.$[v].moreDetails.$[md].comeBackToOriginalPrice": detailsData.comeBackToOriginalPrice,
-                          "variants.$[v].moreDetails.$[md].discountBulkPricing": detailsData.bulkPricing,
-                          "variants.$[v].moreDetails.$[md].price": detailsData.discountPrice,
-                          "variants.$[v].moreDetails.$[md].bulkPricingCombinations": detailsData.bulkPricing,
-                        }
-                      },
-                       {
-                        arrayFilters: [
-                          {"v._id": variantId},
-                          {"md._id": detailsId}
-                        ]
-                      }
-                    )
-                  } catch(err) {
-                    console.log(err);
-                    return res.status(400).json({message: "There some problem in updating the product"})
-                  }
-                }
-              }
-            }
-          })
-        })
-      })
-    })
-    } else {
-      return res.status(400).json({message: "Product Not found"});
-    }
-    
-  }
-}
-// End of function that will handle the product without being checked
-
-Product.js:
-const mongoose = require("mongoose")
-
-// Schema for dynamic key-value pairs (Product Details, Optional Details)
-const keyValueSchema = mongoose.Schema({
-  key: { type: String, required: false }, // Made optional for testing
-  value: { type: String, required: false }, // Made optional for testing
-})
-
-// Schema for Bulk Pricing
-const bulkPricingSchema = mongoose.Schema({
-  wholesalePrice: { type: Number, required: false }, // Made optional for testing
-  quantity: { type: Number, required: false }, // Made optional for testing
-})
-
-// Schema for a single Size object
-const singleSizeSchema = mongoose.Schema({
-  length: { type: Number, required: false },
-  breadth: { type: Number, required: false },
-  height: { type: Number, required: false },
-  unit: { type: String, enum: ["cm", "m", "inch"], required: false }, // Changed to required: false
-})
-
-// Schema for 'More Details' section (now representing a specific Size instance)
-const moreDetailsSchema = mongoose.Schema({
-  size: singleSizeSchema, // This should be an object, not an array
-  additionalImages: [String], // Array of Cloudinary URLs
-  optionalDetails: [keyValueSchema],
-  // Fields for price/stock if they are specific to this moreDetails section
-  price: { type: Number, required: false },
-  stock: { type: Number, required: false },
-  lastRestockedAt: {type: Date, required: false, default: null},
-  discountStartDate: {type: Date, required: false, default: null},
-    discountEndDate: {type: Date, required: false, default: null},
-    discountPrice: {type: Number, required: false, default: ""},
-    comeBackToOriginalPrice: {type: Boolean, required: false, default: null},
-    discountBulkPricing: [{
-  wholesalePrice: { type: Number },
-  quantity: { type: Number }
-}],
-  bulkPricingCombinations: [bulkPricingSchema],
-})
-
-// Schema for Product Variants
-const productVariantSchema = mongoose.Schema({
-  colorName: { type: String, required: false }, // Made optional for testing
-  variantImage: { type: String, required: false }, // Cloudinary URL
-  optionalDetails: [keyValueSchema], // Variant-specific optional details
-  moreDetails: [moreDetailsSchema], // Array of 'More Details' sections (each representing a unique size instance)
-  // Fields for price/stock if they are common for all moreDetails sections of this variant
-  commonPrice: { type: Number, required: false },
-  commonStock: { type: Number, required: false },
-  commonBulkPricingCombinations: [bulkPricingSchema],
-  isDefault: { type: Boolean, default: false }, // New field for default variant
-})
-
-// Main Product Schema
-const productSchema = mongoose.Schema(
-  {
-    name: { type: String, required: false, trim: true }, // Made optional for testing
-    mainCategory: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: false }, // Made optional for testing
-    subCategory: { type: mongoose.Schema.Types.ObjectId, ref: "Category", required: false }, // Made optional for testing
-    categoryPath: { type: String, required: false }, // e.g., Electronics > Mobiles > Vivo // Made optional for testing
-    productDetails: [keyValueSchema],
-    stock: { type: Number, required: false, default: "" }, // Required if no variants
-    price: { type: Number, required: false, default: "" }, // Required if no variants
-    lastRestockedAt: {type: Date, required: false, default: null},
-    discountStartDate: {type: Date, required: false, default: null},
-    discountEndDate: {type: Date, required: false, default: null},
-    discountPrice: {type: Number, required: false, default: ""},
-    comeBackToOriginalPrice: {type: Boolean, required: false, default: null},
-    discountBulkPricing: [{
-  wholesalePrice: { type: Number },
-  quantity: { type: Number }
-}],
-    image: { type: String, required: false, default: "" }, // Main product image URL (Cloudinary)
-    additionalImages: [String], // Array of Cloudinary URLs for basic product
-    bulkPricing: [bulkPricingSchema], // Bulk pricing for basic product
-
-    hasVariants: { type: Boolean, default: false }, // Flag to indicate if product has variants
-    variants: [productVariantSchema], // Array of product variants
-  },
-  {
-    timestamps: true,
-  },
-)
-
-module.exports = mongoose.model("Product", productSchema)
-
-
-productRoutes.js:
-const express = require("express")
-const router = express.Router()
-const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate } = require("../controllers/productController")
-const authenticate = require("../middlewares/authenticate") // Assuming these exist
-const authorize = require("../middlewares/authorize") // Assuming these exist
-const productController = require("../controllers/productController")
-
-// Route to add a new product
-// This route will be protected by authentication and authorization middleware
-router.post("/add", authenticate, authorize(["admin"]), addProduct)
-router.get("/all", authenticate, authorize(['admin', 'user']), fetchProducts);
-router.post("/mass-restock", authenticate, authorize(['admin']), massRestock);
-router.post("/restock", authenticate, authorize(['admin']), restock);
-router.post("/mass-revised-rate", authenticate, authorize(['admin']), massRevisedRate);
-router.post("/revised-rate", authenticate, authorize(['admin']), revisedRate);
-
-module.exports = router
-
-
-I have provided you certain files. Now If you want more file then dont generate any content and just me the file names you ned and I will provide you the requested files. If you dont want any files then satrt with generating solution. Make sure you don't change anything while implementing this functionality as the backedn for all other functionality has already been implemented and it is working fine.
-
-
-
