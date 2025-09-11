@@ -148,6 +148,14 @@ export default function Home() {
     return now >= startDate && now <= endDate
   }
 
+  const isNew = (product) => {
+    if (!product.createdAt) return false;
+    const createdDate = new Date(product.createdAt);
+    const now = new Date();
+    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000);
+    return createdDate >= threeDaysAgo && createdDate <= now;
+  }
+
   const isRecentlyRestocked = (product, variant = null, sizeDetail = null) => {
     let lastRestockedAt
 
@@ -161,8 +169,8 @@ export default function Home() {
 
     const restockDate = new Date(lastRestockedAt)
     const now = new Date()
-    const threeDaysAgo = new Date(now.getTime() - 3 * 24 * 60 * 60 * 1000)
-    return restockDate >= threeDaysAgo && restockDate <= now
+    const twoDaysAgo = new Date(now.getTime() - 2 * 24 * 60 * 60 * 1000)
+    return restockDate >= twoDaysAgo && restockDate <= now
   }
 
   const formatSize = (sizeObj) => {
@@ -258,13 +266,18 @@ export default function Home() {
   }
 
   const getProductBadge = (product, variant = null, sizeDetail = null) => {
-    if (isDiscountActive(product, variant, sizeDetail) || getApplicableDiscount(product)) {
-      return { text: "DISCOUNTED", color: "bg-red-500" }
+    if (isDiscountActive(product, variant, sizeDetail)) {
+      return { text: "Revised Rate", color: "bg-orange-500" }
+    } else if (getApplicableDiscount(product)) {
+      return { text: "Discounted", color: "bg-red-500" }
     }
     if (isRecentlyRestocked(product, variant, sizeDetail)) {
-      return { text: "RESTOCKED", color: "bg-green-500" }
+      return { text: "Restocked", color: "bg-green-500" }
     }
-    return { text: "NEW", color: "bg-blue-500" }
+    if (isNew(product)) {
+      return { text: "New", color: "bg-blue-500" }
+    }
+    return null
   }
 
   const generateCartKey = (productId, colorName = null, sizeString = null) => {
@@ -560,9 +573,11 @@ export default function Home() {
             )}
           </div>
 
-          <div className="absolute top-2 left-2">
-            <span className={`px-2 py-1 text-xs font-bold rounded-full text-white ${badge.color}`}>{badge.text}</span>
-          </div>
+          {badge && (
+            <div className="absolute top-2 left-2">
+              <span className={`px-2 py-1 text-xs font-bold rounded-full text-white ${badge.color}`}>{badge.text}</span>
+            </div>
+          )}
 
           <div className="absolute top-2 right-2 flex items-center gap-2">
             <button
@@ -1353,9 +1368,7 @@ const CartModal = () => {
 };
 
   const getJustArrivedProducts = () => {
-    const filteredProducts = products.filter((product) => {
-      return true
-    });
+    const filteredProducts = products.filter((product) => isNew(product));
     return sortProductsByPrice(filteredProducts);
   }
 
@@ -1604,34 +1617,40 @@ const CartModal = () => {
           </section>
         )}
 
-        <section className="mb-12" ref={justArrivedRef}>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Just Arrived</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {getJustArrivedProducts()
-              .slice(0, 10)
-              .map((product) => (
-                <ProductCard key={`just-arrived-${product._id}`} product={product} />
+        {getJustArrivedProducts().length > 0 && (
+          <section className="mb-12" ref={justArrivedRef}>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Just Arrived</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {getJustArrivedProducts()
+                .slice(0, 10)
+                .map((product) => (
+                  <ProductCard key={`just-arrived-${product._id}`} product={product} />
+                ))}
+            </div>
+          </section>
+        )}
+
+        {getRestockedProducts().length > 0 && (
+          <section className="mb-12" ref={restockedRef}>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Restocked Items</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {getRestockedProducts().map((product) => (
+                <ProductCard key={`restocked-${product._id}`} product={product} />
               ))}
-          </div>
-        </section>
+            </div>
+          </section>
+        )}
 
-        <section className="mb-12" ref={restockedRef}>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Restocked Items</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {getRestockedProducts().map((product) => (
-              <ProductCard key={`restocked-${product._id}`} product={product} />
-            ))}
-          </div>
-        </section>
-
-        <section className="mb-12" ref={revisedRatesRef}>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Revised Rates</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-            {getRevisedRatesProducts().map((product) => (
-              <ProductCard key={`revised-rates-${product._id}`} product={product} />
-            ))}
-          </div>
-        </section>
+        {getRevisedRatesProducts().length > 0 && (
+          <section className="mb-12" ref={revisedRatesRef}>
+            <h2 className="text-2xl font-bold text-gray-800 mb-6">Revised Rates</h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
+              {getRevisedRatesProducts().map((product) => (
+                <ProductCard key={`revised-rates-${product._id}`} product={product} />
+              ))}
+            </div>
+          </section>
+        )}
 
         <section>
           <h2 className="text-2xl font-bold text-gray-800 mb-6">All Products</h2>
