@@ -15,7 +15,7 @@ import AddBanner from '../../components/admin/SidebarLinks/Banner/AddBanner';
 import AllBanners from '../../components/admin/SidebarLinks/Banner/AllBanners';
 import AddAnnouncement from '../../components/admin/SidebarLinks/Announcement/AddAnnouncement';
 import AllAnnouncement from '../../components/admin/SidebarLinks/Announcement/AllAnnouncement';
-
+import BulkUpload from '../../components/admin/SidebarLinks/products/BulkUpload';
 
 function AdminPanel() {
   // State to manage sidebar open/close
@@ -58,6 +58,7 @@ function AdminPanel() {
           <Route path="banner/all" element={<AllBanners />} />
           <Route path="announcement/add" element={<AddAnnouncement />} />
           <Route path="announcement/all" element={<AllAnnouncement />} />
+          <Route path="products/b" element={<BulkUpload />} />
           {/* Add more routes for other menu items as needed */}
           <Route path="*" element={<Orders />} /> {/* Fallback route */}
         </Routes>

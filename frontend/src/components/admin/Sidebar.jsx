@@ -60,6 +60,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { id: 'edit-products', label: 'Edit Products', icon: Edit3, href: '/admin/panel/products/edit' },
         { id: 'categories', label: 'Categories', icon: List, href: '/admin/panel/products/categories' },
         { id: 'restock', label: 'Restock', icon: Package, href: '/admin/panel/products/restock' },
+        { id: 'bulk-upload', label: 'Bulk Upload', icon: Package, href: '/admin/panel/products/b' },
       ]
     },
     {

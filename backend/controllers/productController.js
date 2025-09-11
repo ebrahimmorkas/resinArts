@@ -1,14 +1,41 @@
-const { default: mongoose } = require("mongoose")
-const Product = require("../models/Product")
-const { cloudinary } = require("../utils/cloudinary")
-const multer = require("multer")
-const e = require("express")
+const { default: mongoose } = require("mongoose");
+const Product = require("../models/Product");
+const { cloudinary } = require("../utils/cloudinary");
+const multer = require("multer");
+const e = require("express");
+const xlsx = require('xlsx');
+const path = require('path');
+const fs = require('fs');
+const Category = require('../models/Category');
+
+
+
+// Start of function to check the file extension
+const fileFilter = (req, file, cb) => {
+  // Check file extensions
+  const allowedExtensions = ['.xlsx', '.csv'];
+  const fileExtension = path.extname(file.originalname).toLowerCase();
+  
+  if (allowedExtensions.includes(fileExtension)) {
+    cb(null, true);
+  } else {
+    cb(new Error(`Invalid file format. Allowed extensions: ${allowedExtensions.join(', ')}`), false);
+  }
+};
+// End of function to check the file extension
 
 // Configure multer for in-memory storage to handle file uploads
 const storage = multer.memoryStorage()
-const upload = multer({ storage })
+const upload = multer({ 
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  }
+})
 
-// Helper function to upload a single image to Cloudinary
+// Helper function to upload a single product's image to Cloudinary
+// Start of function to add product to cloudinary for single product
 const uploadImageToCloudinary = async (fileBuffer, folder) => {
   if (!fileBuffer) return null
 
@@ -20,7 +47,37 @@ const uploadImageToCloudinary = async (fileBuffer, folder) => {
     uploadStream.end(fileBuffer)
   })
 }
+// End of function to add product's image to cloudinary
 
+// Start of function to upload image to cloudinary for bulk edit
+const BulkUploadImageToCloudinary = async (imagePath, folder = 'products') => {
+  try {
+    // Check if file exists
+    if (!fs.existsSync(imagePath)) {
+      throw new Error(`Image not found at path: ${imagePath}`);
+    }
+
+    // Check file extension
+    const allowedImageExtensions = ['.jpg', '.jpeg', '.png'];
+    const fileExtension = path.extname(imagePath).toLowerCase();
+    
+    if (!allowedImageExtensions.includes(fileExtension)) {
+      throw new Error(`Invalid image format. Allowed: ${allowedImageExtensions.join(', ')}`);
+    }
+
+    const result = await cloudinary.uploader.upload(imagePath, {
+      folder: folder,
+      resource_type: 'image'
+    });
+    
+    return result.secure_url;
+  } catch (error) {
+    throw new Error(`Cloudinary upload failed: ${error.message}`);
+  }
+};
+// End of function to upload image to cloudinary for bulk edit
+
+// Start of function to add single product
 const addProduct = async (req, res) => {
   try {
     // Parse JSON fields from FormData
@@ -182,6 +239,348 @@ const addProduct = async (req, res) => {
     res.status(500).json({ error: "Internal server error", details: error.message })
   }
 }
+// End of function to add single product
+
+// Start of function for bulk adding product
+const bulkUploadProducts = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({
+        success: false,
+        message: 'No file uploaded. Please upload an Excel (.xlsx) or CSV file.'
+      });
+    }
+
+    // Parse Excel/CSV file
+    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const sheetName = workbook.SheetNames[0];
+    const worksheet = workbook.Sheets[sheetName];
+    const jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+    if (jsonData.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Excel file is empty or invalid format.'
+      });
+    }
+
+    const results = {
+      successful: [],
+      failed: [],
+      totalProcessed: 0,
+      successCount: 0,
+      failCount: 0
+    };
+
+    // Group rows by product name to handle variants
+    const productGroups = {};
+    jsonData.forEach((row, index) => {
+      const productName = row.productName?.trim();
+      if (!productName) return;
+      
+      if (!productGroups[productName]) {
+        productGroups[productName] = [];
+      }
+      productGroups[productName].push({ ...row, originalRowIndex: index });
+    });
+
+    results.totalProcessed = Object.keys(productGroups).length;
+
+    // Process each product
+    for (const [productName, productRows] of Object.entries(productGroups)) {
+      try {
+        const firstRow = productRows[0];
+        
+        // Validate required fields
+        if (!firstRow.mainCategory || !firstRow.subCategory) {
+          throw new Error('Missing required fields: mainCategory or subCategory');
+        }
+
+        // Verify categories exist
+        const mainCategory = await Category.findById(firstRow.mainCategory);
+        const subCategory = await Category.findById(firstRow.subCategory);
+        
+        if (!mainCategory) {
+          throw new Error(`Main category not found: ${firstRow.mainCategory}`);
+        }
+        if (!subCategory) {
+          throw new Error(`Sub category not found: ${firstRow.subCategory}`);
+        }
+
+        // Parse product details
+        let productDetails = [];
+        if (firstRow.productDetails) {
+          try {
+            const parsed = JSON.parse(firstRow.productDetails);
+            productDetails = Object.entries(parsed).map(([key, value]) => ({ key, value: String(value) }));
+          } catch (e) {
+            // If not JSON, treat as plain text
+            productDetails = [{ key: 'details', value: String(firstRow.productDetails) }];
+          }
+        }
+
+        // Handle main product image
+        let mainImageUrl = '';
+        if (firstRow.mainImage && firstRow.mainImage.trim() !== '') {
+          try {
+            mainImageUrl = await BulkUploadImageToCloudinary(firstRow.mainImage.trim(), 'products');
+          } catch (imageError) {
+            throw new Error(`Main image upload failed: ${imageError.message}`);
+          }
+        }
+
+        // Handle additional images
+        let additionalImageUrls = [];
+        if (firstRow.additionalImages && firstRow.additionalImages.trim() !== '') {
+          const imagePaths = firstRow.additionalImages.split(',').map(path => path.trim());
+          for (const imagePath of imagePaths) {
+            try {
+              const imageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/additional');
+              additionalImageUrls.push(imageUrl);
+            } catch (imageError) {
+              // Log error but continue with other images
+              console.error(`Additional image upload failed for ${imagePath}:`, imageError.message);
+            }
+          }
+        }
+
+        // Parse bulk pricing
+        let bulkPricing = [];
+        if (firstRow.bulkPricing && firstRow.bulkPricing.trim() !== '' && firstRow.bulkPricing !== '[]') {
+          try {
+            bulkPricing = JSON.parse(firstRow.bulkPricing);
+          } catch (e) {
+            console.error('Invalid bulk pricing JSON:', firstRow.bulkPricing);
+          }
+        }
+
+        // Create base product object
+        const productData = {
+          name: productName,
+          mainCategory: firstRow.mainCategory,
+          subCategory: firstRow.subCategory,
+          categoryPath: firstRow.categoryPath || '',
+          productDetails: productDetails,
+          image: mainImageUrl,
+          additionalImages: additionalImageUrls,
+          bulkPricing: bulkPricing,
+          hasVariants: firstRow.hasVariants === 'TRUE' || firstRow.hasVariants === true,
+        };
+
+        // Handle variants or simple product
+        if (productData.hasVariants) {
+          // Group rows by variant color name
+          const variantGroups = {};
+          productRows.forEach(row => {
+            const colorName = row.variantColorName?.trim() || 'default';
+            if (!variantGroups[colorName]) {
+              variantGroups[colorName] = [];
+            }
+            variantGroups[colorName].push(row);
+          });
+
+          const variants = [];
+          
+          for (const [colorName, variantRows] of Object.entries(variantGroups)) {
+            const firstVariantRow = variantRows[0];
+            
+            // Upload variant image
+            let variantImageUrl = '';
+            if (firstVariantRow.variantImage && firstVariantRow.variantImage.trim() !== '') {
+              try {
+                variantImageUrl = await BulkUploadImageToCloudinary(firstVariantRow.variantImage.trim(), 'products/variants');
+              } catch (imageError) {
+                console.error(`Variant image upload failed:`, imageError.message);
+              }
+            }
+
+            // Parse variant optional details
+            let variantOptionalDetails = [];
+            if (firstVariantRow.variantOptionalDetails && firstVariantRow.variantOptionalDetails.trim() !== '' && firstVariantRow.variantOptionalDetails !== '[]') {
+              try {
+                const parsed = JSON.parse(firstVariantRow.variantOptionalDetails);
+                if (Array.isArray(parsed)) {
+                  variantOptionalDetails = parsed;
+                } else {
+                  variantOptionalDetails = Object.entries(parsed).map(([key, value]) => ({ key, value: String(value) }));
+                }
+              } catch (e) {
+                console.error('Invalid variant optional details JSON:', firstVariantRow.variantOptionalDetails);
+              }
+            }
+
+            // Create more details for each size combination
+            const moreDetails = [];
+            
+            for (const row of variantRows) {
+              if (row.sizeLength || row.sizeBreadth || row.sizeHeight) {
+                // Parse size bulk pricing
+                let sizeBulkPricing = [];
+                if (row.sizeBulkPricing && row.sizeBulkPricing.trim() !== '' && row.sizeBulkPricing !== '[]') {
+                  try {
+                    sizeBulkPricing = JSON.parse(row.sizeBulkPricing);
+                  } catch (e) {
+                    console.error('Invalid size bulk pricing JSON:', row.sizeBulkPricing);
+                  }
+                }
+
+                // Parse size optional details
+                let sizeOptionalDetails = [];
+                if (row.sizeOptionalDetails && row.sizeOptionalDetails.trim() !== '' && row.sizeOptionalDetails !== '[]') {
+                  try {
+                    const parsed = JSON.parse(row.sizeOptionalDetails);
+                    if (Array.isArray(parsed)) {
+                      sizeOptionalDetails = parsed;
+                    } else {
+                      sizeOptionalDetails = Object.entries(parsed).map(([key, value]) => ({ key, value: String(value) }));
+                    }
+                  } catch (e) {
+                    console.error('Invalid size optional details JSON:', row.sizeOptionalDetails);
+                  }
+                }
+
+                // Handle size additional images
+                let sizeAdditionalImages = [];
+                if (row.sizeAdditionalImages && row.sizeAdditionalImages.trim() !== '') {
+                  const imagePaths = row.sizeAdditionalImages.split(',').map(path => path.trim());
+                  for (const imagePath of imagePaths) {
+                    try {
+                      const imageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/variants/more-details');
+                      sizeAdditionalImages.push(imageUrl);
+                    } catch (imageError) {
+                      console.error(`Size additional image upload failed for ${imagePath}:`, imageError.message);
+                    }
+                  }
+                }
+
+                // Parse discount bulk pricing
+                let discountBulkPricing = [];
+                if (row.discountBulkPricing && row.discountBulkPricing.trim() !== '' && row.discountBulkPricing !== '[]') {
+                  try {
+                    discountBulkPricing = JSON.parse(row.discountBulkPricing);
+                  } catch (e) {
+                    console.error('Invalid discount bulk pricing JSON:', row.discountBulkPricing);
+                  }
+                }
+
+                const moreDetail = {
+                  size: {
+                    length: parseFloat(row.sizeLength) || undefined,
+                    breadth: parseFloat(row.sizeBreadth) || undefined,
+                    height: parseFloat(row.sizeHeight) || undefined,
+                    unit: row.sizeUnit || undefined
+                  },
+                  additionalImages: sizeAdditionalImages,
+                  optionalDetails: sizeOptionalDetails,
+                  price: parseFloat(row.sizePrice) || undefined,
+                  stock: parseInt(row.sizeStock) || undefined,
+                  bulkPricingCombinations: sizeBulkPricing,
+                  discountStartDate: row.discountStartDate ? new Date(row.discountStartDate) : undefined,
+                  discountEndDate: row.discountEndDate ? new Date(row.discountEndDate) : undefined,
+                  discountPrice: parseFloat(row.discountPrice) || undefined,
+                  comeBackToOriginalPrice: row.comeBackToOriginalPrice === 'TRUE' || row.comeBackToOriginalPrice === true,
+                  discountBulkPricing: discountBulkPricing
+                };
+
+                moreDetails.push(moreDetail);
+              }
+            }
+
+            const variant = {
+              colorName: colorName === 'default' ? '' : colorName,
+              variantImage: variantImageUrl,
+              optionalDetails: variantOptionalDetails,
+              moreDetails: moreDetails,
+              isDefault: firstVariantRow.isDefaultVariant === 'TRUE' || firstVariantRow.isDefaultVariant === true
+            };
+
+            variants.push(variant);
+          }
+
+          productData.variants = variants;
+        } else {
+          // Simple product without variants
+          productData.price = parseFloat(firstRow.price) || undefined;
+          productData.stock = parseInt(firstRow.stock) || undefined;
+          
+          // Handle discount fields
+          if (firstRow.discountStartDate) {
+            productData.discountStartDate = new Date(firstRow.discountStartDate);
+          }
+          if (firstRow.discountEndDate) {
+            productData.discountEndDate = new Date(firstRow.discountEndDate);
+          }
+          if (firstRow.discountPrice) {
+            productData.discountPrice = parseFloat(firstRow.discountPrice);
+          }
+          if (firstRow.comeBackToOriginalPrice) {
+            productData.comeBackToOriginalPrice = firstRow.comeBackToOriginalPrice === 'TRUE' || firstRow.comeBackToOriginalPrice === true;
+          }
+          if (firstRow.discountBulkPricing && firstRow.discountBulkPricing.trim() !== '' && firstRow.discountBulkPricing !== '[]') {
+            try {
+              productData.discountBulkPricing = JSON.parse(firstRow.discountBulkPricing);
+            } catch (e) {
+              console.error('Invalid discount bulk pricing JSON:', firstRow.discountBulkPricing);
+            }
+          }
+        }
+
+        // Create and save product
+        const newProduct = new Product(productData);
+        await newProduct.save();
+
+        results.successful.push({
+          productName: productName,
+          productId: newProduct._id,
+          variantsCount: productData.hasVariants ? productData.variants?.length || 0 : 0,
+          imagesUploaded: {
+            main: !!mainImageUrl,
+            additional: additionalImageUrls.length,
+            variants: productData.variants?.reduce((total, variant) => {
+              return total + (variant.variantImage ? 1 : 0) + 
+                     variant.moreDetails?.reduce((sum, detail) => sum + detail.additionalImages.length, 0);
+            }, 0) || 0
+          }
+        });
+
+        results.successCount++;
+
+      } catch (error) {
+        results.failed.push({
+          productName: productName,
+          error: error.message,
+          rowsAffected: productGroups[productName].map(row => row.originalRowIndex + 1)
+        });
+        results.failCount++;
+      }
+
+      // Send progress update
+      if (req.io) {
+        const processed = results.successCount + results.failCount;
+        req.io.emit('productUploadProgress', {
+          processed: processed,
+          total: results.totalProcessed,
+          successCount: results.successCount,
+          failCount: results.failCount
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `Product upload completed. ${results.successCount} successful, ${results.failCount} failed.`,
+      results: results
+    });
+
+  } catch (error) {
+    return res.status(500).json({
+      success: false,
+      message: 'Server error during product upload',
+      error: error.message
+    });
+  }
+};
+// End of function for bulk adding product
 
 // Export addProduct with upload.any() middleware directly
 module.exports = {
@@ -997,6 +1396,9 @@ const revisedRate = async (req, res) => {
 };
 // End of function that will handle the product without being checked
 
+// Start of function that will handle mass upload of products
+// End of function that will handle mass upload of products
+
 
 // Export addProduct with upload.any() middleware directly
 module.exports = {
@@ -1005,5 +1407,7 @@ module.exports = {
   restock,
   massRestock,
   massRevisedRate,
-  revisedRate
+  revisedRate,
+  upload,
+  bulkUploadProducts
 }

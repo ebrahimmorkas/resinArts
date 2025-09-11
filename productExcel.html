@@ -1,0 +1,347 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excel Sheet Structure for Product Import</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 20px;
+            background-color: #f5f7fa;
+        }
+        .container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 100%;
+            overflow-x: auto;
+        }
+        h1 {
+            color: #2c3e50;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 28px;
+        }
+        h2 {
+            color: #34495e;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 10px;
+            margin-top: 30px;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 20px 0;
+            font-size: 12px;
+            min-width: 1200px;
+        }
+        th {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 12px 8px;
+            text-align: center;
+            font-weight: 600;
+            font-size: 10px;
+            border: 1px solid #ddd;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+        }
+        td {
+            padding: 10px 8px;
+            border: 1px solid #ddd;
+            text-align: center;
+            vertical-align: top;
+            word-wrap: break-word;
+            max-width: 120px;
+        }
+        .product1 {
+            background-color: #fff8e1;
+        }
+        .product2 {
+            background-color: #e8f5e8;
+        }
+        .json-cell {
+            font-family: 'Courier New', monospace;
+            font-size: 10px;
+            background-color: #f8f9fa;
+            color: #495057;
+            max-width: 150px;
+            word-break: break-all;
+        }
+        .note {
+            background-color: #e3f2fd;
+            border-left: 4px solid #2196f3;
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+        }
+        .note h3 {
+            margin-top: 0;
+            color: #1976d2;
+        }
+        .highlight {
+            background-color: #fff3cd;
+            border: 1px solid #ffeaa7;
+        }
+        .variant-separator {
+            border-top: 3px solid #e74c3c;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Excel Sheet Structure for Product Import</h1>
+        
+        <div class="note">
+            <h3>Key Points:</h3>
+            <ul>
+                <li><strong>Multiple rows per product:</strong> Each row represents one size within a variant</li>
+                <li><strong>Product without variants:</strong> Single row with all basic product info</li>
+                <li><strong>JSON format:</strong> Use JSON strings for complex data like details and bulk pricing</li>
+                <li><strong>Pipe separation:</strong> Use | to separate multiple images</li>
+            </ul>
+        </div>
+
+        <h2>Complete Excel Structure</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>productName</th>
+                    <th>mainCategory</th>
+                    <th>subCategory</th>
+                    <th>categoryPath</th>
+                    <th>productDetails</th>
+                    <th>hasVariants</th>
+                    <th>mainImage</th>
+                    <th>additionalImages</th>
+                    <th>price</th>
+                    <th>stock</th>
+                    <th>bulkPricing</th>
+                    <th>variantColorName</th>
+                    <th>variantImage</th>
+                    <th>variantOptionalDetails</th>
+                    <th>isDefaultVariant</th>
+                    <th>sizeLength</th>
+                    <th>sizeBreadth</th>
+                    <th>sizeHeight</th>
+                    <th>sizeUnit</th>
+                    <th>sizePrice</th>
+                    <th>sizeStock</th>
+                    <th>sizeAdditionalImages</th>
+                    <th>sizeOptionalDetails</th>
+                    <th>sizeBulkPricing</th>
+                    <th>discountStartDate</th>
+                    <th>discountEndDate</th>
+                    <th>discountPrice</th>
+                    <th>comeBackToOriginalPrice</th>
+                    <th>discountBulkPricing</th>
+                </tr>
+            </thead>
+            <tbody>
+                <!-- Product 1: "okkkkk" with variants -->
+                <tr class="product1">
+                    <td>okkkkk</td>
+                    <td>6888f173761f14852e7841d2</td>
+                    <td>6888f173761f14852e7841d8</td>
+                    <td>test image > a > b > c</td>
+                    <td class="json-cell">{"hii":"jii"}</td>
+                    <td>TRUE</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>[]</td>
+                    <td>yellow</td>
+                    <td>https://res.cloudinary.com/djn2jtaez/image/upload/v1754894620/products/variants/t8hsphdxbmh0nragax3r.jpg</td>
+                    <td>[]</td>
+                    <td>FALSE</td>
+                    <td>7</td>
+                    <td>7</td>
+                    <td>7</td>
+                    <td>cm</td>
+                    <td>31</td>
+                    <td>138</td>
+                    <td></td>
+                    <td>[]</td>
+                    <td class="json-cell">[{"wholesalePrice":3,"quantity":4}]</td>
+                    <td>2025-09-26T05:48:00.000Z</td>
+                    <td>2025-09-28T23:48:00.000Z</td>
+                    <td>21</td>
+                    <td>TRUE</td>
+                    <td class="json-cell">[{"wholesalePrice":20,"quantity":10}]</td>
+                </tr>
+                <tr class="product1">
+                    <td>okkkkk</td>
+                    <td>6888f173761f14852e7841d2</td>
+                    <td>6888f173761f14852e7841d8</td>
+                    <td>test image > a > b > c</td>
+                    <td class="json-cell">{"hii":"jii"}</td>
+                    <td>TRUE</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>[]</td>
+                    <td>yellow</td>
+                    <td>https://res.cloudinary.com/djn2jtaez/image/upload/v1754894620/products/variants/t8hsphdxbmh0nragax3r.jpg</td>
+                    <td>[]</td>
+                    <td>FALSE</td>
+                    <td>74</td>
+                    <td>85</td>
+                    <td>54</td>
+                    <td>cm</td>
+                    <td>10</td>
+                    <td>61</td>
+                    <td></td>
+                    <td>[]</td>
+                    <td class="json-cell">[{"wholesalePrice":3,"quantity":4}]</td>
+                    <td>2025-09-20T05:48:00.000Z</td>
+                    <td>2025-09-30T05:48:00.000Z</td>
+                    <td>9</td>
+                    <td>TRUE</td>
+                    <td class="json-cell">[{"wholesalePrice":8,"quantity":10}]</td>
+                </tr>
+                <tr class="product1 variant-separator">
+                    <td>okkkkk</td>
+                    <td>6888f173761f14852e7841d2</td>
+                    <td>6888f173761f14852e7841d8</td>
+                    <td>test image > a > b > c</td>
+                    <td class="json-cell">{"hii":"jii"}</td>
+                    <td>TRUE</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>[]</td>
+                    <td>dfguygwtycnbdfjrhgteyrgudhfbjgye</td>
+                    <td>https://res.cloudinary.com/djn2jtaez/image/upload/v1754894620/products/variants/fpi3njkvlsycv18opwla.jpg</td>
+                    <td>[]</td>
+                    <td>TRUE</td>
+                    <td>7</td>
+                    <td>7</td>
+                    <td>7</td>
+                    <td>cm</td>
+                    <td>7</td>
+                    <td>973</td>
+                    <td>https://res.cloudinary.com/djn2jtaez/image/upload/v1754894620/products/variants/more-details/xgujvvxlvjqza4e6qbik.jpg</td>
+                    <td class="json-cell">{"p":"p"}</td>
+                    <td class="json-cell">[{"wholesalePrice":5,"quantity":5}]</td>
+                    <td>2025-09-11T05:49:00.000Z</td>
+                    <td>2025-09-27T05:49:00.000Z</td>
+                    <td>7</td>
+                    <td>FALSE</td>
+                    <td class="json-cell">[{"wholesalePrice":5,"quantity":5}]</td>
+                </tr>
+                <tr class="product1">
+                    <td>okkkkk</td>
+                    <td>6888f173761f14852e7841d2</td>
+                    <td>6888f173761f14852e7841d8</td>
+                    <td>test image > a > b > c</td>
+                    <td class="json-cell">{"hii":"jii"}</td>
+                    <td>TRUE</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>[]</td>
+                    <td>dfguygwtycnbdfjrhgteyrgudhfbjgye</td>
+                    <td>https://res.cloudinary.com/djn2jtaez/image/upload/v1754894620/products/variants/fpi3njkvlsycv18opwla.jpg</td>
+                    <td>[]</td>
+                    <td>TRUE</td>
+                    <td>4</td>
+                    <td>5</td>
+                    <td>3</td>
+                    <td>cm</td>
+                    <td>789</td>
+                    <td>163</td>
+                    <td></td>
+                    <td>[]</td>
+                    <td>[]</td>
+                    <td>2025-09-11T05:50:00.000Z</td>
+                    <td>2025-09-27T05:50:00.000Z</td>
+                    <td>780</td>
+                    <td>TRUE</td>
+                    <td class="json-cell">[{"wholesalePrice":760,"quantity":9}]</td>
+                </tr>
+                <!-- Product 2: "test free cash again" without variants -->
+                <tr class="product2">
+                    <td>test free cash again</td>
+                    <td>688110bc5387fa46bb139d71</td>
+                    <td>688110bc5387fa46bb139d73</td>
+                    <td>abc > abc s</td>
+                    <td class="json-cell">{"test free cash details again key":"test free cash details again value"}</td>
+                    <td>FALSE</td>
+                    <td>https://res.cloudinary.com/djn2jtaez/image/upload/v1757507761/products/z5t1wujdpqjatkagt5sb.png</td>
+                    <td>https://res.cloudinary.com/djn2jtaez/image/upload/v1757507763/products/additional/spnqsfqoir40xoaz68hn.jpg</td>
+                    <td>198</td>
+                    <td>0</td>
+                    <td class="json-cell">[{"wholesalePrice":20,"quantity":12}]</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>[]</td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td>[]</td>
+                </tr>
+            </tbody>
+        </table>
+
+        <h2>Data Format Explanations</h2>
+        
+        <div class="note">
+            <h3>JSON Format Examples:</h3>
+            <ul>
+                <li><strong>productDetails:</strong> <code>{"key1":"value1","key2":"value2"}</code></li>
+                <li><strong>bulkPricing:</strong> <code>[{"wholesalePrice":20,"quantity":10},{"wholesalePrice":15,"quantity":20}]</code></li>
+                <li><strong>sizeOptionalDetails:</strong> <code>{"Material":"Cotton","Care":"Machine Wash"}</code></li>
+                <li><strong>Empty arrays:</strong> <code>[]</code> for no data</li>
+            </ul>
+        </div>
+
+        <div class="note">
+            <h3>Special Handling:</h3>
+            <ul>
+                <li><strong>Multiple Images:</strong> Use pipe separator: <code>image1.jpg|image2.jpg|image3.jpg</code></li>
+                <li><strong>Category IDs:</strong> Use MongoDB ObjectId strings or category names (your choice)</li>
+                <li><strong>Dates:</strong> Use ISO format: <code>2025-09-26T05:48:00.000Z</code></li>
+                <li><strong>Boolean Values:</strong> Use TRUE/FALSE (Excel will convert to boolean)</li>
+                <li><strong>Empty Fields:</strong> Leave blank for null/empty values</li>
+            </ul>
+        </div>
+
+        <h2>Row Logic Summary</h2>
+        
+        <div class="note">
+            <ul>
+                <li><strong>Product 1 (okkkkk):</strong> 4 rows total
+                    <ul>
+                        <li>Row 1-2: Yellow variant with 2 different sizes</li>
+                        <li>Row 3-4: Second variant with 2 different sizes</li>
+                    </ul>
+                </li>
+                <li><strong>Product 2 (test free cash again):</strong> 1 row total
+                    <ul>
+                        <li>Simple product without variants</li>
+                        <li>All data in single row</li>
+                    </ul>
+                </li>
+            </ul>
+        </div>
+    </div>
+</body>
+</html>
