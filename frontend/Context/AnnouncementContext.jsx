@@ -11,7 +11,7 @@ export const AnnouncementProvider = ({ children }) => {
   useEffect(() => {
     const fetchAnnouncement = async () => {
       try {
-        const res = await axios.get('http://localhost:3000/api/announcement/all');
+        const res = await axios.get('https://resinarts.onrender.com/api/announcement/all');
         const now = new Date();
         const activeAnnouncements = res.data.filter(a => !a.isDefault && new Date(a.startDate) <= now && new Date(a.endDate) >= now);
         let currentText = '';

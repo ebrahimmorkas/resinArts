@@ -328,7 +328,7 @@ const Home = () => {
   const handleLogout = async () => {
     try {
       const res = await axios.post(
-        "http://localhost:3000/api/auth/logout",
+        "https://resinarts.onrender.com/api/auth/logout",
         {},
         {
           withCredentials: true,
@@ -352,7 +352,7 @@ const Home = () => {
   useEffect(() => {
     const checkLogin = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/auth/me", { withCredentials: true })
+        const res = await axios.get("https://resinarts.onrender.com/api/auth/me", { withCredentials: true })
         setUser(res.data.user)
       } catch (err) {
         setUser(null)

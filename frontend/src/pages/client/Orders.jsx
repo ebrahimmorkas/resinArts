@@ -154,7 +154,7 @@ export default function Orders() {
         console.log("Fetching orders for userId:", userId);
         setLoadingOrders(true);
         const res = await axios.post(
-          "http://localhost:3000/api/user/find-user",
+          "https://resinarts.onrender.com/api/user/find-user",
           { userId },
           { withCredentials: true }
         );

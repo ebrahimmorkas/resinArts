@@ -56,7 +56,7 @@ export const CartProvider = ({ children }) => {
     const fetchCartFromBackend = async () => {
         try {
             setLoading(true);
-            const response = await axios.get("http://localhost:3000/api/cart", {
+            const response = await axios.get("https://resinarts.onrender.com/api/cart", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -147,7 +147,7 @@ export const CartProvider = ({ children }) => {
                 cartItemData.size = sizeString;
             }
 
-            const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
+            const response = await axios.post("https://resinarts.onrender.com/api/cart", cartItemData, {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -213,7 +213,7 @@ export const CartProvider = ({ children }) => {
             }
 
             const response = await axios.put(
-                "http://localhost:3000/api/cart",
+                "https://resinarts.onrender.com/api/cart",
                 {
                     product_id: item.productId,
                     variant_name: item.variantName,
@@ -250,7 +250,7 @@ export const CartProvider = ({ children }) => {
             const item = cartItems[cartKey];
             if (!item) return;
 
-            const response = await axios.delete("http://localhost:3000/api/cart", {
+            const response = await axios.delete("https://resinarts.onrender.com/api/cart", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -363,7 +363,7 @@ export const CartProvider = ({ children }) => {
                 // Update on backend
                 try {
                     await axios.put(
-                        "http://localhost:3000/api/cart",
+                        "https://resinarts.onrender.com/api/cart",
                         {
                             product_id: item.productId,
                             variant_name: item.variantName,
@@ -419,7 +419,7 @@ export const CartProvider = ({ children }) => {
         try {
             setLoading(true);
             // Clear cart on backend
-            const response = await axios.delete("http://localhost:3000/api/cart/clear", {
+            const response = await axios.delete("https://resinarts.onrender.com/api/cart/clear", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",

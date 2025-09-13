@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:3000'); // Assuming your backend server is at port 3000 and has socket.io set up
+const socket = io('https://resinarts.onrender.com'); // Assuming your backend server is at port 3000 and has socket.io set up
 
 const BulkUpload = () => {
   const [productFile, setProductFile] = useState(null);
@@ -57,7 +57,7 @@ const BulkUpload = () => {
     formData.append('file', productFile);
 
     try {
-      const res = await axios.post('http://localhost:3000/api/product/bulk-upload', formData, {
+      const res = await axios.post('https://resinarts.onrender.com/api/product/bulk-upload', formData, {
         withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -81,7 +81,7 @@ const BulkUpload = () => {
     formData.append('file', categoryFile);
 
     try {
-      const res = await axios.post('http://localhost:3000/api/category/bulk-upload', formData, {
+      const res = await axios.post('https://resinarts.onrender.com/api/category/bulk-upload', formData, {
         withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data',

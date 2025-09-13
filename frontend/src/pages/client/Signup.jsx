@@ -593,7 +593,7 @@ const Signup = () => {
     setErrorMessages("")
 
     try {
-      const res = await axios.post("http://localhost:3000/api/auth/register", formData)
+      const res = await axios.post("https://resinarts.onrender.com/api/auth/register", formData)
       console.log(res.data)
       setIsLoading(false)
     } catch (err) {

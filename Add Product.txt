@@ -567,7 +567,7 @@ const handleSubmit = async (e) => {
   })
 
   try {
-    const response = await axios.post("http://localhost:3000/api/product/add", formDataToSend, {
+    const response = await axios.post("https://resinarts.onrender.com/api/product/add", formDataToSend, {
       headers: { "Content-Type": "multipart/form-data" },
       withCredentials: true,
     })

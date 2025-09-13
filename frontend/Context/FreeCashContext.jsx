@@ -19,7 +19,7 @@ export const FreeCashProvider = ({ children }) => {
 
     setLoadingFreeCash(true);
     try {
-      const res = await axios.get('http://localhost:3000/api/free-cash/check-eligibility', {
+      const res = await axios.get('https://resinarts.onrender.com/api/free-cash/check-eligibility', {
         withCredentials: true,
         headers: {
           "Content-Type": "application/json",

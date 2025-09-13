@@ -54,7 +54,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   // Function to handle status change for backend
   const handleStatusChangeBackend = async (status, orderId) => {
     try {
-      const res = await axios.post('http://localhost:3000/api/order/status-change', {status, orderId}, {withCredentials: true}) ;
+      const res = await axios.post('https://resinarts.onrender.com/api/order/status-change', {status, orderId}, {withCredentials: true}) ;
       if(res.status === 200) {
         console.log("Order status changed successfully");
         setStatus(status);
@@ -72,7 +72,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     setCurrentOrder(order);
     setShowEditModal(true);
     // try {
-    //   const res = await axios.post('http://localhost:3000/api/order/edit-order', order, {withCredentials: true});
+    //   const res = await axios.post('https://resinarts.onrender.com/api/order/edit-order', order, {withCredentials: true});
 
     //   // if(res.status === 200) {
     //   //   console.log("dited successfully");
@@ -469,7 +469,7 @@ export default function OrdersManagement() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/order/all", {
+        const res = await axios.get("https://resinarts.onrender.com/api/order/all", {
           withCredentials: true,
         })
 
@@ -579,7 +579,7 @@ export default function OrdersManagement() {
       }
 
       // Here you would make an API call to update the status on the server
-      // await axios.put(`http://localhost:3000/api/order/${orderId}/status`, { status: newStatus })
+      // await axios.put(`https://resinarts.onrender.com/api/order/${orderId}/status`, { status: newStatus })
     } catch (isError) {
       console.isError("isError updating order status:", isError)
       // Revert the change if API call fails

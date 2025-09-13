@@ -27,7 +27,7 @@ const AddAnnouncement = ({ onSuccess }) => {
     setSuccess(null);
     
     try {
-      await axios.post('http://localhost:3000/api/announcement/add', formData);
+      await axios.post('https://resinarts.onrender.com/api/announcement/add', formData);
       setSuccess('Announcement added successfully');
       setFormData({ text: '', startDate: '', endDate: '', isDefault: false });
       if (onSuccess) onSuccess();
@@ -49,7 +49,7 @@ const AddAnnouncement = ({ onSuccess }) => {
     setShowModal(false);
     setLoading(true);
     try {
-      await axios.post('http://localhost:3000/api/announcement/add-with-override', formData);
+      await axios.post('https://resinarts.onrender.com/api/announcement/add-with-override', formData);
       setSuccess('Announcement added successfully and set as default');
       setFormData({ text: '', startDate: '', endDate: '', isDefault: false });
       if (onSuccess) onSuccess();
@@ -65,7 +65,7 @@ const AddAnnouncement = ({ onSuccess }) => {
     setLoading(true);
     try {
       const dataWithoutDefault = { ...formData, isDefault: false };
-      await axios.post('http://localhost:3000/api/announcement/add', dataWithoutDefault);
+      await axios.post('https://resinarts.onrender.com/api/announcement/add', dataWithoutDefault);
       setSuccess('Announcement added successfully (not as default)');
       setFormData({ text: '', startDate: '', endDate: '', isDefault: false });
       if (onSuccess) onSuccess();

@@ -12,7 +12,7 @@ export const DiscountProvider = ({children}) => {
     useEffect(() => {
         const checkForDiscounts = async () => {
             try {
-                const res = await axios.get('http://localhost:3000/api/discount/fetch-discount', {withCredentials: true});
+                const res = await axios.get('https://resinarts.onrender.com/api/discount/fetch-discount', {withCredentials: true});
             if(res.status === 200) {
                 console.log("Discount data");
                 console.log(res.data.data);

@@ -11,7 +11,7 @@ export const AuthProvider = ({children}) => {
     const checkLogin = async() => {
       try {
         const res = await axios.get(
-          'http://localhost:3000/api/auth/me',
+          'https://resinarts.onrender.com/api/auth/me',
           {withCredentials: true},
         );
         console.log("You are logged in")
