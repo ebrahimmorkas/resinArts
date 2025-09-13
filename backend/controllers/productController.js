@@ -272,39 +272,83 @@ const bulkUploadProducts = async (req, res) => {
       failCount: 0
     };
 
-    // Group rows by product name to handle variants
+    // Track unique product names (case-insensitive) in the Excel file
+    const seenProductNames = new Set(); // Stores lowercase product names
     const productGroups = {};
-    jsonData.forEach((row, index) => {
+
+    // Process rows sequentially to handle variants and duplicates
+    for (let index = 0; index < jsonData.length; index++) {
+      const row = jsonData[index];
       const productName = row.productName?.trim();
-      if (!productName) return;
-      
-      if (!productGroups[productName]) {
-        productGroups[productName] = [];
+      if (!productName) {
+        results.failed.push({
+          productName: 'N/A',
+          error: 'Missing product name',
+          rowsAffected: [index + 1]
+        });
+        results.failCount++;
+        continue;
       }
-      productGroups[productName].push({ ...row, originalRowIndex: index });
-    });
+
+      const productNameLower = productName.toLowerCase();
+
+      // Check if this productName is a variant (matches a seen product name)
+      if (seenProductNames.has(productNameLower)) {
+        // Add to existing product group (variant)
+        if (!productGroups[productNameLower]) {
+          productGroups[productNameLower] = [];
+        }
+        productGroups[productNameLower].push({ ...row, originalRowIndex: index });
+        continue;
+      }
+
+      // Check if product exists in the database (case-insensitive)
+      const existingProduct = await Product.findOne({
+        name: { $regex: `^${productName}$`, $options: 'i' }
+      });
+      if (existingProduct) {
+        results.failed.push({
+          productName,
+          error: `Product '${productName}' already exists in the database`,
+          rowsAffected: [index + 1]
+        });
+        results.failCount++;
+        continue;
+      }
+
+      // New product: add to seen names and initialize group
+      seenProductNames.add(productNameLower);
+      productGroups[productNameLower] = [{ ...row, originalRowIndex: index }];
+    }
 
     results.totalProcessed = Object.keys(productGroups).length;
 
-    // Process each product
-    for (const [productName, productRows] of Object.entries(productGroups)) {
+    // Process each product group
+    for (const [productNameLower, productRows] of Object.entries(productGroups)) {
       try {
         const firstRow = productRows[0];
-        
-        // Validate required fields
+        const productName = firstRow.productName.trim(); // Use original casing
+
+        // Validate required fields for the first row
         if (!firstRow.mainCategory || !firstRow.subCategory) {
-          throw new Error('Missing required fields: mainCategory or subCategory');
+          throw new Error('Missing required fields: mainCategory or subCategory in the first row');
         }
 
-        // Verify categories exist
-        const mainCategory = await Category.findById(firstRow.mainCategory);
-        const subCategory = await Category.findById(firstRow.subCategory);
-        
+        // Verify categories exist by name (case-insensitive)
+        const mainCategory = await Category.findOne({
+          categoryName: { $regex: `^${firstRow.mainCategory.trim()}$`, $options: 'i' },
+          parent_category_id: null // Main categories have no parent
+        });
+        const subCategory = await Category.findOne({
+          categoryName: { $regex: `^${firstRow.subCategory.trim()}$`, $options: 'i' },
+          parent_category_id: mainCategory?._id // Sub-category must belong to the main category
+        });
+
         if (!mainCategory) {
           throw new Error(`Main category not found: ${firstRow.mainCategory}`);
         }
         if (!subCategory) {
-          throw new Error(`Sub category not found: ${firstRow.subCategory}`);
+          throw new Error(`Sub category not found: ${firstRow.subCategory} under main category ${firstRow.mainCategory}`);
         }
 
         // Parse product details
@@ -314,7 +358,6 @@ const bulkUploadProducts = async (req, res) => {
             const parsed = JSON.parse(firstRow.productDetails);
             productDetails = Object.entries(parsed).map(([key, value]) => ({ key, value: String(value) }));
           } catch (e) {
-            // If not JSON, treat as plain text
             productDetails = [{ key: 'details', value: String(firstRow.productDetails) }];
           }
         }
@@ -323,9 +366,22 @@ const bulkUploadProducts = async (req, res) => {
         let mainImageUrl = '';
         if (firstRow.mainImage && firstRow.mainImage.trim() !== '') {
           try {
-            mainImageUrl = await BulkUploadImageToCloudinary(firstRow.mainImage.trim(), 'products');
+            const imagePath = firstRow.mainImage.trim();
+            if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+              if (!fs.existsSync(imagePath)) {
+                throw new Error(`Main image file not found: ${imagePath}`);
+              }
+              const fileExtension = path.extname(imagePath).toLowerCase();
+              const allowedImageExtensions = ['.jpg', '.jpeg', '.png'];
+              if (!allowedImageExtensions.includes(fileExtension)) {
+                throw new Error(`Invalid main image format for ${imagePath}. Allowed: ${allowedImageExtensions.join(', ')}`);
+              }
+              mainImageUrl = await BulkUploadImageToCloudinary(imagePath, 'products');
+            } else {
+              mainImageUrl = imagePath; // Use Cloudinary URL directly
+            }
           } catch (imageError) {
-            throw new Error(`Main image upload failed: ${imageError.message}`);
+            throw new Error(`Main image upload failed for ${productName}: ${imageError.message}`);
           }
         }
 
@@ -335,11 +391,29 @@ const bulkUploadProducts = async (req, res) => {
           const imagePaths = firstRow.additionalImages.split(',').map(path => path.trim());
           for (const imagePath of imagePaths) {
             try {
-              const imageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/additional');
+              let imageUrl;
+              if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+                if (!fs.existsSync(imagePath)) {
+                  throw new Error(`Additional image file not found: ${imagePath}`);
+                }
+                const fileExtension = path.extname(imagePath).toLowerCase();
+                const allowedImageExtensions = ['.jpg', '.jpeg', '.png'];
+                if (!allowedImageExtensions.includes(fileExtension)) {
+                  throw new Error(`Invalid additional image format for ${imagePath}. Allowed: ${allowedImageExtensions.join(', ')}`);
+                }
+                imageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/additional');
+              } else {
+                imageUrl = imagePath; // Use Cloudinary URL directly
+              }
               additionalImageUrls.push(imageUrl);
             } catch (imageError) {
-              // Log error but continue with other images
-              console.error(`Additional image upload failed for ${imagePath}:`, imageError.message);
+              results.failed.push({
+                productName,
+                error: `Additional image upload failed for ${imagePath}: ${imageError.message}`,
+                rowsAffected: [firstRow.originalRowIndex + 1]
+              });
+              results.failCount++;
+              continue;
             }
           }
         }
@@ -357,8 +431,8 @@ const bulkUploadProducts = async (req, res) => {
         // Create base product object
         const productData = {
           name: productName,
-          mainCategory: firstRow.mainCategory,
-          subCategory: firstRow.subCategory,
+          mainCategory: mainCategory._id,
+          subCategory: subCategory._id,
           categoryPath: firstRow.categoryPath || '',
           productDetails: productDetails,
           image: mainImageUrl,
@@ -366,6 +440,16 @@ const bulkUploadProducts = async (req, res) => {
           bulkPricing: bulkPricing,
           hasVariants: firstRow.hasVariants === 'TRUE' || firstRow.hasVariants === true,
         };
+
+        // Validate that subsequent rows don't have redundant fields
+        if (productData.hasVariants) {
+          for (let i = 1; i < productRows.length; i++) {
+            const row = productRows[i];
+            if (row.mainCategory || row.subCategory || row.categoryPath || row.productDetails || row.mainImage || row.additionalImages || row.bulkPricing) {
+              console.warn(`Redundant fields found in row ${row.originalRowIndex + 1} for product '${productName}'. Using first row's values.`);
+            }
+          }
+        }
 
         // Handle variants or simple product
         if (productData.hasVariants) {
@@ -380,17 +464,36 @@ const bulkUploadProducts = async (req, res) => {
           });
 
           const variants = [];
-          
+
           for (const [colorName, variantRows] of Object.entries(variantGroups)) {
             const firstVariantRow = variantRows[0];
-            
+
             // Upload variant image
             let variantImageUrl = '';
             if (firstVariantRow.variantImage && firstVariantRow.variantImage.trim() !== '') {
               try {
-                variantImageUrl = await BulkUploadImageToCloudinary(firstVariantRow.variantImage.trim(), 'products/variants');
+                const imagePath = firstVariantRow.variantImage.trim();
+                if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+                  if (!fs.existsSync(imagePath)) {
+                    throw new Error(`Variant image file not found: ${imagePath}`);
+                  }
+                  const fileExtension = path.extname(imagePath).toLowerCase();
+                  const allowedImageExtensions = ['.jpg', '.jpeg', '.png'];
+                  if (!allowedImageExtensions.includes(fileExtension)) {
+                    throw new Error(`Invalid variant image format for ${imagePath}. Allowed: ${allowedImageExtensions.join(', ')}`);
+                  }
+                  variantImageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/variants');
+                } else {
+                  variantImageUrl = imagePath; // Use Cloudinary URL directly
+                }
               } catch (imageError) {
-                console.error(`Variant image upload failed:`, imageError.message);
+                results.failed.push({
+                  productName,
+                  error: `Variant image upload failed for ${colorName} in ${productName}: ${imageError.message}`,
+                  rowsAffected: variantRows.map(row => row.originalRowIndex + 1)
+                });
+                results.failCount++;
+                continue; // Skip this variant but continue processing others
               }
             }
 
@@ -411,7 +514,7 @@ const bulkUploadProducts = async (req, res) => {
 
             // Create more details for each size combination
             const moreDetails = [];
-            
+
             for (const row of variantRows) {
               if (row.sizeLength || row.sizeBreadth || row.sizeHeight) {
                 // Parse size bulk pricing
@@ -445,10 +548,29 @@ const bulkUploadProducts = async (req, res) => {
                   const imagePaths = row.sizeAdditionalImages.split(',').map(path => path.trim());
                   for (const imagePath of imagePaths) {
                     try {
-                      const imageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/variants/more-details');
+                      let imageUrl;
+                      if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+                        if (!fs.existsSync(imagePath)) {
+                          throw new Error(`Size additional image file not found: ${imagePath}`);
+                        }
+                        const fileExtension = path.extname(imagePath).toLowerCase();
+                        const allowedImageExtensions = ['.jpg', '.jpeg', '.png'];
+                        if (!allowedImageExtensions.includes(fileExtension)) {
+                          throw new Error(`Invalid size additional image format for ${imagePath}. Allowed: ${allowedImageExtensions.join(', ')}`);
+                        }
+                        imageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/variants/more-details');
+                      } else {
+                        imageUrl = imagePath; // Use Cloudinary URL directly
+                      }
                       sizeAdditionalImages.push(imageUrl);
                     } catch (imageError) {
-                      console.error(`Size additional image upload failed for ${imagePath}:`, imageError.message);
+                      results.failed.push({
+                        productName,
+                        error: `Size additional image upload failed for ${imagePath} in ${productName}: ${imageError.message}`,
+                        rowsAffected: [row.originalRowIndex + 1]
+                      });
+                      results.failCount++;
+                      continue;
                     }
                   }
                 }
@@ -477,7 +599,7 @@ const bulkUploadProducts = async (req, res) => {
                   bulkPricingCombinations: sizeBulkPricing,
                   discountStartDate: row.discountStartDate ? new Date(row.discountStartDate) : undefined,
                   discountEndDate: row.discountEndDate ? new Date(row.discountEndDate) : undefined,
-                  discountPrice: parseFloat(row.discountPrice) || undefined,
+                  discountPrice: row.discountPrice ? parseFloat(row.discountPrice) : undefined,
                   comeBackToOriginalPrice: row.comeBackToOriginalPrice === 'TRUE' || row.comeBackToOriginalPrice === true,
                   discountBulkPricing: discountBulkPricing
                 };
@@ -491,7 +613,8 @@ const bulkUploadProducts = async (req, res) => {
               variantImage: variantImageUrl,
               optionalDetails: variantOptionalDetails,
               moreDetails: moreDetails,
-              isDefault: firstVariantRow.isDefaultVariant === 'TRUE' || firstVariantRow.isDefaultVariant === true
+              isDefault: firstVariantRow.isDefaultVariant === 'TRUE' || firstVariantRow.isDefaultVariant === true,
+              commonBulkPricingCombinations: []
             };
 
             variants.push(variant);
@@ -502,7 +625,7 @@ const bulkUploadProducts = async (req, res) => {
           // Simple product without variants
           productData.price = parseFloat(firstRow.price) || undefined;
           productData.stock = parseInt(firstRow.stock) || undefined;
-          
+
           // Handle discount fields
           if (firstRow.discountStartDate) {
             productData.discountStartDate = new Date(firstRow.discountStartDate);
@@ -537,7 +660,7 @@ const bulkUploadProducts = async (req, res) => {
             main: !!mainImageUrl,
             additional: additionalImageUrls.length,
             variants: productData.variants?.reduce((total, variant) => {
-              return total + (variant.variantImage ? 1 : 0) + 
+              return total + (variant.variantImage ? 1 : 0) +
                      variant.moreDetails?.reduce((sum, detail) => sum + detail.additionalImages.length, 0);
             }, 0) || 0
           }
@@ -547,9 +670,9 @@ const bulkUploadProducts = async (req, res) => {
 
       } catch (error) {
         results.failed.push({
-          productName: productName,
+          productName: productRows[0].productName.trim(),
           error: error.message,
-          rowsAffected: productGroups[productName].map(row => row.originalRowIndex + 1)
+          rowsAffected: productRows.map(row => row.originalRowIndex + 1)
         });
         results.failCount++;
       }
