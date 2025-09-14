@@ -1,7 +1,8 @@
 "use client"
 
 import { useState, useMemo, useEffect, useContext } from "react"
-import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, Edit2, Trash2, ChevronLeft, ChevronRight, Filter, MoreVertical } from "lucide-react"
+import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar } from "lucide-react"
+import * as XLSX from 'xlsx'
 
 import axios from "axios"
 import { ProductContext } from "../../../../../Context/ProductContext"
@@ -161,7 +162,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   setShowShippingPriceModal(true);
 
                 }}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Accepted"}
               >
                 <Check className="h-4 w-4 mr-2" />
@@ -173,7 +174,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                     onStatusChange(order._id, "Rejected")
                     handleStatusChangeBackend("Rejected", order._id);
                   }}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Rejected"}
               >
                 <X className="h-4 w-4 mr-2" />
@@ -182,18 +183,21 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
               <button
                 onClick={
                   () => {
-                    onStatusChange(order._id, "Rejected")
+                    onStatusChange(order._id, "Confirm")
                     handleStatusChangeBackend("Confirm", order._id);
                   }}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
-                disabled={order.status === "Rejected"}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                disabled={order.status === "Confirm"}
               >
-                <X className="h-4 w-4 mr-2" />
+                <CheckCircle className="h-4 w-4 mr-2" />
                 Confirm
               </button>
               <button
-                onClick={() => onStatusChange(order._id, "In Progress")}
-                className="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+                onClick={() => {
+                  onStatusChange(order._id, "In Progress")
+                  handleStatusChangeBackend("In Progress", order._id);
+                }}
+                className="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "In Progress"}
               >
                 <Clock className="h-4 w-4 mr-2" />
@@ -204,7 +208,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   onStatusChange(order._id, "Dispatched");
                   handleStatusChangeBackend("Dispatched", order._id)
                 }}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Dispatched"}
               >
                 <Truck className="h-4 w-4 mr-2" />
@@ -215,7 +219,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   onStatusChange(order._id, "Completed");
                   handleStatusChangeBackend("Completed", order._id);
                 }}
-                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Completed"}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -226,9 +230,9 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   handleEdit(order)
                   setOrderId(order._id);
                 }}
-                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50"
+                className="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
               >
-                <CheckCircle className="h-4 w-4 mr-2" />
+                <User className="h-4 w-4 mr-2" />
                 Edit
               </button>
             </div>
@@ -442,9 +446,82 @@ export default function OrdersManagement() {
   const [isError, setIsError] = useState(null)
   const [selectedOrder, setSelectedOrder] = useState(null)
   const [isModalOpen, setIsModalOpen] = useState(false)
+  const [statusFilter, setStatusFilter] = useState("")
+  const [dateFilter, setDateFilter] = useState("")
+  const [customStartDate, setCustomStartDate] = useState("")
+  const [customEndDate, setCustomEndDate] = useState("")
+  const [singleDate, setSingleDate] = useState("")
   const {products, loading, error} = useContext(ProductContext);
   const [orderedProducts, setOrderedProducts] = useState([]);
   const [singleOrderedProduct, setSingleOrderedProduct] = useState(null);
+
+  // Dummy dates generator for orders without createdAt
+  const generateDummyDate = (index) => {
+    const baseDate = new Date();
+    baseDate.setDate(baseDate.getDate() - Math.floor(Math.random() * 30)); // Random date within last 30 days
+    return baseDate.toISOString();
+  }
+
+  // Format date function
+  const formatOrderDate = (dateString, index) => {
+    if (!dateString) {
+      dateString = generateDummyDate(index);
+    }
+    const date = new Date(dateString);
+    const options = { day: 'numeric', month: 'short', year: 'numeric' };
+    return date.toLocaleDateString('en-GB', options);
+  }
+
+  // Date filter functions
+  const isToday = (dateString) => {
+    const today = new Date();
+    const orderDate = new Date(dateString);
+    return today.toDateString() === orderDate.toDateString();
+  }
+
+  const isYesterday = (dateString) => {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const orderDate = new Date(dateString);
+    return yesterday.toDateString() === orderDate.toDateString();
+  }
+
+  const isSingleDate = (dateString, targetDate) => {
+    const orderDate = new Date(dateString);
+    const target = new Date(targetDate);
+    return orderDate.toDateString() === target.toDateString();
+  }
+
+  const isInDateRange = (dateString, startDate, endDate) => {
+    const orderDate = new Date(dateString);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    return orderDate >= start && orderDate <= end;
+  }
+
+  // Excel export function
+  const exportToExcel = (data, filename) => {
+    const exportData = data.map((order, index) => ({
+      'Sr No.': index + 1,
+      'Order ID': order._id,
+      'User Name': order.user_name,
+      'Phone': order.phone_number,
+      'WhatsApp': order.whatsapp_number,
+      'Email': order.email,
+      'Total Price': order.total_price === "Pending" ? "Pending" : `$${order.total_price}`,
+      'Status': order.status,
+      'Ordered At': formatOrderDate(order.createdAt, index),
+      'User ID': order.user_id,
+      'Products': order.orderedProducts.map(p => p.product_name).join(', '),
+      'Quantities': order.orderedProducts.map(p => p.quantity).join(', '),
+      'Subtotal': `$${order.price}`
+    }));
+
+    const ws = XLSX.utils.json_to_sheet(exportData);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Orders");
+    XLSX.writeFile(wb, `${filename}.xlsx`);
+  }
 
   // Fetching the orders
   useEffect(() => {
@@ -480,27 +557,63 @@ export default function OrdersManagement() {
   loadProducts();
   }, [loading])
 
-  // Filter orders based on search term
+  // Enhanced filter orders based on search term, status, and date
   const filteredOrders = useMemo(() => {
-    if (!searchTerm) return orders
+    let filtered = orders;
 
-    return orders.filter((order) => {
-      const searchableFields = [
-        order._id,
-        order.user_name,
-        order.email,
-        order.phone_number,
-        order.whatsapp_number,
-        order.status,
-        ...order.orderedProducts.map((p) => p.product_name),
-        ...order.orderedProducts.map((p) => p.variant_name).filter(Boolean),
-      ]
+    // Search filter
+    if (searchTerm) {
+      filtered = filtered.filter((order) => {
+        const searchableFields = [
+          order._id,
+          order.user_name,
+          order.email,
+          order.phone_number,
+          order.whatsapp_number,
+          order.status,
+          ...order.orderedProducts.map((p) => p.product_name),
+          ...order.orderedProducts.map((p) => p.variant_name).filter(Boolean),
+        ]
 
-      return searchableFields.some(
-        (field) => field && field.toString().toLowerCase().includes(searchTerm.toLowerCase()),
-      )
-    })
-  }, [orders, searchTerm])
+        return searchableFields.some(
+          (field) => field && field.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+        )
+      })
+    }
+
+    // Status filter
+    if (statusFilter) {
+      filtered = filtered.filter(order => order.status.toLowerCase() === statusFilter.toLowerCase())
+    }
+
+    // Date filter
+    if (dateFilter) {
+      filtered = filtered.filter((order, index) => {
+        const orderDate = order.createdAt || generateDummyDate(index);
+        
+        switch (dateFilter) {
+          case 'today':
+            return isToday(orderDate);
+          case 'yesterday':
+            return isYesterday(orderDate);
+          case 'single':
+            if (singleDate) {
+              return isSingleDate(orderDate, singleDate);
+            }
+            return true;
+          case 'custom':
+            if (customStartDate && customEndDate) {
+              return isInDateRange(orderDate, customStartDate, customEndDate);
+            }
+            return true;
+          default:
+            return true;
+        }
+      })
+    }
+
+    return filtered;
+  }, [orders, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, singleDate])
 
   useEffect(() => {
     const productsMapperWithOrderId = [];
@@ -523,7 +636,7 @@ export default function OrdersManagement() {
   // Reset to page 1 when search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, itemsPerPage]);
+  }, [searchTerm, itemsPerPage, statusFilter, dateFilter]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
@@ -575,10 +688,59 @@ export default function OrdersManagement() {
     setIsModalOpen(true)
   }
 
-  // Handle download (placeholder function)
-  const handleDownload = (type) => {
-    console.log(`DownisLoading ${type} data...`)
-    // Implement actual download logic here
+  // Handle accept/reject with backend calls
+  const handleAccept = async (e, order, orderedProduct) => {
+    e.stopPropagation()
+    handleStatusChange(order._id, "Accepted")
+    setSelectedOrder(order)
+    setSingleOrderedProduct(orderedProduct);
+    setIsModalOpen(true)
+  }
+
+  const handleReject = async (e, orderId) => {
+    e.stopPropagation()
+    try {
+      const res = await axios.post('http://localhost:3000/api/order/status-change', {status: "Rejected", orderId}, {withCredentials: true})
+      if(res.status === 200) {
+        handleStatusChange(orderId, "Rejected")
+      }
+    } catch(error) {
+      console.log(error)
+    }
+  }
+
+  // Handle download by status
+  const handleDownload = (statusType) => {
+    let dataToExport = orders;
+    let filename = "all_orders";
+
+    switch(statusType) {
+      case 'pending':
+        dataToExport = orders.filter(order => order.status.toLowerCase() === 'pending');
+        filename = "pending_orders";
+        break;
+      case 'accepted':
+        dataToExport = orders.filter(order => order.status.toLowerCase() === 'accepted');
+        filename = "accepted_orders";
+        break;
+      case 'dispatched':
+        dataToExport = orders.filter(order => order.status.toLowerCase() === 'dispatched');
+        filename = "dispatched_orders";
+        break;
+      case 'rejected':
+        dataToExport = orders.filter(order => order.status.toLowerCase() === 'rejected');
+        filename = "rejected_orders";
+        break;
+      case 'completed':
+        dataToExport = orders.filter(order => order.status.toLowerCase() === 'completed');
+        filename = "completed_orders";
+        break;
+      default:
+        dataToExport = orders;
+        filename = "all_orders";
+    }
+
+    exportToExcel(dataToExport, filename);
   }
 
   // Truncate order ID for display
@@ -588,18 +750,6 @@ export default function OrdersManagement() {
     }
     return orderId
   }
-
-  const handleEdit = (id) => {
-    console.log('Edit item:', id);
-  };
-
-  const handleDelete = (id) => {
-    console.log('Delete item:', id);
-  };
-
-  const handleView = (id) => {
-    console.log('View item:', id);
-  };
 
   const getStatusBadge = (status) => {
     const statusStyles = {
@@ -623,18 +773,16 @@ export default function OrdersManagement() {
 
   if (isLoading) {
     return (
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
-        </div>
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     )
   }
 
   if (isError) {
     return (
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <div className="min-h-screen flex justify-center items-center p-6">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg max-w-md">
           <strong className="font-bold">Error: </strong>
           <span className="block sm:inline">{isError}</span>
         </div>
@@ -644,8 +792,8 @@ export default function OrdersManagement() {
 
   if(error) {
      return (
-      <div className="container mx-auto p-6 max-w-7xl">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <div className="min-h-screen flex justify-center items-center p-6">
+        <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg max-w-md">
           <strong className="font-bold">Error: </strong>
           <span className="block sm:inline">{error}</span>
         </div>
@@ -654,217 +802,336 @@ export default function OrdersManagement() {
   }
 
   if(loading) {
-  return <p>Loading products and orders</p>
+  return (
+    <div className="min-h-screen flex justify-center items-center">
+      <div className="text-lg">Loading products and orders...</div>
+    </div>
+  )
   }
 
   // Main content starts from here
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <h1 className="text-3xl font-bold text-gray-900 mb-8">Orders Management</h1>
-
-      {/* Stats Section */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
-          <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
-          <div className="text-sm text-gray-600 mb-3">Total Orders</div>
-          <button
-            onClick={() => handleDownload("total")}
-            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
-          >
-            <Download className="h-3 w-3 inline mr-1" />
-            Download
-          </button>
+    <div className="min-h-screen bg-gray-50 py-6">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
+        {/* Header Section */}
+        <div className="text-center mb-8">
+          <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
+            Orders Management Dashboard
+          </h1>
+          <p className="text-gray-600 text-lg">Manage and track all your orders efficiently</p>
         </div>
 
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
-          <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
-          <div className="text-sm text-gray-600 mb-3">Pending</div>
-          <button
-            onClick={() => handleDownload("pending")}
-            className="text-xs bg-yellow-50 text-yellow-600 px-2 py-1 rounded hover:bg-yellow-100 transition-colors"
-          >
-            <Download className="h-3 w-3 inline mr-1" />
-            Download
-          </button>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
-          <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
-          <div className="text-sm text-gray-600 mb-3">Accepted</div>
-          <button
-            onClick={() => handleDownload("accepted")}
-            className="text-xs bg-green-50 text-green-600 px-2 py-1 rounded hover:bg-green-100 transition-colors"
-          >
-            <Download className="h-3 w-3 inline mr-1" />
-            Download
-          </button>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
-          <div className="text-2xl font-bold text-blue-600">{stats.dispatched}</div>
-          <div className="text-sm text-gray-600 mb-3">Dispatched</div>
-          <button
-            onClick={() => handleDownload("dispatched")}
-            className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded hover:bg-blue-100 transition-colors"
-          >
-            <Download className="h-3 w-3 inline mr-1" />
-            Download
-          </button>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
-          <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
-          <div className="text-sm text-gray-600 mb-3">Rejected</div>
-          <button
-            onClick={() => handleDownload("rejected")}
-            className="text-xs bg-red-50 text-red-600 px-2 py-1 rounded hover:bg-red-100 transition-colors"
-          >
-            <Download className="h-3 w-3 inline mr-1" />
-            Download
-          </button>
-        </div>
-
-        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
-          <div className="text-2xl font-bold text-purple-600">{stats.completed}</div>
-          <div className="text-sm text-gray-600 mb-3">Completed</div>
-          <button
-            onClick={() => handleDownload("completed")}
-            className="text-xs bg-purple-50 text-purple-600 px-2 py-1 rounded hover:bg-purple-100 transition-colors"
-          >
-            <Download className="h-3 w-3 inline mr-1" />
-            Download
-          </button>
-        </div>
-      </div>
-
-      {/* Orders Table with AdminTable styling */}
-      <div className="bg-white rounded-lg border border-gray-200">
-        {/* Table Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">Orders Management</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} results
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search orders, customers, products..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
-                />
+        {/* Stats Section */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+          <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
+              <div className="p-2 bg-blue-200 rounded-full">
+                <Package className="h-6 w-6 text-blue-700" />
               </div>
-              
-              {/* Actions */}
-              <div className="flex items-center space-x-2">
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                  <Filter className="w-4 h-4 mr-2" />
-                  Filter
-                </button>
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500">
-                  <Download className="w-4 h-4 mr-2" />
-                  Export
+            </div>
+            <div className="text-sm text-blue-600 font-medium mb-3">Total Orders</div>
+            <button
+              onClick={() => handleDownload("total")}
+              className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full hover:bg-blue-200 transition-colors font-medium"
+            >
+              <Download className="h-3 w-3 inline mr-1" />
+              Export
+            </button>
+          </div>
+
+          <div className="bg-gradient-to-br from-yellow-50 to-yellow-100 border border-yellow-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-2xl font-bold text-yellow-700">{stats.pending}</div>
+              <div className="p-2 bg-yellow-200 rounded-full">
+                <Clock className="h-6 w-6 text-yellow-700" />
+              </div>
+            </div>
+            <div className="text-sm text-yellow-600 font-medium mb-3">Pending</div>
+            <button
+              onClick={() => handleDownload("pending")}
+              className="text-xs bg-yellow-100 text-yellow-700 px-3 py-1.5 rounded-full hover:bg-yellow-200 transition-colors font-medium"
+            >
+              <Download className="h-3 w-3 inline mr-1" />
+              Export
+            </button>
+          </div>
+
+          <div className="bg-gradient-to-br from-green-50 to-green-100 border border-green-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-2xl font-bold text-green-700">{stats.accepted}</div>
+              <div className="p-2 bg-green-200 rounded-full">
+                <CheckCircle className="h-6 w-6 text-green-700" />
+              </div>
+            </div>
+            <div className="text-sm text-green-600 font-medium mb-3">Accepted</div>
+            <button
+              onClick={() => handleDownload("accepted")}
+              className="text-xs bg-green-100 text-green-700 px-3 py-1.5 rounded-full hover:bg-green-200 transition-colors font-medium"
+            >
+              <Download className="h-3 w-3 inline mr-1" />
+              Export
+            </button>
+          </div>
+
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-2xl font-bold text-blue-700">{stats.dispatched}</div>
+              <div className="p-2 bg-blue-200 rounded-full">
+                <Truck className="h-6 w-6 text-blue-700" />
+              </div>
+            </div>
+            <div className="text-sm text-blue-600 font-medium mb-3">Dispatched</div>
+            <button
+              onClick={() => handleDownload("dispatched")}
+              className="text-xs bg-blue-100 text-blue-700 px-3 py-1.5 rounded-full hover:bg-blue-200 transition-colors font-medium"
+            >
+              <Download className="h-3 w-3 inline mr-1" />
+              Export
+            </button>
+          </div>
+
+          <div className="bg-gradient-to-br from-red-50 to-red-100 border border-red-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-2xl font-bold text-red-700">{stats.rejected}</div>
+              <div className="p-2 bg-red-200 rounded-full">
+                <XCircle className="h-6 w-6 text-red-700" />
+              </div>
+            </div>
+            <div className="text-sm text-red-600 font-medium mb-3">Rejected</div>
+            <button
+              onClick={() => handleDownload("rejected")}
+              className="text-xs bg-red-100 text-red-700 px-3 py-1.5 rounded-full hover:bg-red-200 transition-colors font-medium"
+            >
+              <Download className="h-3 w-3 inline mr-1" />
+              Export
+            </button>
+          </div>
+
+          <div className="bg-gradient-to-br from-purple-50 to-purple-100 border border-purple-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+            <div className="flex items-center justify-between mb-2">
+              <div className="text-2xl font-bold text-purple-700">{stats.completed}</div>
+              <div className="p-2 bg-purple-200 rounded-full">
+                <CheckCircle className="h-6 w-6 text-purple-700" />
+              </div>
+            </div>
+            <div className="text-sm text-purple-600 font-medium mb-3">Completed</div>
+            <button
+              onClick={() => handleDownload("completed")}
+              className="text-xs bg-purple-100 text-purple-700 px-3 py-1.5 rounded-full hover:bg-purple-200 transition-colors font-medium"
+            >
+              <Download className="h-3 w-3 inline mr-1" />
+              Export
+            </button>
+          </div>
+        </div>
+
+        {/* Orders Table */}
+        <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+          {/* Table Header - Fixed */}
+          <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
+            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+              <div>
+                <h3 className="text-xl font-semibold text-gray-900">Orders Table</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} results
+                </p>
+              </div>
+              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
+                {/* Search */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                  <input
+                    type="text"
+                    placeholder="Search orders, customers, products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
+                  />
+                </div>
+                
+                {/* Status Filter */}
+                <div className="relative">
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value)}
+                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value="">All Status</option>
+                    <option value="pending">Pending</option>
+                    <option value="accepted">Accepted</option>
+                    <option value="rejected">Rejected</option>
+                    <option value="confirm">Confirm</option>
+                    <option value="in progress">In Progress</option>
+                    <option value="dispatched">Dispatched</option>
+                    <option value="completed">Completed</option>
+                  </select>
+                  <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                </div>
+
+                {/* Date Filter */}
+                <div className="flex space-x-2">
+                  <div className="relative">
+                    <select
+                      value={dateFilter}
+                      onChange={(e) => setDateFilter(e.target.value)}
+                      className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    >
+                      <option value="">All Dates</option>
+                      <option value="today">Today</option>
+                      <option value="yesterday">Yesterday</option>
+                      <option value="single">Single Date</option>
+                      <option value="custom">Date Range</option>
+                    </select>
+                    <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+                  </div>
+                  
+                  {dateFilter === 'single' && (
+                    <input
+                      type="date"
+                      value={singleDate}
+                      onChange={(e) => setSingleDate(e.target.value)}
+                      className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    />
+                  )}
+
+                  {dateFilter === 'custom' && (
+                    <div className="flex space-x-2">
+                      <input
+                        type="date"
+                        value={customStartDate}
+                        onChange={(e) => setCustomStartDate(e.target.value)}
+                        className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                      <input
+                        type="date"
+                        value={customEndDate}
+                        onChange={(e) => setCustomEndDate(e.target.value)}
+                        className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                  )}
+                </div>
+
+                {/* Export Button */}
+                <button 
+                  onClick={() => exportToExcel(filteredOrders, 'filtered_orders')}
+                  className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                >
+                  <Download className="w-4 h-4" />
                 </button>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Table Container with Horizontal Scroll and Sticky Header */}
-        <div className="overflow-hidden border-t border-gray-200">
-          {/* Single scrollable container for both header and body */}
-          <div className="overflow-x-auto overflow-y-auto max-h-96">
-            <table className="min-w-full divide-y divide-gray-200">
+          {/* Table Content - Scrollable */}
+          <div className="overflow-y-auto max-h-[600px]">
+            <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '80px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Sr No.
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Order ID
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '150px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     User Name
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Phone
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     WhatsApp
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '200px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Email
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Total Price
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '200px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                    Ordered At
+                  </th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentOrders.map((order, index) => (
-                  <tr key={order._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
+                  <tr key={order._id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleOrderClick(order, orderedProducts[startIndex + index])}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {startIndex + index + 1}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '140px' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className="font-medium text-blue-600" title={order._id}>{truncateOrderId(order._id)}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '150px' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {order.user_name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {order.phone_number}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {order.whatsapp_number}
                     </td>
-                    <td className="px-6 py-4 text-sm text-center text-gray-900" style={{ minWidth: '200px' }}>
-                      <div className="truncate" title={order.email}>
+                    <td className="px-6 py-4 text-sm text-gray-900">
+                      <div className="max-w-xs truncate" title={order.email}>
                         {order.email}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       <span className="font-medium">
                         {order.total_price === "Pending" ? "Pending" : `${order.total_price}`}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getStatusBadge(order.status)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '200px' }}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {formatOrderDate(order.createdAt, startIndex + index)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <div className="flex items-center justify-center space-x-2">
                         <button
-                          onClick={() => handleOrderClick(order, orderedProducts[index])}
-                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            handleOrderClick(order, orderedProducts[startIndex + index])
+                          }}
+                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                           title="View Details"
                         >
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleEdit(order._id)}
-                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                          title="Edit"
+                          onClick={(e) => handleAccept(e, order, orderedProducts[startIndex + index])}
+                          className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={order.status === "Accepted"}
+                          title="Accept Order"
                         >
-                          <Edit2 className="w-4 h-4" />
+                          <Check className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={() => handleDelete(order._id)}
-                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                          title="Delete"
+                          onClick={(e) => handleReject(e, order._id)}
+                          className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                          disabled={order.status === "Rejected"}
+                          title="Reject Order"
                         >
-                          <Trash2 className="w-4 h-4" />
+                          <X className="w-4 h-4" />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            exportToExcel([order], `order_${order._id}`)
+                          }}
+                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+                          title="Download Order"
+                        >
+                          <Download className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
@@ -873,100 +1140,103 @@ export default function OrdersManagement() {
               </tbody>
             </table>
           </div>
-        </div>
 
-        {/* Show message when no orders */}
-        {currentOrders.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">No orders found</p>
-            {searchTerm && <p className="text-gray-400 text-sm mt-2">Try adjusting your search criteria</p>}
-          </div>
-        )}
-
-        {/* Table Footer */}
-        <div className="px-6 py-4 border-t border-gray-200">
-          <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
-            {/* Items per page */}
-            <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-700">Show</span>
-              <select
-                value={itemsPerPage}
-                onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={25}>25</option>
-                <option value={50}>50</option>
-                <option value={100}>100</option>
-              </select>
-              <span className="text-sm text-gray-700">entries per page</span>
+          {/* Show message when no orders */}
+          {currentOrders.length === 0 && (
+            <div className="text-center py-12">
+              <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <p className="text-gray-500 text-lg font-medium">No orders found</p>
+              {(searchTerm || statusFilter || dateFilter) && (
+                <p className="text-gray-400 text-sm mt-2">Try adjusting your search criteria or filters</p>
+              )}
             </div>
+          )}
 
-            {/* Pagination */}
-            <div className="flex items-center space-x-2">
-              <button
-                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                disabled={currentPage === 1}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Previous
-              </button>
+          {/* Table Footer */}
+          {totalPages > 1 && (
+            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+              <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
+                {/* Items per page */}
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">Show</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <span className="text-sm text-gray-700">entries per page</span>
+                </div>
 
-              <div className="flex items-center space-x-1">
-                {[...Array(Math.min(totalPages, 7))].map((_, index) => {
-                  let pageNumber;
-                  if (totalPages <= 7) {
-                    pageNumber = index + 1;
-                  } else if (currentPage <= 4) {
-                    pageNumber = index + 1;
-                  } else if (currentPage >= totalPages - 3) {
-                    pageNumber = totalPages - 6 + index;
-                  } else {
-                    pageNumber = currentPage - 3 + index;
-                  }
+                {/* Pagination */}
+                <div className="flex items-center space-x-2">
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                  </button>
 
-                  return (
-                    <button
-                      key={pageNumber}
-                      onClick={() => setCurrentPage(pageNumber)}
-                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                        currentPage === pageNumber
-                          ? 'bg-blue-600 text-white'
-                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                      }`}
-                    >
-                      {pageNumber}
-                    </button>
-                  );
-                })}
+                  <div className="flex items-center space-x-1">
+                    {[...Array(Math.min(totalPages, 7))].map((_, index) => {
+                      let pageNumber;
+                      if (totalPages <= 7) {
+                        pageNumber = index + 1;
+                      } else if (currentPage <= 4) {
+                        pageNumber = index + 1;
+                      } else if (currentPage >= totalPages - 3) {
+                        pageNumber = totalPages - 6 + index;
+                      } else {
+                        pageNumber = currentPage - 3 + index;
+                      }
+
+                      return (
+                        <button
+                          key={pageNumber}
+                          onClick={() => setCurrentPage(pageNumber)}
+                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                            currentPage === pageNumber
+                              ? 'bg-blue-600 text-white shadow-sm'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                          }`}
+                        >
+                          {pageNumber}
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  <button
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                </div>
               </div>
-
-              <button
-                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                disabled={currentPage === totalPages}
-                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Next
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </button>
             </div>
-          </div>
+          )}
         </div>
-      </div>
 
-      {/* Order Details Modal */}
-      <OrderDetailsModal
-        order={selectedOrder}
-        isOpen={isModalOpen}
-        onClose={() => {
-          setIsModalOpen(false)
-          setSelectedOrder(null)
-        }}
-        onStatusChange={handleStatusChange}
-        productMappedWithOrderId={singleOrderedProduct}
-      />
+        {/* Order Details Modal */}
+        <OrderDetailsModal
+          order={selectedOrder}
+          isOpen={isModalOpen}
+          onClose={() => {
+            setIsModalOpen(false)
+            setSelectedOrder(null)
+          }}
+          onStatusChange={handleStatusChange}
+          productMappedWithOrderId={singleOrderedProduct}
+        />
+      </div>
     </div>
   )
 }
