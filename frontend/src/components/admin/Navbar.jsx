@@ -1,104 +1,234 @@
 import React, { useState } from 'react';
-import { Menu, Bell, User, ShoppingCart, Search, Settings } from 'lucide-react';
+import { Menu, Bell, User, RefreshCw, ChevronDown, LogOut, UserCircle, X, Trash2 } from 'lucide-react';
 
 const Navbar = ({ onMenuClick, isSidebarOpen }) => {
-  const [searchFocus, setSearchFocus] = useState(false);
+  const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
+  const [notificationsOpen, setNotificationsOpen] = useState(false);
+  const [notifications, setNotifications] = useState([
+    { id: 1, title: 'New Order Received', message: 'Order #1234 has been placed', time: '2 mins ago', unread: true },
+    { id: 2, title: 'Low Stock Alert', message: 'iPhone 15 Pro Max is running low', time: '1 hour ago', unread: true },
+    { id: 3, title: 'Payment Processed', message: 'Payment of $299.99 has been processed', time: '3 hours ago', unread: false },
+    { id: 4, title: 'New Customer Registered', message: 'Sarah Johnson has created an account', time: '5 hours ago', unread: false },
+  ]);
+
+  const handleRefresh = () => {
+    window.location.reload();
+  };
+
+  const deleteNotification = (notificationId) => {
+    setNotifications(prev => prev.filter(notif => notif.id !== notificationId));
+  };
+
+  const markAllAsRead = () => {
+    setNotifications(prev => prev.map(notif => ({ ...notif, unread: false })));
+  };
+
+  const unreadCount = notifications.filter(notif => notif.unread).length;
 
   return (
-    <nav className="bg-gradient-to-r from-gray-900 to-indigo-900 shadow-xl fixed top-0 left-0 right-0 z-40 border-b border-indigo-500/30">
-      <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="flex justify-between items-center h-16">
-          {/* Left Section - Menu & Logo */}
-          <div className="flex items-center space-x-4">
-            {/* Hamburger Menu */}
-            <button
-              onClick={onMenuClick}
-              className="text-white hover:text-indigo-300 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-50 rounded-lg p-2 transition-all duration-300 hover:bg-indigo-600/50 shadow-sm hover:shadow-md"
-            >
-              <Menu className="w-6 h-6 transform hover:scale-110 transition-transform duration-300" />
-            </button>
+    <>
+      <nav className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-40 shadow-sm">
+        <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            {/* Left Section - Menu & Logo */}
+            <div className="flex items-center space-x-4">
+              {/* Beautiful Hamburger Menu */}
+              <button
+                onClick={onMenuClick}
+                className="p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 group"
+              >
+                <div className="w-6 h-6 flex flex-col justify-center items-center space-y-1">
+                  <span className={`block h-0.5 w-6 bg-gray-600 rounded-full transition-all duration-300 ${isSidebarOpen ? 'rotate-45 translate-y-1.5' : ''} group-hover:bg-blue-600`}></span>
+                  <span className={`block h-0.5 w-6 bg-gray-600 rounded-full transition-all duration-300 ${isSidebarOpen ? 'opacity-0' : ''} group-hover:bg-blue-600`}></span>
+                  <span className={`block h-0.5 w-6 bg-gray-600 rounded-full transition-all duration-300 ${isSidebarOpen ? '-rotate-45 -translate-y-1.5' : ''} group-hover:bg-blue-600`}></span>
+                </div>
+              </button>
 
-            {/* Logo */}
-            <div className="flex items-center space-x-2">
-              <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-xl flex items-center justify-center transform hover:scale-110 transition-transform duration-300">
-                <ShoppingCart className="w-5 h-5 text-white" />
+              {/* Logo */}
+              <div className="flex items-center space-x-3">
+                <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
+                  <span className="text-white font-bold text-sm">M</span>
+                </div>
+                <div className="text-xl font-bold text-gray-900 hidden sm:block">
+                  Mould Market
+                </div>
               </div>
-              <div className="text-2xl font-extrabold text-white tracking-tight hidden sm:block">
-                SellerHub
+            </div>
+
+            {/* Center - Admin Panel Title */}
+            <div className="hidden md:flex flex-1 max-w-md mx-8 justify-center">
+              <div className="text-center">
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+                  {/* Admin panel    --> text over here */}
+                </h1>
+              </div>
+            </div>
+
+            {/* Right Section - Actions & Profile */}
+            <div className="flex items-center space-x-2 sm:space-x-4">
+              {/* Refresh Button */}
+              <button 
+                onClick={handleRefresh}
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                title="Refresh Page"
+              >
+                <RefreshCw className="w-5 h-5" />
+              </button>
+
+              {/* Notifications */}
+              <button 
+                className="text-gray-500 hover:text-gray-700 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50 relative"
+                onClick={() => setNotificationsOpen(!notificationsOpen)}
+              >
+                <Bell className="w-5 h-5" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
+                    {unreadCount}
+                  </span>
+                )}
+              </button>
+
+              {/* Profile */}
+              <div className="flex items-center space-x-3 border-l border-gray-200 pl-4">
+                <div className="relative">
+                  <button 
+                    className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
+                    onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
+                  >
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-300">
+                      <User className="w-4 h-4 text-gray-600" />
+                    </div>
+                    <div className="hidden sm:block text-left">
+                      <div className="text-sm font-medium text-gray-900">Ebrahim Kanchwala</div>
+                      <div className="text-xs text-gray-500">Administrator</div>
+                    </div>
+                    <ChevronDown className="w-4 h-4 text-gray-400" />
+                  </button>
+
+                  {/* Profile Dropdown */}
+                  {profileDropdownOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                      <div className="px-4 py-2 border-b border-gray-200">
+                        <p className="text-sm font-medium text-gray-900">Ebrahim Kanchwala</p>
+                        <p className="text-xs text-gray-500">mouldmarket.com</p>
+                      </div>
+                      <div className="py-1">
+                        <a href="/admin/panel/settings/account" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                          <UserCircle className="w-4 h-4 mr-3" />
+                          Profile Settings
+                        </a>
+                        <a href="/admin/panel/settings/account" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                          <User className="w-4 h-4 mr-3" />
+                          Account Settings
+                        </a>
+                        <div className="border-t border-gray-200 my-1"></div>
+                        <a href="/logout" className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200">
+                          <LogOut className="w-4 h-4 mr-3" />
+                          Sign Out
+                        </a>
+                      </div>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           </div>
+        </div>
 
-          {/* Center - Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-md mx-8">
-            <div className="relative w-full">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Search className={`w-5 h-5 transition-colors duration-300 ${
-                  searchFocus ? 'text-indigo-400' : 'text-gray-300'
-                }`} />
-              </div>
-              <input
-                type="text"
-                placeholder="Search products, orders..."
-                onFocus={() => setSearchFocus(true)}
-                onBlur={() => setSearchFocus(false)}
-                className="block w-full pl-10 pr-3 py-2 border border-indigo-500/50 rounded-lg bg-gray-800/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 transition-all duration-300 shadow-sm hover:shadow-md"
-              />
-            </div>
+        {/* Mobile Admin Panel Title */}
+        <div className="md:hidden px-4 pb-3 border-t border-gray-200">
+          <div className="text-center">
+            <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
+              Admin Panel
+            </h1>
           </div>
+        </div>
+      </nav>
 
-          {/* Right Section - Actions & Profile */}
-          <div className="flex items-center space-x-2 sm:space-x-4">
-            {/* Mobile Search */}
-            <button className="md:hidden text-gray-300 hover:text-indigo-300 p-2 rounded-lg hover:bg-indigo-600/50 transition-all duration-300 shadow-sm hover:shadow-md">
-              <Search className="w-5 h-5 transform hover:scale-110 transition-transform duration-300" />
-            </button>
-
-            {/* Notifications */}
-            <div className="relative">
-              <button className="text-gray-300 hover:text-indigo-300 p-2 rounded-lg hover:bg-indigo-600/50 transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-50">
-                <Bell className="w-5 h-5 transform hover:scale-110 transition-transform duration-300" />
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center animate-pulse">
-                  3
-                </span>
+      {/* Windows-style Notifications Panel */}
+      {notificationsOpen && (
+        <>
+          <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
+          <div className="fixed top-0 right-0 h-full w-96 bg-white shadow-2xl border-l border-gray-200 z-50 transform transition-transform duration-300 ease-in-out">
+            {/* Header */}
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+              <h3 className="text-lg font-semibold text-gray-900">Notifications ({notifications.length})</h3>
+              <button 
+                onClick={() => setNotificationsOpen(false)}
+                className="p-2 rounded-lg hover:bg-gray-200 transition-colors duration-200"
+              >
+                <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
-
-            {/* Settings */}
-            <button className="hidden sm:block text-gray-300 hover:text-indigo-300 p-2 rounded-lg hover:bg-indigo-600/50 transition-all duration-300 shadow-sm hover:shadow-md">
-              <Settings className="w-5 h-5 transform hover:scale-110 transition-transform duration-300" />
-            </button>
-
-            {/* Profile */}
-            <div className="flex items-center space-x-3 border-l border-indigo-500/50 pl-4">
-              <div className="hidden sm:block text-right">
-                <div className="text-sm font-medium text-white">John Seller</div>
-                <div className="text-xs text-indigo-300">Premium Account</div>
-              </div>
-              <div className="relative">
-                <button className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-full flex items-center justify-center text-white hover:from-indigo-600 hover:to-purple-700 transition-all duration-300 shadow-sm hover:shadow-md focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:ring-opacity-50">
-                  <User className="w-5 h-5" />
-                </button>
-              </div>
+            
+            {/* Notifications List */}
+            <div className="flex-1 overflow-y-auto h-full">
+              {notifications.length > 0 ? (
+                <>
+                  {notifications.map((notification) => (
+                    <div key={notification.id} className={`relative p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 ${notification.unread ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}`}>
+                      
+                      {/* ALWAYS VISIBLE DELETE BUTTON - TOP RIGHT */}
+                      <button
+                        onClick={() => deleteNotification(notification.id)}
+                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors duration-200 flex items-center justify-center shadow-md z-10"
+                        title="Delete notification"
+                      >
+                        <X className="w-4 h-4" />
+                      </button>
+                      
+                      {/* Content with padding to avoid delete button */}
+                      <div className="pr-12">
+                        <div className="flex items-start justify-between mb-2">
+                          <h4 className="text-sm font-semibold text-gray-900 pr-2">{notification.title}</h4>
+                          {notification.unread && (
+                            <span className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></span>
+                          )}
+                        </div>
+                        <p className="text-sm text-gray-600 mb-2">{notification.message}</p>
+                        <p className="text-xs text-gray-400">{notification.time}</p>
+                      </div>
+                    </div>
+                  ))}
+                  
+                  {/* Action Buttons */}
+                  <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-2">
+                    {unreadCount > 0 && (
+                      <button 
+                        onClick={markAllAsRead}
+                        className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2 px-4 rounded-lg hover:bg-blue-50 transition-colors duration-200 border border-blue-200"
+                      >
+                        Mark all as read ({unreadCount})
+                      </button>
+                    )}
+                    <button 
+                      onClick={() => setNotifications([])}
+                      className="w-full text-center text-sm text-red-600 hover:text-red-700 font-medium py-2 px-4 rounded-lg hover:bg-red-50 transition-colors duration-200 border border-red-200"
+                    >
+                      Clear all notifications
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <div className="p-8 text-center">
+                  <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+                  <p className="text-gray-500 text-lg">No notifications</p>
+                  <p className="text-gray-400 text-sm mt-2">You're all caught up!</p>
+                </div>
+              )}
             </div>
           </div>
-        </div>
-      </div>
+        </>
+      )}
 
-      {/* Mobile Search Bar */}
-      <div className="md:hidden px-4 pb-3">
-        <div className="relative">
-          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-            <Search className="w-4 h-4 text-gray-300" />
-          </div>
-          <input
-            type="text"
-            placeholder="Search products, orders..."
-            className="block w-full pl-9 pr-3 py-2 border border-indigo-500/50 rounded-lg bg-gray-800/50 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 text-sm transition-all duration-300 shadow-sm hover:shadow-md"
-          />
-        </div>
-      </div>
-    </nav>
+      {/* Click outside to close profile dropdown */}
+      {profileDropdownOpen && (
+        <div 
+          className="fixed inset-0 z-30" 
+          onClick={() => setProfileDropdownOpen(false)}
+        />
+      )}
+    </>
   );
 };
 

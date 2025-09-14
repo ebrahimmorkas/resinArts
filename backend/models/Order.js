@@ -100,6 +100,16 @@ const orderSchema = mongoose.Schema({
         enum: ['Paid', 'Payment Pending'],
         default: "Payment Pending",
     },
+    createdAt: {
+        type: Date,
+        required: false,
+        default: Date.now(),
+    },
+    updatedAt: {
+        type: Date,
+        required: false,
+        default: Date.now(),
+    }
 });
 
 module.exports = mongoose.model('Order', orderSchema);

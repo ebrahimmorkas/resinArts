@@ -18,7 +18,7 @@ import AllAnnouncement from '../../components/admin/SidebarLinks/Announcement/Al
 import BulkUpload from '../../components/admin/SidebarLinks/products/BulkUpload';
 
 function AdminPanel() {
-  // State to manage sidebar open/close
+  // State to manage sidebar open/close - starts closed
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -33,36 +33,65 @@ function AdminPanel() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-100">
       {/* Pass the toggle function to Navbar */}
       <Navbar onMenuClick={toggleSidebar} isSidebarOpen={sidebarOpen} />
       
       {/* Pass the state and close function to Sidebar */}
       <Sidebar isOpen={sidebarOpen} onClose={closeSidebar} />
       
-      {/* Main content with routes */}
-      <main className="w-screen my-8">
-        <Routes>
-          <Route index element={<Orders />} /> {/* Default route for /admin/panel */}
-          <Route path="dashboard" element={<div>Dashboard Component</div>} />
-          <Route path="products" element={<AllProducts />} />
-          <Route path="products/add" element={<AddProduct />} />
-          <Route path="products/categories" element={<AddCategory />} />
-          <Route path="orders" element={<Orders />} /> {/* Route for /admin/panel/orders */}
-          <Route path="orders/pending" element={<OrdersPanel />} />
-          <Route path="orders/completed" element={<OrdersAccepted />} />
-          <Route path="customers" element={<Users />} />
-          <Route path="discount" element={<Discount />} />
-          <Route path="products/restock" element={<RestockPanel />} />
-          <Route path="banner/add" element={<AddBanner />} />
-          <Route path="banner/all" element={<AllBanners />} />
-          <Route path="announcement/add" element={<AddAnnouncement />} />
-          <Route path="announcement/all" element={<AllAnnouncement />} />
-          <Route path="products/b" element={<BulkUpload />} />
-          {/* Add more routes for other menu items as needed */}
-          <Route path="*" element={<Orders />} /> {/* Fallback route */}
-        </Routes>
-      </main>
+      {/* Main content with routes - Full width always, no overlay interference */}
+      <div className="pt-16 min-h-screen w-screen">
+        <main className="p-4 sm:p-6 w-full min-w-full">
+          <div className="w-full min-w-full overflow-x-hidden">
+            <Routes>
+              <Route index element={<Orders />} /> {/* Default route for /admin/panel */}
+              <Route path="dashboard" element={<div className="bg-white rounded-lg shadow p-6 w-full">Dashboard Component</div>} />
+              <Route path="products" element={<AllProducts />} />
+              <Route path="products/add" element={<AddProduct />} />
+              <Route path="products/categories" element={<AddCategory />} />
+              <Route path="orders" element={<Orders />} /> {/* Route for /admin/panel/orders */}
+              <Route path="orders/pending" element={<OrdersPanel />} />
+              <Route path="orders/completed" element={<OrdersAccepted />} />
+              <Route path="customers" element={<Users />} />
+              <Route path="discount" element={<Discount />} />
+              <Route path="products/restock" element={<RestockPanel />} />
+              <Route path="banner/add" element={<AddBanner />} />
+              <Route path="banner/all" element={<AllBanners />} />
+              <Route path="announcement/add" element={<AddAnnouncement />} />
+              <Route path="announcement/all" element={<AllAnnouncement />} />
+              <Route path="products/b" element={<BulkUpload />} />
+              
+              {/* Additional routes for new menu items */}
+              <Route path="analytics/sales" element={<div className="bg-white rounded-lg shadow p-6 w-full">Sales Report Component</div>} />
+              <Route path="analytics/revenue" element={<div className="bg-white rounded-lg shadow p-6 w-full">Revenue Component</div>} />
+              <Route path="analytics/products" element={<div className="bg-white rounded-lg shadow p-6 w-full">Product Performance Component</div>} />
+              <Route path="analytics/customers" element={<div className="bg-white rounded-lg shadow p-6 w-full">Customer Insights Component</div>} />
+              
+              <Route path="shipping/zones" element={<div className="bg-white rounded-lg shadow p-6 w-full">Shipping Zones Component</div>} />
+              <Route path="shipping/rates" element={<div className="bg-white rounded-lg shadow p-6 w-full">Shipping Rates Component</div>} />
+              <Route path="shipping/tracking" element={<div className="bg-white rounded-lg shadow p-6 w-full">Tracking Component</div>} />
+              
+              <Route path="payments/transactions" element={<div className="bg-white rounded-lg shadow p-6 w-full">Transactions Component</div>} />
+              <Route path="payments/payouts" element={<div className="bg-white rounded-lg shadow p-6 w-full">Payouts Component</div>} />
+              <Route path="payments/methods" element={<div className="bg-white rounded-lg shadow p-6 w-full">Payment Methods Component</div>} />
+              
+              <Route path="store/info" element={<div className="bg-white rounded-lg shadow p-6 w-full">Store Information Component</div>} />
+              <Route path="store/appearance" element={<div className="bg-white rounded-lg shadow p-6 w-full">Store Appearance Component</div>} />
+              <Route path="store/policies" element={<div className="bg-white rounded-lg shadow p-6 w-full">Store Policies Component</div>} />
+              
+              <Route path="settings/account" element={<div className="bg-white rounded-lg shadow p-6 w-full">Account Settings Component</div>} />
+              <Route path="settings/notifications" element={<div className="bg-white rounded-lg shadow p-6 w-full">Notifications Settings Component</div>} />
+              <Route path="settings/security" element={<div className="bg-white rounded-lg shadow p-6 w-full">Security Settings Component</div>} />
+              
+              <Route path="help" element={<div className="bg-white rounded-lg shadow p-6 w-full">Help & Support Component</div>} />
+              
+              {/* Fallback route */}
+              <Route path="*" element={<Orders />} />
+            </Routes>
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useContext } from "react"
-import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle } from "lucide-react"
+import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, Edit2, Trash2, ChevronLeft, ChevronRight, Filter, MoreVertical } from "lucide-react"
 
 import axios from "axios"
 import { ProductContext } from "../../../../../Context/ProductContext"
@@ -71,17 +71,6 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   const handleEdit = async (order) => {
     setCurrentOrder(order);
     setShowEditModal(true);
-    // try {
-    //   const res = await axios.post('http://localhost:3000/api/order/edit-order', order, {withCredentials: true});
-
-    //   // if(res.status === 200) {
-    //   //   console.log("dited successfully");
-    //   // } else {
-    //   //   console.log("Cannot edit");
-    //   // }
-    // } catch(error) {
-    //   console.log(error);
-    // }
   }
 
   // Function to check stock status and return appropriate styling
@@ -113,7 +102,6 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   }
 
   const getStock = (details, variantAndSizeDetails) => {
-    // const stocks = [];
     console.log(details);
     console.log("From get stock")
     
@@ -123,22 +111,16 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
             variantLoop: for (const variant of detail.variants) {
                 moreDetailLoop: for (const moreDetail of variant.moreDetails) {
                     if(moreDetail.size._id.toString() === variantAndSizeDetails.size_id.toString()) {
-                        // stocks.push(moreDetail.stock);
                         return moreDetail.stock
-                        // break variantLoop; 
                     }
                 }
             }
             console.log(variantAndSizeDetails)
         } else {
             console.log("It does not have variants")
-            // stocks.push(detail.stock);
             return detail.stock;
-            // break;
         }
     }
-    console.log(stocks);
-    // return stocks;
 }
 
   // Start of order details modal
@@ -165,7 +147,6 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 <span
                   className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium ${statusColors[order.status]}`}
                 >
-                  {/* <StatusIcon className="h-4 w-4 mr-2" /> */}
                   {order.status}
                 </span>
               </div>
@@ -455,7 +436,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
 export default function OrdersManagement() {
   const [searchTerm, setSearchTerm] = useState("")
   const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage] = useState(10)
+  const [itemsPerPage, setItemsPerPage] = useState(10)
   const [orders, setOrders] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [isError, setIsError] = useState(null)
@@ -539,6 +520,10 @@ export default function OrdersManagement() {
   }
   }, [orders, products])
   
+  // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, itemsPerPage]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
@@ -578,12 +563,8 @@ export default function OrdersManagement() {
         setSelectedOrder((prev) => ({ ...prev, status: newStatus }))
       }
 
-      // Here you would make an API call to update the status on the server
-      // await axios.put(`http://localhost:3000/api/order/${orderId}/status`, { status: newStatus })
     } catch (isError) {
       console.isError("isError updating order status:", isError)
-      // Revert the change if API call fails
-      // You might want to show an isError message to the user
     }
   }
 
@@ -608,13 +589,37 @@ export default function OrdersManagement() {
     return orderId
   }
 
-  // Tailwind classes
-  const cardClass = "bg-white rounded-xl shadow-lg p-6 border border-gray-100"
-  const buttonClass =
-    "inline-flex items-center px-3 py-1.5 text-sm font-medium rounded-lg transition-colors duration-200"
-  const primaryButtonClass = `${buttonClass} bg-blue-600 text-white hover:bg-blue-700`
-  const successButtonClass = `${buttonClass} bg-green-600 text-white hover:bg-green-700`
-  const dangerButtonClass = `${buttonClass} bg-red-600 text-white hover:bg-red-700`
+  const handleEdit = (id) => {
+    console.log('Edit item:', id);
+  };
+
+  const handleDelete = (id) => {
+    console.log('Delete item:', id);
+  };
+
+  const handleView = (id) => {
+    console.log('View item:', id);
+  };
+
+  const getStatusBadge = (status) => {
+    const statusStyles = {
+      'Completed': 'bg-green-100 text-green-800 border-green-200',
+      'Processing': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'Shipped': 'bg-blue-100 text-blue-800 border-blue-200',
+      'Pending': 'bg-orange-100 text-orange-800 border-orange-200',
+      'Cancelled': 'bg-red-100 text-red-800 border-red-200',
+      'Accepted': 'bg-green-100 text-green-800 border-green-200',
+      'Dispatched': 'bg-blue-100 text-blue-800 border-blue-200',
+      'Rejected': 'bg-red-100 text-red-800 border-red-200',
+      'In Progress': 'bg-orange-100 text-orange-800 border-orange-200'
+    };
+    
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
+        {status}
+      </span>
+    );
+  };
 
   if (isLoading) {
     return (
@@ -659,7 +664,7 @@ export default function OrdersManagement() {
 
       {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
-        <div className={`${cardClass} text-center`}>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
           <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
           <div className="text-sm text-gray-600 mb-3">Total Orders</div>
           <button
@@ -671,7 +676,7 @@ export default function OrdersManagement() {
           </button>
         </div>
 
-        <div className={`${cardClass} text-center`}>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
           <div className="text-2xl font-bold text-yellow-600">{stats.pending}</div>
           <div className="text-sm text-gray-600 mb-3">Pending</div>
           <button
@@ -683,7 +688,7 @@ export default function OrdersManagement() {
           </button>
         </div>
 
-        <div className={`${cardClass} text-center`}>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
           <div className="text-2xl font-bold text-green-600">{stats.accepted}</div>
           <div className="text-sm text-gray-600 mb-3">Accepted</div>
           <button
@@ -695,7 +700,7 @@ export default function OrdersManagement() {
           </button>
         </div>
 
-        <div className={`${cardClass} text-center`}>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
           <div className="text-2xl font-bold text-blue-600">{stats.dispatched}</div>
           <div className="text-sm text-gray-600 mb-3">Dispatched</div>
           <button
@@ -707,7 +712,7 @@ export default function OrdersManagement() {
           </button>
         </div>
 
-        <div className={`${cardClass} text-center`}>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
           <div className="text-2xl font-bold text-red-600">{stats.rejected}</div>
           <div className="text-sm text-gray-600 mb-3">Rejected</div>
           <button
@@ -719,7 +724,7 @@ export default function OrdersManagement() {
           </button>
         </div>
 
-        <div className={`${cardClass} text-center`}>
+        <div className="bg-white rounded-xl shadow-lg p-6 border border-gray-100 text-center">
           <div className="text-2xl font-bold text-purple-600">{stats.completed}</div>
           <div className="text-sm text-gray-600 mb-3">Completed</div>
           <button
@@ -732,128 +737,142 @@ export default function OrdersManagement() {
         </div>
       </div>
 
-      {/* Search Bar */}
-      <div className={`${cardClass} mb-6`}>
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-          <input
-            type="text"
-            placeholder="Search orders by order ID, user name, email, phone, etc..."
-            value={searchTerm}
-            onChange={(e) => {
-              setSearchTerm(e.target.value)
-              setCurrentPage(1)
-            }}
-            className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-colors"
-          />
+      {/* Orders Table with AdminTable styling */}
+      <div className="bg-white rounded-lg border border-gray-200">
+        {/* Table Header */}
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+            <div>
+              <h3 className="text-lg font-medium text-gray-900">Orders Management</h3>
+              <p className="text-sm text-gray-500 mt-1">
+                Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} results
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search orders, customers, products..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
+                />
+              </div>
+              
+              {/* Actions */}
+              <div className="flex items-center space-x-2">
+                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <Filter className="w-4 h-4 mr-2" />
+                  Filter
+                </button>
+                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <Download className="w-4 h-4 mr-2" />
+                  Export
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
 
-      {/* Orders Table */}
-      <div className={cardClass}>
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Sr No.
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Order ID
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  User Name
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Phone
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  WhatsApp
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Email
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Total Price
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Actions
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {currentOrders.map((order, index) => {
-                const StatusIcon = statusIcons[order.status]
-
-                return (
-                  <tr
-                    key={order._id}
-                    className="hover:bg-gray-50 cursor-pointer transition-colors"
-                    onClick={() => handleOrderClick(order, orderedProducts[index])}
-                  >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{startIndex + index + 1}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600" title={order._id}>
-                      {truncateOrderId(order._id)}
+        {/* Table Container with Horizontal Scroll and Sticky Header */}
+        <div className="overflow-hidden border-t border-gray-200">
+          {/* Single scrollable container for both header and body */}
+          <div className="overflow-x-auto overflow-y-auto max-h-96">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50 sticky top-0 z-10">
+                <tr>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '80px' }}>
+                    Sr No.
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                    Order ID
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '150px' }}>
+                    User Name
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                    Phone
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                    WhatsApp
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '200px' }}>
+                    Email
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    Total Price
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    Status
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '200px' }}>
+                    Actions
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {currentOrders.map((order, index) => (
+                  <tr key={order._id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
+                      {startIndex + index + 1}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.user_name}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.phone_number}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.whatsapp_number}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{order.email}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
-                      {order.total_price === "Pending" ? "Pending" : `$${order.total_price}`}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '140px' }}>
+                      <span className="font-medium text-blue-600" title={order._id}>{truncateOrderId(order._id)}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusColors[order.status]}`}
-                      >
-                        {/* <StatusIcon className="h-3 w-3 mr-1" /> */}
-                        {order.status}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '150px' }}>
+                      {order.user_name}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
+                      {order.phone_number}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
+                      {order.whatsapp_number}
+                    </td>
+                    <td className="px-6 py-4 text-sm text-center text-gray-900" style={{ minWidth: '200px' }}>
+                      <div className="truncate" title={order.email}>
+                        {order.email}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
+                      <span className="font-medium">
+                        {order.total_price === "Pending" ? "Pending" : `${order.total_price}`}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      <div className="flex space-x-2">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
+                      {getStatusBadge(order.status)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '200px' }}>
+                      <div className="flex items-center justify-center space-x-2">
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleOrderClick(order, orderedProducts[index])
-                          }}
-                          className={`${primaryButtonClass} text-xs`}
+                          onClick={() => handleOrderClick(order, orderedProducts[index])}
+                          className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                          title="View Details"
                         >
-                          <Eye className="h-3 w-3 mr-1" />
-                          View
+                          <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleStatusChange(order._id, "Accepted")
-                          }}
-                          className={`${successButtonClass} text-xs`}
-                          disabled={order.status === "Accepted"}
+                          onClick={() => handleEdit(order._id)}
+                          className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                          title="Edit"
                         >
-                          <Check className="h-3 w-3 mr-1" />
-                          Accept
+                          <Edit2 className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            handleStatusChange(order._id, "Rejected")
-                          }}
-                          className={`${dangerButtonClass} text-xs`}
-                          disabled={order.status === "Rejected"}
+                          onClick={() => handleDelete(order._id)}
+                          className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                          title="Delete"
                         >
-                          <X className="h-3 w-3 mr-1" />
-                          Reject
+                          <Trash2 className="w-4 h-4" />
                         </button>
                       </div>
                     </td>
                   </tr>
-                )
-              })}
-            </tbody>
-          </table>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
 
         {/* Show message when no orders */}
@@ -864,79 +883,77 @@ export default function OrdersManagement() {
           </div>
         )}
 
-        {/* Pagination */}
-        {totalPages > 1 && (
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button
-                onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
-                disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+        {/* Table Footer */}
+        <div className="px-6 py-4 border-t border-gray-200">
+          <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
+            {/* Items per page */}
+            <div className="flex items-center space-x-2">
+              <span className="text-sm text-gray-700">Show</span>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => setItemsPerPage(Number(e.target.value))}
+                className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
               >
+                <option value={5}>5</option>
+                <option value={10}>10</option>
+                <option value={25}>25</option>
+                <option value={50}>50</option>
+                <option value={100}>100</option>
+              </select>
+              <span className="text-sm text-gray-700">entries per page</span>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                disabled={currentPage === 1}
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1" />
                 Previous
               </button>
+
+              <div className="flex items-center space-x-1">
+                {[...Array(Math.min(totalPages, 7))].map((_, index) => {
+                  let pageNumber;
+                  if (totalPages <= 7) {
+                    pageNumber = index + 1;
+                  } else if (currentPage <= 4) {
+                    pageNumber = index + 1;
+                  } else if (currentPage >= totalPages - 3) {
+                    pageNumber = totalPages - 6 + index;
+                  } else {
+                    pageNumber = currentPage - 3 + index;
+                  }
+
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => setCurrentPage(pageNumber)}
+                      className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                        currentPage === pageNumber
+                          ? 'bg-blue-600 text-white'
+                          : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                })}
+              </div>
+
               <button
-                onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
+                onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Next
+                <ChevronRight className="w-4 h-4 ml-1" />
               </button>
             </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">{startIndex + 1}</span> to{" "}
-                  <span className="font-medium">{Math.min(endIndex, filteredOrders.length)}</span> of{" "}
-                  <span className="font-medium">{filteredOrders.length}</span> results
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(currentPage - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Previous
-                  </button>
-                  {[...Array(Math.min(totalPages, 10))].map((_, i) => {
-                    let pageNumber
-                    if (totalPages <= 10) {
-                      pageNumber = i + 1
-                    } else {
-                      const start = Math.max(1, currentPage - 5)
-                      const end = Math.min(totalPages, start + 9)
-                      pageNumber = start + i
-                      if (pageNumber > end) return null
-                    }
-
-                    return (
-                      <button
-                        key={pageNumber}
-                        onClick={() => setCurrentPage(pageNumber)}
-                        className={`relative inline-flex items-center px-4 py-2 border text-sm font-medium ${
-                          currentPage === pageNumber
-                            ? "z-10 bg-blue-50 border-blue-500 text-blue-600"
-                            : "bg-white border-gray-300 text-gray-500 hover:bg-gray-50"
-                        }`}
-                      >
-                        {pageNumber}
-                      </button>
-                    )
-                  })}
-                  <button
-                    onClick={() => setCurrentPage(Math.min(currentPage + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Next
-                  </button>
-                </nav>
-              </div>
-            </div>
           </div>
-        )}
+        </div>
       </div>
 
       {/* Order Details Modal */}
@@ -952,5 +969,4 @@ export default function OrdersManagement() {
       />
     </div>
   )
-  // End of main content
 }
