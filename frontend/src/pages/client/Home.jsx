@@ -62,7 +62,7 @@ export default function Home() {
       console.error("User not logged in");
       return;
     }
-    const res = await axios.post('https://resinarts.onrender.com/api/order/place-order', cartItems, {
+    const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
       withCredentials: true,
     });
     console.log("Checkout response:", res.data);

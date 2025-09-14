@@ -207,7 +207,7 @@ function Discount() {
         console.log('Form data before submission:', formData); // Debug form data
 
         try {
-            const res = await axios.post('https://resinarts.onrender.com/api/discount/add', formData, { withCredentials: true });
+            const res = await axios.post('http://localhost:3000/api/discount/add', formData, { withCredentials: true });
             if (res.status !== 201) {
                 alert(`Failed to create discount: Invalid response status (${res.status})`);
                 return;

@@ -200,7 +200,7 @@ const setDataForSingleProductWithVariants = (product) => {
   }
     // Talk to the toy store
     const res = await axios.post(
-      'https://resinarts.onrender.com/api/product/restock',
+      'http://localhost:3000/api/product/restock',
       dataToSend,
       { withCredentials: true }
     );
@@ -231,7 +231,7 @@ const handleUpdateMultipleStock = async (localMultipleToRestock) => {
   setIsLoading(true);
 
   try{
-    const res = await axios.post('https://resinarts.onrender.com/api/product/mass-restock', localMultipleToRestock, {
+    const res = await axios.post('http://localhost:3000/api/product/mass-restock', localMultipleToRestock, {
       withCredentials: true,
     });
     if(res.status === 200) {
@@ -514,7 +514,7 @@ const handleUpdateMultipleStock = async (localMultipleToRestock) => {
   }
     // Talk to the toy store
     const res = await axios.post(
-      'https://resinarts.onrender.com/api/product/revised-rate',
+      'http://localhost:3000/api/product/revised-rate',
       dataToSend,
       { withCredentials: true }
     );
@@ -545,7 +545,7 @@ const handleUpdateMultipleStock = async (localMultipleForRevisedRate) => {
   setIsLoading(true);
 
   try{
-    const res = await axios.post('https://resinarts.onrender.com/api/product/mass-revised-rate', localMultipleForRevisedRate, {
+    const res = await axios.post('http://localhost:3000/api/product/mass-revised-rate', localMultipleForRevisedRate, {
       withCredentials: true,
     });
     if(res.status === 200) {

@@ -61,7 +61,7 @@ const AddBanner = () => {
     // Removed isActive from form data
 
     try {
-      const response = await axios.post('https://resinarts.onrender.com/api/banner/add', data, {
+      const response = await axios.post('http://localhost:3000/api/banner/add', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
         withCredentials: true,
       });

@@ -32,7 +32,7 @@ const AllBanners = () => {
   const fetchBanners = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('https://resinarts.onrender.com/api/banner/fetch-banners', {
+      const res = await axios.get('http://localhost:3000/api/banner/fetch-banners', {
         withCredentials: true
       });
       setBanners(res.data);
@@ -60,7 +60,7 @@ const AllBanners = () => {
     setShowDefaultModal(false);
     
     try {
-      await axios.put(`https://resinarts.onrender.com/api/banner/update-default/${bannerToUpdateDefault._id}`, {
+      await axios.put(`http://localhost:3000/api/banner/update-default/${bannerToUpdateDefault._id}`, {
         isDefault: newDefaultStatus
       }, {
         withCredentials: true
@@ -116,7 +116,7 @@ const AllBanners = () => {
     setShowDeleteModal(false);
     
     try {
-      await axios.delete(`https://resinarts.onrender.com/api/banner/delete/${bannerToDelete._id}`, {
+      await axios.delete(`http://localhost:3000/api/banner/delete/${bannerToDelete._id}`, {
         withCredentials: true
       });
       

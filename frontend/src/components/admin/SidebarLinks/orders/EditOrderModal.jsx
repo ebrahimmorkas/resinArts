@@ -22,7 +22,7 @@ function EditOrderModal({ onClose, order }) {
   const handleEditOrder = async (e) => {
     e.preventDefault();
     console.log("Updated Products:", products);
-    const res = await axios.post(`https://resinarts.onrender.com/api/order/edit-order/${order._id}`, {products}, {withCredentials: true});
+    const res = await axios.post(`http://localhost:3000/api/order/edit-order/${order._id}`, {products}, {withCredentials: true});
     if(res.status === 200) {
         console.log("Product Updated");
         onClose();

@@ -273,7 +273,7 @@ const AddCategory = () => {
       console.log('Sending data to backend:', { categories })
 
       const response = await axios.post(
-        'https://resinarts.onrender.com/api/category/add',
+        'http://localhost:3000/api/category/add',
         formData,
         {
           headers: {
