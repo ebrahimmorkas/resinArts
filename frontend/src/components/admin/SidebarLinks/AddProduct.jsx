@@ -1,8 +1,27 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react" // Import useRef
+import { useState, useEffect, useCallback, useRef } from "react"
 import { fetchCategories, addProduct } from "../../../../utils/api"
-import { X, Plus, AlertCircle } from "lucide-react" // Using Lucide React for icons
+import { X, Plus, AlertCircle, Upload, Image as ImageIcon, Package, Tag, DollarSign, Layers, Check } from "lucide-react"
+import { toast, ToastContainer } from 'react-toastify'
+import 'react-toastify/dist/ReactToastify.css'
+
+// Loading Overlay Component
+const LoadingOverlay = ({ isLoading, message = "Adding Product..." }) => {
+  if (!isLoading) return null
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white rounded-xl shadow-2xl p-8 text-center max-w-sm mx-4">
+        <div className="flex justify-center mb-4">
+          <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
+        </div>
+        <h4 className="font-semibold text-gray-900 mb-2">{message}</h4>
+        <p className="text-gray-600 text-sm">Please wait while we process your request...</p>
+      </div>
+    </div>
+  )
+}
 
 // Helper to flatten category tree for easy lookup and path building
 const flattenCategories = (categories, parentPath = "", parentId = null) => {
@@ -34,11 +53,12 @@ const findCategoryInTree = (categoryId, categories) => {
 }
 
 export default function AddProduct() {
+  const [isLoading, setIsLoading] = useState(false)
   const [productName, setProductName] = useState("")
-  const [allCategoriesTree, setAllCategoriesTree] = useState([]) // Nested tree structure
-  const [allCategoriesFlat, setAllCategoriesFlat] = useState([]) // Flattened for easy lookup
+  const [allCategoriesTree, setAllCategoriesTree] = useState([])
+  const [allCategoriesFlat, setAllCategoriesFlat] = useState([])
 
-  const [selectedCategoryIds, setSelectedCategoryIds] = useState([]) // Array of selected category IDs for dynamic dropdowns
+  const [selectedCategoryIds, setSelectedCategoryIds] = useState([])
   const [categoryPath, setCategoryPath] = useState("")
 
   const [productDetails, setProductDetails] = useState([{ key: "", value: "" }])
@@ -50,7 +70,7 @@ export default function AddProduct() {
   const [bulkPricing, setBulkPricing] = useState([{ wholesalePrice: "", quantity: "" }])
 
   const [hasVariants, setHasVariants] = useState(false)
-  const [variants, setVariants] = useState([]) // Array of variant objects
+  const [variants, setVariants] = useState([])
 
   // Refs for direct file input clicks
   const mainAdditionalImageInputRef = useRef([])
@@ -64,6 +84,7 @@ export default function AddProduct() {
     mainImage !== null ||
     additionalImages.some((img) => img.file !== null) ||
     bulkPricing.some((bp) => bp.wholesalePrice !== "" || bp.quantity !== "")
+  
   // State to track if any variant field is filled
   const isVariantInfoFilled =
     variants.length > 0 &&
@@ -110,6 +131,7 @@ export default function AddProduct() {
         setAllCategoriesFlat(flattenCategories(categories))
       } catch (error) {
         console.error("Failed to fetch categories:", error)
+        toast.error("Failed to fetch categories")
       }
     }
     getCategories()
@@ -134,7 +156,7 @@ export default function AddProduct() {
     }
   }, [mainImage])
 
-  // Handlers for dynamic fields (Product Details, Variant Optional Details, MD Optional Details)
+  // Handlers for dynamic fields
   const addKeyValuePair = (setter, currentArray) => setter([...currentArray, { key: "", value: "" }])
   const updateKeyValuePair = (setter, currentArray, index, field, value) => {
     const newArray = [...currentArray]
@@ -146,7 +168,7 @@ export default function AddProduct() {
     setter(newArray)
   }
 
-  // Handlers for dynamic image fields (Additional Images, Variant Image, MD Additional Images)
+  // Handlers for dynamic image fields
   const addImageField = (setter, currentArray) => setter([...currentArray, { file: null, preview: null }])
   const updateImageField = (setter, currentArray, index, file) => {
     const newArray = [...currentArray]
@@ -202,19 +224,18 @@ export default function AddProduct() {
           reusedOptionalDetailSource: "",
         },
       ],
-      isPriceSame: "yes", // Default for variant price
-      isStockSame: "yes", // Default for variant stock
+      isPriceSame: "yes",
+      isStockSame: "yes",
       commonPrice: "",
       commonStock: "",
       commonBulkPricingCombinations: [{ wholesalePrice: "", quantity: "" }],
-      isDefault: variants.length === 0, // First variant added is default
+      isDefault: variants.length === 0,
     }
     setVariants([...variants, newVariant])
   }
 
   const removeVariant = (index) => {
     const newVariants = variants.filter((_, i) => i !== index)
-    // If the removed variant was default, and there are other variants, set the first one as default
     if (variants[index].isDefault && newVariants.length > 0) {
       newVariants[0].isDefault = true
     }
@@ -227,7 +248,6 @@ export default function AddProduct() {
   const updateVariantField = (index, field, value) => {
     const newVariants = [...variants]
     if (field === "isDefault" && value === true) {
-      // If setting this variant as default, unset others
       newVariants.forEach((v, i) => {
         if (i !== index) {
           v.isDefault = false
@@ -238,7 +258,7 @@ export default function AddProduct() {
     setVariants(newVariants)
   }
 
-  // Size section handlers (formerly More Details)
+  // Size section handlers
   const addSizeSection = (variantIndex) => {
     const newVariants = [...variants]
     newVariants[variantIndex].moreDetails.push({
@@ -268,28 +288,24 @@ export default function AddProduct() {
     setVariants(newVariants)
   }
 
-  // Size fields within a Size Section
   const updateSingleSizeField = (variantIndex, mdIndex, field, value) => {
     const newVariants = [...variants]
     newVariants[variantIndex].moreDetails[mdIndex].size[field] = value
     setVariants(newVariants)
   }
 
-  // Logic for generating reuse options for Additional Images/Optional Details
+  // Logic for generating reuse options
   const getReuseOptions = useCallback(
     (currentVariantIndex, currentMdIndex, type) => {
       const options = []
       variants.forEach((variant, vIdx) => {
-        // Only include sections from the current variant
         if (vIdx === currentVariantIndex) {
           variant.moreDetails.forEach((md, mdIdx) => {
-            // Only include sections that are NOT reusing and are before the current section
             const isBeforeCurrent = mdIdx < currentMdIndex
             const isNotReusing =
               (type === "images" && md.reuseAdditionalImages === "no") ||
               (type === "optionalDetails" && md.reuseOptionalDetails === "no")
 
-            // Only offer reuse if the source actually has data
             const hasData =
               type === "images"
                 ? md.additionalImages.some((img) => img.file !== null || img.preview !== null)
@@ -301,7 +317,7 @@ export default function AddProduct() {
                 : "N/A"
               options.push({
                 id: `${vIdx}-${mdIdx}`,
-                label: `${variant.colorName || "Variant"} - Size Section ${mdIdx + 1} (${sizeInfo})`, // Updated label
+                label: `${variant.colorName || "Variant"} - Size Section ${mdIdx + 1} (${sizeInfo})`,
                 data: type === "images" ? md.additionalImages : md.optionalDetails,
               })
             }
@@ -319,19 +335,15 @@ export default function AddProduct() {
 
     if (selectedOption) {
       if (type === "images") {
-        // Revoke old previews for the current section's images
         newVariants[variantIndex].moreDetails[mdIndex].additionalImages.forEach((img) => {
           if (img?.preview) URL.revokeObjectURL(img.preview)
         })
-        // Copy the data (which includes file and preview for images)
-        // Ensure file objects are copied for re-upload
         newVariants[variantIndex].moreDetails[mdIndex].additionalImages = selectedOption.data.map((item) => ({
-          file: item.file, // Copy the file object
-          preview: item.file ? URL.createObjectURL(item.file) : item.preview, // Re-create blob URL if file exists, else use existing preview
+          file: item.file,
+          preview: item.file ? URL.createObjectURL(item.file) : item.preview,
         }))
         newVariants[variantIndex].moreDetails[mdIndex].reusedImageSource = selectedId
       } else {
-        // Copy the data (key-value pairs)
         newVariants[variantIndex].moreDetails[mdIndex].optionalDetails = selectedOption.data.map((item) => ({
           ...item,
         }))
@@ -343,182 +355,183 @@ export default function AddProduct() {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-
-    const formData = new FormData()
-
-    // Determine final category ID
-    const finalCategoryId = selectedCategoryIds[selectedCategoryIds.length - 1] || ""
-
-    // Prepare product data object
-    const productData = {
-      name: productName,
-      mainCategory: selectedCategoryIds[0] || "", // First selected category is main
-      subCategory: finalCategoryId, // Last selected category is sub (could be main if only one selected)
-      categoryPath: categoryPath,
-      productDetails: productDetails.filter((pd) => pd.key && pd.value),
-      hasVariants: hasVariants,
-    }
-
-    if (!hasVariants) {
-      productData.stock = stock
-      productData.price = price
-      productData.bulkPricing = bulkPricing.filter((bp) => bp.wholesalePrice && bp.quantity)
-    }
-
-    // Append main product image
-    if (mainImage) {
-      formData.append("image", mainImage)
-    }
-
-    // Append additional images for basic product
-    additionalImages.forEach((img) => {
-      if (img.file) {
-        formData.append(`additionalImages`, img.file)
-      }
-    })
-
-    // Process variants for FormData
-    if (hasVariants) {
-      productData.variants = variants.map((variant) => {
-        const variantObj = {
-          colorName: variant.colorName,
-          optionalDetails: variant.optionalDetails.filter((od) => od.key && od.value),
-          isDefault: variant.isDefault, // Include isDefault
-          isPriceSame: variant.isPriceSame,
-          isStockSame: variant.isStockSame, // Include isStockSame
-          // If only one size section, implicitly common price/stock
-          commonPrice:
-            variant.moreDetails.length === 1 || variant.isPriceSame === "yes" ? variant.commonPrice : undefined,
-          commonStock:
-            variant.moreDetails.length === 1 || variant.isStockSame === "yes" ? variant.commonStock : undefined,
-          commonBulkPricingCombinations:
-            variant.moreDetails.length === 1 || variant.isPriceSame === "yes"
-              ? variant.commonBulkPricingCombinations.filter((bpc) => bpc.wholesalePrice && bpc.quantity)
-              : [],
-          moreDetails: variant.moreDetails.map((md) => {
-            const mdObj = {
-              size: md.size,
-              // If reusing optional details, send the copied data directly
-              optionalDetails:
-                md.reuseOptionalDetails === "yes"
-                  ? md.optionalDetails
-                  : md.optionalDetails.filter((od) => od.key && od.value),
-              // For additional images, we don't send the preview URLs in productData,
-              // as files are appended separately. The backend will handle the URLs.
-              additionalImages: [], // This will be populated by the backend after file uploads
-            }
-            // Only include price/stock/bulk pricing if not common for variant AND multiple sizes exist
-            if (variant.isPriceSame === "no" && variant.moreDetails.length > 1) {
-              mdObj.price = md.price
-              mdObj.bulkPricingCombinations = md.bulkPricingCombinations.filter(
-                (bpc) => bpc.wholesalePrice && bpc.quantity,
-              )
-            }
-            if (variant.isStockSame === "no" && variant.moreDetails.length > 1) {
-              mdObj.stock = md.stock
-            }
-            return mdObj
-          }),
-        }
-        return variantObj
-      })
-
-      // Append variant images and moreDetails additional images to FormData
-      variants.forEach((variant, variantIndex) => {
-        if (variant.variantImage.file) {
-          formData.append(`variants[${variantIndex}].variantImage`, variant.variantImage.file)
-        }
-        variant.moreDetails.forEach((md, mdIndex) => {
-          // Always append file if it exists, regardless of reuse flag.
-          // If reuse was selected, the file object was copied to md.additionalImages.
-          md.additionalImages.forEach((img) => {
-            if (img.file) {
-              formData.append(`variants[${variantIndex}].moreDetails[${mdIndex}].additionalImages`, img.file)
-            }
-          })
-        })
-      })
-    }
-
-    formData.append("productData", JSON.stringify(productData))
+    setIsLoading(true)
 
     try {
+      const formData = new FormData()
+
+      const finalCategoryId = selectedCategoryIds[selectedCategoryIds.length - 1] || ""
+
+      const productData = {
+        name: productName,
+        mainCategory: selectedCategoryIds[0] || "",
+        subCategory: finalCategoryId,
+        categoryPath: categoryPath,
+        productDetails: productDetails.filter((pd) => pd.key && pd.value),
+        hasVariants: hasVariants,
+      }
+
+      if (!hasVariants) {
+        productData.stock = stock
+        productData.price = price
+        productData.bulkPricing = bulkPricing.filter((bp) => bp.wholesalePrice && bp.quantity)
+      }
+
+      if (mainImage) {
+        formData.append("image", mainImage)
+      }
+
+      additionalImages.forEach((img) => {
+        if (img.file) {
+          formData.append(`additionalImages`, img.file)
+        }
+      })
+
+      if (hasVariants) {
+        productData.variants = variants.map((variant) => {
+          const variantObj = {
+            colorName: variant.colorName,
+            optionalDetails: variant.optionalDetails.filter((od) => od.key && od.value),
+            isDefault: variant.isDefault,
+            isPriceSame: variant.isPriceSame,
+            isStockSame: variant.isStockSame,
+            commonPrice:
+              variant.moreDetails.length === 1 || variant.isPriceSame === "yes" ? variant.commonPrice : undefined,
+            commonStock:
+              variant.moreDetails.length === 1 || variant.isStockSame === "yes" ? variant.commonStock : undefined,
+            commonBulkPricingCombinations:
+              variant.moreDetails.length === 1 || variant.isPriceSame === "yes"
+                ? variant.commonBulkPricingCombinations.filter((bpc) => bpc.wholesalePrice && bpc.quantity)
+                : [],
+            moreDetails: variant.moreDetails.map((md) => {
+              const mdObj = {
+                size: md.size,
+                optionalDetails:
+                  md.reuseOptionalDetails === "yes"
+                    ? md.optionalDetails
+                    : md.optionalDetails.filter((od) => od.key && od.value),
+                additionalImages: [],
+              }
+              if (variant.isPriceSame === "no" && variant.moreDetails.length > 1) {
+                mdObj.price = md.price
+                mdObj.bulkPricingCombinations = md.bulkPricingCombinations.filter(
+                  (bpc) => bpc.wholesalePrice && bpc.quantity,
+                )
+              }
+              if (variant.isStockSame === "no" && variant.moreDetails.length > 1) {
+                mdObj.stock = md.stock
+              }
+              return mdObj
+            }),
+          }
+          return variantObj
+        })
+
+        variants.forEach((variant, variantIndex) => {
+          if (variant.variantImage.file) {
+            formData.append(`variants[${variantIndex}].variantImage`, variant.variantImage.file)
+          }
+          variant.moreDetails.forEach((md, mdIndex) => {
+            md.additionalImages.forEach((img) => {
+              if (img.file) {
+                formData.append(`variants[${variantIndex}].moreDetails[${mdIndex}].additionalImages`, img.file)
+              }
+            })
+          })
+        })
+      }
+
+      formData.append("productData", JSON.stringify(productData))
+
       const response = await addProduct(formData)
       console.log("Product added successfully:", response)
-      alert("Product added successfully!")
-      // Reset form or redirect
+      toast.success("Product added successfully! 🎉", {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
+      
+      // Reset form
+      setProductName("")
+      setSelectedCategoryIds([])
+      setCategoryPath("")
+      setProductDetails([{ key: "", value: "" }])
+      setStock("")
+      setPrice("")
+      setMainImage(null)
+      setMainImagePreview(null)
+      setAdditionalImages([{ file: null, preview: null }])
+      setBulkPricing([{ wholesalePrice: "", quantity: "" }])
+      setVariants([])
+      setHasVariants(false)
+
     } catch (error) {
       console.error("Error adding product:", error.message)
-      alert(`Error adding product: ${error.message}`)
+      toast.error(`Error adding product: ${error.message}`, {
+        position: "top-right",
+        autoClose: 5000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      })
+    } finally {
+      setIsLoading(false)
     }
   }
 
-  // Tailwind CSS classes for common elements - refined for beauty
-  const cardClass = "bg-white rounded-xl shadow-2xl p-6 md:p-8 lg:p-10 border border-gray-100"
-  const sectionHeaderClass = "flex justify-between items-center pb-4 mb-6 border-b border-gray-200"
-  const sectionTitleClass = "text-2xl md:text-3xl font-extrabold text-gray-800"
-  const subSectionTitleClass = "text-xl font-bold text-gray-700"
-  const labelClass = "block text-sm font-semibold text-gray-700 mb-1"
-  const inputClass =
-    "mt-1 block w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-base transition duration-200 ease-in-out"
-  const buttonClass =
-    "inline-flex items-center px-5 py-2.5 border border-transparent text-base font-medium rounded-lg shadow-sm transition duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2"
-  const primaryButtonClass = `${buttonClass} text-white bg-purple-600 hover:bg-purple-700 focus:ring-purple-500`
-  const secondaryButtonClass = `${buttonClass} text-purple-700 bg-purple-100 hover:bg-purple-200 focus:ring-purple-500`
-  const outlineButtonClass = `${buttonClass} text-gray-700 bg-white border-gray-300 hover:bg-gray-50 focus:ring-purple-500`
-  const destructiveButtonClass = `${buttonClass} text-white bg-red-600 hover:bg-red-700 focus:ring-red-500`
-  const selectClass =
-    "mt-1 block w-full pl-4 pr-10 py-2.5 text-base border border-gray-300 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 sm:text-base rounded-lg shadow-sm appearance-none bg-white transition duration-200 ease-in-out"
-  const checkboxClass =
-    "h-5 w-5 text-purple-600 focus:ring-purple-500 border-gray-300 rounded transition duration-200 ease-in-out"
+  // Professional styling classes
+  const cardClass = "bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+  const sectionClass = "p-8"
+  const headerClass = "border-b border-gray-100 px-8 py-6 bg-gradient-to-r from-gray-50 to-white"
+  const titleClass = "text-2xl font-bold text-gray-900 flex items-center gap-3"
+  const subtitleClass = "text-gray-600 mt-1"
+  const inputClass = "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white text-gray-900 placeholder-gray-400"
+  const labelClass = "block text-sm font-semibold text-gray-700 mb-2"
+  const buttonClass = "inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2"
+  const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl focus:ring-blue-500`
+  const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 focus:ring-gray-500`
+  const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white focus:ring-red-500`
+  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white`
 
   // Dynamic Category Dropdowns
   const handleCategorySelect = (level, categoryId) => {
     let newSelectedCategoryIds = [...selectedCategoryIds.slice(0, level), categoryId].filter(Boolean)
-
-    // If a category is unselected (value is ""), clear all subsequent levels
     if (!categoryId) {
       newSelectedCategoryIds = newSelectedCategoryIds.slice(0, level)
     }
-
     setSelectedCategoryIds(newSelectedCategoryIds)
   }
 
   const renderCategoryDropdowns = () => {
     const dropdowns = []
 
-    // Main Category Dropdown (Level 0)
     const mainCategoryOptions = allCategoriesTree.filter((cat) => !cat.parentCategoryId && !cat.parent_category_id)
     dropdowns.push(
       <div key={`category-dropdown-0`} className="space-y-2">
         <label htmlFor={`category-level-0`} className={labelClass}>
+          <Tag className="inline w-4 h-4 mr-2" />
           Main Category
         </label>
-        <div className="relative">
-          <select
-            id={`category-level-0`}
-            value={selectedCategoryIds[0] || ""}
-            onChange={(e) => handleCategorySelect(0, e.target.value)}
-            className={selectClass}
-            // Removed required attribute
-          >
-            <option value="">Select main category</option>
-            {mainCategoryOptions.map((cat) => (
-              <option key={cat._id} value={cat._id}>
-                {cat.categoryName}
-              </option>
-            ))}
-          </select>
-          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-            </svg>
-          </div>
-        </div>
+        <select
+          id={`category-level-0`}
+          value={selectedCategoryIds[0] || ""}
+          onChange={(e) => handleCategorySelect(0, e.target.value)}
+          className={selectClass}
+        >
+          <option value="">Select main category</option>
+          {mainCategoryOptions.map((cat) => (
+            <option key={cat._id} value={cat._id}>
+              {cat.categoryName}
+            </option>
+          ))}
+        </select>
       </div>,
     )
 
-    // Sub Category Dropdown (Dynamic, always refers to the next level based on the last selected category)
     const lastSelectedCategoryId = selectedCategoryIds[selectedCategoryIds.length - 1]
     const lastSelectedCategoryInTree = findCategoryInTree(lastSelectedCategoryId, allCategoriesTree)
     const subCategoryOptions = lastSelectedCategoryInTree ? lastSelectedCategoryInTree.subcategories || [] : []
@@ -527,1208 +540,1122 @@ export default function AddProduct() {
       dropdowns.push(
         <div key={`category-dropdown-sub`} className="space-y-2">
           <label htmlFor={`category-level-sub`} className={labelClass}>
+            <Layers className="inline w-4 h-4 mr-2" />
             Sub Category
           </label>
-          <div className="relative">
-            <select
-              id={`category-level-sub`}
-              value={selectedCategoryIds[selectedCategoryIds.length] || ""} // This will be empty initially for the next level
-              onChange={(e) => handleCategorySelect(selectedCategoryIds.length, e.target.value)}
-              className={selectClass}
-              // Removed required attribute
-            >
-              <option value="">Select sub category</option>
-              {subCategoryOptions.map((cat) => (
-                <option key={cat._id} value={cat._id}>
-                  {cat.categoryName}
-                </option>
-              ))}
-            </select>
-            <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-              <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
-                <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-              </svg>
-            </div>
-          </div>
+          <select
+            id={`category-level-sub`}
+            value={selectedCategoryIds[selectedCategoryIds.length] || ""}
+            onChange={(e) => handleCategorySelect(selectedCategoryIds.length, e.target.value)}
+            className={selectClass}
+          >
+            <option value="">Select sub category</option>
+            {subCategoryOptions.map((cat) => (
+              <option key={cat._id} value={cat._id}>
+                {cat.categoryName}
+              </option>
+            ))}
+          </select>
         </div>,
       )
     }
 
-    return <div className="grid grid-cols-1 md:grid-cols-2 gap-6">{dropdowns}</div>
+    return <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">{dropdowns}</div>
   }
 
   return (
-    <div className="container mx-auto p-4 md:p-8 lg:p-12 max-w-7xl font-sans">
-      <h1 className="text-4xl md:text-5xl font-extrabold text-center mb-12 text-gray-900 tracking-tight">
-        Add New Product
-      </h1>
-
-      <form onSubmit={handleSubmit} className="space-y-10">
-        {/* Basic Information Section */}
-        <div className={cardClass}>
-          <div className={sectionHeaderClass}>
-            <h2 className={sectionTitleClass}>Basic Information</h2>
-          </div>
-          <div className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-              <div className="space-y-2">
-                <label htmlFor="productName" className={labelClass}>
-                  Product Name
-                </label>
-                <input
-                  id="productName"
-                  type="text"
-                  value={productName}
-                  onChange={(e) => setProductName(e.target.value)}
-                  placeholder="Enter product name"
-                  className={inputClass}
-                  // Removed required attribute
-                />
-              </div>
-              {/* Category Dropdowns */}
-              <div className="col-span-full">
-                {renderCategoryDropdowns()}
-                {categoryPath && (
-                  <div className="text-sm text-gray-600 mt-4 p-3 bg-purple-50 rounded-lg border border-purple-200">
-                    Category Path:{" "}
-                    {selectedCategoryIds.map((id, index) => {
-                      const category = allCategoriesFlat.find((cat) => cat._id === id)
-                      if (!category) return null
-                      return (
-                        <span key={id}>
-                          <button
-                            type="button"
-                            onClick={() => setSelectedCategoryIds(selectedCategoryIds.slice(0, index + 1))}
-                            className="font-medium text-purple-700 hover:underline"
-                          >
-                            {category.categoryName}
-                          </button>
-                          {index < selectedCategoryIds.length - 1 && <span className="mx-1">{" > "}</span>}
-                        </span>
-                      )
-                    })}
-                  </div>
-                )}
-              </div>
-            </div>
-
-            {/* Product Details (Key-Value Pairs) */}
-            <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-gray-50">
-              <div className="flex justify-between items-center">
-                <h3 className={subSectionTitleClass}>Product Details</h3>
-                <button
-                  type="button"
-                  className={outlineButtonClass}
-                  onClick={() => addKeyValuePair(setProductDetails, productDetails)}
-                >
-                  <Plus className="h-4 w-4 mr-2" /> Add Detail
-                </button>
-              </div>
-              {productDetails.map((detail, index) => (
-                <div key={index} className="flex flex-col sm:flex-row gap-4 items-end">
-                  <div className="flex-1 space-y-2">
-                    <label htmlFor={`detail-key-${index}`} className={labelClass}>
-                      Key
-                    </label>
-                    <input
-                      id={`detail-key-${index}`}
-                      type="text"
-                      value={detail.key}
-                      onChange={(e) =>
-                        updateKeyValuePair(setProductDetails, productDetails, index, "key", e.target.value)
-                      }
-                      placeholder="e.g., Material"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="flex-1 space-y-2">
-                    <label htmlFor={`detail-value-${index}`} className={labelClass}>
-                      Value
-                    </label>
-                    <input
-                      id={`detail-value-${index}`}
-                      type="text"
-                      value={detail.value}
-                      onChange={(e) =>
-                        updateKeyValuePair(setProductDetails, productDetails, index, "value", e.target.value)
-                      }
-                      placeholder="e.g., Cotton"
-                      className={inputClass}
-                    />
-                  </div>
-                  <button
-                    type="button"
-                    className={`${destructiveButtonClass} p-2`}
-                    onClick={() => removeKeyValuePair(setProductDetails, productDetails, index)}
-                  >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Conditional Message */}
-            <div
-              className="bg-yellow-50 border-l-4 border-yellow-400 text-yellow-800 p-4 rounded-md shadow-sm flex items-center space-x-3"
-              role="alert"
-            >
-              <AlertCircle className="h-6 w-6 flex-shrink-0 text-yellow-500" />
-              <p className="text-base font-medium">
-                Fill below fields only if you don't have any product variants. If you add variants, these fields will be
-                ignored.
-              </p>
-            </div>
-
-            {/* Price, Stock, Image, Additional Images, Bulk Pricing (Conditional) */}
-            {!hasVariants && (
-              <>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                  <div className="space-y-2">
-                    <label htmlFor="stock" className={labelClass}>
-                      Stock
-                    </label>
-                    <input
-                      id="stock"
-                      type="number"
-                      value={stock}
-                      onChange={(e) => setStock(e.target.value)}
-                      placeholder="Enter stock quantity"
-                      className={inputClass}
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <label htmlFor="price" className={labelClass}>
-                      Price
-                    </label>
-                    <input
-                      id="price"
-                      type="number"
-                      value={price}
-                      onChange={(e) => setPrice(e.target.value)}
-                      placeholder="Enter price"
-                      className={inputClass}
-                    />
-                  </div>
-                </div>
-
-                <div className="space-y-2">
-                  <label htmlFor="mainImage" className={labelClass}>
-                    Product Main Image
-                  </label>
-                  <input
-                    id="mainImage"
-                    type="file"
-                    accept="image/*"
-                    onChange={(e) => setMainImage(e.target.files[0])}
-                    className={`${inputClass} file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer`}
-                  />
-                  {mainImagePreview && (
-                    <div className="mt-2">
-                      <img
-                        src={mainImagePreview || "/placeholder.svg"}
-                        alt="Main Product Preview"
-                        className="h-24 w-24 object-cover rounded-md shadow-sm"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-gray-50">
-                  <div className="flex justify-between items-center">
-                    <h3 className={subSectionTitleClass}>Additional Images</h3>
-                    <button
-                      type="button"
-                      className={outlineButtonClass}
-                      onClick={() => {
-                        addImageField(setAdditionalImages, additionalImages)
-                        // Trigger click on the newly added input field
-                        // This assumes the ref array is updated synchronously
-                        setTimeout(() => {
-                          if (mainAdditionalImageInputRef.current[additionalImages.length]) {
-                            mainAdditionalImageInputRef.current[additionalImages.length].click()
-                          }
-                        }, 0)
-                      }}
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Add More Image
-                    </button>
-                  </div>
-                  {additionalImages.map((image, index) => (
-                    <div key={index} className="flex flex-col sm:flex-row items-end gap-4">
-                      <div className="flex-1 space-y-2">
-                        <label htmlFor={`additional-image-${index}`} className={labelClass}>
-                          Image {index + 1}
-                        </label>
-                        <input
-                          id={`additional-image-${index}`}
-                          type="file"
-                          accept="image/*"
-                          ref={(el) => (mainAdditionalImageInputRef.current[index] = el)} // Assign ref
-                          onChange={(e) =>
-                            updateImageField(setAdditionalImages, additionalImages, index, e.target.files[0])
-                          }
-                          className={`${inputClass} file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer`}
-                        />
-                        {image.preview && (
-                          <div className="mt-2">
-                            <img
-                              src={image.preview || "/placeholder.svg"}
-                              alt={`Additional ${index + 1} Preview`}
-                              className="h-20 w-20 object-cover rounded-md shadow-sm"
-                            />
-                          </div>
-                        )}
-                      </div>
-                      <button
-                        type="button"
-                        className={`${destructiveButtonClass} p-2`}
-                        onClick={() => removeImageField(setAdditionalImages, additionalImages, index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                {/* Bulk Pricing Section */}
-                <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-gray-50">
-                  <div className="flex justify-between items-center">
-                    <h3 className={subSectionTitleClass}>Bulk Pricing</h3>
-                    <button
-                      type="button"
-                      className={outlineButtonClass}
-                      onClick={() => addBulkPricingField(setBulkPricing, bulkPricing)}
-                    >
-                      <Plus className="h-4 w-4 mr-2" /> Add Bulk Pricing
-                    </button>
-                  </div>
-                  {bulkPricing.map((bp, index) => (
-                    <div key={index} className="flex flex-col sm:flex-row gap-4 items-end">
-                      <div className="flex-1 space-y-2">
-                        <label htmlFor={`wholesale-price-${index}`} className={labelClass}>
-                          Wholesale Price
-                        </label>
-                        <input
-                          id={`wholesale-price-${index}`}
-                          type="number"
-                          value={bp.wholesalePrice}
-                          onChange={(e) =>
-                            updateBulkPricingField(setBulkPricing, bulkPricing, index, "wholesalePrice", e.target.value)
-                          }
-                          placeholder="Enter wholesale price"
-                          className={inputClass}
-                        />
-                        {price &&
-                          bp.wholesalePrice &&
-                          Number.parseFloat(bp.wholesalePrice) >= Number.parseFloat(price) && (
-                            <p className="text-red-500 text-sm mt-1">Wholesale price must be less than main price.</p>
-                          )}
-                      </div>
-                      <div className="flex-1 space-y-2">
-                        <label htmlFor={`quantity-${index}`} className={labelClass}>
-                          Quantity
-                        </label>
-                        <input
-                          id={`quantity-${index}`}
-                          type="number"
-                          value={bp.quantity}
-                          onChange={(e) =>
-                            updateBulkPricingField(setBulkPricing, bulkPricing, index, "quantity", e.target.value)
-                          }
-                          placeholder="Enter quantity"
-                          className={inputClass}
-                        />
-                        <p className="text-sm font-bold text-gray-700 mt-1">This will be included</p>
-                      </div>
-                      <button
-                        type="button"
-                        className={`${destructiveButtonClass} p-2`}
-                        onClick={() => removeBulkPricingField(setBulkPricing, bulkPricing, index)}
-                      >
-                        <X className="h-4 w-4" />
-                      </button>
-                    </div>
-                  ))}
-                </div>
-              </>
-            )}
-          </div>
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50">
+      <LoadingOverlay isLoading={isLoading} />
+      <ToastContainer />
+      
+      <div className="container mx-auto px-4 py-12 max-w-7xl">
+        {/* Page Header */}
+        <div className="text-center mb-12">
+          <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
+            Add New Product
+          </h1>
+          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            Create and manage your product catalog with our comprehensive product management system
+          </p>
         </div>
 
-        {/* Product Variant Section */}
-        {hasVariants && (
+        <form onSubmit={handleSubmit} className="space-y-8">
+          {/* Basic Information Section */}
           <div className={cardClass}>
-            <div className={sectionHeaderClass}>
-              <h2 className={sectionTitleClass}>Product Variants</h2>
+            <div className={headerClass}>
+              <h2 className={titleClass}>
+                <Package className="w-8 h-8 text-blue-600" />
+                Basic Information
+              </h2>
+              <p className={subtitleClass}>Essential details about your product</p>
             </div>
-            <div className="space-y-10">
-              {variants.map((variant, variantIndex) => (
-                <div
-                  key={variantIndex}
-                  className="bg-gray-50 rounded-xl p-6 space-y-8 border-2 border-dashed border-gray-300"
-                >
-                  <div className="flex justify-between items-center mb-4">
-                    <h3 className="text-xl font-bold text-gray-800">Variant {variantIndex + 1}</h3>
+            <div className={sectionClass}>
+              <div className="space-y-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="space-y-2">
+                    <label htmlFor="productName" className={labelClass}>
+                      Product Name *
+                    </label>
+                    <input
+                      id="productName"
+                      type="text"
+                      value={productName}
+                      onChange={(e) => setProductName(e.target.value)}
+                      placeholder="Enter your product name"
+                      className={inputClass}
+                    />
+                  </div>
+                  <div className="space-y-6">
+                    {renderCategoryDropdowns()}
+                  </div>
+                </div>
+
+                {categoryPath && (
+                  <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
+                    <div className="flex items-center gap-2 text-blue-800 font-medium">
+                      <Check className="w-5 h-5" />
+                      Category Path: {categoryPath}
+                    </div>
+                  </div>
+                )}
+
+                {/* Product Details */}
+                <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                  <div className="flex justify-between items-center">
+                    <h3 className="text-xl font-semibold text-gray-900">Product Specifications</h3>
                     <button
                       type="button"
-                      className={`${destructiveButtonClass} p-2`}
-                      onClick={() => removeVariant(variantIndex)}
+                      className={secondaryButtonClass}
+                      onClick={() => addKeyValuePair(setProductDetails, productDetails)}
                     >
-                      <X className="h-5 w-5" />
+                      <Plus className="w-4 h-4" />
+                      Add Detail
                     </button>
                   </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div className="space-y-2">
-                      <label htmlFor={`color-name-${variantIndex}`} className={labelClass}>
-                        Color Name
-                      </label>
-                      <input
-                        id={`color-name-${variantIndex}`}
-                        type="text"
-                        value={variant.colorName}
-                        onChange={(e) => updateVariantField(variantIndex, "colorName", e.target.value)}
-                        placeholder="e.g., Red"
-                        className={inputClass}
-                        // Removed required attribute
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <label htmlFor={`variant-image-${variantIndex}`} className={labelClass}>
-                        Variant Image
-                      </label>
-                      <input
-                        id={`variant-image-${variantIndex}`}
-                        type="file"
-                        accept="image/*"
-                        ref={(el) => (variantImageInputRefs.current[variantIndex] = el)} // Assign ref
-                        onChange={(e) =>
-                          updateVariantField(variantIndex, "variantImage", {
-                            file: e.target.files[0],
-                            preview: e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : null,
-                          })
-                        }
-                        className={`${inputClass} file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer`}
-                      />
-                      {variant.variantImage.preview && (
-                        <div className="mt-2">
-                          <img
-                            src={variant.variantImage.preview || "/placeholder.svg"}
-                            alt="Variant Preview"
-                            className="h-24 w-24 object-cover rounded-md shadow-sm"
-                          />
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Set as Default Checkbox */}
-                  <div className="flex items-center space-x-3 mt-4">
-                    <input
-                      id={`default-variant-${variantIndex}`}
-                      type="checkbox"
-                      checked={variant.isDefault}
-                      onChange={(e) => updateVariantField(variantIndex, "isDefault", e.target.checked)}
-                      className={checkboxClass}
-                    />
-                    <label
-                      htmlFor={`default-variant-${variantIndex}`}
-                      className="text-base font-medium text-gray-700 cursor-pointer"
-                    >
-                      Set as default
-                    </label>
-                  </div>
-
-                  {/* Variant-specific Optional Details */}
-                  <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-white">
-                    <div className="flex justify-between items-center">
-                      <h4 className={subSectionTitleClass}>Variant Optional Details (Optional)</h4>
-                      <button
-                        type="button"
-                        className={outlineButtonClass}
-                        onClick={() => {
-                          updateVariantField(variantIndex, "optionalDetails", [
-                            ...variant.optionalDetails,
-                            { key: "", value: "" },
-                          ])
-                        }}
-                      >
-                        <Plus className="h-4 w-4 mr-2" /> Add Optional Detail
-                      </button>
-                    </div>
-                    {variant.optionalDetails.map((detail, index) => (
-                      <div key={index} className="flex flex-col sm:flex-row gap-4 items-end">
-                        <div className="flex-1 space-y-2">
-                          <label htmlFor={`variant-optional-key-${variantIndex}-${index}`} className={labelClass}>
-                            Key
-                          </label>
+                  {productDetails.map((detail, index) => (
+                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <label className={labelClass}>Specification</label>
+                        <input
+                          type="text"
+                          value={detail.key}
+                          onChange={(e) =>
+                            updateKeyValuePair(setProductDetails, productDetails, index, "key", e.target.value)
+                          }
+                          placeholder="e.g., Material, Weight, Color"
+                          className={inputClass}
+                        />
+                      </div>
+                      <div className="space-y-2 flex gap-4 items-end">
+                        <div className="flex-1">
+                          <label className={labelClass}>Value</label>
                           <input
-                            id={`variant-optional-key-${variantIndex}-${index}`}
-                            type="text"
-                            value={detail.key}
-                            onChange={(e) => {
-                              const newDetails = [...variant.optionalDetails]
-                              newDetails[index].key = e.target.value
-                              updateVariantField(variantIndex, "optionalDetails", newDetails)
-                            }}
-                            placeholder="e.g., Material"
-                            className={inputClass}
-                          />
-                        </div>
-                        <div className="flex-1 space-y-2">
-                          <label htmlFor={`variant-optional-value-${variantIndex}-${index}`} className={labelClass}>
-                            Value
-                          </label>
-                          <input
-                            id={`variant-optional-value-${variantIndex}-${index}`}
                             type="text"
                             value={detail.value}
-                            onChange={(e) => {
-                              const newDetails = [...variant.optionalDetails]
-                              newDetails[index].value = e.target.value
-                              updateVariantField(variantIndex, "optionalDetails", newDetails)
-                            }}
-                            placeholder="e.g., Cotton"
+                            onChange={(e) =>
+                              updateKeyValuePair(setProductDetails, productDetails, index, "value", e.target.value)
+                            }
+                            placeholder="e.g., Cotton, 500g, Blue"
                             className={inputClass}
                           />
                         </div>
                         <button
                           type="button"
-                          className={`${destructiveButtonClass} p-2`}
-                          onClick={() => {
-                            const newDetails = variant.optionalDetails.filter((_, i) => i !== index)
-                            updateVariantField(variantIndex, "optionalDetails", newDetails)
-                          }}
+                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                          onClick={() => removeKeyValuePair(setProductDetails, productDetails, index)}
                         >
-                          <X className="h-4 w-4" />
+                          <X className="w-4 h-4" />
                         </button>
                       </div>
-                    ))}
-                  </div>
-
-                  {/* Size Sections (formerly More Details Sections) */}
-                  <div className="space-y-8">
-                    <div className="flex justify-between items-center">
-                      <h3 className={subSectionTitleClass}>Size Sections</h3>
-                      <button type="button" className={outlineButtonClass} onClick={() => addSizeSection(variantIndex)}>
-                        <Plus className="h-4 w-4 mr-2" /> Add Size Section
-                      </button>
                     </div>
-                    {variant.moreDetails.map((md, mdIndex) => (
-                      <div
-                        key={mdIndex}
-                        className="bg-white rounded-xl p-6 space-y-8 border-2 border-dotted border-gray-200"
-                      >
-                        <div className="flex justify-between items-center mb-4">
-                          <h4 className="text-lg font-bold text-gray-800">Size Section {mdIndex + 1}</h4>
-                          <button
-                            type="button"
-                            className={`${destructiveButtonClass} p-2`}
-                            onClick={() => removeSizeSection(variantIndex, mdIndex)}
-                          >
-                            <X className="h-5 w-5" />
-                          </button>
-                        </div>
+                  ))}
+                </div>
 
-                        {/* Single Size Fields - Dimensions and Unit in one line */}
-                        <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-gray-50">
-                          <h5 className="text-md font-semibold text-gray-800">Dimensions</h5>
-                          <div className="grid grid-cols-1 sm:grid-cols-4 gap-6">
-                            <div className="space-y-2">
-                              <label htmlFor={`length-${variantIndex}-${mdIndex}`} className={labelClass}>
-                                Length
-                              </label>
-                              <input
-                                id={`length-${variantIndex}-${mdIndex}`}
-                                type="number"
-                                value={md.size.length}
-                                onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "length", e.target.value)}
-                                placeholder="Length"
-                                className={inputClass}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label htmlFor={`breadth-${variantIndex}-${mdIndex}`} className={labelClass}>
-                                Breadth
-                              </label>
-                              <input
-                                id={`breadth-${variantIndex}-${mdIndex}`}
-                                type="number"
-                                value={md.size.breadth}
-                                onChange={(e) =>
-                                  updateSingleSizeField(variantIndex, mdIndex, "breadth", e.target.value)
-                                }
-                                placeholder="Breadth"
-                                className={inputClass}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label htmlFor={`height-${variantIndex}-${mdIndex}`} className={labelClass}>
-                                Height
-                              </label>
-                              <input
-                                id={`height-${variantIndex}-${mdIndex}`}
-                                type="number"
-                                value={md.size.height}
-                                onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "height", e.target.value)}
-                                placeholder="Height"
-                                className={inputClass}
-                              />
-                            </div>
-                            <div className="space-y-2">
-                              <label htmlFor={`unit-${variantIndex}-${mdIndex}`} className={labelClass}>
-                                Unit
-                              </label>
-                              <div className="relative">
-                                <select
-                                  id={`unit-${variantIndex}-${mdIndex}`}
-                                  value={md.size.unit}
-                                  onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "unit", e.target.value)}
-                                  className={`${selectClass} w-full`}
-                                  // Removed required attribute
-                                >
-                                  <option value="cm">cm</option>
-                                  <option value="m">m</option>
-                                  <option value="inch">inch</option>
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                  <svg
-                                    className="fill-current h-4 w-4"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Additional Images for this Size Section */}
-                        <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-gray-50">
-                          <div className="flex justify-between items-center">
-                            <h5 className="text-md font-semibold text-gray-800">
-                              Additional Images for this Size (Optional)
-                            </h5>
-                            <button
-                              type="button"
-                              className={outlineButtonClass}
-                              onClick={() => {
-                                addImageField(
-                                  (arr) => updateSizeSectionField(variantIndex, mdIndex, "additionalImages", arr),
-                                  md.additionalImages,
-                                )
-                                setTimeout(() => {
-                                  if (
-                                    mdAdditionalImageInputRefs.current[
-                                      `${variantIndex}-${mdIndex}-${md.additionalImages.length}`
-                                    ]
-                                  ) {
-                                    mdAdditionalImageInputRefs.current[
-                                      `${variantIndex}-${mdIndex}-${md.additionalImages.length}`
-                                    ].click()
-                                  }
-                                }, 0)
-                              }}
-                            >
-                              <Plus className="h-4 w-4 mr-2" /> Add More Image
-                            </button>
-                          </div>
-                          {getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
-                            <div className="space-y-2">
-                              <label htmlFor={`reuse-images-${variantIndex}-${mdIndex}`} className={labelClass}>
-                                Do you want to reuse additional images?
-                              </label>
-                              <div className="relative">
-                                <select
-                                  id={`reuse-images-${variantIndex}-${mdIndex}`}
-                                  value={md.reuseAdditionalImages}
-                                  onChange={(e) => {
-                                    updateSizeSectionField(
-                                      variantIndex,
-                                      mdIndex,
-                                      "reuseAdditionalImages",
-                                      e.target.value,
-                                    )
-                                    if (e.target.value === "no") {
-                                      updateSizeSectionField(variantIndex, mdIndex, "additionalImages", [
-                                        { file: null, preview: null },
-                                      ]) // Reset if not reusing
-                                      updateSizeSectionField(variantIndex, mdIndex, "reusedImageSource", "")
-                                    }
-                                  }}
-                                  className={selectClass}
-                                >
-                                  <option value="no">No</option>
-                                  <option value="yes">Yes</option>
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                  <svg
-                                    className="fill-current h-4 w-4"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {md.reuseAdditionalImages === "yes" &&
-                            getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
-                              <div className="space-y-2">
-                                <label
-                                  htmlFor={`reused-image-source-${variantIndex}-${mdIndex}`}
-                                  className={labelClass}
-                                >
-                                  Select source
-                                </label>
-                                <div className="relative">
-                                  <select
-                                    id={`reused-image-source-${variantIndex}-${mdIndex}`}
-                                    value={md.reusedImageSource}
-                                    onChange={(e) =>
-                                      handleReuseSelection(variantIndex, mdIndex, "images", e.target.value)
-                                    }
-                                    className={selectClass}
-                                  >
-                                    <option value="">Select source</option>
-                                    {getReuseOptions(variantIndex, mdIndex, "images").map((option) => (
-                                      <option key={option.id} value={option.id}>
-                                        {option.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                    <svg
-                                      className="fill-current h-4 w-4"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                    </svg>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                          {md.reuseAdditionalImages === "no" &&
-                            md.additionalImages.map((image, index) => (
-                              <div key={index} className="flex flex-col sm:flex-row items-end gap-4">
-                                <div className="flex-1 space-y-2">
-                                  <label
-                                    htmlFor={`md-additional-image-${variantIndex}-${mdIndex}-${index}`}
-                                    className={labelClass}
-                                  >
-                                    Image {index + 1}
-                                  </label>
-                                  <input
-                                    id={`md-additional-image-${variantIndex}-${mdIndex}-${index}`}
-                                    type="file"
-                                    accept="image/*"
-                                    ref={(el) =>
-                                      (mdAdditionalImageInputRefs.current[`${variantIndex}-${mdIndex}-${index}`] = el)
-                                    } // Assign ref
-                                    onChange={(e) => {
-                                      const newImages = [...md.additionalImages]
-                                      if (newImages[index]?.preview) URL.revokeObjectURL(newImages[index].preview)
-                                      newImages[index] = {
-                                        file: e.target.files[0],
-                                        preview: e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : null,
-                                      }
-                                      updateSizeSectionField(variantIndex, mdIndex, "additionalImages", newImages)
-                                    }}
-                                    className={`${inputClass} file:mr-4 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-semibold file:bg-purple-50 file:text-purple-700 hover:file:bg-purple-100 cursor-pointer`}
-                                  />
-                                  {image.preview && (
-                                    <div className="mt-2">
-                                      <img
-                                        src={image.preview || "/placeholder.svg"}
-                                        alt={`MD Add ${index + 1} Preview`}
-                                        className="h-20 w-20 object-cover rounded-md shadow-sm"
-                                      />
-                                    </div>
-                                  )}
-                                </div>
-                                <button
-                                  type="button"
-                                  className={`${destructiveButtonClass} p-2`}
-                                  onClick={() => {
-                                    const newImages = md.additionalImages.filter((_, i) => i !== index)
-                                    if (md.additionalImages[index]?.preview)
-                                      URL.revokeObjectURL(md.additionalImages[index].preview)
-                                    updateSizeSectionField(variantIndex, mdIndex, "additionalImages", newImages)
-                                  }}
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
-                        </div>
-
-                        {/* Optional Details for this size */}
-                        <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-gray-50">
-                          <div className="flex justify-between items-center">
-                            <h5 className="text-md font-semibold text-gray-800">
-                              Optional Details for this Size (Optional)
-                            </h5>
-                            <button
-                              type="button"
-                              className={outlineButtonClass}
-                              onClick={() => {
-                                updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", [
-                                  ...md.optionalDetails,
-                                  { key: "", value: "" },
-                                ])
-                              }}
-                            >
-                              <Plus className="h-4 w-4 mr-2" /> Add Optional Detail
-                            </button>
-                          </div>
-                          {getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
-                            <div className="space-y-2">
-                              <label
-                                htmlFor={`reuse-optional-details-${variantIndex}-${mdIndex}`}
-                                className={labelClass}
-                              >
-                                Do you want to reuse optional details?
-                              </label>
-                              <div className="relative">
-                                <select
-                                  id={`reuse-optional-details-${variantIndex}-${mdIndex}`}
-                                  value={md.reuseOptionalDetails}
-                                  onChange={(e) => {
-                                    updateSizeSectionField(
-                                      variantIndex,
-                                      mdIndex,
-                                      "reuseOptionalDetails",
-                                      e.target.value,
-                                    )
-                                    if (e.target.value === "no") {
-                                      updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", [
-                                        { key: "", value: "" },
-                                      ]) // Reset if not reusing
-                                      updateSizeSectionField(variantIndex, mdIndex, "reusedOptionalDetailSource", "")
-                                    }
-                                  }}
-                                  className={selectClass}
-                                >
-                                  <option value="no">No</option>
-                                  <option value="yes">Yes</option>
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                  <svg
-                                    className="fill-current h-4 w-4"
-                                    xmlns="http://www.w3.org/2000/svg"
-                                    viewBox="0 0 20 20"
-                                  >
-                                    <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                  </svg>
-                                </div>
-                              </div>
-                            </div>
-                          )}
-
-                          {md.reuseOptionalDetails === "yes" &&
-                            getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
-                              <div className="space-y-2">
-                                <label
-                                  htmlFor={`reused-optional-detail-source-${variantIndex}-${mdIndex}`}
-                                  className={labelClass}
-                                >
-                                  Select source
-                                </label>
-                                <div className="relative">
-                                  <select
-                                    id={`reused-optional-detail-source-${variantIndex}-${mdIndex}`}
-                                    value={md.reusedOptionalDetailSource}
-                                    onChange={(e) =>
-                                      handleReuseSelection(variantIndex, mdIndex, "optionalDetails", e.target.value)
-                                    }
-                                    className={selectClass}
-                                  >
-                                    <option value="">Select source</option>
-                                    {getReuseOptions(variantIndex, mdIndex, "optionalDetails").map((option) => (
-                                      <option key={option.id} value={option.id}>
-                                        {option.label}
-                                      </option>
-                                    ))}
-                                  </select>
-                                  <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                                    <svg
-                                      className="fill-current h-4 w-4"
-                                      xmlns="http://www.w3.org/2000/svg"
-                                      viewBox="0 0 20 20"
-                                    >
-                                      <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                                    </svg>
-                                  </div>
-                                </div>
-                              </div>
-                            )}
-
-                          {md.reuseOptionalDetails === "no" &&
-                            md.optionalDetails.map((detail, index) => (
-                              <div key={index} className="flex flex-col sm:flex-row gap-4 items-end">
-                                <div className="flex-1 space-y-2">
-                                  <label
-                                    htmlFor={`md-optional-key-${variantIndex}-${mdIndex}-${index}`}
-                                    className={labelClass}
-                                  >
-                                    Key
-                                  </label>
-                                  <input
-                                    id={`md-optional-key-${variantIndex}-${mdIndex}-${index}`}
-                                    type="text"
-                                    value={detail.key}
-                                    onChange={(e) => {
-                                      const newDetails = [...md.optionalDetails]
-                                      newDetails[index].key = e.target.value
-                                      updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
-                                    }}
-                                    placeholder="e.g., Feature"
-                                    className={inputClass}
-                                  />
-                                </div>
-                                <div className="flex-1 space-y-2">
-                                  <label
-                                    htmlFor={`md-optional-value-${variantIndex}-${mdIndex}-${index}`}
-                                    className={labelClass}
-                                  >
-                                    Value
-                                  </label>
-                                  <input
-                                    id={`md-optional-value-${variantIndex}-${mdIndex}-${index}`}
-                                    type="text"
-                                    value={detail.value}
-                                    onChange={(e) => {
-                                      const newDetails = [...md.optionalDetails]
-                                      newDetails[index].value = e.target.value
-                                      updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
-                                    }}
-                                    placeholder="e.g., Waterproof"
-                                    className={inputClass}
-                                  />
-                                </div>
-                                <button
-                                  type="button"
-                                  className={`${destructiveButtonClass} p-2`}
-                                  onClick={() => {
-                                    const newDetails = md.optionalDetails.filter((_, i) => i !== index)
-                                    updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
-                                  }}
-                                >
-                                  <X className="h-4 w-4" />
-                                </button>
-                              </div>
-                            ))}
-                        </div>
-
-                        {/* Price & Stock for this specific Size Section (only if not common for variant) */}
-                        {variant.moreDetails.length > 1 && variant.isPriceSame === "no" && (
-                          <div className="space-y-2">
-                            <label htmlFor={`md-price-${variantIndex}-${mdIndex}`} className={labelClass}>
-                              Price ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x
-                              {md.size?.height || "?"})
-                            </label>
-                            <input
-                              id={`md-price-${variantIndex}-${mdIndex}`}
-                              type="number"
-                              value={md.price}
-                              onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "price", e.target.value)}
-                              placeholder="Enter price"
-                              className={inputClass}
-                            />
-                          </div>
-                        )}
-                        {variant.moreDetails.length > 1 && variant.isStockSame === "no" && (
-                          <div className="space-y-2">
-                            <label htmlFor={`md-stock-${variantIndex}-${mdIndex}`} className={labelClass}>
-                              Stock ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x
-                              {md.size?.height || "?"})
-                            </label>
-                            <input
-                              id={`md-stock-${variantIndex}-${mdIndex}`}
-                              type="number"
-                              value={md.stock}
-                              onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "stock", e.target.value)}
-                              placeholder="Enter stock"
-                              className={inputClass}
-                            />
-                          </div>
-                        )}
-                        {variant.moreDetails.length > 1 &&
-                          (variant.isPriceSame === "no" || variant.isStockSame === "no") && (
-                            <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-gray-50">
-                              <div className="flex justify-between items-center">
-                                <h5 className="text-md font-semibold text-gray-800">
-                                  Bulk Pricing Combinations ({variant.colorName} - {md.size?.length || "?"}x
-                                  {md.size?.breadth || "?"}x{md.size?.height || "?"})
-                                </h5>
-                                <button
-                                  type="button"
-                                  className={outlineButtonClass}
-                                  onClick={() => {
-                                    updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", [
-                                      ...md.bulkPricingCombinations,
-                                      { wholesalePrice: "", quantity: "" },
-                                    ])
-                                  }}
-                                >
-                                  <Plus className="h-4 w-4 mr-2" /> Add Bulk Pricing
-                                </button>
-                              </div>
-                              {md.bulkPricingCombinations.map((bpc, index) => (
-                                <div key={index} className="flex flex-col sm:flex-row gap-4 items-end">
-                                  <div className="flex-1 space-y-2">
-                                    <label
-                                      htmlFor={`md-bpc-wholesale-${variantIndex}-${mdIndex}-${index}`}
-                                      className={labelClass}
-                                    >
-                                      Wholesale Price
-                                    </label>
-                                    <input
-                                      id={`md-bpc-wholesale-${variantIndex}-${mdIndex}-${index}`}
-                                      type="number"
-                                      value={bpc.wholesalePrice}
-                                      onChange={(e) => {
-                                        const newBPC = [...md.bulkPricingCombinations]
-                                        newBPC[index].wholesalePrice = e.target.value
-                                        updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
-                                      }}
-                                      placeholder="Enter wholesale price"
-                                      className={inputClass}
-                                    />
-                                    {md.price &&
-                                      bpc.wholesalePrice &&
-                                      Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(md.price) && (
-                                        <p className="text-red-500 text-sm mt-1">
-                                          Wholesale price must be less than this price.
-                                        </p>
-                                      )}
-                                  </div>
-                                  <div className="flex-1 space-y-2">
-                                    <label
-                                      htmlFor={`md-bpc-quantity-${variantIndex}-${mdIndex}-${index}`}
-                                      className={labelClass}
-                                    >
-                                      Quantity
-                                    </label>
-                                    <input
-                                      id={`md-bpc-quantity-${variantIndex}-${mdIndex}-${index}`}
-                                      type="number"
-                                      value={bpc.quantity}
-                                      onChange={(e) => {
-                                        const newBPC = [...md.bulkPricingCombinations]
-                                        newBPC[index].quantity = e.target.value
-                                        updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
-                                      }}
-                                      placeholder="Enter quantity"
-                                      className={inputClass}
-                                    />
-                                    <p className="text-sm font-bold text-gray-700 mt-1">This will be included</p>
-                                  </div>
-                                  <button
-                                    type="button"
-                                    className={`${destructiveButtonClass} p-2`}
-                                    onClick={() => {
-                                      const newBPC = md.bulkPricingCombinations.filter((_, i) => i !== index)
-                                      updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
-                                    }}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </button>
-                                </div>
-                              ))}
-                            </div>
-                          )}
-                      </div>
-                    ))}
+                {/* Warning Message */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
+                  <div className="flex items-start gap-3">
+                    <AlertCircle className="w-6 h-6 text-amber-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <h4 className="font-semibold text-amber-900 mb-2">Important Notice</h4>
+                      <p className="text-amber-800">
+                        Fill the fields below only if you don't have product variants. If you add variants, these basic fields will be ignored.
+                      </p>
+                    </div>
                   </div>
+                </div>
 
-                  {/* Price & Stock for Variant (Common or Per Size Section) */}
-                  {/* Display these dropdowns only if there are multiple size sections */}
-                  {variant.moreDetails.length > 1 && (
-                    <>
+                {/* Basic Product Fields */}
+                {!hasVariants && (
+                  <>
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                       <div className="space-y-2">
-                        <label className={labelClass}>Is price same for all size sections?</label>
-                        <div className="relative">
-                          <select
-                            value={variant.isPriceSame}
-                            onChange={(e) => updateVariantField(variantIndex, "isPriceSame", e.target.value)}
-                            className={selectClass}
-                          >
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <svg
-                              className="fill-current h-4 w-4"
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                            </svg>
-                          </div>
-                        </div>
+                        <label htmlFor="stock" className={labelClass}>
+                          <Package className="inline w-4 h-4 mr-2" />
+                          Stock Quantity
+                        </label>
+                        <input
+                          id="stock"
+                          type="number"
+                          value={stock}
+                          onChange={(e) => setStock(e.target.value)}
+                          placeholder="Available quantity"
+                          className={inputClass}
+                        />
                       </div>
                       <div className="space-y-2">
-                        <label className={labelClass}>Is stock same for all size sections?</label>
-                        <div className="relative">
-                          <select
-                            value={variant.isStockSame}
-                            onChange={(e) => updateVariantField(variantIndex, "isStockSame", e.target.value)}
-                            className={selectClass}
-                          >
-                            <option value="yes">Yes</option>
-                            <option value="no">No</option>
-                          </select>
-                          <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
-                            <svg
-                              className="fill-current h-4 w-4"
-                              xmlns="http://www.w3.org/2000/svg"
-                              viewBox="0 0 20 20"
-                            >
-                              <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                            </svg>
-                          </div>
-                        </div>
+                        <label htmlFor="price" className={labelClass}>
+                          <DollarSign className="inline w-4 h-4 mr-2" />
+                          Price ($)
+                        </label>
+                        <input
+                          id="price"
+                          type="number"
+                          value={price}
+                          onChange={(e) => setPrice(e.target.value)}
+                          placeholder="Product price"
+                          className={inputClass}
+                        />
                       </div>
-                    </>
-                  )}
+                    </div>
 
-                  {/* Common Price, Stock, Bulk Pricing (always shown if single size, or if 'yes' selected for multiple sizes) */}
-                  {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
-                    <div className="space-y-2">
-                      <label htmlFor={`common-price-${variantIndex}`} className={labelClass}>
-                        Common Price
+                    {/* Main Image Upload */}
+                    <div className="space-y-4">
+                      <label htmlFor="mainImage" className={labelClass}>
+                        <ImageIcon className="inline w-4 h-4 mr-2" />
+                        Product Main Image
                       </label>
-                      <input
-                        id={`common-price-${variantIndex}`}
-                        type="number"
-                        value={variant.commonPrice}
-                        onChange={(e) => updateVariantField(variantIndex, "commonPrice", e.target.value)}
-                        placeholder="Enter common price"
-                        className={inputClass}
-                      />
+                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+                        <input
+                          id="mainImage"
+                          type="file"
+                          accept="image/*"
+                          onChange={(e) => setMainImage(e.target.files[0])}
+                          className="hidden"
+                        />
+                        <label htmlFor="mainImage" className="cursor-pointer">
+                          {mainImagePreview ? (
+                            <div className="space-y-4">
+                              <img
+                                src={mainImagePreview}
+                                alt="Main Product Preview"
+                                className="h-40 w-40 object-cover rounded-xl mx-auto shadow-lg"
+                              />
+                              <p className="text-sm text-gray-600">Click to change image</p>
+                            </div>
+                          ) : (
+                            <div className="space-y-4">
+                              <Upload className="h-16 w-16 text-gray-400 mx-auto" />
+                              <div>
+                                <p className="text-lg font-medium text-gray-900">Upload Product Image</p>
+                                <p className="text-sm text-gray-600">PNG, JPG up to 10MB</p>
+                              </div>
+                            </div>
+                          )}
+                        </label>
+                      </div>
                     </div>
-                  )}
-                  {(variant.moreDetails.length === 1 || variant.isStockSame === "yes") && (
-                    <div className="space-y-2">
-                      <label htmlFor={`common-stock-${variantIndex}`} className={labelClass}>
-                        Common Stock
-                      </label>
-                      <input
-                        id={`common-stock-${variantIndex}`}
-                        type="number"
-                        value={variant.commonStock}
-                        onChange={(e) => updateVariantField(variantIndex, "commonStock", e.target.value)}
-                        placeholder="Enter common stock"
-                        className={inputClass}
-                      />
-                    </div>
-                  )}
-                  {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
-                    <div className="space-y-4 border border-gray-200 p-6 rounded-lg bg-white">
+
+                    {/* Additional Images */}
+                    <div className="bg-gray-50 rounded-xl p-6 space-y-6">
                       <div className="flex justify-between items-center">
-                        <h4 className={subSectionTitleClass}>Common Bulk Pricing Combinations</h4>
+                        <h3 className="text-xl font-semibold text-gray-900">Additional Images</h3>
                         <button
                           type="button"
-                          className={outlineButtonClass}
+                          className={secondaryButtonClass}
                           onClick={() => {
-                            updateVariantField(variantIndex, "commonBulkPricingCombinations", [
-                              ...variant.commonBulkPricingCombinations,
-                              { wholesalePrice: "", quantity: "" },
-                            ])
+                            addImageField(setAdditionalImages, additionalImages)
+                            setTimeout(() => {
+                              if (mainAdditionalImageInputRef.current[additionalImages.length]) {
+                                mainAdditionalImageInputRef.current[additionalImages.length].click()
+                              }
+                            }, 0)
                           }}
                         >
-                          <Plus className="h-4 w-4 mr-2" /> Add Common Bulk Pricing
+                          <Plus className="w-4 h-4" />
+                          Add Image
                         </button>
                       </div>
-                      {variant.commonBulkPricingCombinations.map((bpc, index) => (
-                        <div key={index} className="flex flex-col sm:flex-row gap-4 items-end">
-                          <div className="flex-1 space-y-2">
-                            <label htmlFor={`common-bpc-wholesale-${variantIndex}-${index}`} className={labelClass}>
-                              Wholesale Price
-                            </label>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {additionalImages.map((image, index) => (
+                          <div key={index} className="relative">
+                            <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 transition-colors">
+                              <input
+                                id={`additional-image-${index}`}
+                                type="file"
+                                accept="image/*"
+                                ref={(el) => (mainAdditionalImageInputRef.current[index] = el)}
+                                onChange={(e) =>
+                                  updateImageField(setAdditionalImages, additionalImages, index, e.target.files[0])
+                                }
+                                className="hidden"
+                              />
+                              <label htmlFor={`additional-image-${index}`} className="cursor-pointer block">
+                                {image.preview ? (
+                                  <img
+                                    src={image.preview}
+                                    alt={`Additional ${index + 1}`}
+                                    className="h-24 w-24 object-cover rounded-lg mx-auto shadow-md"
+                                  />
+                                ) : (
+                                  <div className="space-y-2">
+                                    <ImageIcon className="h-8 w-8 text-gray-400 mx-auto" />
+                                    <p className="text-sm text-gray-600">Image {index + 1}</p>
+                                  </div>
+                                )}
+                              </label>
+                            </div>
+                            <button
+                              type="button"
+                              className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                              onClick={() => removeImageField(setAdditionalImages, additionalImages, index)}
+                            >
+                              <X className="w-3 h-3" />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* Bulk Pricing */}
+                    <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-xl font-semibold text-gray-900">Bulk Pricing Options</h3>
+                        <button
+                          type="button"
+                          className={secondaryButtonClass}
+                          onClick={() => addBulkPricingField(setBulkPricing, bulkPricing)}
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Pricing Tier
+                        </button>
+                      </div>
+                      {bulkPricing.map((bp, index) => (
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                          <div className="space-y-2">
+                            <label className={labelClass}>Wholesale Price ($)</label>
                             <input
-                              id={`common-bpc-wholesale-${variantIndex}-${index}`}
                               type="number"
-                              value={bpc.wholesalePrice}
-                              onChange={(e) => {
-                                const newBPC = [...variant.commonBulkPricingCombinations]
-                                newBPC[index].wholesalePrice = e.target.value
-                                updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
-                              }}
-                              placeholder="Enter wholesale price"
+                              value={bp.wholesalePrice}
+                              onChange={(e) =>
+                                updateBulkPricingField(setBulkPricing, bulkPricing, index, "wholesalePrice", e.target.value)
+                              }
+                              placeholder="Bulk price"
                               className={inputClass}
                             />
-                            {variant.commonPrice &&
-                              bpc.wholesalePrice &&
-                              Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(variant.commonPrice) && (
-                                <p className="text-red-500 text-sm mt-1">
-                                  Wholesale price must be less than common price.
-                                </p>
+                            {price &&
+                              bp.wholesalePrice &&
+                              Number.parseFloat(bp.wholesalePrice) >= Number.parseFloat(price) && (
+                                <p className="text-red-500 text-sm">Must be less than regular price</p>
                               )}
                           </div>
-                          <div className="flex-1 space-y-2">
-                            <label htmlFor={`common-bpc-quantity-${variantIndex}-${index}`} className={labelClass}>
-                              Quantity
-                            </label>
-                            <input
-                              id={`common-bpc-quantity-${variantIndex}-${index}`}
-                              type="number"
-                              value={bpc.quantity}
-                              onChange={(e) => {
-                                const newBPC = [...variant.commonBulkPricingCombinations]
-                                newBPC[index].quantity = e.target.value
-                                updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
-                              }}
-                              placeholder="Enter quantity"
-                              className={inputClass}
-                            />
-                            <p className="text-sm font-bold text-gray-700 mt-1">This will be included</p>
+                          <div className="space-y-2 flex gap-4 items-end">
+                            <div className="flex-1">
+                              <label className={labelClass}>Minimum Quantity</label>
+                              <input
+                                type="number"
+                                value={bp.quantity}
+                                onChange={(e) =>
+                                  updateBulkPricingField(setBulkPricing, bulkPricing, index, "quantity", e.target.value)
+                                }
+                                placeholder="Min qty"
+                                className={inputClass}
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                              onClick={() => removeBulkPricingField(setBulkPricing, bulkPricing, index)}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
                           </div>
-                          <button
-                            type="button"
-                            className={`${destructiveButtonClass} p-2`}
-                            onClick={() => {
-                              const newBPC = variant.commonBulkPricingCombinations.filter((_, i) => i !== index)
-                              updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
-                            }}
-                          >
-                            <X className="h-4 w-4" />
-                          </button>
                         </div>
                       ))}
                     </div>
-                  )}
-                </div>
-              ))}
-              <button type="button" className={secondaryButtonClass} onClick={addVariant}>
-                <Plus className="h-5 w-5 mr-2" /> Add Product Variant
-              </button>
+                  </>
+                )}
+              </div>
             </div>
           </div>
-        )}
 
-        <div className="flex justify-end gap-4 mt-8">
-          <button type="submit" className={`${primaryButtonClass} px-8 py-3 text-lg`}>
-            Add Product
-          </button>
-          {!hasVariants && (
-            <button
-              type="button"
-              className={`${outlineButtonClass} px-8 py-3 text-lg`}
-              onClick={() => setHasVariants(true)}
-            >
-              Add Variant Section
-            </button>
+          {/* Product Variants Section */}
+          {hasVariants && (
+            <div className={cardClass}>
+              <div className={headerClass}>
+                <h2 className={titleClass}>
+                  <Layers className="w-8 h-8 text-purple-600" />
+                  Product Variants
+                </h2>
+                <p className={subtitleClass}>Create different variations of your product</p>
+              </div>
+              <div className={sectionClass}>
+                <div className="space-y-10">
+                  {variants.map((variant, variantIndex) => (
+                    <div
+                      key={variantIndex}
+                      className="bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-200 p-8 space-y-8"
+                    >
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-2xl font-bold text-gray-900">
+                          Variant {variantIndex + 1}
+                          {variant.isDefault && (
+                            <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                              Default
+                            </span>
+                          )}
+                        </h3>
+                        <button
+                          type="button"
+                          className={dangerButtonClass}
+                          onClick={() => removeVariant(variantIndex)}
+                        >
+                          <X className="w-4 h-4" />
+                          Remove Variant
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                          <label className={labelClass}>Color/Variant Name</label>
+                          <input
+                            type="text"
+                            value={variant.colorName}
+                            onChange={(e) => updateVariantField(variantIndex, "colorName", e.target.value)}
+                            placeholder="e.g., Red, Blue, Large"
+                            className={inputClass}
+                          />
+                        </div>
+                        <div className="space-y-4">
+                          <label className={labelClass}>Variant Image</label>
+                          <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                            <input
+                              id={`variant-image-${variantIndex}`}
+                              type="file"
+                              accept="image/*"
+                              ref={(el) => (variantImageInputRefs.current[variantIndex] = el)}
+                              onChange={(e) =>
+                                updateVariantField(variantIndex, "variantImage", {
+                                  file: e.target.files[0],
+                                  preview: e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : null,
+                                })
+                              }
+                              className="hidden"
+                            />
+                            <label htmlFor={`variant-image-${variantIndex}`} className="cursor-pointer block">
+                              {variant.variantImage.preview ? (
+                                <img
+                                  src={variant.variantImage.preview}
+                                  alt="Variant Preview"
+                                  className="h-20 w-20 object-cover rounded-xl mx-auto shadow-md"
+                                />
+                              ) : (
+                                <div className="space-y-2">
+                                  <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                                  <p className="text-sm text-gray-600">Upload variant image</p>
+                                </div>
+                              )}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Default Variant Checkbox */}
+                      <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
+                        <input
+                          id={`default-variant-${variantIndex}`}
+                          type="checkbox"
+                          checked={variant.isDefault}
+                          onChange={(e) => updateVariantField(variantIndex, "isDefault", e.target.checked)}
+                          className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor={`default-variant-${variantIndex}`} className="font-medium text-blue-900 cursor-pointer">
+                          Set as default variant
+                        </label>
+                      </div>
+
+                      {/* Variant Optional Details */}
+                      <div className="bg-white rounded-xl p-6 border border-gray-100 space-y-6">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-lg font-semibold text-gray-900">Variant Specifications</h4>
+                          <button
+                            type="button"
+                            className={secondaryButtonClass}
+                            onClick={() => {
+                              updateVariantField(variantIndex, "optionalDetails", [
+                                ...variant.optionalDetails,
+                                { key: "", value: "" },
+                              ])
+                            }}
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add Detail
+                          </button>
+                        </div>
+                        {variant.optionalDetails.map((detail, index) => (
+                          <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className={labelClass}>Specification</label>
+                              <input
+                                type="text"
+                                value={detail.key}
+                                onChange={(e) => {
+                                  const newDetails = [...variant.optionalDetails]
+                                  newDetails[index].key = e.target.value
+                                  updateVariantField(variantIndex, "optionalDetails", newDetails)
+                                }}
+                                placeholder="e.g., Material"
+                                className={inputClass}
+                              />
+                            </div>
+                            <div className="space-y-2 flex gap-4 items-end">
+                              <div className="flex-1">
+                                <label className={labelClass}>Value</label>
+                                <input
+                                  type="text"
+                                  value={detail.value}
+                                  onChange={(e) => {
+                                    const newDetails = [...variant.optionalDetails]
+                                    newDetails[index].value = e.target.value
+                                    updateVariantField(variantIndex, "optionalDetails", newDetails)
+                                  }}
+                                  placeholder="e.g., Cotton"
+                                  className={inputClass}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                onClick={() => {
+                                  const newDetails = variant.optionalDetails.filter((_, i) => i !== index)
+                                  updateVariantField(variantIndex, "optionalDetails", newDetails)
+                                }}
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Size Sections */}
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-xl font-semibold text-gray-900">Size Configurations</h3>
+                          <button 
+                            type="button" 
+                            className={secondaryButtonClass} 
+                            onClick={() => addSizeSection(variantIndex)}
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add Size
+                          </button>
+                        </div>
+                        {variant.moreDetails.map((md, mdIndex) => (
+                          <div
+                            key={mdIndex}
+                            className="bg-white rounded-xl border border-gray-200 p-6 space-y-6"
+                          >
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-lg font-semibold text-gray-800">Size Configuration {mdIndex + 1}</h4>
+                              <button
+                                type="button"
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                onClick={() => removeSizeSection(variantIndex, mdIndex)}
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            {/* Dimensions */}
+                            <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+                              <h5 className="font-semibold text-gray-800">Dimensions</h5>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Length</label>
+                                  <input
+                                    type="number"
+                                    value={md.size.length}
+                                    onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "length", e.target.value)}
+                                    placeholder="0"
+                                    className={inputClass}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Width</label>
+                                  <input
+                                    type="number"
+                                    value={md.size.breadth}
+                                    onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "breadth", e.target.value)}
+                                    placeholder="0"
+                                    className={inputClass}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Height</label>
+                                  <input
+                                    type="number"
+                                    value={md.size.height}
+                                    onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "height", e.target.value)}
+                                    placeholder="0"
+                                    className={inputClass}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Unit</label>
+                                  <select
+                                    value={md.size.unit}
+                                    onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "unit", e.target.value)}
+                                    className={selectClass}
+                                  >
+                                    <option value="cm">cm</option>
+                                    <option value="m">m</option>
+                                    <option value="inch">inch</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Additional Images for this Size Section */}
+                            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                              <div className="flex justify-between items-center">
+                                <h5 className="text-md font-semibold text-gray-800">
+                                  Additional Images for this Size (Optional)
+                                </h5>
+                                <button
+                                  type="button"
+                                  className={secondaryButtonClass}
+                                  onClick={() => {
+                                    const setter = (arr) => updateSizeSectionField(variantIndex, mdIndex, "additionalImages", arr);
+                                    addImageField(setter, md.additionalImages)
+                                    setTimeout(() => {
+                                      if (
+                                        mdAdditionalImageInputRefs.current[
+                                          `${variantIndex}-${mdIndex}-${md.additionalImages.length}`
+                                        ]
+                                      ) {
+                                        mdAdditionalImageInputRefs.current[
+                                          `${variantIndex}-${mdIndex}-${md.additionalImages.length}`
+                                        ].click()
+                                      }
+                                    }, 0)
+                                  }}
+                                >
+                                  <Plus className="w-4 h-4" />
+                                  Add Image
+                                </button>
+                              </div>
+                              {getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
+                                <div className="space-y-2">
+                                  <label className={labelClass}>
+                                    Do you want to reuse additional images?
+                                  </label>
+                                  <select
+                                    value={md.reuseAdditionalImages}
+                                    onChange={(e) => {
+                                      updateSizeSectionField(
+                                        variantIndex,
+                                        mdIndex,
+                                        "reuseAdditionalImages",
+                                        e.target.value,
+                                      )
+                                      if (e.target.value === "no") {
+                                        updateSizeSectionField(variantIndex, mdIndex, "additionalImages", [
+                                          { file: null, preview: null },
+                                        ]) // Reset if not reusing
+                                        updateSizeSectionField(variantIndex, mdIndex, "reusedImageSource", "")
+                                      }
+                                    }}
+                                    className={selectClass}
+                                  >
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
+                                  </select>
+                                </div>
+                              )}
+
+                              {md.reuseAdditionalImages === "yes" &&
+                                getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
+                                  <div className="space-y-2">
+                                    <label className={labelClass}>
+                                      Select source
+                                    </label>
+                                    <select
+                                      value={md.reusedImageSource}
+                                      onChange={(e) =>
+                                        handleReuseSelection(variantIndex, mdIndex, "images", e.target.value)
+                                      }
+                                      className={selectClass}
+                                    >
+                                      <option value="">Select source</option>
+                                      {getReuseOptions(variantIndex, mdIndex, "images").map((option) => (
+                                        <option key={option.id} value={option.id}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+
+                              {md.reuseAdditionalImages === "no" && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                  {md.additionalImages.map((image, index) => (
+                                    <div key={index} className="relative">
+                                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 transition-colors">
+                                        <input
+                                          id={`md-additional-image-${variantIndex}-${mdIndex}-${index}`}
+                                          type="file"
+                                          accept="image/*"
+                                          ref={(el) =>
+                                            (mdAdditionalImageInputRefs.current[`${variantIndex}-${mdIndex}-${index}`] = el)
+                                          }
+                                          onChange={(e) => {
+                                            const newImages = [...md.additionalImages]
+                                            if (newImages[index]?.preview) URL.revokeObjectURL(newImages[index].preview)
+                                            newImages[index] = {
+                                              file: e.target.files[0],
+                                              preview: e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : null,
+                                            }
+                                            updateSizeSectionField(variantIndex, mdIndex, "additionalImages", newImages)
+                                          }}
+                                          className="hidden"
+                                        />
+                                        <label htmlFor={`md-additional-image-${variantIndex}-${mdIndex}-${index}`} className="cursor-pointer block">
+                                          {image.preview ? (
+                                            <img
+                                              src={image.preview}
+                                              alt={`Additional ${index + 1}`}
+                                              className="h-24 w-24 object-cover rounded-lg mx-auto shadow-md"
+                                            />
+                                          ) : (
+                                            <div className="space-y-2">
+                                              <ImageIcon className="h-8 w-8 text-gray-400 mx-auto" />
+                                              <p className="text-sm text-gray-600">Image {index + 1}</p>
+                                            </div>
+                                          )}
+                                        </label>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                        onClick={() => {
+                                          const newImages = md.additionalImages.filter((_, i) => i !== index)
+                                          if (md.additionalImages[index]?.preview)
+                                            URL.revokeObjectURL(md.additionalImages[index].preview)
+                                          updateSizeSectionField(variantIndex, mdIndex, "additionalImages", newImages)
+                                        }}
+                                      >
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Optional Details for this size */}
+                            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                              <div className="flex justify-between items-center">
+                                <h5 className="text-md font-semibold text-gray-800">
+                                  Optional Details for this Size (Optional)
+                                </h5>
+                                <button
+                                  type="button"
+                                  className={secondaryButtonClass}
+                                  onClick={() => {
+                                    updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", [
+                                      ...md.optionalDetails,
+                                      { key: "", value: "" },
+                                    ])
+                                  }}
+                                >
+                                  <Plus className="w-4 h-4" />
+                                  Add Detail
+                                </button>
+                              </div>
+                              {getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
+                                <div className="space-y-2">
+                                  <label className={labelClass}>
+                                    Do you want to reuse optional details?
+                                  </label>
+                                  <select
+                                    value={md.reuseOptionalDetails}
+                                    onChange={(e) => {
+                                      updateSizeSectionField(
+                                        variantIndex,
+                                        mdIndex,
+                                        "reuseOptionalDetails",
+                                        e.target.value,
+                                      )
+                                      if (e.target.value === "no") {
+                                        updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", [
+                                          { key: "", value: "" },
+                                        ]) // Reset if not reusing
+                                        updateSizeSectionField(variantIndex, mdIndex, "reusedOptionalDetailSource", "")
+                                      }
+                                    }}
+                                    className={selectClass}
+                                  >
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
+                                  </select>
+                                </div>
+                              )}
+
+                              {md.reuseOptionalDetails === "yes" &&
+                                getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
+                                  <div className="space-y-2">
+                                    <label className={labelClass}>
+                                      Select source
+                                    </label>
+                                    <select
+                                      value={md.reusedOptionalDetailSource}
+                                      onChange={(e) =>
+                                        handleReuseSelection(variantIndex, mdIndex, "optionalDetails", e.target.value)
+                                      }
+                                      className={selectClass}
+                                    >
+                                      <option value="">Select source</option>
+                                      {getReuseOptions(variantIndex, mdIndex, "optionalDetails").map((option) => (
+                                        <option key={option.id} value={option.id}>
+                                          {option.label}
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+
+                              {md.reuseOptionalDetails === "no" && (
+                                <div className="space-y-4">
+                                  {md.optionalDetails.map((detail, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <label className={labelClass}>Key</label>
+                                        <input
+                                          type="text"
+                                          value={detail.key}
+                                          onChange={(e) => {
+                                            const newDetails = [...md.optionalDetails]
+                                            newDetails[index].key = e.target.value
+                                            updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
+                                          }}
+                                          placeholder="e.g., Feature"
+                                          className={inputClass}
+                                        />
+                                      </div>
+                                      <div className="space-y-2 flex gap-4 items-end">
+                                        <div className="flex-1">
+                                          <label className={labelClass}>Value</label>
+                                          <input
+                                            type="text"
+                                            value={detail.value}
+                                            onChange={(e) => {
+                                              const newDetails = [...md.optionalDetails]
+                                              newDetails[index].value = e.target.value
+                                              updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
+                                            }}
+                                            placeholder="e.g., Waterproof"
+                                            className={inputClass}
+                                          />
+                                        </div>
+                                        <button
+                                          type="button"
+                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                          onClick={() => {
+                                            const newDetails = md.optionalDetails.filter((_, i) => i !== index)
+                                            updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
+                                          }}
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {/* Price & Stock for this specific Size Section (only if not common for variant) */}
+                            {variant.moreDetails.length > 1 && variant.isPriceSame === "no" && (
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Price ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x
+                                  {md.size?.height || "?"})
+                                </label>
+                                <input
+                                  type="number"
+                                  value={md.price}
+                                  onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "price", e.target.value)}
+                                  placeholder="Enter price"
+                                  className={inputClass}
+                                />
+                              </div>
+                            )}
+                            {variant.moreDetails.length > 1 && variant.isStockSame === "no" && (
+                              <div className="space-y-2">
+                                <label className={labelClass}>
+                                  Stock ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x
+                                  {md.size?.height || "?"})
+                                </label>
+                                <input
+                                  type="number"
+                                  value={md.stock}
+                                  onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "stock", e.target.value)}
+                                  placeholder="Enter stock"
+                                  className={inputClass}
+                                />
+                              </div>
+                            )}
+                            {variant.moreDetails.length > 1 &&
+                              variant.isPriceSame === "no" && (
+                                <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                                  <div className="flex justify-between items-center">
+                                    <h5 className="text-md font-semibold text-gray-800">
+                                      Bulk Pricing Combinations ({variant.colorName} - {md.size?.length || "?"}x
+                                      {md.size?.breadth || "?"}x{md.size?.height || "?"})
+                                    </h5>
+                                    <button
+                                      type="button"
+                                      className={secondaryButtonClass}
+                                      onClick={() => {
+                                        updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", [
+                                          ...md.bulkPricingCombinations,
+                                          { wholesalePrice: "", quantity: "" },
+                                        ])
+                                      }}
+                                    >
+                                      <Plus className="w-4 h-4" />
+                                      Add Bulk Pricing
+                                    </button>
+                                  </div>
+                                  {md.bulkPricingCombinations.map((bpc, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                                      <div className="space-y-2">
+                                        <label className={labelClass}>Wholesale Price ($)</label>
+                                        <input
+                                          type="number"
+                                          value={bpc.wholesalePrice}
+                                          onChange={(e) => {
+                                            const newBPC = [...md.bulkPricingCombinations]
+                                            newBPC[index].wholesalePrice = e.target.value
+                                            updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
+                                          }}
+                                          placeholder="Enter wholesale price"
+                                          className={inputClass}
+                                        />
+                                        {md.price &&
+                                          bpc.wholesalePrice &&
+                                          Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(md.price) && (
+                                            <p className="text-red-500 text-sm">
+                                              Wholesale price must be less than this price.
+                                            </p>
+                                          )}
+                                      </div>
+                                      <div className="space-y-2 flex gap-4 items-end">
+                                        <div className="flex-1">
+                                          <label className={labelClass}>Quantity</label>
+                                          <input
+                                            type="number"
+                                            value={bpc.quantity}
+                                            onChange={(e) => {
+                                              const newBPC = [...md.bulkPricingCombinations]
+                                              newBPC[index].quantity = e.target.value
+                                              updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
+                                            }}
+                                            placeholder="Enter quantity"
+                                            className={inputClass}
+                                          />
+                                        </div>
+                                        <button
+                                          type="button"
+                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                          onClick={() => {
+                                            const newBPC = md.bulkPricingCombinations.filter((_, i) => i !== index)
+                                            updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
+                                          }}
+                                        >
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Price and Stock Configuration for Variants */}
+                      {variant.moreDetails.length > 1 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className={labelClass}>Same price for all sizes?</label>
+                            <select
+                              value={variant.isPriceSame}
+                              onChange={(e) => updateVariantField(variantIndex, "isPriceSame", e.target.value)}
+                              className={selectClass}
+                            >
+                              <option value="yes">Yes</option>
+                              <option value="no">No</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className={labelClass}>Same stock for all sizes?</label>
+                            <select
+                              value={variant.isStockSame}
+                              onChange={(e) => updateVariantField(variantIndex, "isStockSame", e.target.value)}
+                              className={selectClass}
+                            >
+                              <option value="yes">Yes</option>
+                              <option value="no">No</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Common Price and Stock */}
+                      {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className={labelClass}>Price ($)</label>
+                            <input
+                              type="number"
+                              value={variant.commonPrice}
+                              onChange={(e) => updateVariantField(variantIndex, "commonPrice", e.target.value)}
+                              placeholder="Variant price"
+                              className={inputClass}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className={labelClass}>Stock</label>
+                            <input
+                              type="number"
+                              value={variant.commonStock}
+                              onChange={(e) => updateVariantField(variantIndex, "commonStock", e.target.value)}
+                              placeholder="Stock quantity"
+                              className={inputClass}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Common Bulk Pricing */}
+                      {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
+                        <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-xl font-semibold text-gray-900">Common Bulk Pricing Combinations</h4>
+                            <button
+                              type="button"
+                              className={secondaryButtonClass}
+                              onClick={() => {
+                                updateVariantField(variantIndex, "commonBulkPricingCombinations", [
+                                  ...variant.commonBulkPricingCombinations,
+                                  { wholesalePrice: "", quantity: "" },
+                                ])
+                              }}
+                            >
+                              <Plus className="w-4 h-4" />
+                              Add Bulk Pricing
+                            </button>
+                          </div>
+                          {variant.commonBulkPricingCombinations.map((bpc, index) => (
+                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                              <div className="space-y-2">
+                                <label className={labelClass}>Wholesale Price ($)</label>
+                                <input
+                                  type="number"
+                                  value={bpc.wholesalePrice}
+                                  onChange={(e) => {
+                                    const newBPC = [...variant.commonBulkPricingCombinations]
+                                    newBPC[index].wholesalePrice = e.target.value
+                                    updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
+                                  }}
+                                  placeholder="Enter wholesale price"
+                                  className={inputClass}
+                                />
+                                {variant.commonPrice &&
+                                  bpc.wholesalePrice &&
+                                  Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(variant.commonPrice) && (
+                                    <p className="text-red-500 text-sm">
+                                      Wholesale price must be less than common price.
+                                    </p>
+                                  )}
+                              </div>
+                              <div className="space-y-2 flex gap-4 items-end">
+                                <div className="flex-1">
+                                  <label className={labelClass}>Quantity</label>
+                                  <input
+                                    type="number"
+                                    value={bpc.quantity}
+                                    onChange={(e) => {
+                                      const newBPC = [...variant.commonBulkPricingCombinations]
+                                      newBPC[index].quantity = e.target.value
+                                      updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
+                                    }}
+                                    placeholder="Enter quantity"
+                                    className={inputClass}
+                                  />
+                                </div>
+                                <button
+                                  type="button"
+                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                  onClick={() => {
+                                    const newBPC = variant.commonBulkPricingCombinations.filter((_, i) => i !== index)
+                                    updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
+                                  }}
+                                >
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  
+                  <div className="text-center">
+                    <button type="button" className={primaryButtonClass} onClick={addVariant}>
+                      <Plus className="w-5 h-5" />
+                      Add New Variant
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
           )}
-        </div>
-      </form>
+
+          {/* Form Actions */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
+            <button 
+              type="submit" 
+              disabled={isLoading}
+              className={`${primaryButtonClass} text-lg px-12 py-4 shadow-2xl ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
+                  Adding Product...
+                </>
+              ) : (
+                <>
+                  <Package className="w-5 h-5" />
+                  Add Product
+                </>
+              )}
+            </button>
+            {!hasVariants && (
+              <button
+                type="button"
+                className={`${secondaryButtonClass} text-lg px-8 py-4`}
+                onClick={() => setHasVariants(true)}
+              >
+                <Layers className="w-5 h-5" />
+                Add Variants
+              </button>
+            )}
+          </div>
+        </form>
+      </div>
     </div>
   )
 }

@@ -13,7 +13,7 @@ const Category = require('../models/Category');
 // Start of function to check the file extension
 const fileFilter = (req, file, cb) => {
   // Check file extensions
-  const allowedExtensions = ['.xlsx', '.csv'];
+  const allowedExtensions = ['.xlsx', '.csv', '.jpg', '.jpeg', '.png'];
   const fileExtension = path.extname(file.originalname).toLowerCase();
   
   if (allowedExtensions.includes(fileExtension)) {
