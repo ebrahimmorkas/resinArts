@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useMemo } from "react"
 import jsPDF from "jspdf"
-import * as XLSX from 'xlsx'
 import {
   Search,
   Filter,
@@ -132,43 +131,136 @@ const setupAxiosInterceptors = (navigate) => {
 
 // Date formatting function
 const formatDate = (dateString) => {
-  const date = new Date(dateString);
-  const options = { year: 'numeric', month: 'short', day: 'numeric' };
-  return date.toLocaleDateString('en-US', options);
+  if (!dateString) return "N/A";
+  try {
+    const date = new Date(dateString);
+    if (isNaN(date.getTime())) return "Invalid Date";
+    
+    const options = { 
+      year: 'numeric', 
+      month: 'short', 
+      day: 'numeric'
+    };
+    return date.toLocaleDateString('en-US', options);
+  } catch (error) {
+    console.error("Date formatting error:", error);
+    return "Invalid Date";
+  }
 };
 
 // Date filter functions
-const isToday = (date) => {
-  const today = new Date();
-  const checkDate = new Date(date);
-  return checkDate.toDateString() === today.toDateString();
+const isToday = (dateString) => {
+  if (!dateString) return false;
+  try {
+    const today = new Date();
+    const checkDate = new Date(dateString);
+    return checkDate.toDateString() === today.toDateString();
+  } catch {
+    return false;
+  }
 };
 
-const isYesterday = (date) => {
-  const yesterday = new Date();
-  yesterday.setDate(yesterday.getDate() - 1);
-  const checkDate = new Date(date);
-  return checkDate.toDateString() === yesterday.toDateString();
+const isYesterday = (dateString) => {
+  if (!dateString) return false;
+  try {
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const checkDate = new Date(dateString);
+    return checkDate.toDateString() === yesterday.toDateString();
+  } catch {
+    return false;
+  }
 };
 
-const isSameDate = (date1, date2) => {
-  return new Date(date1).toDateString() === new Date(date2).toDateString();
+const isSameDate = (dateString, targetDate) => {
+  if (!dateString || !targetDate) return false;
+  try {
+    const date1 = new Date(dateString);
+    const date2 = new Date(targetDate);
+    return date1.toDateString() === date2.toDateString();
+  } catch {
+    return false;
+  }
 };
 
-const isDateInRange = (date, startDate, endDate) => {
-  const checkDate = new Date(date);
-  const start = new Date(startDate);
-  const end = new Date(endDate);
-  return checkDate >= start && checkDate <= end;
+const isDateInRange = (dateString, startDate, endDate) => {
+  if (!dateString || !startDate || !endDate) return false;
+  try {
+    const checkDate = new Date(dateString);
+    const start = new Date(startDate);
+    const end = new Date(endDate);
+    
+    // Set time to start/end of day for proper comparison
+    start.setHours(0, 0, 0, 0);
+    end.setHours(23, 59, 59, 999);
+    
+    return checkDate >= start && checkDate <= end;
+  } catch {
+    return false;
+  }
 };
 
-const isSameYear = (date, year) => {
-  return new Date(date).getFullYear() === parseInt(year);
+const isSameYear = (dateString, year) => {
+  if (!dateString || !year) return false;
+  try {
+    const date = new Date(dateString);
+    return date.getFullYear() === parseInt(year);
+  } catch {
+    return false;
+  }
 };
 
-const isYearInRange = (date, startYear, endYear) => {
-  const year = new Date(date).getFullYear();
-  return year >= parseInt(startYear) && year <= parseInt(endYear);
+const isYearInRange = (dateString, startYear, endYear) => {
+  if (!dateString || !startYear || !endYear) return false;
+  try {
+    const year = new Date(dateString).getFullYear();
+    return year >= parseInt(startYear) && year <= parseInt(endYear);
+  } catch {
+    return false;
+  }
+};
+
+// Safe number conversion
+const safeNumber = (value, fallback = 0) => {
+  const num = parseFloat(value);
+  return isNaN(num) ? fallback : num;
+};
+
+// Simple Excel export without external library
+const exportToExcel = (data) => {
+  try {
+    const headers = ['Sr No.', 'Order ID', 'Ordered At', 'Products', 'Quantity', 'Amount', 'Status', 'Payment', 'Shipping Address'];
+    
+    let csvContent = headers.join(',') + '\n';
+    
+    data.forEach((order, index) => {
+      const row = [
+        index + 1,
+        `"${order.id}"`,
+        `"${formatDate(order.orderedAt)}"`,
+        `"${order.items.map(item => item.name).join('; ')}"`,
+        order.items.reduce((total, item) => total + safeNumber(item.quantity), 0),
+        `"$${safeNumber(order.total).toFixed(2)}"`,
+        `"${statusConfig[order.status]?.label || order.status}"`,
+        `"${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}"`,
+        `"${order.shippingAddress.replace(/"/g, '""')}"`
+      ];
+      csvContent += row.join(',') + '\n';
+    });
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `orders_export_${new Date().toISOString().split('T')[0]}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  } catch (error) {
+    console.error('Export error:', error);
+    alert('Failed to export data. Please try again.');
+  }
 };
 
 export default function Orders() {
@@ -245,24 +337,24 @@ export default function Orders() {
   // Transform backend data to match frontend expectations
   const transformOrder = (order) => {
     return {
-      id: order._id,
-      date: new Date(order.createdAt || Date.now()).toISOString().split("T")[0],
+      id: order._id || '',
+      date: order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       orderedAt: order.createdAt,
-      items: order.orderedProducts.map((product) => ({
-        name: product.product_name + (product.variant_name ? ` - ${product.variant_name}` : ""),
-        quantity: product.quantity,
-        price: product.price,
-        image: product.image_url,
+      items: (order.orderedProducts || []).map((product) => ({
+        name: (product.product_name || 'Unknown Product') + (product.variant_name ? ` - ${product.variant_name}` : ""),
+        quantity: safeNumber(product.quantity, 1),
+        price: safeNumber(product.price, 0),
+        image: product.image_url || '',
         size: product.size || null,
       })),
-      itemsTotal: order.price,
-      shippingPrice: order.shipping_price || 0,
-      total: order.total_price,
-      status: order.status.toLowerCase(),
-      trackingNumber: order._id,
+      itemsTotal: safeNumber(order.price, 0),
+      shippingPrice: safeNumber(order.shipping_price, 0),
+      total: safeNumber(order.total_price, 0),
+      status: (order.status || 'pending').toLowerCase(),
+      trackingNumber: order._id || '',
       estimatedDelivery: null,
       shippingAddress: userAddress
-        ? `${userAddress.address}, ${userAddress.city}, ${userAddress.state} ${userAddress.zipCode}`
+        ? `${userAddress.address || ''}, ${userAddress.city || ''}, ${userAddress.state || ''} ${userAddress.zipCode || ''}`
         : "Address not available",
       paymentStatus: order.payment_status ? order.payment_status.toLowerCase() : "pending",
     };
@@ -271,10 +363,12 @@ export default function Orders() {
   // Filter and search functionality using useMemo
   const filteredOrders = useMemo(() => {
     return orders.map(transformOrder).filter((order) => {
-      const matchesSearch =
+      // Search filter
+      const matchesSearch = !searchQuery || 
         order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
         order.items.some((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
+      // Status filter
       let matchesStatus = true;
       if (statusFilter === "ongoing") {
         matchesStatus = ongoingStatuses.includes(order.status);
@@ -282,8 +376,10 @@ export default function Orders() {
         matchesStatus = order.status === statusFilter;
       }
 
+      // Payment filter
       const matchesPayment = paymentFilter === "all" || order.paymentStatus === paymentFilter;
 
+      // Date filter
       let matchesDate = true;
       if (dateFilter === "today") {
         matchesDate = isToday(order.orderedAt);
@@ -312,48 +408,14 @@ export default function Orders() {
   // Reset to page 1 when search changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchQuery, ordersPerPage]);
+  }, [searchQuery, ordersPerPage, statusFilter, paymentFilter, dateFilter]);
 
-  // Export to Excel function
-  const exportToExcel = () => {
-    const exportData = filteredOrders.map((order, index) => ({
-      'Sr No.': index + 1,
-      'Order ID': order.id,
-      'Ordered At': formatDate(order.orderedAt),
-      'Products': order.items.map(item => item.name).join(', '),
-      'Quantity': order.items.reduce((total, item) => total + item.quantity, 0),
-      'Amount': `$${order.total.toFixed(2)}`,
-      'Status': statusConfig[order.status]?.label || order.status,
-      'Payment': paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus,
-      'Shipping Address': order.shippingAddress
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Orders");
-    
-    // Auto-size columns
-    const range = XLSX.utils.decode_range(ws['!ref']);
-    const cols = [];
-    for (let C = range.s.c; C <= range.e.c; ++C) {
-      let max_width = 10;
-      for (let R = range.s.r; R <= range.e.r; ++R) {
-        const cell_address = { c: C, r: R };
-        const cell_ref = XLSX.utils.encode_cell(cell_address);
-        const cell = ws[cell_ref];
-        if (cell && cell.v) {
-          const cell_width = cell.v.toString().length;
-          if (cell_width > max_width) {
-            max_width = cell_width;
-          }
-        }
-      }
-      cols[C] = { width: Math.min(max_width + 2, 50) };
+  const handleExportToExcel = () => {
+    if (filteredOrders.length === 0) {
+      alert('No data to export');
+      return;
     }
-    ws['!cols'] = cols;
-
-    const fileName = `orders_export_${new Date().toISOString().split('T')[0]}.xlsx`;
-    XLSX.writeFile(wb, fileName);
+    exportToExcel(filteredOrders);
   };
 
   const downloadInvoice = async (order, e) => {
@@ -375,7 +437,7 @@ export default function Orders() {
       doc.setFontSize(9);
       doc.setFont(undefined, "normal");
       doc.text(`Invoice #: ${order.id}`, 120, 40);
-      doc.text(`Date: ${new Date(order.date).toLocaleDateString()}`, 120, 45);
+      doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, 45);
       doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 50);
       doc.text(`Payment: ${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}`, 120, 55);
       doc.setFontSize(12);
@@ -405,7 +467,7 @@ export default function Orders() {
       let yPosition = tableStartY + 10;
       doc.setFont(undefined, "normal");
       for (const item of order.items) {
-        const itemTotal = item.price * item.quantity;
+        const itemTotal = safeNumber(item.price) * safeNumber(item.quantity);
         if (item.image && item.image !== "/placeholder.svg") {
           try {
             const img = new Image();
@@ -426,9 +488,9 @@ export default function Orders() {
         }
         const itemName = item.name.length > 35 ? item.name.substring(0, 35) + "..." : item.name;
         doc.text(itemName, 40, yPosition);
-        doc.text(item.quantity.toString(), 120, yPosition);
-        doc.text(`$${item.price}`, 140, yPosition);
-        doc.text(`$${itemTotal}`, 170, yPosition);
+        doc.text(safeNumber(item.quantity).toString(), 120, yPosition);
+        doc.text(`$${safeNumber(item.price).toFixed(2)}`, 140, yPosition);
+        doc.text(`$${itemTotal.toFixed(2)}`, 170, yPosition);
         yPosition += 15;
       }
       yPosition += 5;
@@ -436,15 +498,15 @@ export default function Orders() {
       yPosition += 10;
       doc.setFont(undefined, "normal");
       doc.text(`Items Subtotal:`, 120, yPosition);
-      doc.text(`$${order.itemsTotal}`, 170, yPosition);
+      doc.text(`$${safeNumber(order.itemsTotal).toFixed(2)}`, 170, yPosition);
       yPosition += 8;
       doc.text(`Shipping:`, 120, yPosition);
-      doc.text(`$${order.shippingPrice}`, 170, yPosition);
+      doc.text(`$${safeNumber(order.shippingPrice).toFixed(2)}`, 170, yPosition);
       yPosition += 8;
       doc.setFont(undefined, "bold");
       doc.setFontSize(12);
       doc.text(`TOTAL:`, 120, yPosition);
-      doc.text(`$${order.total}`, 170, yPosition);
+      doc.text(`$${safeNumber(order.total).toFixed(2)}`, 170, yPosition);
       yPosition += 20;
       doc.setFontSize(8);
       doc.setFont(undefined, "normal");
@@ -454,10 +516,7 @@ export default function Orders() {
       doc.save(filename);
     } catch (error) {
       console.error("Error generating invoice:", error);
-      if (error.response?.status === 401 || error.response?.status === 403) {
-        alert("Your session has expired. Please log in again.");
-        navigate('/login');
-      }
+      alert('Error generating invoice. Please try again.');
     }
   };
 
@@ -520,15 +579,15 @@ export default function Orders() {
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Items Total:</span>
-                      <span className="font-semibold">${order.itemsTotal}</span>
+                      <span className="font-semibold">${safeNumber(order.itemsTotal).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Shipping:</span>
-                      <span className="font-semibold">${order.shippingPrice}</span>
+                      <span className="font-semibold">${safeNumber(order.shippingPrice).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Total:</span>
-                      <span className="font-semibold">${order.total}</span>
+                      <span className="font-semibold">${safeNumber(order.total).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-gray-600">Payment:</span>
@@ -567,13 +626,13 @@ export default function Orders() {
                     <div className="flex-1">
                       <h4 className="font-medium text-gray-800">{item.name}</h4>
                       <p className="text-sm text-gray-600">
-                        Quantity: {item.quantity}
+                        Quantity: {safeNumber(item.quantity)}
                         {item.size && ` • Size: ${item.size}`}
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="font-semibold">${item.price * item.quantity}</p>
-                      <p className="text-sm text-gray-600">${item.price} each</p>
+                      <p className="font-semibold">${(safeNumber(item.price) * safeNumber(item.quantity)).toFixed(2)}</p>
+                      <p className="text-sm text-gray-600">${safeNumber(item.price).toFixed(2)} each</p>
                     </div>
                   </div>
                 ))}
@@ -594,7 +653,7 @@ export default function Orders() {
               </button>
               <div className="text-right">
                 <span className="text-lg font-semibold">Total Amount:</span>
-                <span className="text-2xl font-bold text-blue-600 ml-2">${order.total}</span>
+                <span className="text-2xl font-bold text-blue-600 ml-2">${safeNumber(order.total).toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -710,7 +769,7 @@ export default function Orders() {
                     <option value="yearRange">Year Range</option>
                   </select>
                   <button 
-                    onClick={exportToExcel}
+                    onClick={handleExportToExcel}
                     className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <Download className="w-4 h-4 mr-2" />
@@ -724,7 +783,7 @@ export default function Orders() {
           {/* Date Filter Inputs */}
           {dateFilter !== "all" && dateFilter !== "today" && dateFilter !== "yesterday" && (
             <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
-              <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-4 flex-wrap">
                 {dateFilter === "custom" && (
                   <div>
                     <label className="text-sm font-medium text-gray-700 mr-2">Select Date:</label>
@@ -816,7 +875,7 @@ export default function Orders() {
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '200px' }}>
                       Order ID
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
                       Ordered At
                     </th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '250px' }}>
@@ -848,20 +907,20 @@ export default function Orders() {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '200px' }}>
                         <span className="font-medium text-blue-600">{order.id}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '140px' }}>
                         {formatDate(order.orderedAt)}
                       </td>
                       <td className="px-6 py-4 text-sm text-center text-gray-900" style={{ minWidth: '250px' }}>
                         <div className="truncate" title={order.items.map(item => item.name).join(', ')}>
-                          {order.items[0].name}
+                          {order.items.length > 0 ? order.items[0].name : 'No items'}
                           {order.items.length > 1 && ` +${order.items.length - 1} more`}
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '100px' }}>
-                        {order.items.reduce((total, item) => total + item.quantity, 0)}
+                        {order.items.reduce((total, item) => total + safeNumber(item.quantity), 0)}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
-                        <span className="font-medium">${order.total}</span>
+                        <span className="font-medium">${safeNumber(order.total).toFixed(2)}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
                         <StatusBadge status={order.status} />
@@ -913,76 +972,80 @@ export default function Orders() {
           )}
 
           {/* Table Footer */}
-          <div className="px-6 py-4 border-t border-gray-200">
-            <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
-              {/* Items per page */}
-              <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-700">Show</span>
-                <select
-                  value={ordersPerPage}
-                  onChange={(e) => setOrdersPerPage(Number(e.target.value))}
-                  className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span className="text-sm text-gray-700">entries per page</span>
-              </div>
-
-              {/* Pagination */}
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                  disabled={currentPage === 1}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <ChevronLeft className="w-4 h-4 mr-1" />
-                  Previous
-                </button>
-
-                <div className="flex items-center space-x-1">
-                  {[...Array(Math.min(totalPages, 7))].map((_, index) => {
-                    let pageNumber;
-                    if (totalPages <= 7) {
-                      pageNumber = index + 1;
-                    } else if (currentPage <= 4) {
-                      pageNumber = index + 1;
-                    } else if (currentPage >= totalPages - 3) {
-                      pageNumber = totalPages - 6 + index;
-                    } else {
-                      pageNumber = currentPage - 3 + index;
-                    }
-
-                    return (
-                      <button
-                        key={pageNumber}
-                        onClick={() => setCurrentPage(pageNumber)}
-                        className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
-                          currentPage === pageNumber
-                            ? 'bg-blue-600 text-white'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
-                        }`}
-                      >
-                        {pageNumber}
-                      </button>
-                    );
-                  })}
+          {totalPages > 0 && (
+            <div className="px-6 py-4 border-t border-gray-200">
+              <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
+                {/* Items per page */}
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-700">Show</span>
+                  <select
+                    value={ordersPerPage}
+                    onChange={(e) => setOrdersPerPage(Number(e.target.value))}
+                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                  >
+                    <option value={5}>5</option>
+                    <option value={10}>10</option>
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                  </select>
+                  <span className="text-sm text-gray-700">entries per page</span>
                 </div>
 
-                <button
-                  onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                  disabled={currentPage === totalPages}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  Next
-                  <ChevronRight className="w-4 h-4 ml-1" />
-                </button>
+                {/* Pagination */}
+                {totalPages > 1 && (
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      disabled={currentPage === 1}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <ChevronLeft className="w-4 h-4 mr-1" />
+                      Previous
+                    </button>
+
+                    <div className="flex items-center space-x-1">
+                      {[...Array(Math.min(totalPages, 7))].map((_, index) => {
+                        let pageNumber;
+                        if (totalPages <= 7) {
+                          pageNumber = index + 1;
+                        } else if (currentPage <= 4) {
+                          pageNumber = index + 1;
+                        } else if (currentPage >= totalPages - 3) {
+                          pageNumber = totalPages - 6 + index;
+                        } else {
+                          pageNumber = currentPage - 3 + index;
+                        }
+
+                        return (
+                          <button
+                            key={pageNumber}
+                            onClick={() => setCurrentPage(pageNumber)}
+                            className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
+                              currentPage === pageNumber
+                                ? 'bg-blue-600 text-white'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                            }`}
+                          >
+                            {pageNumber}
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      disabled={currentPage === totalPages}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                      <ChevronRight className="w-4 h-4 ml-1" />
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
-          </div>
+          )}
         </div>
       </div>
       
