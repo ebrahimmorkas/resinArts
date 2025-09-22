@@ -1,12 +1,161 @@
 "use client"
 
-import { useEffect, useState, useContext } from "react"
+import { useEffect, useState, useContext, useMemo } from "react"
 import {
   Search, Filter, Ban, Trash2, DollarSign, Key, ChevronLeft, ChevronRight, X, AlertTriangle,
   UsersIcon, Phone, Mail, MessageCircle, Clock, ShoppingBag, Gift, RefreshCw,
 } from "lucide-react";
 import { UserContext } from "../../../../../Context/UserContext";
 import axios from "axios";
+
+function CashModal({
+  show,
+  onClose,
+  onSubmit,
+  cashForm,
+  setCashForm,
+  isFreeCashValidForAllProducts,
+  onAllProductsChange,
+  loadingCategories,
+  categoriesFetchingError,
+  renderCategoryDropdowns,
+  categoryPath,
+  selectedCategoryIds,
+  allCategoriesFlat,
+  setSelectedCategoryIds,
+  mainCategoryError,
+}) {
+  if (!show) return null
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900">Pay Cash to User</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={onSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Cash Amount (₹)</label>
+              <input
+                type="number"
+                min="0.01"
+                step="0.01"
+                value={cashForm.amount}
+                onChange={(e) => setCashForm({ ...cashForm, amount: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter amount"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Valid Above ₹</label>
+              <input
+                type="number"
+                min="0"
+                step="0.01"
+                value={cashForm.validAbove}
+                onChange={(e) => setCashForm({ ...cashForm, validAbove: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="0 for no minimum"
+              />
+            </div>
+            <div>
+              <input
+                type="checkbox"
+                checked={isFreeCashValidForAllProducts}
+                onChange={onAllProductsChange}
+                className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+              />
+              <label className="ml-2 text-sm font-medium text-gray-700">Valid for all products</label>
+            </div>
+            {!isFreeCashValidForAllProducts && (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700 mb-2">Select Category Hierarchy</label>
+                {loadingCategories ? (
+                  <span>Loading categories...</span>
+                ) : categoriesFetchingError ? (
+                  <span className="text-red-500 text-sm">{categoriesFetchingError}</span>
+                ) : (
+                  <div className="space-y-3">
+                    {renderCategoryDropdowns()}
+                    {categoryPath && (
+                      <div className="text-sm text-gray-600 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                        Category Path:{" "}
+                        {selectedCategoryIds.map((id, index) => {
+                          const category = allCategoriesFlat.find((cat) => cat._id === id)
+                          if (!category) return null
+                          return (
+                            <span key={id}>
+                              <button
+                                type="button"
+                                onClick={() => setSelectedCategoryIds(selectedCategoryIds.slice(0, index + 1))}
+                                className="font-medium text-blue-700 hover:underline"
+                              >
+                                {category.categoryName}
+                              </button>
+                              {index < selectedCategoryIds.length - 1 && <span className="mx-1">{" > "}</span>}
+                            </span>
+                          )
+                        })}
+                        <div className="text-xs text-gray-500 mt-1">
+                          {selectedCategoryIds.length === 1
+                            ? "Applies to main category and all its sub-levels"
+                            : "Applies to selected sub-category and its sub-levels"}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+                {mainCategoryError && (
+                  <span className="text-red-500 text-xs">{mainCategoryError}</span>
+                )}
+              </div>
+            )}
+            {isFreeCashValidForAllProducts && (
+              <p className="text-sm text-gray-500 p-2 bg-gray-50 rounded">
+                Valid for all products - category selection disabled.
+              </p>
+            )}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
+              <input
+                type="date"
+                value={cashForm.endDate}
+                onChange={(e) => setCashForm({ ...cashForm, endDate: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Leave empty for no expiry"
+              />
+            </div>
+            <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+              <p className="text-sm text-yellow-800">
+                <strong>Note:</strong> If you do not enter the end date, you need to revoke cash manually.
+              </p>
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end mt-6">
+            <button
+              type="button"
+              onClick={onClose}
+              className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={!cashForm.amount || parseFloat(cashForm.amount) <= 0}
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Pay Cash
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
 
 export default function Users() {
   const {users, loadingUsers, usersError, refetchUsers} = useContext(UserContext);
@@ -509,139 +658,6 @@ export default function Users() {
     )
   }
 
-  const CashModal = ({ show, onClose, userID }) => {
-    if (!show) return null
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">Pay Cash to User</h3>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <form onSubmit={handleCashModalFormSubmit}>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Cash Amount (₹)</label>
-                <input
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={cashForm.amount}
-                  onChange={(e) => setCashForm({ ...cashForm, amount: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Enter amount"
-                  required
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Valid Above ₹</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={cashForm.validAbove}
-                  onChange={(e) => setCashForm({ ...cashForm, validAbove: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="0 for no minimum"
-                />
-              </div>
-              <div>
-                <input
-                  type="checkbox"
-                  checked={isFreeCashValidForAllProducts}
-                  onChange={handleAllProductsChange}
-                  className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                />
-                <label className="ml-2 text-sm font-medium text-gray-700">Valid for all products</label>
-              </div>
-              {!isFreeCashValidForAllProducts && (
-                <div className="space-y-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-2">Select Category Hierarchy</label>
-                  {loadingCategories ? (
-                    <span>Loading categories...</span>
-                  ) : categoriesFetchingError ? (
-                    <span className="text-red-500 text-sm">{categoriesFetchingError}</span>
-                  ) : (
-                    <div className="space-y-3">
-                      {renderCategoryDropdowns()}
-                      {categoryPath && (
-                        <div className="text-sm text-gray-600 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                          Category Path:{" "}
-                          {selectedCategoryIds.map((id, index) => {
-                            const category = allCategoriesFlat.find((cat) => cat._id === id)
-                            if (!category) return null
-                            return (
-                              <span key={id}>
-                                <button
-                                  type="button"
-                                  onClick={() => setSelectedCategoryIds(selectedCategoryIds.slice(0, index + 1))}
-                                  className="font-medium text-blue-700 hover:underline"
-                                >
-                                  {category.categoryName}
-                                </button>
-                                {index < selectedCategoryIds.length - 1 && <span className="mx-1">{" > "}</span>}
-                              </span>
-                            )
-                          })}
-                          <div className="text-xs text-gray-500 mt-1">
-                            {selectedCategoryIds.length === 1
-                              ? "Applies to main category and all its sub-levels"
-                              : "Applies to selected sub-category and its sub-levels"}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {mainCategoryError && (
-                    <span className="text-red-500 text-xs">{mainCategoryError}</span>
-                  )}
-                </div>
-              )}
-              {isFreeCashValidForAllProducts && (
-                <p className="text-sm text-gray-500 p-2 bg-gray-50 rounded">
-                  Valid for all products - category selection disabled.
-                </p>
-              )}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">End Date (Optional)</label>
-                <input
-                  type="date"
-                  value={cashForm.endDate}
-                  onChange={(e) => setCashForm({ ...cashForm, endDate: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="Leave empty for no expiry"
-                />
-              </div>
-              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                <p className="text-sm text-yellow-800">
-                  <strong>Note:</strong> If you do not enter the end date, you need to revoke cash manually.
-                </p>
-              </div>
-            </div>
-            <div className="flex gap-3 justify-end mt-6">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={!cashForm.amount || parseFloat(cashForm.amount) <= 0}
-                className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Pay Cash
-              </button>
-            </div>
-          </form>
-        </div>
-      </div>
-    )
-  }
-
   const PasswordModal = ({ show, onClose, onConfirm }) => {
     if (!show) return null
     return (
@@ -1099,7 +1115,23 @@ export default function Users() {
         }
         type="warning"
       />
-      <CashModal show={showCashModal} onClose={() => setShowCashModal(false)} userID={selectedUser?._id} />
+      <CashModal
+        show={showCashModal}
+        onClose={() => setShowCashModal(false)}
+        onSubmit={handleCashModalFormSubmit}
+        cashForm={cashForm}
+        setCashForm={setCashForm}
+        isFreeCashValidForAllProducts={isFreeCashValidForAllProducts}
+        onAllProductsChange={handleAllProductsChange}
+        loadingCategories={loadingCategories}
+        categoriesFetchingError={categoriesFetchingError}
+        renderCategoryDropdowns={renderCategoryDropdowns}
+        categoryPath={categoryPath}
+        selectedCategoryIds={selectedCategoryIds}
+        allCategoriesFlat={allCategoriesFlat}
+        setSelectedCategoryIds={setSelectedCategoryIds}
+        mainCategoryError={mainCategoryError}
+      />
       <PasswordModal
         show={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
