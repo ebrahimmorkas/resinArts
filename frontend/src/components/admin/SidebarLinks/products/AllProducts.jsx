@@ -19,7 +19,6 @@ export default function AdminProductsPage() {
   const [showRevisedRateModal, setShowRevisedRateModal] = useState(false);
   const [multipleProductsForRevisedRate, setMultipleProductsForRevisedRate] = useState({});
   const [RevisedRateProduct, setRevisedRateProduct] = useState(null);
-  const [isLoading, setIsLoading] = useState(false);
   
   // New state variables for table functionality
   const [searchTerm, setSearchTerm] = useState('');
@@ -35,6 +34,7 @@ export default function AdminProductsPage() {
   const [showViewStockModal, setShowViewStockModal] = useState(false);
   const [showViewPriceModal, setShowViewPriceModal] = useState(false);
   const [selectedProductForView, setSelectedProductForView] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   // Function to open view stock modal
   const openViewStockModal = (product) => {
@@ -54,18 +54,18 @@ export default function AdminProductsPage() {
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-gray-900">Stock Details - {product.name}</h2>
+        <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+          <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900">Stock Details - {product.name}</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="p-6 overflow-y-auto flex-1">
+          <div className="p-4 md:p-6 overflow-y-auto flex-1">
             <div className="space-y-6">
               {product.variants.map(variant => (
                 <div key={variant._id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center gap-4 mb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
                     <img 
                       src={variant.variantImage || getImageUrl(product)} 
                       alt={variant.colorName} 
@@ -76,30 +76,30 @@ export default function AdminProductsPage() {
                       <p className="text-sm text-gray-500">Variant</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {variant.moreDetails.map(details => (
                       <div key={details._id} className="bg-gray-50 p-3 rounded-lg">
                         <div className="flex justify-between items-start mb-2">
-                          <div>
+                          <div className="flex-1">
                             <p className="text-sm font-medium text-gray-700">
                               Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
                             </p>
                             <p className="text-xs text-gray-500 mt-1">Weight: {details.size.weight}kg</p>
                           </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold text-blue-600">{details.size.stock}</p>
+                          <div className="text-right ml-2">
+                            <p className="text-lg font-bold text-blue-600">{details.stock || 0}</p>
                             <p className="text-xs text-gray-500">in stock</p>
                           </div>
                         </div>
                         <div className="mt-2">
                           <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            details.size.stock > 10 
+                            (details.stock || 0) > 10 
                               ? 'bg-green-100 text-green-800' 
-                              : details.size.stock > 0 
+                              : (details.stock || 0) > 0 
                                 ? 'bg-yellow-100 text-yellow-800' 
                                 : 'bg-red-100 text-red-800'
                           }`}>
-                            {details.size.stock > 10 ? 'In Stock' : details.size.stock > 0 ? 'Low Stock' : 'Out of Stock'}
+                            {(details.stock || 0) > 10 ? 'In Stock' : (details.stock || 0) > 0 ? 'Low Stock' : 'Out of Stock'}
                           </div>
                         </div>
                       </div>
@@ -120,18 +120,18 @@ export default function AdminProductsPage() {
 
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-gray-900">Price Details - {product.name}</h2>
+        <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+          <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+            <h2 className="text-lg md:text-xl font-semibold text-gray-900">Price Details - {product.name}</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <X className="w-5 h-5" />
             </button>
           </div>
-          <div className="p-6 overflow-y-auto flex-1">
+          <div className="p-4 md:p-6 overflow-y-auto flex-1">
             <div className="space-y-6">
               {product.variants.map(variant => (
                 <div key={variant._id} className="border border-gray-200 rounded-lg p-4">
-                  <div className="flex items-center gap-4 mb-4">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
                     <img 
                       src={variant.variantImage || getImageUrl(product)} 
                       alt={variant.colorName} 
@@ -142,7 +142,7 @@ export default function AdminProductsPage() {
                       <p className="text-sm text-gray-500">Variant</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                     {variant.moreDetails.map(details => (
                       <div key={details._id} className="bg-gray-50 p-3 rounded-lg">
                         <div className="mb-3">
@@ -155,13 +155,13 @@ export default function AdminProductsPage() {
                         <div className="space-y-2">
                           <div className="flex justify-between items-center">
                             <span className="text-sm text-gray-600">Base Price:</span>
-                            <span className="text-lg font-bold text-green-600">${details.price}</span>
+                            <span className="text-base md:text-lg font-bold text-green-600">${details.price}</span>
                           </div>
                           
                           {details.discountPrice && (
                             <div className="flex justify-between items-center">
                               <span className="text-sm text-gray-600">Discount Price:</span>
-                              <span className="text-lg font-bold text-red-600">${details.discountPrice}</span>
+                              <span className="text-base md:text-lg font-bold text-red-600">${details.discountPrice}</span>
                             </div>
                           )}
                           
@@ -411,6 +411,16 @@ export default function AdminProductsPage() {
         const stockA = a.hasVariants ? 0 : a.stock;
         const stockB = b.hasVariants ? 0 : b.stock;
         return stockB - stockA;
+      });
+    } else if (stockSort === 'out-of-stock') {
+      filtered = filtered.filter(item => {
+        if (!item.hasVariants) {
+          return item.stock === 0;
+        } else {
+          return item.variants.every(variant => 
+            variant.moreDetails.every(detail => (detail.stock || 0) === 0)
+          );
+        }
       });
     }
 
@@ -1709,7 +1719,7 @@ export default function AdminProductsPage() {
             {/* Filters Panel */}
             {showFilters && (
               <div className="mt-4 p-4 bg-gray-50 rounded-lg border">
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Date Filter</label>
                     <select 
@@ -1783,6 +1793,7 @@ export default function AdminProductsPage() {
                       <option value="">No Sort</option>
                       <option value="low-high">Low to High</option>
                       <option value="high-low">High to Low</option>
+                      <option value="out-of-stock">Out of Stock</option>
                     </select>
                   </div>
                 </div>
@@ -1999,6 +2010,7 @@ export default function AdminProductsPage() {
                   className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
+                  Previous
                 </button>
 
                 <div className="flex items-center space-x-1">
@@ -2035,6 +2047,7 @@ export default function AdminProductsPage() {
                   disabled={currentPage === totalPages}
                   className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
+                  Next
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </button>
               </div>
