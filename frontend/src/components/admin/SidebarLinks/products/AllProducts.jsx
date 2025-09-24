@@ -204,6 +204,34 @@ const handleDelete = async () => {
   }
 };
 
+const handleDeleteSelected = async () => {
+  if (selectedProducts.length === 0) return;
+  setIsLoading(true);
+  
+  try {
+    const deletePromises = selectedProducts.map(product => 
+      axios.delete(`http://localhost:3000/api/product/delete-product/${product._id}`, {
+        withCredentials: true
+      })
+    );
+    
+    await Promise.all(deletePromises);
+    
+    toast.success(`${selectedProducts.length} products deleted successfully!`);
+    setSelectedProducts([]);
+    // TODO: Refresh products from context
+    
+  } catch (error) {
+    console.error("Delete selected error:", error);
+    const errorMessage = error.response?.data?.message || 'Failed to delete selected products!';
+    toast.error(errorMessage);
+  } finally {
+    setIsLoading(false);
+    setShowDeleteModal(false);
+    setSelectedProductForDelete(null);
+  }
+};
+
   // Filtered data
   const filteredData = useMemo(() => {
     let filtered = products.filter(item =>
@@ -348,7 +376,12 @@ const handleDelete = async () => {
   };
 
 const DeleteConfirmationModal = () => {
-  if (!showDeleteModal || !selectedProductForDelete) return null;
+  if (!showDeleteModal) return null;
+
+  const isMultipleDelete = selectedProducts.length > 0;
+  const productToDelete = isMultipleDelete ? null : selectedProductForDelete;
+  
+  if (!isMultipleDelete && !productToDelete) return null;
 
   return (
     <div className="fixed inset-0 z-50 overflow-y-auto">
@@ -360,13 +393,19 @@ const DeleteConfirmationModal = () => {
               <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
                 <Trash2 className="w-6 h-6 text-red-600" />
               </div>
-              <h3 className="text-lg font-semibold text-gray-900">Delete Product</h3>
+              <h3 className="text-lg font-semibold text-gray-900">
+                {isMultipleDelete ? 'Delete Selected Products' : 'Delete Product'}
+              </h3>
             </div>
           </div>
           <div className="px-6 py-6">
             <p className="text-sm text-gray-600 mb-4">
-              Are you sure you want to delete "<span className="font-semibold">{selectedProductForDelete.name}</span>"? 
-              This action cannot be undone and will permanently remove the product from your inventory.
+              {isMultipleDelete ? (
+                <>Are you sure you want to delete <span className="font-semibold">{selectedProducts.length} selected products</span>?</>
+              ) : (
+                <>Are you sure you want to delete "<span className="font-semibold">{productToDelete.name}</span>"?</>
+              )}
+              {" "}This action cannot be undone and will permanently remove the product(s) from your inventory.
             </p>
             <div className="bg-red-50 border border-red-200 rounded-md p-4">
               <div className="flex items-start">
@@ -390,11 +429,11 @@ const DeleteConfirmationModal = () => {
                 Cancel
               </button>
               <button 
-                onClick={handleDelete}
+                onClick={isMultipleDelete ? handleDeleteSelected : handleDelete}
                 disabled={isLoading}
                 className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50"
               >
-                {isLoading ? 'Deleting...' : 'Delete Product'}
+                {isLoading ? 'Deleting...' : `Delete ${isMultipleDelete ? 'Selected' : 'Product'}`}
               </button>
             </div>
           </div>
@@ -1998,9 +2037,12 @@ const DeleteConfirmationModal = () => {
                     <button onClick={() => setShowRestockModal(true)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors">
                       Restock
                     </button>
-                    <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors">
-                      Delete Selected
-                    </button>
+                    <button 
+  onClick={() => setShowDeleteModal(true)} 
+  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors"
+>
+  Delete Selected
+</button>
                   </div>
                 </div>
               </div>
