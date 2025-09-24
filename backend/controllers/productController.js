@@ -1381,6 +1381,49 @@ const revisedRate = async (req, res) => {
 // Start of function that will handle mass upload of products
 // End of function that will handle mass upload of products
 
+// Start of funcion that will handle the deletion of product
+const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    // Validate if ID is provided
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "Product ID is required"
+      });
+    }
+
+    // Find the product first to check if it exists
+    const product = await Product.findById(id);
+    
+    if (!product) {
+      return res.status(404).json({
+        success: false,
+        message: "Product not found"
+      });
+    }
+
+    // Delete the product
+    await Product.findByIdAndDelete(id);
+
+    return res.status(200).json({
+      success: true,
+      message: "Product deleted successfully"
+    });
+
+  } catch (error) {
+    console.error("Error deleting product:", error);
+    return res.status(500).json({
+      success: false,
+      message: "Internal server error while deleting product",
+      error: error.message
+    });
+  }
+};
+// End of funcion that will handle the deletion of product
+
+
 
 // Export addProduct with upload.any() middleware directly
 module.exports = {
@@ -1391,5 +1434,6 @@ module.exports = {
   massRevisedRate,
   revisedRate,
   upload,
-  bulkUploadProducts
+  bulkUploadProducts,
+  deleteProduct
 }

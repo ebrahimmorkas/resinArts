@@ -179,24 +179,30 @@ export default function AdminProductsPage() {
     setShowDeleteModal(true);
   };
 
-  const handleDelete = async () => {
-    if (!selectedProductForDelete) return;
-    setIsLoading(true);
-    try {
-      const res = await axios.delete(`http://localhost:3000/api/product/delete-product/${selectedProductForDelete._id}`, {
-        withCredentials: true
-      });
-      if (res.status === 200) {
-        toast.success('Product deleted successfully!');
-        // TODO: Refresh products from context
-      }
-    } catch (error) {
-      toast.error('Failed to delete product!');
-    } finally {
-      setIsLoading(false);
-      setShowDeleteModal(false);
+const handleDelete = async () => {
+  if (!selectedProductForDelete) return;
+  setIsLoading(true);
+  try {
+    const res = await axios.delete(`http://localhost:3000/api/product/delete-product/${selectedProductForDelete._id}`, {
+      withCredentials: true
+    });
+    if (res.status === 200) {
+      toast.success('Product deleted successfully!');
+      // Remove the deleted product from selectedProducts if it was selected
+      setSelectedProducts(prev => prev.filter(p => p._id !== selectedProductForDelete._id));
+      // You might want to add a context method to refresh products here
+      // For example: refreshProducts() or fetchProducts()
     }
-  };
+  } catch (error) {
+    console.error("Delete error:", error);
+    const errorMessage = error.response?.data?.message || 'Failed to delete product!';
+    toast.error(errorMessage);
+  } finally {
+    setIsLoading(false);
+    setShowDeleteModal(false);
+    setSelectedProductForDelete(null);
+  }
+};
 
   // Filtered data
   const filteredData = useMemo(() => {
@@ -341,59 +347,62 @@ export default function AdminProductsPage() {
     );
   };
 
-  const DeleteConfirmationModal = () => {
-    if (!showDeleteModal || !selectedProductForDelete) return null;
+const DeleteConfirmationModal = () => {
+  if (!showDeleteModal || !selectedProductForDelete) return null;
 
-    return (
-      <div className="fixed inset-0 z-50 overflow-y-auto">
-        <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
-          <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
-          <div className="inline-block w-full max-w-md my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
-              <div className="flex items-center">
-                <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
-                  <Trash2 className="w-6 h-6 text-red-600" />
+  return (
+    <div className="fixed inset-0 z-50 overflow-y-auto">
+      <div className="flex items-center justify-center min-h-screen px-4 pt-4 pb-20 text-center sm:block sm:p-0">
+        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+        <div className="inline-block w-full max-w-md my-8 overflow-hidden text-left align-middle transition-all transform bg-white shadow-xl rounded-lg relative z-10">
+          <div className="px-6 py-4 border-b border-gray-200">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center mr-3">
+                <Trash2 className="w-6 h-6 text-red-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900">Delete Product</h3>
+            </div>
+          </div>
+          <div className="px-6 py-6">
+            <p className="text-sm text-gray-600 mb-4">
+              Are you sure you want to delete "<span className="font-semibold">{selectedProductForDelete.name}</span>"? 
+              This action cannot be undone and will permanently remove the product from your inventory.
+            </p>
+            <div className="bg-red-50 border border-red-200 rounded-md p-4">
+              <div className="flex items-start">
+                <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
+                <div className="text-sm text-red-700">
+                  <strong>Warning:</strong> This will also remove all associated data including variants, pricing, and stock information.
                 </div>
-                <h3 className="text-lg font-semibold text-gray-900">Delete Product</h3>
               </div>
             </div>
-            <div className="px-6 py-6">
-              <p className="text-sm text-gray-600 mb-4">
-                Are you sure you want to delete "<span className="font-semibold">{selectedProductForDelete.name}</span>"? 
-                This action cannot be undone and will permanently remove the product from your inventory.
-              </p>
-              <div className="bg-red-50 border border-red-200 rounded-md p-4">
-                <div className="flex items-start">
-                  <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 mr-3 flex-shrink-0" />
-                  <div className="text-sm text-red-700">
-                    <strong>Warning:</strong> This will also remove all associated data including variants, pricing, and stock information.
-                  </div>
-                </div>
-              </div>
-            </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
-              <div className="flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3">
-                <button 
-                  onClick={() => setShowDeleteModal(false)}
-                  className="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
-                  disabled={isLoading}
-                >
-                  Cancel
-                </button>
-                <button 
-                  onClick={handleDelete}
-                  disabled={isLoading}
-                  className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50"
-                >
-                  {isLoading ? 'Deleting...' : 'Delete Product'}
-                </button>
-              </div>
+          </div>
+          <div className="px-6 py-4 bg-gray-50 border-t border-gray-200">
+            <div className="flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+              <button 
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setSelectedProductForDelete(null);
+                }}
+                className="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                disabled={isLoading}
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDelete}
+                disabled={isLoading}
+                className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50"
+              >
+                {isLoading ? 'Deleting...' : 'Delete Product'}
+              </button>
             </div>
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const ViewDetailsModal = ({ product, onClose }) => {
     if (!product) return null;
