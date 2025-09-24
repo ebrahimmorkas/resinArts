@@ -10,8 +10,243 @@ import {
   Filter,
   Download,
   Star,
-  StarOff
+  StarOff,
+  X,
+  AlertTriangle,
+  CheckCircle,
+  XCircle,
+  Info
 } from 'lucide-react';
+
+// Toast Component
+const Toast = ({ message, type, onClose }) => {
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      onClose();
+    }, 3000);
+    return () => clearTimeout(timer);
+  }, [onClose]);
+
+  const getToastStyles = () => {
+    switch (type) {
+      case 'success':
+        return 'bg-green-50 border-green-200 text-green-800';
+      case 'error':
+        return 'bg-red-50 border-red-200 text-red-800';
+      case 'warning':
+        return 'bg-yellow-50 border-yellow-200 text-yellow-800';
+      default:
+        return 'bg-blue-50 border-blue-200 text-blue-800';
+    }
+  };
+
+  const getIcon = () => {
+    switch (type) {
+      case 'success':
+        return <CheckCircle className="w-5 h-5" />;
+      case 'error':
+        return <XCircle className="w-5 h-5" />;
+      case 'warning':
+        return <AlertTriangle className="w-5 h-5" />;
+      default:
+        return <Info className="w-5 h-5" />;
+    }
+  };
+
+  return (
+    <div className={`fixed top-4 right-4 z-50 max-w-sm w-full mx-4 sm:mx-0 border rounded-lg shadow-lg ${getToastStyles()} transform transition-all duration-300 ease-in-out`}>
+      <div className="p-4">
+        <div className="flex items-start">
+          <div className="flex-shrink-0">
+            {getIcon()}
+          </div>
+          <div className="ml-3 flex-1">
+            <p className="text-sm font-medium">{message}</p>
+          </div>
+          <div className="ml-4 flex-shrink-0">
+            <button
+              onClick={onClose}
+              className="rounded-md hover:opacity-75 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-green-50 focus:ring-green-600"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Professional Modal Wrapper
+const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
+  if (!isOpen) return null;
+
+  const getSizeClasses = () => {
+    switch (size) {
+      case 'sm':
+        return 'max-w-md';
+      case 'lg':
+        return 'max-w-2xl';
+      case 'xl':
+        return 'max-w-4xl';
+      default:
+        return 'max-w-lg';
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className={`bg-white rounded-lg shadow-xl ${getSizeClasses()} w-full max-h-[90vh] overflow-y-auto`}>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+          <button
+            onClick={onClose}
+            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+          >
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-6">
+          {children}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Confirmation Modal Component
+const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, type = 'danger', loading = false, preview = null }) => {
+  if (!isOpen) return null;
+
+  const getTypeStyles = () => {
+    switch (type) {
+      case 'warning':
+        return {
+          icon: <AlertTriangle className="w-6 h-6 text-yellow-600" />,
+          iconBg: 'bg-yellow-100',
+          button: 'bg-yellow-600 hover:bg-yellow-700 focus:ring-yellow-500'
+        };
+      case 'info':
+        return {
+          icon: <Info className="w-6 h-6 text-blue-600" />,
+          iconBg: 'bg-blue-100',
+          button: 'bg-blue-600 hover:bg-blue-700 focus:ring-blue-500'
+        };
+      default:
+        return {
+          icon: <AlertTriangle className="w-6 h-6 text-red-600" />,
+          iconBg: 'bg-red-100',
+          button: 'bg-red-600 hover:bg-red-700 focus:ring-red-500'
+        };
+    }
+  };
+
+  const styles = getTypeStyles();
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="sm:flex sm:items-start mb-6">
+            <div className={`mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full ${styles.iconBg} sm:mx-0 sm:h-10 sm:w-10`}>
+              {styles.icon}
+            </div>
+            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">{message}</p>
+                {preview && (
+                  <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+                    <p className="text-sm font-medium text-gray-900">"{preview}"</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col-reverse sm:flex-row sm:justify-end gap-3">
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={loading}
+              className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={onConfirm}
+              disabled={loading}
+              className={`w-full sm:w-auto inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 text-base font-medium text-white ${styles.button} focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed`}
+            >
+              {loading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Processing...
+                </>
+              ) : (
+                'Confirm'
+              )}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Error Modal Component
+const ErrorModal = ({ isOpen, onClose, title, message }) => {
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-lg font-semibold text-gray-900">{title || "Error Occurred"}</h3>
+            <button
+              onClick={onClose}
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          
+          <div className="sm:flex sm:items-start mb-6">
+            <div className="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100 sm:mx-0 sm:h-10 sm:w-10">
+              <XCircle className="w-6 h-6 text-red-600" />
+            </div>
+            <div className="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left flex-1">
+              <div className="mt-2">
+                <p className="text-sm text-gray-500">{message}</p>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end">
+            <button
+              type="button"
+              onClick={onClose}
+              className="inline-flex justify-center rounded-lg border border-transparent shadow-sm px-4 py-2 bg-red-600 text-base font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const AllAnnouncements = () => {
   const [announcements, setAnnouncements] = useState([]);
@@ -21,7 +256,9 @@ const AllAnnouncements = () => {
   const [editModal, setEditModal] = useState(false);
   const [defaultModal, setDefaultModal] = useState(false);
   const [deleteModal, setDeleteModal] = useState(false);
+  const [errorModal, setErrorModal] = useState({ open: false, title: '', message: '' });
   const [selectedAnnouncement, setSelectedAnnouncement] = useState(null);
+  const [toast, setToast] = useState({ show: false, message: '', type: '' });
   
   // New state for search and pagination
   const [searchTerm, setSearchTerm] = useState('');
@@ -32,6 +269,14 @@ const AllAnnouncements = () => {
     fetchAnnouncements();
   }, []);
 
+  const showToast = (message, type = 'info') => {
+    setToast({ show: true, message, type });
+  };
+
+  const showErrorModal = (title, message) => {
+    setErrorModal({ open: true, title, message });
+  };
+
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
@@ -39,7 +284,9 @@ const AllAnnouncements = () => {
       setAnnouncements(res.data);
       setError(null);
     } catch (err) {
-      setError('Failed to fetch announcements');
+      const errorMessage = err.response?.data?.message || 'Failed to fetch announcements';
+      setError(errorMessage);
+      showErrorModal('Fetch Error', errorMessage);
       console.error(err);
     } finally {
       setLoading(false);
@@ -76,9 +323,12 @@ const AllAnnouncements = () => {
     try {
       await axios.delete(`http://localhost:3000/api/announcement/delete/${selectedAnnouncement._id}`);
       setDeleteModal(false);
+      showToast('Announcement deleted successfully', 'success');
       fetchAnnouncements();
     } catch (err) {
-      setError('Failed to delete announcement');
+      const errorMessage = err.response?.data?.message || 'Failed to delete announcement';
+      setError(errorMessage);
+      showErrorModal('Delete Error', errorMessage);
       console.error(err);
     } finally {
       setOperationLoading(null);
@@ -95,9 +345,12 @@ const AllAnnouncements = () => {
     try {
       await axios.put(`http://localhost:3000/api/announcement/update/${selectedAnnouncement._id}`, updatedData);
       setEditModal(false);
+      showToast('Announcement updated successfully', 'success');
       fetchAnnouncements();
     } catch (err) {
-      setError('Failed to update announcement');
+      const errorMessage = err.response?.data?.message || 'Failed to update announcement';
+      setError(errorMessage);
+      showErrorModal('Update Error', errorMessage);
       console.error(err);
     } finally {
       setOperationLoading(null);
@@ -117,9 +370,12 @@ const AllAnnouncements = () => {
         isDefault: true 
       });
       setDefaultModal(false);
+      showToast('Default announcement set successfully', 'success');
       fetchAnnouncements();
     } catch (err) {
-      setError('Failed to set default');
+      const errorMessage = err.response?.data?.message || 'Failed to set default';
+      setError(errorMessage);
+      showErrorModal('Default Setting Error', errorMessage);
       console.error(err);
     } finally {
       setOperationLoading(null);
@@ -145,6 +401,15 @@ const AllAnnouncements = () => {
 
   return (
     <div className="p-4 max-w-full">
+      {/* Toast Notification */}
+      {toast.show && (
+        <Toast 
+          message={toast.message} 
+          type={toast.type} 
+          onClose={() => setToast({ show: false, message: '', type: '' })} 
+        />
+      )}
+
       <div className="bg-white rounded-lg border border-gray-200">
         {/* Table Header */}
         <div className="px-6 py-4 border-b border-gray-200">
@@ -365,86 +630,57 @@ const AllAnnouncements = () => {
       </div>
 
       {/* Edit Modal */}
-      {editModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
-            <h3 className="text-lg font-bold mb-4">Edit Announcement</h3>
-            <EditForm 
-              initialData={selectedAnnouncement} 
-              onSubmit={handleUpdate} 
-              onCancel={() => setEditModal(false)}
-              loading={operationLoading === 'update'}
-            />
-          </div>
-        </div>
-      )}
+      <Modal 
+        isOpen={editModal} 
+        onClose={() => setEditModal(false)} 
+        title="Edit Announcement"
+        size="lg"
+      >
+        <EditForm 
+          initialData={selectedAnnouncement} 
+          onSubmit={handleUpdate} 
+          onCancel={() => setEditModal(false)}
+          loading={operationLoading === 'update'}
+        />
+      </Modal>
 
       {/* Default Confirmation Modal */}
-      {defaultModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md mx-4">
-            <h3 className="text-lg font-bold mb-4 text-blue-600">Set as Default</h3>
-            <p className="mb-6 text-gray-700">
-              Are you sure you want to make this announcement the default? This will override the current default announcement.
-            </p>
-            <div className="flex space-x-3">
-              <button 
-                onClick={confirmSetDefault}
-                className="flex-1 bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded transition-colors"
-                disabled={operationLoading === 'default'}
-              >
-                {operationLoading === 'default' ? 'Processing...' : 'Yes, Set as Default'}
-              </button>
-              <button 
-                onClick={() => setDefaultModal(false)}
-                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded transition-colors"
-                disabled={operationLoading === 'default'}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={defaultModal}
+        onClose={() => setDefaultModal(false)}
+        onConfirm={confirmSetDefault}
+        title="Set as Default"
+        message="Are you sure you want to make this announcement the default? This will override the current default announcement."
+        type="warning"
+        loading={operationLoading === 'default'}
+      />
 
       {/* Delete Confirmation Modal */}
-      {deleteModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black/50 z-50">
-          <div className="bg-white p-6 rounded-lg max-w-md mx-4">
-            <h3 className="text-lg font-bold mb-4 text-red-600">Delete Announcement</h3>
-            <p className="mb-4 text-gray-700">
-              Are you sure you want to delete this announcement?
-            </p>
-            <div className="bg-gray-100 p-3 rounded mb-4">
-              <p className="text-sm font-medium">"{selectedAnnouncement?.text}"</p>
-            </div>
-            <p className="mb-6 text-red-600 text-sm">This action cannot be undone.</p>
-            <div className="flex space-x-3">
-              <button 
-                onClick={confirmDelete}
-                className="flex-1 bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded transition-colors"
-                disabled={operationLoading === 'delete'}
-              >
-                {operationLoading === 'delete' ? 'Deleting...' : 'Yes, Delete'}
-              </button>
-              <button 
-                onClick={() => setDeleteModal(false)}
-                className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded transition-colors"
-                disabled={operationLoading === 'delete'}
-              >
-                Cancel
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmationModal
+        isOpen={deleteModal}
+        onClose={() => setDeleteModal(false)}
+        onConfirm={confirmDelete}
+        title="Delete Announcement"
+        message="Are you sure you want to delete this announcement? This action cannot be undone."
+        type="danger"
+        loading={operationLoading === 'delete'}
+        preview={selectedAnnouncement?.text}
+      />
+
+      {/* Error Modal */}
+      <ErrorModal
+        isOpen={errorModal.open}
+        onClose={() => setErrorModal({ open: false, title: '', message: '' })}
+        title={errorModal.title}
+        message={errorModal.message}
+      />
 
       {/* Global loading overlay */}
       {operationLoading && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
-          <div className="bg-white p-4 rounded-lg flex items-center">
+          <div className="bg-white p-6 rounded-xl flex items-center shadow-lg">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-3"></div>
-            <span>
+            <span className="font-medium">
               {operationLoading === 'update' && 'Updating announcement...'}
               {operationLoading === 'delete' && 'Deleting announcement...'}
               {operationLoading === 'default' && 'Setting as default...'}
@@ -525,87 +761,123 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
   const isDefault = initialData.isDefault;
 
   return (
-    <form onSubmit={handleFormSubmit} className="space-y-4">
+    <form onSubmit={handleFormSubmit} className="space-y-6">
+      {/* Error Alert */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
-          {error}
+        <div className="rounded-lg bg-red-50 border border-red-200 p-4">
+          <div className="flex">
+            <div className="flex-shrink-0">
+              <XCircle className="h-5 w-5 text-red-400" />
+            </div>
+            <div className="ml-3">
+              <h3 className="text-sm font-medium text-red-800">Validation Error</h3>
+              <div className="mt-2 text-sm text-red-700">
+                <p>{error}</p>
+              </div>
+            </div>
+          </div>
         </div>
       )}
-      
-      <div>
-        <label className="block text-sm font-medium mb-1">Text</label>
-        <textarea 
-          name="text" 
-          value={formData.text} 
-          onChange={handleChange} 
-          required 
-          className="w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          rows="3"
-        />
+
+      {/* Form Fields */}
+      <div className="space-y-4">
+        {/* Text Field */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">
+            Announcement Text
+          </label>
+          <textarea 
+            name="text" 
+            value={formData.text} 
+            onChange={handleChange} 
+            required 
+            rows="4"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors resize-none"
+            placeholder="Enter your announcement text..."
+          />
+        </div>
+
+        {/* Date Fields */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Start Date
+            </label>
+            <input 
+              type="date" 
+              name="startDate" 
+              value={formData.startDate} 
+              onChange={handleChange} 
+              required 
+              disabled={isDefault}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                isDefault ? 'bg-gray-50 cursor-not-allowed text-gray-500' : ''
+              }`}
+            />
+            {isDefault && (
+              <p className="text-xs text-gray-500 mt-1">
+                Start date cannot be edited for default announcements
+              </p>
+            )}
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              End Date
+            </label>
+            <input 
+              type="date" 
+              name="endDate" 
+              value={formData.endDate} 
+              onChange={handleChange} 
+              required 
+              disabled={isDefault}
+              className={`w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
+                isDefault ? 'bg-gray-50 cursor-not-allowed text-gray-500' : ''
+              }`}
+            />
+            {isDefault && (
+              <p className="text-xs text-gray-500 mt-1">
+                End date cannot be edited for default announcements
+              </p>
+            )}
+          </div>
+        </div>
+
+        {/* Default Checkbox */}
+        <div className="flex items-start">
+          <div className="flex items-center h-5">
+            <input 
+              type="checkbox" 
+              name="isDefault" 
+              checked={formData.isDefault} 
+              onChange={handleChange}
+              disabled={isDefault}
+              className={`w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${
+                isDefault ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
+              }`}
+            />
+          </div>
+          <div className="ml-3 text-sm">
+            <label className={`font-medium ${isDefault ? 'text-gray-500' : 'text-gray-700'}`}>
+              Set as Default Announcement
+            </label>
+            <p className="text-gray-500">
+              {isDefault 
+                ? 'This announcement is currently the default and cannot be unmarked.' 
+                : 'Default announcements are shown when no other announcement is active.'
+              }
+            </p>
+          </div>
+        </div>
       </div>
-      
-      <div>
-        <label className="block text-sm font-medium mb-1">Start Date</label>
-        <input 
-          type="date" 
-          name="startDate" 
-          value={formData.startDate} 
-          onChange={handleChange} 
-          required 
-          disabled={isDefault}
-          className={`w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-            isDefault ? 'bg-gray-100 cursor-not-allowed' : ''
-          }`}
-        />
-        {isDefault && (
-          <p className="text-xs text-gray-500 mt-1">
-            Start date cannot be edited for default announcements
-          </p>
-        )}
-      </div>
-      
-      <div>
-        <label className="block text-sm font-medium mb-1">End Date</label>
-        <input 
-          type="date" 
-          name="endDate" 
-          value={formData.endDate} 
-          onChange={handleChange} 
-          required 
-          disabled={isDefault}
-          className={`w-full border p-2 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent ${
-            isDefault ? 'bg-gray-100 cursor-not-allowed' : ''
-          }`}
-        />
-        {isDefault && (
-          <p className="text-xs text-gray-500 mt-1">
-            End date cannot be edited for default announcements
-          </p>
-        )}
-      </div>
-      
-      <div className="flex items-center">
-        <input 
-          type="checkbox" 
-          name="isDefault" 
-          checked={formData.isDefault} 
-          onChange={handleChange}
-          disabled={isDefault}
-          className={`mr-2 ${isDefault ? 'cursor-not-allowed' : 'cursor-pointer'}`}
-        />
-        <label className={`text-sm font-medium ${isDefault ? 'text-gray-500' : ''}`}>
-          Set as Default
-        </label>
-        {isDefault && (
-          <span className="text-xs text-gray-500 ml-2">(Cannot uncheck default)</span>
-        )}
-      </div>
-      
-      <div className="flex space-x-3 pt-4">
+
+      {/* Form Actions */}
+      <div className="flex flex-col sm:flex-row-reverse gap-3 pt-6 border-t border-gray-200">
         <button 
           type="submit" 
-          className="flex-1 bg-blue-500 hover:bg-blue-600 disabled:bg-blue-300 text-white px-4 py-2 rounded transition-colors flex items-center justify-center"
           disabled={loading}
+          className="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           {loading ? (
             <>
@@ -613,14 +885,14 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
               Updating...
             </>
           ) : (
-            'Update'
+            'Update Announcement'
           )}
         </button>
         <button 
           type="button" 
           onClick={onCancel} 
-          className="flex-1 bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded transition-colors"
           disabled={loading}
+          className="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Cancel
         </button>
