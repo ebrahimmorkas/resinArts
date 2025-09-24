@@ -256,6 +256,18 @@ export default function Home() {
     return bulkPricing;
   }
 
+  const getEffectiveUnitPrice = (quantity, bulkPricing, basePrice) => {
+    if (bulkPricing.length === 0) return basePrice;
+    let effectivePrice = basePrice;
+    for (let i = bulkPricing.length - 1; i >= 0; i--) {
+      if (quantity >= bulkPricing[i].quantity) {
+        effectivePrice = bulkPricing[i].wholesalePrice;
+        break;
+      }
+    }
+    return effectivePrice;
+  }
+
   const getApplicableDiscount = (product) => {
     const now = new Date();
     for (const discount of discountData) {
@@ -1280,6 +1292,25 @@ const CartModal = () => {
 
   const isFreeCashDisabled = cartTotal < validAboveAmount || (!isAllProducts && !hasEligibleProduct);
 
+  // Compute local cart total with bulk pricing
+  let localCartTotal = 0;
+  const cartEntries = Object.entries(cartItems);
+  cartEntries.forEach(([cartKey, item]) => {
+    const product = products.find((p) => p._id === item.productId);
+    if (!product) {
+      localCartTotal += ((item.discountedPrice || item.price) * item.quantity) - (item.cashApplied || 0);
+      return;
+    }
+
+    const variant = product.variants?.find((v) => v._id === item.variantId);
+    const sizeDetail = variant?.moreDetails?.find((md) => md._id === item.detailsId);
+    const bulkPricing = getBulkPricing(product, variant, sizeDetail);
+    const basePrice = item.discountedPrice || item.price;
+    const effectiveUnit = getEffectiveUnitPrice(item.quantity, bulkPricing, basePrice);
+    const subtotal = effectiveUnit * item.quantity;
+    localCartTotal += subtotal - (item.cashApplied || 0);
+  });
+
   return (
     <div className={`fixed inset-0 z-50 ${isCartOpen ? "block" : "hidden"}`}>
       <div className="absolute inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
@@ -1352,12 +1383,15 @@ const CartModal = () => {
                   )}
                 </div>
               )}
-              {Object.entries(cartItems).map(([cartKey, item]) => {
+              {cartEntries.map(([cartKey, item]) => {
                 const product = products.find((p) => p._id === item.productId);
                 if (!product) return null;
 
-                const variant = product.variants?.find((v) => v.colorName === item.colorName);
-                const itemPrice = item.discountedPrice || item.price;
+                const variant = product.variants?.find((v) => v._id === item.variantId);
+                const sizeDetail = variant?.moreDetails?.find((md) => md._id === item.detailsId);
+                const bulkPricing = getBulkPricing(product, variant, sizeDetail);
+                const basePrice = item.discountedPrice || item.price;
+                const effectiveUnit = getEffectiveUnitPrice(item.quantity, bulkPricing, basePrice);
 
                 return (
                   <div key={cartKey} className="flex items-center space-x-4 p-4 border rounded-lg">
@@ -1373,7 +1407,14 @@ const CartModal = () => {
                           ? `${item.colorName}, ${item.sizeString}`
                           : "Default variant"}
                       </p>
-                      <p className="text-blue-600 font-bold">₹{itemPrice.toFixed(2)}</p>
+                      <div className="flex items-center gap-2">
+                        <span className={`font-bold ${effectiveUnit < basePrice ? "text-green-600" : "text-blue-600"}`}>
+                          ₹{effectiveUnit.toFixed(2)}
+                        </span>
+                        {effectiveUnit < basePrice && (
+                          <span className="text-sm text-gray-500 line-through">₹{basePrice.toFixed(2)}</span>
+                        )}
+                      </div>
                       {item.cashApplied > 0 && (
                         <p className="text-xs text-green-600">
                           Free Cash Applied: ₹{item.cashApplied.toFixed(2)}
@@ -1419,7 +1460,7 @@ const CartModal = () => {
                 )}
                 <div className="flex justify-between items-center mb-4">
                   <span className="font-bold">Total:</span>
-                  <span className="font-bold text-xl">₹{cartTotal.toFixed(2)}</span>
+                  <span className="font-bold text-xl">₹{localCartTotal.toFixed(2)}</span>
                 </div>
                 <button
                   className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200"
