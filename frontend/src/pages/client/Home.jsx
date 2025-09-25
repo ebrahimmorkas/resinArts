@@ -100,7 +100,7 @@ export default function Home() {
   const restockedRef = useRef(null)
   const revisedRatesRef = useRef(null)
   const outOfStockRef = useRef(null)
-  const { user } = useContext(AuthContext)
+  const { user, setUser } = useContext(AuthContext)
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -284,6 +284,17 @@ export default function Home() {
     }
     return null;
   }
+
+// Function that will handle logout
+const handleLogout = async () => {
+    try {
+      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true });
+      setUser(null);
+      navigate('/auth/login');
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
 
   const getProductBadge = (product, variant = null, sizeDetail = null) => {
     if (isOutOfStockForBadge(product, variant, sizeDetail)) {
@@ -1590,12 +1601,16 @@ const CartModal = () => {
                       My Orders
                     </Link>
                     <a
-                      href="#"
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <LogOut className="w-4 h-4" />
-                      Logout
-                    </a>
+      href="#"
+      onClick={(e) => {
+        e.preventDefault();
+        handleLogout();
+      }}
+      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+    >
+      <LogOut className="w-4 h-4" />
+      Logout
+    </a>
                   </div>
                 )}
               </div>
