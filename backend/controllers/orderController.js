@@ -3,6 +3,7 @@ const Order = require('../models/Order');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 const FreeCash = require('../models/FreeCash');
+const Discount = require('../models/Discount');
 
 // Function to check whether the order exists or not
 const findOrder = async (orderId) => {
@@ -47,7 +48,6 @@ const placeOrder = async (req, res) => {
             });
         }
 
-        // Use req.user.id from auth middleware instead of body
         const userId = req.user.id;
         if (!userId) {
             return res.status(401).json({
@@ -80,6 +80,14 @@ const placeOrder = async (req, res) => {
             ],
         });
 
+        // Fetch all active global discounts (mirrors DiscountContext)
+        const now = new Date();
+        const discountData = await Discount.find({
+            startDate: { $lte: now },
+            endDate: { $gte: now },
+            isActive: true,
+        });
+
         for (const cartData of cartItems) {
             try {
                 const product = await Product.findById(cartData.productId);
@@ -88,6 +96,107 @@ const placeOrder = async (req, res) => {
                     continue;
                 }
 
+                let variant = null;
+                let sizeDetail = null;
+                if (cartData.variantId) {
+                    variant = product.variants.find((v) => v._id.toString() === cartData.variantId);
+                    if (!variant) {
+                        errors.push(`Variant not found for product ${cartData.productName}`);
+                        continue;
+                    }
+
+                    if (cartData.detailsId) {
+                        sizeDetail = variant.moreDetails.find((md) => md._id.toString() === cartData.detailsId);
+                        if (!sizeDetail) {
+                            errors.push(`Size detail not found for variant in product ${cartData.productName}`);
+                            continue;
+                        }
+                    }
+                }
+
+                // Compute if per-product discount is active (mirrors isDiscountActive)
+                let discountStartDate, discountEndDate;
+                if (sizeDetail && sizeDetail.discountStartDate && sizeDetail.discountEndDate) {
+                    discountStartDate = sizeDetail.discountStartDate;
+                    discountEndDate = sizeDetail.discountEndDate;
+                } else if (variant && variant.discountStartDate && variant.discountEndDate) {
+                    discountStartDate = variant.discountStartDate;
+                    discountEndDate = variant.discountEndDate;
+                } else if (product.discountStartDate && product.discountEndDate) {
+                    discountStartDate = product.discountStartDate;
+                    discountEndDate = product.discountEndDate;
+                }
+
+                const isDiscountActive = discountStartDate && discountEndDate
+                    ? now >= new Date(discountStartDate) && now <= new Date(discountEndDate)
+                    : false;
+
+                // Compute base price (original or discounted, mirrors getOriginalPrice and getDisplayPrice without global discount)
+                let basePrice = 0;
+                if (sizeDetail) {
+                    basePrice = parseFloat(isDiscountActive && sizeDetail.discountPrice ? sizeDetail.discountPrice : sizeDetail.price) || 0;
+                } else if (variant && variant.commonPrice !== undefined) {
+                    basePrice = parseFloat(isDiscountActive && variant.discountCommonPrice ? variant.discountCommonPrice : variant.commonPrice) || 0;
+                } else {
+                    basePrice = parseFloat(isDiscountActive && product.discountPrice ? product.discountPrice : product.price) || 0;
+                }
+
+                // Get bulk pricing (mirrors getBulkPricing)
+                let bulkPricing = [];
+                if (sizeDetail) {
+                    if (isDiscountActive && sizeDetail.discountBulkPricing) {
+                        bulkPricing = sizeDetail.discountBulkPricing || [];
+                    } else if (sizeDetail.bulkPricingCombinations) {
+                        bulkPricing = sizeDetail.bulkPricingCombinations || [];
+                    }
+                } else if (variant) {
+                    if (isDiscountActive && variant.discountBulkPricing) {
+                        bulkPricing = variant.discountBulkPricing || [];
+                    } else if (variant.bulkPricing) {
+                        bulkPricing = variant.bulkPricing || [];
+                    }
+                } else {
+                    if (isDiscountActive && product.discountBulkPricing) {
+                        bulkPricing = product.discountBulkPricing || [];
+                    } else if (product.bulkPricing) {
+                        bulkPricing = product.bulkPricing || [];
+                    }
+                }
+
+                // Apply global discount if applicable (mirrors getApplicableDiscount)
+                let globalDiscount = null;
+                for (const discount of discountData) {
+                    if (discount.applicableToAll ||
+                        (discount.selectedMainCategory && product.categoryPath?.includes(discount.selectedMainCategory)) ||
+                        (discount.selectedSubCategory && product.categoryPath?.includes(discount.selectedSubCategory))) {
+                        globalDiscount = discount;
+                        break;
+                    }
+                }
+
+                if (globalDiscount) {
+                    const discountFactor = 1 - (globalDiscount.discountPercentage / 100);
+                    basePrice *= discountFactor;
+                    bulkPricing = bulkPricing.map(tier => ({
+                        ...tier,
+                        wholesalePrice: tier.wholesalePrice * discountFactor,
+                    }));
+                }
+
+                // Compute effective unit price with bulk (mirrors getEffectiveUnitPrice)
+                let effectiveUnitPrice = basePrice;
+                if (bulkPricing.length > 0) {
+                    for (let i = bulkPricing.length - 1; i >= 0; i--) {
+                        if (cartData.quantity >= bulkPricing[i].quantity) {
+                            effectiveUnitPrice = bulkPricing[i].wholesalePrice;
+                            break;
+                        }
+                    }
+                }
+
+                const subtotal = effectiveUnitPrice * cartData.quantity;
+
+                // Handle free cash
                 let cashApplied = cartData.cash_applied || cartData.cashApplied || 0;
                 if (freeCash && cashApplied > 0) {
                     const isEligible = isFreeCashEligible(product, cartData, freeCash);
@@ -100,63 +209,28 @@ const placeOrder = async (req, res) => {
                     }
                 }
 
+                // Push to orders with computed values
+                const orderItem = {
+                    image_url: cartData.imageUrl,
+                    product_id: cartData.productId,
+                    product_name: cartData.productName,
+                    quantity: cartData.quantity,
+                    price: effectiveUnitPrice,  // Effective unit price after bulk/discounts
+                    total: subtotal,  // Effective total after bulk/discounts
+                    cash_applied: cashApplied,
+                };
+
                 if (cartData.variantId) {
-                    const variant = product.variants.find((v) => v._id.toString() === cartData.variantId);
-                    if (!variant) {
-                        errors.push(`Variant ${cartData.variantName || 'Unknown'} not found for product ${cartData.productName}`);
-                        continue;
-                    }
-
-                    if (!cartData.sizeId) {
-                        errors.push(`Size is required for variant ${cartData.variantName} of product ${cartData.productName}`);
-                        continue;
-                    }
-
-                    let sizeFound = false;
-                    for (const variantItem of product.variants) {
-                        if (variantItem._id.toString() === cartData.variantId) {
-                            for (const detail of variantItem.moreDetails) {
-                                if (
-                                    detail._id.toString() === cartData.detailsId &&
-                                    detail.size._id.toString() === cartData.sizeId
-                                ) {
-                                    sizeFound = true;
-                                    break;
-                                }
-                            }
-                            break;
-                        }
-                    }
-
-                    if (!sizeFound) {
-                        errors.push(`Size ${cartData.sizeString || 'Unknown'} not found in variant ${cartData.variantName} for product ${cartData.productName}`);
-                        continue;
-                    }
-
-                    ordersToAdd.push({
-                        image_url: cartData.imageUrl,
-                        product_id: cartData.productId,
-                        product_name: cartData.productName,
-                        variant_id: cartData.variantId,
-                        variant_name: cartData.variantName,
-                        size_id: cartData.sizeId,
-                        size: cartData.sizeString,
-                        quantity: cartData.quantity,
-                        price: cartData.price,
-                        total: cartData.price * cartData.quantity,
-                        cash_applied: cashApplied,
-                    });
-                } else {
-                    ordersToAdd.push({
-                        image_url: cartData.imageUrl,
-                        product_id: cartData.productId,
-                        product_name: cartData.productName,
-                        quantity: cartData.quantity,
-                        price: cartData.price,
-                        total: cartData.price * cartData.quantity,
-                        cash_applied: cashApplied,
-                    });
+                    orderItem.variant_id = cartData.variantId;
+                    orderItem.variant_name = variant ? variant.colorName : cartData.variantName;
                 }
+
+                if (cartData.sizeId) {
+                    orderItem.size_id = cartData.sizeId;
+                    orderItem.size = sizeDetail ? `${sizeDetail.size.length} × ${sizeDetail.size.breadth} × ${sizeDetail.size.height} ${sizeDetail.size.unit || 'cm'}` : cartData.sizeString;
+                }
+
+                ordersToAdd.push(orderItem);
             } catch (itemError) {
                 console.error('Error processing cart item:', itemError);
                 errors.push(`Error processing product ${cartData.productId}: ${itemError.message}`);
