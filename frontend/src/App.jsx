@@ -8,7 +8,7 @@ import Home from './pages/client/Home';
 import Orders from './pages/client/Orders';
 import OrdersPanel from './components/admin/SidebarLinks/orders/OrdersPanel';
 import ProtectedRoute from './protectedRoutes';
-
+import UpdateUser from './pages/client/UpdateUser';
 
 function App() {
   return (
@@ -23,6 +23,11 @@ function App() {
         <Route path='/' element={
             <ProtectedRoute allowedRole="user">
               <Home />
+            </ProtectedRoute>
+          } />
+        <Route path='/user/update-profile' element={
+            <ProtectedRoute allowedRole="user">
+              <UpdateUser />
             </ProtectedRoute>
           } />
         <Route path='/orders/:userId' element={

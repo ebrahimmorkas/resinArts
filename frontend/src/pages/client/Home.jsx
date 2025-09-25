@@ -1562,7 +1562,7 @@ const CartModal = () => {
                 />
                 <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
               </div>
-              <Link to={`/orders/${user.id}`}>Orders</Link>
+              
             </div>
             <div className="flex items-center space-x-4">
               <div className="relative profile-dropdown">
@@ -1575,20 +1575,20 @@ const CartModal = () => {
                 </button>
                 {isProfileOpen && (
                   <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
-                    <a
-                      href="#"
+                    <Link
+                      to="/user/update-profile"
                       className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                     >
                       <Settings className="w-4 h-4" />
                       Edit Profile
-                    </a>
-                    <a
-                      href="#"
+                    </Link>
+                    <Link
+                      to={`/orders/${user.id}`}
                       className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
                     >
                       <Package className="w-4 h-4" />
                       My Orders
-                    </a>
+                    </Link>
                     <a
                       href="#"
                       className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
