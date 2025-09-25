@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { Menu, Bell, User, RefreshCw, ChevronDown, LogOut, UserCircle, X, Trash2 } from 'lucide-react';
+import { AuthContext } from '../../../Context/AuthContext';
+import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 
 const Navbar = ({ onMenuClick, isSidebarOpen }) => {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -10,6 +13,18 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
     { id: 3, title: 'Payment Processed', message: 'Payment of $299.99 has been processed', time: '3 hours ago', unread: false },
     { id: 4, title: 'New Customer Registered', message: 'Sarah Johnson has created an account', time: '5 hours ago', unread: false },
   ]);
+  const {setUser} = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  const handleLogout = async () => {
+  try {
+    await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true });
+    setUser(null);
+    navigate('/auth/login');
+  } catch (error) {
+    console.error('Logout error:', error);
+  }
+};
 
   const handleRefresh = () => {
     window.location.reload();
@@ -122,7 +137,10 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                           Account Settings
                         </a>
                         <div className="border-t border-gray-200 my-1"></div>
-                        <a href="/logout" className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200">
+                        <a href="#" onClick={(e) => {
+        e.preventDefault();
+        handleLogout();
+      }} className="flex items-center px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors duration-200">
                           <LogOut className="w-4 h-4 mr-3" />
                           Sign Out
                         </a>
