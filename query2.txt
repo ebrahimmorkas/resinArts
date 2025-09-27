@@ -12,7 +12,7 @@ export const AuthProvider = ({children}) => {
     const checkLogin = async() => {
       try {
         const res = await axios.get(
-          'http://localhost:3000/api/auth/me',
+          'https://api.simplyrks.cloud/api/auth/me',
           {withCredentials: true},
         );
         console.log("You are logged in")
@@ -61,7 +61,7 @@ const Login = () => {
 
     try{
         const res = await axios.post(
-          'http://localhost:3000/api/auth/login', 
+          'https://api.simplyrks.cloud/api/auth/login', 
           formData,
           {withCredentials: true}
         )
@@ -228,7 +228,7 @@ export const CartProvider = ({ children }) => {
     const fetchCartFromBackend = async () => {
         try {
             setLoading(true);
-            const response = await axios.get("http://localhost:3000/api/cart", {
+            const response = await axios.get("https://api.simplyrks.cloud/api/cart", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -319,7 +319,7 @@ export const CartProvider = ({ children }) => {
                 cartItemData.size = sizeString;
             }
 
-            const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
+            const response = await axios.post("https://api.simplyrks.cloud/api/cart", cartItemData, {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -385,7 +385,7 @@ export const CartProvider = ({ children }) => {
             }
 
             const response = await axios.put(
-                "http://localhost:3000/api/cart",
+                "https://api.simplyrks.cloud/api/cart",
                 {
                     product_id: item.productId,
                     variant_name: item.variantName,
@@ -422,7 +422,7 @@ export const CartProvider = ({ children }) => {
             const item = cartItems[cartKey];
             if (!item) return;
 
-            const response = await axios.delete("http://localhost:3000/api/cart", {
+            const response = await axios.delete("https://api.simplyrks.cloud/api/cart", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -535,7 +535,7 @@ export const CartProvider = ({ children }) => {
                 // Update on backend
                 try {
                     await axios.put(
-                        "http://localhost:3000/api/cart",
+                        "https://api.simplyrks.cloud/api/cart",
                         {
                             product_id: item.productId,
                             variant_name: item.variantName,
@@ -591,7 +591,7 @@ export const CartProvider = ({ children }) => {
         try {
             setLoading(true);
             // Clear cart on backend
-            const response = await axios.delete("http://localhost:3000/api/cart/clear", {
+            const response = await axios.delete("https://api.simplyrks.cloud/api/cart/clear", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -650,7 +650,7 @@ export const ProductProvider = ({ children }) => {
       if (!authLoading && user) {
         try {
           const response = await axios.get(
-            "http://localhost:3000/api/product/all",
+            "https://api.simplyrks.cloud/api/product/all",
             { withCredentials: true } // Include cookies (JWT token)
           );
           setProducts(response.data.products);
@@ -690,7 +690,7 @@ export const CategoryProvider = ({ children }) => {
     const fetchCategories = async () => {
       try {
         const res = await axios.get(
-          "http://localhost:3000/api/category/fetch-categories",
+          "https://api.simplyrks.cloud/api/category/fetch-categories",
           { withCredentials: true }
         );
         setCategoriesErrors("");
@@ -738,7 +738,7 @@ export const FreeCashProvider = ({ children }) => {
 
     setLoadingFreeCash(true);
     try {
-      const res = await axios.get('http://localhost:3000/api/free-cash/check-eligibility', {
+      const res = await axios.get('https://api.simplyrks.cloud/api/free-cash/check-eligibility', {
         withCredentials: true,
         headers: {
           "Content-Type": "application/json",
@@ -833,7 +833,7 @@ export const DiscountProvider = ({children}) => {
     useEffect(() => {
         const checkForDiscounts = async () => {
             try {
-                const res = await axios.get('http://localhost:3000/api/discount/fetch-discount', {withCredentials: true});
+                const res = await axios.get('https://api.simplyrks.cloud/api/discount/fetch-discount', {withCredentials: true});
             if(res.status === 200) {
                 console.log("Discount data");
                 console.log(res.data.data);
@@ -879,7 +879,7 @@ export const BannerProvider = ({ children }) => {
       setLoadingBanners(true);
       setBannersError(null);
       
-      const res = await axios.get('http://localhost:3000/api/banner/fetch-banners', {
+      const res = await axios.get('https://api.simplyrks.cloud/api/banner/fetch-banners', {
         withCredentials: true
       });
       
@@ -970,7 +970,7 @@ export const AnnouncementProvider = ({ children }) => {
   useEffect(() => {
     const fetchAnnouncement = async () => {
       try {
-        const res = await axios.get('http://localhost:3000/api/announcement/all');
+        const res = await axios.get('https://api.simplyrks.cloud/api/announcement/all');
         const now = new Date();
         const activeAnnouncements = res.data.filter(a => !a.isDefault && new Date(a.startDate) <= now && new Date(a.endDate) >= now);
         let currentText = '';

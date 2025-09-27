@@ -183,7 +183,7 @@ const handleDelete = async () => {
   if (!selectedProductForDelete) return;
   setIsLoading(true);
   try {
-    const res = await axios.delete(`http://localhost:3000/api/product/delete-product/${selectedProductForDelete._id}`, {
+    const res = await axios.delete(`https://api.simplyrks.cloud/api/product/delete-product/${selectedProductForDelete._id}`, {
       withCredentials: true
     });
     if (res.status === 200) {
@@ -210,7 +210,7 @@ const handleDeleteSelected = async () => {
   
   try {
     const deletePromises = selectedProducts.map(product => 
-      axios.delete(`http://localhost:3000/api/product/delete-product/${product._id}`, {
+      axios.delete(`https://api.simplyrks.cloud/api/product/delete-product/${product._id}`, {
         withCredentials: true
       })
     );
@@ -935,7 +935,7 @@ const DeleteConfirmationModal = () => {
           };
         }
         const res = await axios.post(
-          'http://localhost:3000/api/product/restock',
+          'https://api.simplyrks.cloud/api/product/restock',
           dataToSend,
           { withCredentials: true }
         );
@@ -957,7 +957,7 @@ const DeleteConfirmationModal = () => {
     const handleUpdateMultipleStock = async (localMultipleToRestock) => {
       setModalLoading(true);
       try {
-        const res = await axios.post('http://localhost:3000/api/product/mass-restock', localMultipleToRestock, {
+        const res = await axios.post('https://api.simplyrks.cloud/api/product/mass-restock', localMultipleToRestock, {
           withCredentials: true,
         });
         if (res.status === 200) {
@@ -1256,7 +1256,7 @@ const DeleteConfirmationModal = () => {
           };
         }
         const res = await axios.post(
-          'http://localhost:3000/api/product/revised-rate',
+          'https://api.simplyrks.cloud/api/product/revised-rate',
           dataToSend,
           { withCredentials: true }
         );
@@ -1278,7 +1278,7 @@ const DeleteConfirmationModal = () => {
     const handleUpdateMultipleRevisedRate = async (localMultipleForRevisedRate) => {
       setModalLoading(true);
       try {
-        const res = await axios.post('http://localhost:3000/api/product/mass-revised-rate', localMultipleForRevisedRate, {
+        const res = await axios.post('https://api.simplyrks.cloud/api/product/mass-revised-rate', localMultipleForRevisedRate, {
           withCredentials: true,
         });
         if (res.status === 200) {

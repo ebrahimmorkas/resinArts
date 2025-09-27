@@ -18,7 +18,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
 
   const handleLogout = async () => {
   try {
-    await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true });
+    await axios.post('https://api.simplyrks.cloud/api/auth/logout', {}, { withCredentials: true });
     setUser(null);
     navigate('/auth/login');
   } catch (error) {

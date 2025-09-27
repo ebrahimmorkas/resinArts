@@ -15,7 +15,7 @@ export const ProductProvider = ({ children }) => {
       if (!authLoading && user) {
         try {
           const response = await axios.get(
-            "http://localhost:3000/api/product/all",
+            "https://api.simplyrks.cloud/api/product/all",
             { withCredentials: true } // Include cookies (JWT token)
           );
           setProducts(response.data.products);

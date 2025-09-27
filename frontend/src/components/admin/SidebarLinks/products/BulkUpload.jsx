@@ -3,7 +3,7 @@ import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Package, Users, I
 import axios from 'axios';
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:3000'); // Assuming your backend server is at port 3000 and has socket.io set up
+const socket = io('https://api.simplyrks.cloud'); // Assuming your backend server is at port 3000 and has socket.io set up
 
 // Toast Component
 const Toast = ({ message, type, onClose }) => {
@@ -352,7 +352,7 @@ const BulkUpload = () => {
     formData.append('file', productFile);
 
     try {
-      const res = await axios.post('http://localhost:3000/api/product/bulk-upload', formData, {
+      const res = await axios.post('https://api.simplyrks.cloud/api/product/bulk-upload', formData, {
         withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data',
@@ -385,7 +385,7 @@ const BulkUpload = () => {
     formData.append('file', categoryFile);
 
     try {
-      const res = await axios.post('http://localhost:3000/api/category/bulk-upload', formData, {
+      const res = await axios.post('https://api.simplyrks.cloud/api/category/bulk-upload', formData, {
         withCredentials: true,
         headers: {
           'Content-Type': 'multipart/form-data',

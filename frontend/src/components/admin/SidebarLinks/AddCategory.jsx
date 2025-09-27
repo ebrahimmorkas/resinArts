@@ -273,7 +273,7 @@ const AddCategory = () => {
       console.log('Sending data to backend:', { categories })
 
       const response = await axios.post(
-        'http://localhost:3000/api/category/add',
+        'https://api.simplyrks.cloud/api/category/add',
         formData,
         {
           headers: {

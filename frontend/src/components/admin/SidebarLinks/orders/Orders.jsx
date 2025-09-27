@@ -57,7 +57,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   // Function to handle status change for backend
   const handleStatusChangeBackend = async (status, orderId) => {
     try {
-      const res = await axios.post('http://localhost:3000/api/order/status-change', {status, orderId}, {withCredentials: true}) ;
+      const res = await axios.post('https://api.simplyrks.cloud/api/order/status-change', {status, orderId}, {withCredentials: true}) ;
       if(res.status === 200) {
         console.log("Order status changed successfully");
         setStatus(status);
@@ -730,7 +730,7 @@ export default function OrdersManagement() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/order/all", {
+        const res = await axios.get("https://api.simplyrks.cloud/api/order/all", {
           withCredentials: true,
         })
 
@@ -903,7 +903,7 @@ export default function OrdersManagement() {
   const handleReject = async (e, orderId) => {
     e.stopPropagation()
     try {
-      const res = await axios.post('http://localhost:3000/api/order/status-change', {status: "Rejected", orderId}, {withCredentials: true})
+      const res = await axios.post('https://api.simplyrks.cloud/api/order/status-change', {status: "Rejected", orderId}, {withCredentials: true})
       if(res.status === 200) {
         handleStatusChange(orderId, "Rejected")
       }

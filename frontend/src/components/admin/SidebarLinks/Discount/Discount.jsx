@@ -252,7 +252,7 @@ function Discount() {
         console.log('Form data before submission:', formData);
 
         try {
-            const res = await axios.post('http://localhost:3000/api/discount/add', formData, { withCredentials: true });
+            const res = await axios.post('https://api.simplyrks.cloud/api/discount/add', formData, { withCredentials: true });
             if (res.status !== 201) {
                 const errorMsg = `Failed to create discount: Invalid response status (${res.status})`;
                 setErrorMessage(errorMsg);

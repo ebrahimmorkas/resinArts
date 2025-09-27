@@ -203,7 +203,7 @@ export default function Users() {
   useEffect(() => {
   const getCategories = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
+      const res = await axios.get("https://api.simplyrks.cloud/api/category/fetch-categories", {withCredentials: true});
       if (res.status === 200) {
         const flatCats = res.data.categories;
         const buildTree = (flatCats) => {
@@ -508,7 +508,7 @@ export default function Users() {
 
     console.log("Submitting cleaned form:", cleanedCashForm);
     try {
-      const res = await axios.post('http://localhost:3000/api/free-cash/add', 
+      const res = await axios.post('https://api.simplyrks.cloud/api/free-cash/add', 
         { cashForm: cleanedCashForm, userID: selectedUser._id }, 
         { withCredentials: true }
       );

@@ -62,7 +62,7 @@ export default function Home() {
       console.error("User not logged in");
       return;
     }
-    const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
+    const res = await axios.post('https://api.simplyrks.cloud/api/order/place-order', cartItems, {
       withCredentials: true,
     });
     console.log("Checkout response:", res.data);
@@ -288,7 +288,7 @@ export default function Home() {
 // Function that will handle logout
 const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true });
+      await axios.post('https://api.simplyrks.cloud/api/auth/logout', {}, { withCredentials: true });
       setUser(null);
       navigate('/auth/login');
     } catch (error) {

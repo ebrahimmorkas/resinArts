@@ -11,7 +11,7 @@ export const UserProvider = ({children}) => {
     const fetchUsers = useCallback(async () => {
         try {
             setLoadingUsers(true);
-            const res = await axios.get('http://localhost:3000/api/user/all', {withCredentials: true});
+            const res = await axios.get('https://api.simplyrks.cloud/api/user/all', {withCredentials: true});
             if (res.data.users && res.data.users.length > 0) {
                 setUsers(res.data.users);
                 setUsersError(null);

@@ -12,7 +12,7 @@ export const CategoryProvider = ({ children }) => {
     const fetchCategories = async () => {
       try {
         const res = await axios.get(
-          "http://localhost:3000/api/category/fetch-categories",
+          "https://api.simplyrks.cloud/api/category/fetch-categories",
           { withCredentials: true }
         );
         setCategoriesErrors("");
