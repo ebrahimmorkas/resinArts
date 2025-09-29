@@ -238,13 +238,74 @@ const bulkUploadCategories = async (req, res) => {
   }
 };
 
+// Function to delete category
+const deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { cloudinary } = require('../utils/cloudinary');
 
+    // Find the category to delete
+    const category = await Category.findById(id);
+    
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
 
+    // Function to recursively get all descendant category IDs
+    const getAllDescendantIds = async (parentId) => {
+      const children = await Category.find({ parent_category_id: parentId });
+      let allIds = children.map(child => child._id);
+      
+      for (const child of children) {
+        const descendantIds = await getAllDescendantIds(child._id);
+        allIds = allIds.concat(descendantIds);
+      }
+      
+      return allIds;
+    };
+
+    // Get all descendant category IDs
+    const descendantIds = await getAllDescendantIds(id);
+    const allCategoryIds = [id, ...descendantIds];
+
+    // Get all categories that will be deleted to extract image URLs
+    const categoriesToDelete = await Category.find({ _id: { $in: allCategoryIds } });
+
+    // Delete images from Cloudinary
+    for (const cat of categoriesToDelete) {
+      if (cat.image) {
+        try {
+          // Extract public_id from Cloudinary URL
+          const urlParts = cat.image.split('/');
+          const publicIdWithExtension = urlParts[urlParts.length - 1];
+          const publicId = `categories/${publicIdWithExtension.split('.')[0]}`;
+          
+          await cloudinary.uploader.destroy(publicId);
+        } catch (error) {
+          console.log(`Failed to delete image for category ${cat.categoryName}:`, error.message);
+        }
+      }
+    }
+
+    // Delete all categories (parent and all descendants)
+    await Category.deleteMany({ _id: { $in: allCategoryIds } });
+
+    res.status(200).json({ 
+      message: 'Category and all subcategories deleted successfully',
+      deletedCount: allCategoryIds.length
+    });
+
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ message: 'Failed to delete category', error: error.message });
+  }
+};
 
 module.exports = {
     fetchCategories,
     findCategoryById,
     findSubCategoryById,
     upload,
-    bulkUploadCategories
+    bulkUploadCategories,
+    deleteCategory
 }

@@ -29,10 +29,10 @@ export const CategoryProvider = ({ children }) => {
   }, []); // 👈 run only once on mount
 
   return (
-    <CategoryContext.Provider
-      value={{ categories, loadingCategories, categoriesErrors }}
-    >
-      {children}
-    </CategoryContext.Provider>
-  );
+  <CategoryContext.Provider
+    value={{ categories, setCategories, loadingCategories, categoriesErrors }}
+  >
+    {children}
+  </CategoryContext.Provider>
+);
 };
