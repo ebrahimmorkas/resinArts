@@ -16,6 +16,7 @@ import AllBanners from '../../components/admin/SidebarLinks/Banner/AllBanners';
 import AddAnnouncement from '../../components/admin/SidebarLinks/Announcement/AddAnnouncement';
 import AllAnnouncement from '../../components/admin/SidebarLinks/Announcement/AllAnnouncement';
 import BulkUpload from '../../components/admin/SidebarLinks/products/BulkUpload';
+import AllCategories from '../../components/admin/SidebarLinks/Category/AllCategories';
 
 function AdminPanel() {
   // State to manage sidebar open/close - starts closed
@@ -49,7 +50,6 @@ function AdminPanel() {
               <Route path="dashboard" element={<div className="bg-white rounded-lg shadow p-6 w-full">Dashboard Component</div>} />
               <Route path="products" element={<AllProducts />} />
               <Route path="products/add" element={<AddProduct />} />
-              <Route path="products/categories" element={<AddCategory />} />
               <Route path="orders" element={<Orders />} /> {/* Route for /admin/panel/orders */}
               <Route path="orders/pending" element={<OrdersPanel />} />
               <Route path="orders/completed" element={<OrdersAccepted />} />
@@ -61,6 +61,8 @@ function AdminPanel() {
               <Route path="announcement/add" element={<AddAnnouncement />} />
               <Route path="announcement/all" element={<AllAnnouncement />} />
               <Route path="products/b" element={<BulkUpload />} />
+              <Route path="categories/add" element={<AddCategory />} />
+              <Route path="categories/all" element={<AllCategories />} />
               
               {/* Additional routes for new menu items */}
               <Route path="analytics/sales" element={<div className="bg-white rounded-lg shadow p-6 w-full">Sales Report Component</div>} />
