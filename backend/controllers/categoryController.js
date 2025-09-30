@@ -45,7 +45,7 @@ const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   // Check file extensions
-  const allowedExtensions = ['.xlsx', '.csv'];
+  const allowedExtensions = ['.xlsx', '.csv', '.jpg', '.jpeg', '.png'];
   const fileExtension = path.extname(file.originalname).toLowerCase();
   
   if (allowedExtensions.includes(fileExtension)) {
@@ -238,13 +238,208 @@ const bulkUploadCategories = async (req, res) => {
   }
 };
 
+// Update category name
+const updateCategoryName = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { categoryName } = req.body;
 
+    if (!categoryName || !categoryName.trim()) {
+      return res.status(400).json({ message: 'Category name is required' });
+    }
 
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    category.categoryName = categoryName.trim();
+    await category.save();
+
+    res.status(200).json({ 
+      message: 'Category updated successfully',
+      category 
+    });
+  } catch (error) {
+    console.error('Error updating category name:', error);
+    res.status(500).json({ message: 'Failed to update category', error: error.message });
+  }
+};
+
+// Update category image
+const updateCategoryImage = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { removeImage } = req.body;
+
+    const category = await Category.findById(id);
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Remove image
+    if (removeImage === 'true' || removeImage === true) {
+      if (category.image) {
+        try {
+          const urlParts = category.image.split('/');
+          const publicIdWithExtension = urlParts[urlParts.length - 1];
+          const publicId = `categories/${publicIdWithExtension.split('.')[0]}`;
+          await cloudinary.uploader.destroy(publicId);
+        } catch (error) {
+          console.log('Failed to delete image from Cloudinary:', error.message);
+        }
+      }
+      
+      category.image = null;
+      await category.save();
+      
+      return res.status(200).json({ 
+        message: 'Image removed successfully',
+        imageUrl: null
+      });
+    }
+
+    // Upload new image
+    if (!req.file) {
+      return res.status(400).json({ message: 'No image file provided' });
+    }
+
+    // Delete old image from Cloudinary if exists
+    if (category.image) {
+      try {
+        const urlParts = category.image.split('/');
+        const publicIdWithExtension = urlParts[urlParts.length - 1];
+        const publicId = `categories/${publicIdWithExtension.split('.')[0]}`;
+        await cloudinary.uploader.destroy(publicId);
+      } catch (error) {
+        console.log('Failed to delete old image from Cloudinary:', error.message);
+      }
+    }
+
+    // Upload new image to Cloudinary
+    const result = await cloudinary.uploader.upload(req.file.path, {
+      folder: 'categories',
+      resource_type: 'image'
+    });
+
+    category.image = result.secure_url;
+    await category.save();
+
+    res.status(200).json({ 
+      message: 'Image updated successfully',
+      imageUrl: result.secure_url
+    });
+  } catch (error) {
+    console.error('Error updating category image:', error);
+    res.status(500).json({ message: 'Failed to update image', error: error.message });
+  }
+};
+
+// Add subcategory
+const addSubcategory = async (req, res) => {
+  try {
+    const { categoryName, parent_category_id } = req.body;
+
+    if (!categoryName || !categoryName.trim()) {
+      return res.status(400).json({ message: 'Category name is required' });
+    }
+
+    if (!parent_category_id) {
+      return res.status(400).json({ message: 'Parent category ID is required' });
+    }
+
+    // Check if parent category exists
+    const parentCategory = await Category.findById(parent_category_id);
+    if (!parentCategory) {
+      return res.status(404).json({ message: 'Parent category not found' });
+    }
+
+    const newCategory = new Category({
+      categoryName: categoryName.trim(),
+      parent_category_id: parent_category_id,
+      image: null
+    });
+
+    await newCategory.save();
+
+    res.status(201).json({ 
+      message: 'Subcategory added successfully',
+      category: newCategory
+    });
+  } catch (error) {
+    console.error('Error adding subcategory:', error);
+    res.status(500).json({ message: 'Failed to add subcategory', error: error.message });
+  }
+};
+
+// Delete category (recursive)
+const deleteCategory = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const category = await Category.findById(id);
+    
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Function to recursively get all descendant category IDs
+    const getAllDescendantIds = async (parentId) => {
+      const children = await Category.find({ parent_category_id: parentId });
+      let allIds = children.map(child => child._id);
+      
+      for (const child of children) {
+        const descendantIds = await getAllDescendantIds(child._id);
+        allIds = allIds.concat(descendantIds);
+      }
+      
+      return allIds;
+    };
+
+    // Get all descendant category IDs
+    const descendantIds = await getAllDescendantIds(id);
+    const allCategoryIds = [id, ...descendantIds];
+
+    // Get all categories that will be deleted to extract image URLs
+    const categoriesToDelete = await Category.find({ _id: { $in: allCategoryIds } });
+
+    // Delete images from Cloudinary
+    for (const cat of categoriesToDelete) {
+      if (cat.image) {
+        try {
+          const urlParts = cat.image.split('/');
+          const publicIdWithExtension = urlParts[urlParts.length - 1];
+          const publicId = `categories/${publicIdWithExtension.split('.')[0]}`;
+          
+          await cloudinary.uploader.destroy(publicId);
+        } catch (error) {
+          console.log(`Failed to delete image for category ${cat.categoryName}:`, error.message);
+        }
+      }
+    }
+
+    // Delete all categories (parent and all descendants)
+    await Category.deleteMany({ _id: { $in: allCategoryIds } });
+
+    res.status(200).json({ 
+      message: 'Category and all subcategories deleted successfully',
+      deletedCount: allCategoryIds.length
+    });
+
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ message: 'Failed to delete category', error: error.message });
+  }
+};
 
 module.exports = {
     fetchCategories,
     findCategoryById,
     findSubCategoryById,
     upload,
-    bulkUploadCategories
+    bulkUploadCategories,
+    deleteCategory,
+    updateCategoryName, 
+    updateCategoryImage, 
+    addSubcategory 
 }

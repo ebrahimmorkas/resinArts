@@ -58,9 +58,17 @@ const Sidebar = ({ isOpen, onClose }) => {
       submenu: [
         { id: 'all-products', label: 'All Products', icon: List, href: '/admin/panel/products' },
         { id: 'add-product', label: 'Add Product', icon: Plus, href: '/admin/panel/products/add' },
-        { id: 'categories', label: 'Categories', icon: List, href: '/admin/panel/products/categories' },
-        { id: 'restock', label: 'Restock', icon: Package, href: '/admin/panel/products/restock' },
         { id: 'bulk-upload', label: 'Bulk Upload', icon: Package, href: '/admin/panel/products/b' },
+      ]
+    },
+    {
+      id: 'categories',
+      label: 'Categories',
+      icon: Package,
+      badge: '24',
+      submenu: [
+        { id: 'all-categories', label: 'All categories', icon: List, href: '/admin/panel/categories/all' },
+        { id: 'add-category', label: 'Add Category', icon: Plus, href: '/admin/panel/categories/add' },
       ]
     },
     {
