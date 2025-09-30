@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useContext } from 'react';
+import React, { useState, useMemo, useContext, useRef } from 'react';
 import { 
   Search, 
   Edit2, 
@@ -14,11 +14,15 @@ import {
   FolderTree,
   Plus,
   Calendar,
-  Hash
+  Hash,
+  Save,
+  Image as ImageIcon,
+  Upload
 } from 'lucide-react';
 import { CategoryContext } from '../../../../../context/CategoryContext';
 import axios from 'axios';
-import { toast } from 'react-toastify';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const AllCategories = () => {
   const { categories, loadingCategories, setCategories } = useContext(CategoryContext);
@@ -29,10 +33,21 @@ const AllCategories = () => {
   const [selectedRows, setSelectedRows] = useState([]);
   const [deleteModal, setDeleteModal] = useState({ isOpen: false, categoryId: null, categoryName: '' });
   const [hierarchyModal, setHierarchyModal] = useState({ isOpen: false, category: null });
+  const [editModal, setEditModal] = useState({ isOpen: false, category: null });
   const [filterModal, setFilterModal] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [editingValue, setEditingValue] = useState('');
+  const [addingSubcategoryTo, setAddingSubcategoryTo] = useState(null);
+  const [newSubcategoryName, setNewSubcategoryName] = useState('');
+  const [loadingStates, setLoadingStates] = useState({});
+  const [imagePreview, setImagePreview] = useState(null);
+  const [selectedImage, setSelectedImage] = useState(null);
+  const [showImageUpload, setShowImageUpload] = useState(false);
+  const [unsavedChanges, setUnsavedChanges] = useState({ hasChanges: false, categoryId: null, value: '' });
+  const [confirmModal, setConfirmModal] = useState({ isOpen: false, pendingCategoryId: null });
+  const fileInputRef = useRef(null);
   
-  // Filter states
   const [filters, setFilters] = useState({
     singleDate: '',
     startDate: '',
@@ -48,12 +63,10 @@ const AllCategories = () => {
     subcategoryCount: ''
   });
 
-  // Get only parent categories (where parent_category_id is null)
   const parentCategories = useMemo(() => {
     return categories.filter(cat => !cat.parent_category_id);
   }, [categories]);
 
-  // Count immediate subcategories for each parent
   const getSubcategoryCount = (parentId) => {
     return categories.filter(cat => 
       cat.parent_category_id && 
@@ -63,7 +76,6 @@ const AllCategories = () => {
     ).length;
   };
 
-  // Build hierarchy for a category
   const buildHierarchy = (parentId) => {
     const children = categories.filter(cat => {
       if (!cat.parent_category_id) return false;
@@ -82,7 +94,6 @@ const AllCategories = () => {
     });
   };
 
-  // Apply filters
   const applyFilters = () => {
     setAppliedFilters({ ...filters });
     setFilterModal(false);
@@ -102,13 +113,11 @@ const AllCategories = () => {
     setFilterModal(false);
   };
 
-  // Filter and search functionality
   const filteredData = useMemo(() => {
     let result = parentCategories.filter(item =>
       item.categoryName.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
-    // Apply single date filter
     if (appliedFilters.singleDate) {
       result = result.filter(item => {
         const itemDate = new Date(item.createdAt.$date || item.createdAt).toISOString().split('T')[0];
@@ -116,7 +125,6 @@ const AllCategories = () => {
       });
     }
 
-    // Apply date range filter
     if (appliedFilters.startDate && appliedFilters.endDate) {
       result = result.filter(item => {
         const itemDate = new Date(item.createdAt.$date || item.createdAt);
@@ -127,7 +135,6 @@ const AllCategories = () => {
       });
     }
 
-    // Apply no subcategories filter
     if (appliedFilters.noSubcategories) {
       result = result.filter(item => {
         const categoryId = typeof item._id === 'object' ? item._id.$oid : item._id;
@@ -135,7 +142,6 @@ const AllCategories = () => {
       });
     }
 
-    // Apply subcategory count filter
     if (appliedFilters.subcategoryCount !== '') {
       const count = parseInt(appliedFilters.subcategoryCount);
       if (!isNaN(count)) {
@@ -149,18 +155,15 @@ const AllCategories = () => {
     return result;
   }, [parentCategories, searchTerm, appliedFilters, categories]);
 
-  // Pagination logic
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
   const endIndex = startIndex + itemsPerPage;
   const currentData = filteredData.slice(startIndex, endIndex);
 
-  // Reset to page 1 when search changes
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);
 
-  // Select all checkbox logic
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       const allIds = currentData.map(item => typeof item._id === 'object' ? item._id.$oid : item._id);
@@ -170,7 +173,6 @@ const AllCategories = () => {
     }
   };
 
-  // Individual checkbox logic
   const handleSelectRow = (id) => {
     if (selectedRows.includes(id)) {
       setSelectedRows(selectedRows.filter(rowId => rowId !== id));
@@ -179,7 +181,6 @@ const AllCategories = () => {
     }
   };
 
-  // Open delete modal
   const handleDeleteClick = (category) => {
     const categoryId = typeof category._id === 'object' ? category._id.$oid : category._id;
     setDeleteModal({
@@ -190,57 +191,106 @@ const AllCategories = () => {
     });
   };
 
-  // Delete category
   const handleDeleteConfirm = async () => {
-    setIsDeleting(true);
-    try {
-      await axios.delete(
-        `http://localhost:3000/api/category/delete-category/${deleteModal.categoryId}`,
-        { withCredentials: true }
-      );
-      
-      // Get all category IDs that were deleted (parent + all children)
-      const getAllChildIds = (parentId) => {
-        const children = categories.filter(cat => {
-          const parentIdValue = cat.parent_category_id 
-            ? (typeof cat.parent_category_id === 'object' ? cat.parent_category_id.$oid : cat.parent_category_id)
-            : null;
-          return parentIdValue === parentId;
-        });
-        
-        let allIds = children.map(child => typeof child._id === 'object' ? child._id.$oid : child._id);
-        children.forEach(child => {
-          const childId = typeof child._id === 'object' ? child._id.$oid : child._id;
-          allIds = allIds.concat(getAllChildIds(childId));
-        });
-        return allIds;
-      };
+    if (deleteModal.isBulk) {
+      setIsDeleting(true);
+      try {
+        const deletePromises = deleteModal.categoryId.map(id =>
+          axios.delete(`http://localhost:3000/api/category/delete-category/${id}`, { withCredentials: true })
+        );
+        await Promise.all(deletePromises);
 
-      const deletedIds = [deleteModal.categoryId, ...getAllChildIds(deleteModal.categoryId)];
-      
-      // Update categories in context
-      setCategories(prev => prev.filter(cat => {
-        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-        return !deletedIds.includes(catId);
-      }));
-      
-      toast.success('Category deleted successfully!');
-      setDeleteModal({ isOpen: false, categoryId: null, categoryName: '' });
-      setSelectedRows([]);
-      
-      // Close hierarchy modal if open
-      if (hierarchyModal.isOpen) {
-        setHierarchyModal({ isOpen: false, category: null });
+        const getAllChildIds = (parentId) => {
+          const children = categories.filter(cat => {
+            const parentIdValue = cat.parent_category_id 
+              ? (typeof cat.parent_category_id === 'object' ? cat.parent_category_id.$oid : cat.parent_category_id)
+              : null;
+            return parentIdValue === parentId;
+          });
+          
+          let allIds = children.map(child => typeof child._id === 'object' ? child._id.$oid : child._id);
+          children.forEach(child => {
+            const childId = typeof child._id === 'object' ? child._id.$oid : child._id;
+            allIds = allIds.concat(getAllChildIds(childId));
+          });
+          return allIds;
+        };
+
+        let allDeletedIds = [...deleteModal.categoryId];
+        deleteModal.categoryId.forEach(id => {
+          allDeletedIds = allDeletedIds.concat(getAllChildIds(id));
+        });
+
+        setCategories(prev => prev.filter(cat => {
+          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+          return !allDeletedIds.includes(catId);
+        }));
+
+        toast.success(`${deleteModal.categoryId.length} categories deleted successfully!`);
+        setDeleteModal({ isOpen: false, categoryId: null, categoryName: '' });
+        setSelectedRows([]);
+      } catch (error) {
+        console.error('Error deleting categories:', error);
+        toast.error(error.response?.data?.message || 'Failed to delete categories');
+      } finally {
+        setIsDeleting(false);
       }
-    } catch (error) {
-      console.error('Error deleting category:', error);
-      toast.error(error.response?.data?.message || 'Failed to delete category');
-    } finally {
-      setIsDeleting(false);
+    } else {
+      setIsDeleting(true);
+      try {
+        await axios.delete(
+          `http://localhost:3000/api/category/delete-category/${deleteModal.categoryId}`,
+          { withCredentials: true }
+        );
+        
+        const getAllChildIds = (parentId) => {
+          const children = categories.filter(cat => {
+            const parentIdValue = cat.parent_category_id 
+              ? (typeof cat.parent_category_id === 'object' ? cat.parent_category_id.$oid : cat.parent_category_id)
+              : null;
+            return parentIdValue === parentId;
+          });
+          
+          let allIds = children.map(child => typeof child._id === 'object' ? child._id.$oid : child._id);
+          children.forEach(child => {
+            const childId = typeof child._id === 'object' ? child._id.$oid : child._id;
+            allIds = allIds.concat(getAllChildIds(childId));
+          });
+          return allIds;
+        };
+
+        const deletedIds = [deleteModal.categoryId, ...getAllChildIds(deleteModal.categoryId)];
+        
+        setCategories(prev => prev.filter(cat => {
+          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+          return !deletedIds.includes(catId);
+        }));
+        
+        toast.success('Category deleted successfully!');
+        setDeleteModal({ isOpen: false, categoryId: null, categoryName: '' });
+        setSelectedRows([]);
+        
+        if (editModal.isOpen) {
+          const updatedCategory = categories.find(cat => {
+            const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+            const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
+            return catId === editCatId;
+          });
+          if (updatedCategory) {
+            const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
+            const hierarchy = buildHierarchy(categoryId);
+            setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
+          }
+        }
+      } catch (error) {
+        console.error('Error deleting category:', error);
+        toast.error(error.response?.data?.message || 'Failed to delete category');
+      } finally {
+        setIsDeleting(false);
+      }
     }
   };
 
-  // Bulk delete
   const handleBulkDelete = () => {
     if (selectedRows.length === 0) return;
     
@@ -263,7 +313,6 @@ const AllCategories = () => {
     });
   };
 
-  // View hierarchy
   const handleViewHierarchy = (category) => {
     const categoryId = typeof category._id === 'object' ? category._id.$oid : category._id;
     const hierarchy = buildHierarchy(categoryId);
@@ -273,65 +322,501 @@ const AllCategories = () => {
     });
   };
 
-  // Delete from hierarchy view
-  const handleDeleteFromHierarchy = (categoryId, categoryName) => {
-    const hasChildren = categories.some(cat => {
-      const parentIdValue = cat.parent_category_id 
-        ? (typeof cat.parent_category_id === 'object' ? cat.parent_category_id.$oid : cat.parent_category_id)
-        : null;
-      return parentIdValue === categoryId;
-    });
-
-    setDeleteModal({
+  const handleEditHierarchy = (category) => {
+    const categoryId = typeof category._id === 'object' ? category._id.$oid : category._id;
+    const hierarchy = buildHierarchy(categoryId);
+    setEditModal({
       isOpen: true,
-      categoryId: categoryId,
-      categoryName: categoryName,
-      hasChildren: hasChildren,
-      fromHierarchy: true
+      category: { ...category, children: hierarchy }
     });
+    setEditingCategoryId(null);
+    setAddingSubcategoryTo(null);
+    setImagePreview(null);
+    setSelectedImage(null);
+    setShowImageUpload(false);
   };
 
-  // Render hierarchy tree
-  const renderHierarchyTree = (category, level = 0) => {
+  const handleEditClick = (categoryId, currentName) => {
+    if (unsavedChanges.hasChanges && unsavedChanges.categoryId !== categoryId) {
+      setConfirmModal({
+        isOpen: true,
+        pendingCategoryId: categoryId,
+        pendingValue: currentName
+      });
+    } else {
+      setEditingCategoryId(categoryId);
+      setEditingValue(currentName);
+      setUnsavedChanges({ hasChanges: true, categoryId, value: currentName });
+      setAddingSubcategoryTo(null);
+    }
+  };
+
+  const handleSaveUnsavedChanges = async () => {
+    setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: true }));
+    try {
+      await axios.put(
+        `http://localhost:3000/api/category/update-category/${unsavedChanges.categoryId}`,
+        { categoryName: editingValue },
+        { withCredentials: true }
+      );
+
+      setCategories(prev => prev.map(cat => {
+        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+        if (catId === unsavedChanges.categoryId) {
+          return { ...cat, categoryName: editingValue };
+        }
+        return cat;
+      }));
+
+      toast.success('Category updated successfully!');
+      setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
+      setEditingCategoryId(confirmModal.pendingCategoryId);
+      setEditingValue(confirmModal.pendingValue);
+      setUnsavedChanges({ hasChanges: true, categoryId: confirmModal.pendingCategoryId, value: confirmModal.pendingValue });
+      setConfirmModal({ isOpen: false, pendingCategoryId: null });
+
+      if (editModal.isOpen) {
+        const updatedCategory = categories.find(cat => {
+          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+          const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
+          return catId === editCatId;
+        });
+        if (updatedCategory) {
+          const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
+          const hierarchy = buildHierarchy(categoryId);
+          setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating category:', error);
+      toast.error(error.response?.data?.message || 'Failed to update category');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: false }));
+    }
+  };
+
+  const handleDiscardChanges = () => {
+    setEditingCategoryId(confirmModal.pendingCategoryId);
+    setEditingValue(confirmModal.pendingValue);
+    setUnsavedChanges({ hasChanges: true, categoryId: confirmModal.pendingCategoryId, value: confirmModal.pendingValue });
+    setConfirmModal({ isOpen: false, pendingCategoryId: null });
+  };
+
+  const handleSaveEdit = async (categoryId) => {
+    if (!editingValue.trim()) {
+      toast.error('Category name cannot be empty');
+      return;
+    }
+
+    setLoadingStates(prev => ({ ...prev, [categoryId]: true }));
+    try {
+      await axios.put(
+        `http://localhost:3000/api/category/update-category/${categoryId}`,
+        { categoryName: editingValue },
+        { withCredentials: true }
+      );
+
+      setCategories(prev => prev.map(cat => {
+        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+        if (catId === categoryId) {
+          return { ...cat, categoryName: editingValue };
+        }
+        return cat;
+      }));
+
+      toast.success('Category updated successfully!');
+      setEditingCategoryId(null);
+      setEditingValue('');
+      setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
+
+      if (editModal.isOpen) {
+        const updatedCategory = categories.find(cat => {
+          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+          const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
+          return catId === editCatId;
+        });
+        if (updatedCategory) {
+          const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
+          const hierarchy = buildHierarchy(categoryId);
+          setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
+        }
+      }
+    } catch (error) {
+      console.error('Error updating category:', error);
+      toast.error(error.response?.data?.message || 'Failed to update category');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [categoryId]: false }));
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingCategoryId(null);
+    setEditingValue('');
+    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
+  };
+
+  const handleAddSubcategory = (parentId) => {
+    setAddingSubcategoryTo(parentId);
+    setNewSubcategoryName('');
+    setEditingCategoryId(null);
+  };
+
+  const handleSaveSubcategory = async (parentId) => {
+    if (!newSubcategoryName.trim()) {
+      toast.error('Subcategory name cannot be empty');
+      return;
+    }
+
+    setLoadingStates(prev => ({ ...prev, [`add-${parentId}`]: true }));
+    try {
+      const response = await axios.post(
+        `http://localhost:3000/api/category/add-subcategory`,
+        { categoryName: newSubcategoryName, parent_category_id: parentId },
+        { withCredentials: true }
+      );
+
+      setCategories(prev => [...prev, response.data.category]);
+      toast.success('Subcategory added successfully!');
+      setAddingSubcategoryTo(null);
+      setNewSubcategoryName('');
+
+      if (editModal.isOpen) {
+        const updatedCategory = categories.find(cat => {
+          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+          const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
+          return catId === editCatId;
+        });
+        if (updatedCategory) {
+          const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
+          const hierarchy = buildHierarchy(categoryId);
+          setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
+        }
+      }
+    } catch (error) {
+      console.error('Error adding subcategory:', error);
+      toast.error(error.response?.data?.message || 'Failed to add subcategory');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [`add-${parentId}`]: false }));
+    }
+  };
+
+  const handleCancelAddSubcategory = () => {
+    setAddingSubcategoryTo(null);
+    setNewSubcategoryName('');
+  };
+
+  const handleImageSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('Image size should be less than 5MB');
+        return;
+      }
+      setSelectedImage(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveImage = async () => {
+    if (!selectedImage) {
+      toast.error('Please select an image');
+      return;
+    }
+
+    const categoryId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
+    setLoadingStates(prev => ({ ...prev, [`image-${categoryId}`]: true }));
+
+    try {
+      const formData = new FormData();
+      formData.append('image', selectedImage);
+
+      const response = await axios.put(
+        `http://localhost:3000/api/category/update-category-image/${categoryId}`,
+        formData,
+        { 
+          withCredentials: true,
+          headers: { 'Content-Type': 'multipart/form-data' }
+        }
+      );
+
+      setCategories(prev => prev.map(cat => {
+        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+        if (catId === categoryId) {
+          return { ...cat, image: response.data.imageUrl };
+        }
+        return cat;
+      }));
+
+      toast.success('Image updated successfully!');
+      setShowImageUpload(false);
+      setImagePreview(null);
+      setSelectedImage(null);
+
+      const updatedCategory = categories.find(cat => {
+        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+        return catId === categoryId;
+      });
+      if (updatedCategory) {
+        const hierarchy = buildHierarchy(categoryId);
+        setEditModal({ isOpen: true, category: { ...updatedCategory, image: response.data.imageUrl, children: hierarchy } });
+      }
+    } catch (error) {
+      console.error('Error updating image:', error);
+      toast.error(error.response?.data?.message || 'Failed to update image');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [`image-${categoryId}`]: false }));
+    }
+  };
+
+  const handleRemoveImage = async () => {
+    const categoryId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
+    setLoadingStates(prev => ({ ...prev, [`remove-image-${categoryId}`]: true }));
+
+    try {
+      await axios.put(
+        `http://localhost:3000/api/category/update-category-image/${categoryId}`,
+        { removeImage: true },
+        { withCredentials: true }
+      );
+
+      setCategories(prev => prev.map(cat => {
+        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+        if (catId === categoryId) {
+          return { ...cat, image: null };
+        }
+        return cat;
+      }));
+
+      toast.success('Image removed successfully!');
+
+      const updatedCategory = categories.find(cat => {
+        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+        return catId === categoryId;
+      });
+      if (updatedCategory) {
+        const hierarchy = buildHierarchy(categoryId);
+        setEditModal({ isOpen: true, category: { ...updatedCategory, image: null, children: hierarchy } });
+      }
+    } catch (error) {
+      console.error('Error removing image:', error);
+      toast.error(error.response?.data?.message || 'Failed to remove image');
+    } finally {
+      setLoadingStates(prev => ({ ...prev, [`remove-image-${categoryId}`]: false }));
+    }
+  };
+
+  const renderHierarchyTree = (category, level = 0, isEditMode = false) => {
     const categoryId = typeof category._id === 'object' ? category._id.$oid : category._id;
     const hasChildren = category.children && category.children.length > 0;
+    const isMainParent = level === 0;
+    const isEditing = editingCategoryId === categoryId;
+    const isAddingChild = addingSubcategoryTo === categoryId;
 
     return (
       <div key={categoryId} className="mb-2">
         <div 
-          className={`flex items-center justify-between p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors`}
+          className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors`}
           style={{ marginLeft: level > 0 ? `${level * 24}px` : '0' }}
         >
-          <div className="flex items-center space-x-3">
-            {category.image ? (
-              <img 
-                src={category.image} 
-                alt={category.categoryName}
-                className="w-10 h-10 object-cover rounded-md border border-gray-200"
+          {isEditMode && isMainParent && (
+            <>
+              {showImageUpload && imagePreview ? (
+                <img 
+                  src={imagePreview} 
+                  alt="Preview"
+                  className="w-12 h-12 object-cover rounded-md border-2 border-blue-500"
+                />
+              ) : category.image ? (
+                <img 
+                  src={category.image} 
+                  alt={category.categoryName}
+                  className="w-12 h-12 object-cover rounded-md border border-gray-200"
+                />
+              ) : (
+                <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">
+                  <FolderTree className="w-6 h-6 text-gray-400" />
+                </div>
+              )}
+            </>
+          )}
+
+          {isEditing ? (
+            <>
+              <input
+                type="text"
+                value={editingValue}
+                onChange={(e) => setEditingValue(e.target.value)}
+                className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
               />
-            ) : (
-              <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center">
-                <FolderTree className="w-5 h-5 text-gray-400" />
+              <button
+                onClick={() => handleSaveEdit(categoryId)}
+                disabled={loadingStates[categoryId]}
+                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
+                title="Save"
+              >
+                {loadingStates[categoryId] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+              </button>
+              <button
+                onClick={handleCancelEdit}
+                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                title="Cancel"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </>
+          ) : (
+            <p className="flex-1 font-medium text-gray-900">{category.categoryName}</p>
+          )}
+
+          {isEditMode && !isEditing && (
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleAddSubcategory(categoryId)}
+                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                title="Add Subcategory"
+              >
+                <Plus className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => handleEditClick(categoryId, category.categoryName)}
+                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                title="Edit"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
+              <button
+                onClick={() => setDeleteModal({
+                  isOpen: true,
+                  categoryId: categoryId,
+                  categoryName: category.categoryName,
+                  hasChildren: hasChildren
+                })}
+                className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                title="Delete"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+        </div>
+
+        {isEditMode && isMainParent && !showImageUpload && (
+          <div className="flex gap-2 mt-2 ml-0">
+            <button
+              onClick={() => {
+                setShowImageUpload(true);
+                setImagePreview(null);
+                setSelectedImage(null);
+              }}
+              className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors border border-blue-200"
+            >
+              Change Image
+            </button>
+            {category.image && (
+              <button
+                onClick={handleRemoveImage}
+                disabled={loadingStates[`remove-image-${categoryId}`]}
+                className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200 disabled:opacity-50"
+              >
+                {loadingStates[`remove-image-${categoryId}`] ? (
+                  <Loader2 className="w-4 h-4 animate-spin inline" />
+                ) : (
+                  'Remove Image'
+                )}
+              </button>
+            )}
+          </div>
+        )}
+
+        {isEditMode && isMainParent && showImageUpload && (
+          <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <input
+              type="file"
+              ref={fileInputRef}
+              onChange={handleImageSelect}
+              accept="image/*"
+              className="hidden"
+            />
+            <button
+              onClick={() => fileInputRef.current?.click()}
+              className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
+            >
+              <Upload className="w-5 h-5" />
+              Select Image
+            </button>
+            {imagePreview && (
+              <div className="mt-3 flex gap-2">
+                <button
+                  onClick={handleSaveImage}
+                  disabled={loadingStates[`image-${categoryId}`]}
+                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {loadingStates[`image-${categoryId}`] ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      Saving...
+                    </>
+                  ) : (
+                    <>
+                      <Save className="w-4 h-4" />
+                      Save Image
+                    </>
+                  )}
+                </button>
+                <button
+                  onClick={() => {
+                    setShowImageUpload(false);
+                    setImagePreview(null);
+                    setSelectedImage(null);
+                  }}
+                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
               </div>
             )}
-            <div>
-              <p className="font-medium text-gray-900">{category.categoryName}</p>
-              {hasChildren && (
-                <p className="text-xs text-gray-500">{category.children.length} subcategories</p>
-              )}
-            </div>
           </div>
-          <button
-            onClick={() => handleDeleteFromHierarchy(categoryId, category.categoryName)}
-            className="p-2 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-            title="Delete"
-          >
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
+        )}
+
+        {isAddingChild && (
+          <div className="mt-2 flex items-center gap-2" style={{ marginLeft: level > 0 ? `${(level + 1) * 24}px` : '24px' }}>
+            <input
+              type="text"
+              value={newSubcategoryName}
+              onChange={(e) => setNewSubcategoryName(e.target.value)}
+              placeholder="Enter subcategory name"
+              className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+              autoFocus
+            />
+            <button
+              onClick={() => handleSaveSubcategory(categoryId)}
+              disabled={loadingStates[`add-${categoryId}`]}
+              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+            >
+              {loadingStates[`add-${categoryId}`] ? (
+                <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              ) : (
+                <Save className="w-3.5 h-3.5" />
+              )}
+              Save
+            </button>
+            <button
+              onClick={handleCancelAddSubcategory}
+              className="px-3 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-50 transition-colors"
+            >
+              Cancel
+            </button>
+          </div>
+        )}
+
         {hasChildren && (
           <div className="mt-2">
-            {category.children.map(child => renderHierarchyTree(child, level + 1))}
+            {category.children.map(child => renderHierarchyTree(child, level + 1, isEditMode))}
           </div>
         )}
       </div>
@@ -351,7 +836,18 @@ const AllCategories = () => {
 
   return (
     <div className="p-6">
-      {/* Page Header */}
+      <ToastContainer 
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+      />
+
       <div className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-lg shadow-lg p-6 mb-6">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
           <div>
@@ -366,7 +862,6 @@ const AllCategories = () => {
       </div>
 
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        {/* Table Header */}
         <div className="px-6 py-4 border-b border-gray-200">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div>
@@ -375,7 +870,6 @@ const AllCategories = () => {
               </p>
             </div>
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-              {/* Search */}
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
@@ -387,7 +881,6 @@ const AllCategories = () => {
                 />
               </div>
               
-              {/* Bulk Actions */}
               {selectedRows.length > 0 ? (
                 <div className="flex items-center space-x-2">
                   <button 
@@ -417,7 +910,6 @@ const AllCategories = () => {
           </div>
         </div>
 
-        {/* Table Container */}
         {filteredData.length === 0 ? (
           <div className="text-center py-16">
             <FolderTree className="w-16 h-16 text-gray-300 mx-auto mb-4" />
@@ -459,7 +951,7 @@ const AllCategories = () => {
                         Created At
                       </th>
                       {selectedRows.length === 0 && (
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '180px' }}>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '220px' }}>
                           Actions
                         </th>
                       )}
@@ -513,7 +1005,7 @@ const AllCategories = () => {
                             {createdDate}
                           </td>
                           {selectedRows.length === 0 && (
-                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '180px' }}>
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '220px' }}>
                               <div className="flex items-center justify-center space-x-2">
                                 <button
                                   onClick={() => handleViewHierarchy(item)}
@@ -522,6 +1014,13 @@ const AllCategories = () => {
                                 >
                                   <Eye className="w-3.5 h-3.5 mr-1" />
                                   Hierarchy
+                                </button>
+                                <button
+                                  onClick={() => handleEditHierarchy(item)}
+                                  className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                                  title="Edit"
+                                >
+                                  <Edit2 className="w-4 h-4" />
                                 </button>
                                 <button
                                   onClick={() => handleDeleteClick(item)}
@@ -541,7 +1040,6 @@ const AllCategories = () => {
               </div>
             </div>
 
-            {/* Table Footer */}
             <div className="px-6 py-4 border-t border-gray-200">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 <div className="flex items-center space-x-2">
@@ -637,7 +1135,6 @@ const AllCategories = () => {
             </div>
             
             <div className="px-6 py-4 space-y-4 max-h-96 overflow-y-auto">
-              {/* Single Date Filter */}
               <div>
                 <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4 mr-2" />
@@ -651,7 +1148,6 @@ const AllCategories = () => {
                 />
               </div>
 
-              {/* Date Range Filter */}
               <div className="border-t pt-4">
                 <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4 mr-2" />
@@ -679,7 +1175,6 @@ const AllCategories = () => {
                 </div>
               </div>
 
-              {/* No Subcategories Filter */}
               <div className="border-t pt-4">
                 <label className="flex items-center cursor-pointer">
                   <input
@@ -694,7 +1189,6 @@ const AllCategories = () => {
                 </label>
               </div>
 
-              {/* Subcategory Count Filter */}
               <div className="border-t pt-4">
                 <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
                   <Hash className="w-4 h-4 mr-2" />
@@ -725,6 +1219,47 @@ const AllCategories = () => {
                 className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Clear Filters
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unsaved Changes Confirmation Modal */}
+      {confirmModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+            <div className="px-6 py-4">
+              <div className="flex items-start">
+                <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
+                  <AlertTriangle className="h-6 w-6 text-yellow-600" />
+                </div>
+                <div className="ml-4 flex-1">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    Unsaved Changes
+                  </h3>
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-500">
+                      You have unsaved changes. Do you want to save them before continuing?
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse gap-2">
+              <button
+                type="button"
+                onClick={handleSaveUnsavedChanges}
+                className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Save
+              </button>
+              <button
+                type="button"
+                onClick={handleDiscardChanges}
+                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Discard
               </button>
             </div>
           </div>
@@ -792,7 +1327,7 @@ const AllCategories = () => {
         </div>
       )}
 
-      {/* Hierarchy Modal */}
+      {/* Hierarchy Modal (View Only) */}
       {hierarchyModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
@@ -821,16 +1356,38 @@ const AllCategories = () => {
             </div>
             
             <div className="px-6 py-4 max-h-96 overflow-y-auto">
-              {hierarchyModal.category && renderHierarchyTree(hierarchyModal.category)}
+              {hierarchyModal.category && (
+                <div className="space-y-2">
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                    {hierarchyModal.category.image ? (
+                      <img 
+                        src={hierarchyModal.category.image} 
+                        alt={hierarchyModal.category.categoryName}
+                        className="w-12 h-12 object-cover rounded-md border border-gray-200"
+                      />
+                    ) : (
+                      <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">
+                        <FolderTree className="w-6 h-6 text-gray-400" />
+                      </div>
+                    )}
+                    <p className="flex-1 font-medium text-gray-900">{hierarchyModal.category.categoryName}</p>
+                  </div>
+                  {hierarchyModal.category.children && hierarchyModal.category.children.length > 0 && (
+                    <div className="mt-2">
+                      {hierarchyModal.category.children.map(child => (
+                        <div key={typeof child._id === 'object' ? child._id.$oid : child._id} className="ml-6">
+                          {renderHierarchyTree(child, 1, false)}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
               
               {(!hierarchyModal.category?.children || hierarchyModal.category.children.length === 0) && (
                 <div className="text-center py-8">
                   <FolderTree className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm mb-4">No subcategories found</p>
-                  <button className="inline-flex items-center px-4 py-2 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors text-sm">
-                    <Plus className="w-4 h-4 mr-2" />
-                    Add Subcategory
-                  </button>
+                  <p className="text-gray-500 text-sm">No subcategories found</p>
                 </div>
               )}
             </div>
@@ -848,12 +1405,63 @@ const AllCategories = () => {
         </div>
       )}
 
-      {/* Loading Overlay */}
-      {isDeleting && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-30">
-          <div className="bg-white rounded-lg p-6 shadow-xl">
-            <Loader2 className="w-8 h-8 text-blue-600 animate-spin mx-auto mb-3" />
-            <p className="text-gray-700 text-sm">Processing...</p>
+      {/* Edit Modal */}
+      {editModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
+            <div className="px-6 py-4 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-green-100">
+                    <Edit2 className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                      Edit Category Hierarchy
+                    </h3>
+                    <p className="text-sm text-gray-500">
+                      Manage categories and subcategories
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => {
+                    setEditModal({ isOpen: false, category: null });
+                    setEditingCategoryId(null);
+                    setAddingSubcategoryTo(null);
+                    setImagePreview(null);
+                    setSelectedImage(null);
+                    setShowImageUpload(false);
+                    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
+                  }}
+                  className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="px-6 py-4 max-h-96 overflow-y-auto">
+              {editModal.category && renderHierarchyTree(editModal.category, 0, true)}
+            </div>
+            
+            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse">
+              <button
+                type="button"
+                onClick={() => {
+                  setEditModal({ isOpen: false, category: null });
+                  setEditingCategoryId(null);
+                  setAddingSubcategoryTo(null);
+                  setImagePreview(null);
+                  setSelectedImage(null);
+                  setShowImageUpload(false);
+                  setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
+                }}
+                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}
