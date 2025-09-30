@@ -1566,6 +1566,10 @@ const ProductDetailsModal = ({ product, onClose }) => {
     ? Math.round(((originalPrice - displayPrice) / originalPrice) * 100)
     : 0;
 
+  // Calculate effective price with bulk pricing
+  const effectiveUnitPrice = getEffectiveUnitPrice(quantity, bulkPricing, displayPrice);
+  const totalPrice = effectiveUnitPrice * quantity;
+
   return (
     <div 
       className="fixed inset-0 bg-black bg-opacity-50 z-50 overflow-y-auto"
@@ -1635,22 +1639,46 @@ const ProductDetailsModal = ({ product, onClose }) => {
               </div>
 
               {product.hasVariants && product.variants && product.variants.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-2">
-                  {product.variants.map((variant) => (
-                    <button
-                      key={variant._id}
-                      onClick={() => handleVariantChange(variant)}
-                      className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                        selectedVariant?._id === variant._id ? 'border-blue-500' : 'border-gray-200'
-                      }`}
-                    >
-                      <img
-                        src={variant.variantImage || "/placeholder.svg"}
-                        alt={variant.colorName}
-                        className="w-full h-full object-cover"
-                      />
-                    </button>
-                  ))}
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Variant Images</h4>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {product.variants.map((variant) => (
+                      <button
+                        key={variant._id}
+                        onClick={() => handleVariantChange(variant)}
+                        className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-colors ${
+                          selectedVariant?._id === variant._id ? 'border-blue-500' : 'border-gray-200'
+                        }`}
+                      >
+                        <img
+                          src={variant.variantImage || "/placeholder.svg"}
+                          alt={variant.colorName}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {selectedSize && selectedSize.additionalImages && selectedSize.additionalImages.length > 0 && (
+                <div>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Additional Images</h4>
+                  <div className="flex gap-2 overflow-x-auto pb-2">
+                    {selectedSize.additionalImages.map((img, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setSelectedImage(img)}
+                        className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-400 transition-colors"
+                      >
+                        <img
+                          src={img || "/placeholder.svg"}
+                          alt={`Additional ${index + 1}`}
+                          className="w-full h-full object-cover"
+                        />
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
@@ -1659,13 +1687,33 @@ const ProductDetailsModal = ({ product, onClose }) => {
             <div className="space-y-4 sm:space-y-5">
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                <p className="text-sm sm:text-base text-gray-600">{product.categoryPath}</p>
+                <div className="text-sm sm:text-base text-gray-600 space-y-1">
+                  {product.mainCategory && (
+                    <p>Main Category: <span className="font-medium">
+                      {typeof product.mainCategory === 'object' 
+                        ? product.mainCategory.categoryName 
+                        : categories.find(cat => cat._id === product.mainCategory)?.categoryName || product.mainCategory}
+                    </span></p>
+                  )}
+                  {product.subCategory && (
+                    <p>Sub Category: <span className="font-medium">
+                      {typeof product.subCategory === 'object' 
+                        ? product.subCategory.categoryName 
+                        : categories.find(cat => cat._id === product.subCategory)?.categoryName || product.subCategory}
+                    </span></p>
+                  )}
+                </div>
               </div>
 
-              <div className="flex items-center gap-3">
-                <span className="text-2xl sm:text-3xl font-bold text-gray-900">
-                  ${displayPrice.toFixed(2)}
-                </span>
+              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+                <div>
+                  <span className="text-2xl sm:text-3xl font-bold text-blue-600">
+                    ${effectiveUnitPrice.toFixed(2)}
+                  </span>
+                  {effectiveUnitPrice < displayPrice && (
+                    <span className="text-sm text-green-600 ml-2">(Bulk discount applied)</span>
+                  )}
+                </div>
                 {hasActiveDiscount && originalPrice > displayPrice && (
                   <span className="text-lg sm:text-xl text-gray-500 line-through">
                     ${originalPrice.toFixed(2)}
@@ -1714,9 +1762,6 @@ const ProductDetailsModal = ({ product, onClose }) => {
                       >
                         <div className="text-sm font-medium">
                           {formatSize(detail.size)}
-                        </div>
-                        <div className="text-xs sm:text-sm text-gray-600">
-                          ${getDisplayPrice(product, selectedVariant, detail).toFixed(2)}
                         </div>
                         <div className="text-xs text-gray-500">
                           Stock: {detail.stock}
@@ -1778,7 +1823,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
               >
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                {currentStock === 0 ? "Out of Stock" : `Add ${quantity} to Cart • $${(displayPrice * quantity).toFixed(2)}`}
+                {currentStock === 0 ? "Out of Stock" : `Add ${quantity} to Cart • ${totalPrice.toFixed(2)}`}
               </button>
 
               {product.productDetails && product.productDetails.length > 0 && (
@@ -1801,6 +1846,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
     </div>
   );
 };
+
 
 const CartModal = () => {
   const { products } = useContext(ProductContext);
