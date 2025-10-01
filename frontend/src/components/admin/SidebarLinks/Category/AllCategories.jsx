@@ -645,7 +645,7 @@ const AllCategories = () => {
     setConfirmModal({ isOpen: false, pendingCategoryId: null, isClosing: false });
   };
 
-  const renderHierarchyTree = (category, level = 0, isEditMode = false) => {
+  const renderHierarchyTree = (category, level = 0, isEditMode = false, isLast = false, parentLines = []) => {
     const categoryId = typeof category._id === 'object' ? category._id.$oid : category._id;
     const hasChildren = category.children && category.children.length > 0;
     const isMainParent = level === 0;
@@ -653,203 +653,229 @@ const AllCategories = () => {
     const isAddingChild = addingSubcategoryTo === categoryId;
 
     return (
-      <div key={categoryId} className="mb-2">
-        <div 
-          className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors`}
-          style={{ marginLeft: level > 0 ? `${level * 24}px` : '0' }}
-        >
-          {isEditMode && isMainParent && (
-            <>
-              {showImageUpload && imagePreview ? (
-                <img 
-                  src={imagePreview} 
-                  alt="Preview"
-                  className="w-12 h-12 object-cover rounded-md border-2 border-blue-500"
-                />
-              ) : category.image ? (
-                <img 
-                  src={category.image} 
-                  alt={category.categoryName}
-                  className="w-12 h-12 object-cover rounded-md border border-gray-200"
-                />
-              ) : (
-                <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">
-                  <FolderTree className="w-6 h-6 text-gray-400" />
+      <div key={categoryId} className="mb-1">
+        <div className="flex items-start">
+          {/* Hierarchy Lines */}
+          {level > 0 && (
+            <div className="flex items-start pt-3" style={{ width: `${level * 32}px` }}>
+              {parentLines.map((showLine, idx) => (
+                <div key={idx} className="relative" style={{ width: '32px', height: '100%' }}>
+                  {showLine && (
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-300"></div>
+                  )}
                 </div>
-              )}
-            </>
-          )}
-
-          {isEditing ? (
-            <>
-              <input
-                type="text"
-                value={editingValue}
-                onChange={(e) => setEditingValue(e.target.value)}
-                className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                autoFocus
-              />
-              <button
-                onClick={() => handleSaveEdit(categoryId)}
-                disabled={loadingStates[categoryId]}
-                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
-                title="Save"
-              >
-                {loadingStates[categoryId] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                title="Cancel"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </>
-          ) : (
-            <p className="flex-1 font-medium text-gray-900">{category.categoryName}</p>
-          )}
-
-          {isEditMode && !isEditing && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => handleAddSubcategory(categoryId)}
-                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                title="Add Subcategory"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => handleEditClick(categoryId, category.categoryName)}
-                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                title="Edit"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => handleDeleteFromEditModal(categoryId, category.categoryName)}
-                className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                title="Delete"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              ))}
+              <div className="relative" style={{ width: '32px' }}>
+                <div className="absolute left-4 top-0 w-px bg-gray-300" style={{ height: '24px' }}></div>
+                <div className="absolute left-4 top-6 h-px bg-gray-300" style={{ width: '12px' }}></div>
+                {!isLast && (
+                  <div className="absolute left-4 bottom-0 w-px bg-gray-300" style={{ top: '24px' }}></div>
+                )}
+              </div>
             </div>
           )}
-        </div>
-
-        {isEditMode && isMainParent && !showImageUpload && (
-          <div className="flex gap-2 mt-2 ml-0">
-            <button
-              onClick={() => {
-                setShowImageUpload(true);
-                setImagePreview(null);
-                setSelectedImage(null);
-              }}
-              className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors border border-blue-200"
+          
+          {/* Category Content */}
+          <div className="flex-1">
+            <div 
+              className={`flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 transition-colors ${isMainParent ? 'bg-blue-50' : ''}`}
             >
-              Change Image
-            </button>
-            {category.image && (
-              <button
-                onClick={handleRemoveImage}
-                disabled={loadingStates[`remove-image-${categoryId}`]}
-                className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200 disabled:opacity-50"
-              >
-                {loadingStates[`remove-image-${categoryId}`] ? (
-                  <Loader2 className="w-4 h-4 animate-spin inline" />
-                ) : (
-                  'Remove Image'
-                )}
-              </button>
-            )}
-          </div>
-        )}
-
-        {isEditMode && isMainParent && showImageUpload && (
-          <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageSelect}
-              accept="image/*"
-              className="hidden"
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-            >
-              <Upload className="w-5 h-5" />
-              Select Image
-            </button>
-            {imagePreview && (
-              <div className="mt-3 flex gap-2">
-                <button
-                  onClick={handleSaveImage}
-                  disabled={loadingStates[`image-${categoryId}`]}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {loadingStates[`image-${categoryId}`] ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
+              {isEditMode && isMainParent && (
+                <>
+                  {showImageUpload && imagePreview ? (
+                    <img 
+                      src={imagePreview} 
+                      alt="Preview"
+                      className="w-12 h-12 object-cover rounded-md border-2 border-blue-500"
+                    />
+                  ) : category.image ? (
+                    <img 
+                      src={category.image} 
+                      alt={category.categoryName}
+                      className="w-12 h-12 object-cover rounded-md border border-gray-200"
+                    />
                   ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Save Image
-                    </>
+                    <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">
+                      <FolderTree className="w-6 h-6 text-gray-400" />
+                    </div>
                   )}
-                </button>
+                </>
+              )}
+
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    value={editingValue}
+                    onChange={(e) => setEditingValue(e.target.value)}
+                    className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => handleSaveEdit(categoryId)}
+                    disabled={loadingStates[categoryId]}
+                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
+                    title="Save"
+                  >
+                    {loadingStates[categoryId] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                    title="Cancel"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <p className="flex-1 font-medium text-gray-900">{category.categoryName}</p>
+              )}
+
+              {isEditMode && !isEditing && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleAddSubcategory(categoryId)}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                    title="Add Subcategory"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleEditClick(categoryId, category.categoryName)}
+                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                    title="Edit"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteFromEditModal(categoryId, category.categoryName)}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {isEditMode && isMainParent && !showImageUpload && (
+              <div className="flex gap-2 mt-2 ml-0">
                 <button
                   onClick={() => {
-                    setShowImageUpload(false);
+                    setShowImageUpload(true);
                     setImagePreview(null);
                     setSelectedImage(null);
                   }}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors border border-blue-200"
+                >
+                  Change Image
+                </button>
+                {category.image && (
+                  <button
+                    onClick={handleRemoveImage}
+                    disabled={loadingStates[`remove-image-${categoryId}`]}
+                    className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200 disabled:opacity-50"
+                  >
+                    {loadingStates[`remove-image-${categoryId}`] ? (
+                      <Loader2 className="w-4 h-4 animate-spin inline" />
+                    ) : (
+                      'Remove Image'
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {isEditMode && isMainParent && showImageUpload && (
+              <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageSelect}
+                  accept="image/*"
+                  className="hidden"
+                />
+                <button
+                  onClick={() => fileInputRef.current?.click()}
+                  className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
+                >
+                  <Upload className="w-5 h-5" />
+                  Select Image
+                </button>
+                {imagePreview && (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={handleSaveImage}
+                      disabled={loadingStates[`image-${categoryId}`]}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {loadingStates[`image-${categoryId}`] ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save Image
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowImageUpload(false);
+                        setImagePreview(null);
+                        setSelectedImage(null);
+                      }}
+                      className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isAddingChild && (
+              <div className="mt-2 flex items-center gap-2" style={{ marginLeft: level > 0 ? `${(level + 1) * 24}px` : '24px' }}>
+                <input
+                  type="text"
+                  value={newSubcategoryName}
+                  onChange={(e) => setNewSubcategoryName(e.target.value)}
+                  placeholder="Enter subcategory name"
+                  className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleSaveSubcategory(categoryId)}
+                  disabled={loadingStates[`add-${categoryId}`]}
+                  className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                >
+                  {loadingStates[`add-${categoryId}`] ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  ) : (
+                    <Save className="w-3.5 h-3.5" />
+                  )}
+                  Save
+                </button>
+                <button
+                  onClick={handleCancelAddSubcategory}
+                  className="px-3 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
               </div>
             )}
-          </div>
-        )}
 
-        {isAddingChild && (
-          <div className="mt-2 flex items-center gap-2" style={{ marginLeft: level > 0 ? `${(level + 1) * 24}px` : '24px' }}>
-            <input
-              type="text"
-              value={newSubcategoryName}
-              onChange={(e) => setNewSubcategoryName(e.target.value)}
-              placeholder="Enter subcategory name"
-              className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-            />
-            <button
-              onClick={() => handleSaveSubcategory(categoryId)}
-              disabled={loadingStates[`add-${categoryId}`]}
-              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
-            >
-              {loadingStates[`add-${categoryId}`] ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Save className="w-3.5 h-3.5" />
-              )}
-              Save
-            </button>
-            <button
-              onClick={handleCancelAddSubcategory}
-              className="px-3 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
+            {hasChildren && (
+              <div className="mt-2">
+                {category.children.map((child, idx) => 
+                  renderHierarchyTree(child, level + 1, isEditMode, idx === category.children.length - 1, [...parentLines, !isLast])
+                )}
+              </div>
+            )}
           </div>
-        )}
-
-        {hasChildren && (
-          <div className="mt-2">
-            {category.children.map(child => renderHierarchyTree(child, level + 1, isEditMode))}
-          </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -1258,7 +1284,7 @@ const AllCategories = () => {
 
       {/* Unsaved Changes Confirmation Modal */}
       {confirmModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
             <div className="px-6 py-4">
               <div className="flex items-start">
@@ -1299,7 +1325,7 @@ const AllCategories = () => {
 
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
             <div className="px-6 py-4">
               <div className="flex items-start">
@@ -1389,7 +1415,7 @@ const AllCategories = () => {
             <div className="px-6 py-4 max-h-96 overflow-y-auto">
               {hierarchyModal.category && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
+                  <div className="flex items-center gap-3 p-3 rounded-lg border border-blue-200 bg-blue-50">
                     {hierarchyModal.category.image ? (
                       <img 
                         src={hierarchyModal.category.image} 
@@ -1404,12 +1430,10 @@ const AllCategories = () => {
                     <p className="flex-1 font-medium text-gray-900">{hierarchyModal.category.categoryName}</p>
                   </div>
                   {hierarchyModal.category.children && hierarchyModal.category.children.length > 0 && (
-                    <div className="mt-2">
-                      {hierarchyModal.category.children.map(child => (
-                        <div key={typeof child._id === 'object' ? child._id.$oid : child._id} className="ml-6">
-                          {renderHierarchyTree(child, 1, false)}
-                        </div>
-                      ))}
+                    <div>
+                      {hierarchyModal.category.children.map((child, idx) => 
+                        renderHierarchyTree(child, 1, false, idx === hierarchyModal.category.children.length - 1, [false])
+                      )}
                     </div>
                   )}
                 </div>
