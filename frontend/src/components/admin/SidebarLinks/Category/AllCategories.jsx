@@ -19,7 +19,7 @@ import {
   Image as ImageIcon,
   Upload
 } from 'lucide-react';
-import { CategoryContext } from '../../../../../context/CategoryContext';
+import { CategoryContext } from '../../../../../Context/CategoryContext';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
@@ -94,6 +94,22 @@ const AllCategories = () => {
     });
   };
 
+  const refreshEditModal = () => {
+    if (editModal.isOpen && editModal.category) {
+      const updatedMainCategory = categories.find(cat => {
+        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+        const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
+        return catId === editCatId;
+      });
+      
+      if (updatedMainCategory) {
+        const categoryId = typeof updatedMainCategory._id === 'object' ? updatedMainCategory._id.$oid : updatedMainCategory._id;
+        const hierarchy = buildHierarchy(categoryId);
+        setEditModal({ isOpen: true, category: { ...updatedMainCategory, children: hierarchy } });
+      }
+    }
+  };
+
   const applyFilters = () => {
     setAppliedFilters({ ...filters });
     setFilterModal(false);
@@ -163,6 +179,10 @@ const AllCategories = () => {
   React.useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);
+
+  React.useEffect(() => {
+    refreshEditModal();
+  }, [categories]);
 
   const handleSelectAll = (e) => {
     if (e.target.checked) {
@@ -269,19 +289,6 @@ const AllCategories = () => {
         toast.success('Category deleted successfully!');
         setDeleteModal({ isOpen: false, categoryId: null, categoryName: '' });
         setSelectedRows([]);
-        
-        if (editModal.isOpen) {
-          const updatedCategory = categories.find(cat => {
-            const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-            const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
-            return catId === editCatId;
-          });
-          if (updatedCategory) {
-            const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
-            const hierarchy = buildHierarchy(categoryId);
-            setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
-          }
-        }
       } catch (error) {
         console.error('Error deleting category:', error);
         toast.error(error.response?.data?.message || 'Failed to delete category');
@@ -334,6 +341,7 @@ const AllCategories = () => {
     setImagePreview(null);
     setSelectedImage(null);
     setShowImageUpload(false);
+    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
   };
 
   const handleEditClick = (categoryId, currentName) => {
@@ -374,19 +382,6 @@ const AllCategories = () => {
       setEditingValue(confirmModal.pendingValue);
       setUnsavedChanges({ hasChanges: true, categoryId: confirmModal.pendingCategoryId, value: confirmModal.pendingValue });
       setConfirmModal({ isOpen: false, pendingCategoryId: null });
-
-      if (editModal.isOpen) {
-        const updatedCategory = categories.find(cat => {
-          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-          const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
-          return catId === editCatId;
-        });
-        if (updatedCategory) {
-          const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
-          const hierarchy = buildHierarchy(categoryId);
-          setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
-        }
-      }
     } catch (error) {
       console.error('Error updating category:', error);
       toast.error(error.response?.data?.message || 'Failed to update category');
@@ -428,19 +423,6 @@ const AllCategories = () => {
       setEditingCategoryId(null);
       setEditingValue('');
       setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
-
-      if (editModal.isOpen) {
-        const updatedCategory = categories.find(cat => {
-          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-          const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
-          return catId === editCatId;
-        });
-        if (updatedCategory) {
-          const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
-          const hierarchy = buildHierarchy(categoryId);
-          setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
-        }
-      }
     } catch (error) {
       console.error('Error updating category:', error);
       toast.error(error.response?.data?.message || 'Failed to update category');
@@ -479,19 +461,6 @@ const AllCategories = () => {
       toast.success('Subcategory added successfully!');
       setAddingSubcategoryTo(null);
       setNewSubcategoryName('');
-
-      if (editModal.isOpen) {
-        const updatedCategory = categories.find(cat => {
-          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-          const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
-          return catId === editCatId;
-        });
-        if (updatedCategory) {
-          const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
-          const hierarchy = buildHierarchy(categoryId);
-          setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
-        }
-      }
     } catch (error) {
       console.error('Error adding subcategory:', error);
       toast.error(error.response?.data?.message || 'Failed to add subcategory');
@@ -555,15 +524,6 @@ const AllCategories = () => {
       setShowImageUpload(false);
       setImagePreview(null);
       setSelectedImage(null);
-
-      const updatedCategory = categories.find(cat => {
-        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-        return catId === categoryId;
-      });
-      if (updatedCategory) {
-        const hierarchy = buildHierarchy(categoryId);
-        setEditModal({ isOpen: true, category: { ...updatedCategory, image: response.data.imageUrl, children: hierarchy } });
-      }
     } catch (error) {
       console.error('Error updating image:', error);
       toast.error(error.response?.data?.message || 'Failed to update image');
@@ -580,7 +540,10 @@ const AllCategories = () => {
       await axios.put(
         `http://localhost:3000/api/category/update-category-image/${categoryId}`,
         { removeImage: true },
-        { withCredentials: true }
+        { 
+          withCredentials: true,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
 
       setCategories(prev => prev.map(cat => {
@@ -592,21 +555,94 @@ const AllCategories = () => {
       }));
 
       toast.success('Image removed successfully!');
-
-      const updatedCategory = categories.find(cat => {
-        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-        return catId === categoryId;
-      });
-      if (updatedCategory) {
-        const hierarchy = buildHierarchy(categoryId);
-        setEditModal({ isOpen: true, category: { ...updatedCategory, image: null, children: hierarchy } });
-      }
     } catch (error) {
       console.error('Error removing image:', error);
       toast.error(error.response?.data?.message || 'Failed to remove image');
     } finally {
       setLoadingStates(prev => ({ ...prev, [`remove-image-${categoryId}`]: false }));
     }
+  };
+
+  const handleDeleteFromEditModal = (categoryId, categoryName) => {
+    const hasChildren = categories.some(cat => {
+      const parentIdValue = cat.parent_category_id 
+        ? (typeof cat.parent_category_id === 'object' ? cat.parent_category_id.$oid : cat.parent_category_id)
+        : null;
+      return parentIdValue === categoryId;
+    });
+
+    setDeleteModal({
+      isOpen: true,
+      categoryId: categoryId,
+      categoryName: categoryName,
+      hasChildren: hasChildren
+    });
+  };
+
+  const handleCloseEditModal = () => {
+    if (unsavedChanges.hasChanges) {
+      setConfirmModal({
+        isOpen: true,
+        isClosing: true
+      });
+    } else {
+      setEditModal({ isOpen: false, category: null });
+      setEditingCategoryId(null);
+      setAddingSubcategoryTo(null);
+      setImagePreview(null);
+      setSelectedImage(null);
+      setShowImageUpload(false);
+      setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
+    }
+  };
+
+  const handleConfirmCloseModal = async () => {
+    if (confirmModal.isClosing) {
+      // Save before closing
+      setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: true }));
+      try {
+        await axios.put(
+          `http://localhost:3000/api/category/update-category/${unsavedChanges.categoryId}`,
+          { categoryName: editingValue },
+          { withCredentials: true }
+        );
+
+        setCategories(prev => prev.map(cat => {
+          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+          if (catId === unsavedChanges.categoryId) {
+            return { ...cat, categoryName: editingValue };
+          }
+          return cat;
+        }));
+
+        toast.success('Category updated successfully!');
+      } catch (error) {
+        console.error('Error updating category:', error);
+        toast.error(error.response?.data?.message || 'Failed to update category');
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: false }));
+      }
+    }
+    
+    setEditModal({ isOpen: false, category: null });
+    setEditingCategoryId(null);
+    setAddingSubcategoryTo(null);
+    setImagePreview(null);
+    setSelectedImage(null);
+    setShowImageUpload(false);
+    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
+    setConfirmModal({ isOpen: false, pendingCategoryId: null, isClosing: false });
+  };
+
+  const handleDiscardCloseModal = () => {
+    setEditModal({ isOpen: false, category: null });
+    setEditingCategoryId(null);
+    setAddingSubcategoryTo(null);
+    setImagePreview(null);
+    setSelectedImage(null);
+    setShowImageUpload(false);
+    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
+    setConfirmModal({ isOpen: false, pendingCategoryId: null, isClosing: false });
   };
 
   const renderHierarchyTree = (category, level = 0, isEditMode = false) => {
@@ -690,12 +726,7 @@ const AllCategories = () => {
                 <Edit2 className="w-4 h-4" />
               </button>
               <button
-                onClick={() => setDeleteModal({
-                  isOpen: true,
-                  categoryId: categoryId,
-                  categoryName: category.categoryName,
-                  hasChildren: hasChildren
-                })}
+                onClick={() => handleDeleteFromEditModal(categoryId, category.categoryName)}
                 className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
                 title="Delete"
               >
@@ -1249,14 +1280,14 @@ const AllCategories = () => {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse gap-2">
               <button
                 type="button"
-                onClick={handleSaveUnsavedChanges}
+                onClick={confirmModal.isClosing ? handleConfirmCloseModal : handleSaveUnsavedChanges}
                 className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Save
               </button>
               <button
                 type="button"
-                onClick={handleDiscardChanges}
+                onClick={confirmModal.isClosing ? handleDiscardCloseModal : handleDiscardChanges}
                 className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Discard
@@ -1425,15 +1456,7 @@ const AllCategories = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setEditModal({ isOpen: false, category: null });
-                    setEditingCategoryId(null);
-                    setAddingSubcategoryTo(null);
-                    setImagePreview(null);
-                    setSelectedImage(null);
-                    setShowImageUpload(false);
-                    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
-                  }}
+                  onClick={handleCloseEditModal}
                   className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
                 >
                   <X className="h-6 w-6" />
@@ -1448,15 +1471,7 @@ const AllCategories = () => {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse">
               <button
                 type="button"
-                onClick={() => {
-                  setEditModal({ isOpen: false, category: null });
-                  setEditingCategoryId(null);
-                  setAddingSubcategoryTo(null);
-                  setImagePreview(null);
-                  setSelectedImage(null);
-                  setShowImageUpload(false);
-                  setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
-                }}
+                onClick={handleCloseEditModal}
                 className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Close

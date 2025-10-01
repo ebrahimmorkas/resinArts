@@ -270,15 +270,14 @@ const updateCategoryName = async (req, res) => {
 const updateCategoryImage = async (req, res) => {
   try {
     const { id } = req.params;
-    const { removeImage } = req.body;
 
     const category = await Category.findById(id);
     if (!category) {
       return res.status(404).json({ message: 'Category not found' });
     }
 
-    // Remove image
-    if (removeImage === 'true' || removeImage === true) {
+    // Check if it's a remove image request
+    if (req.body.removeImage) {
       if (category.image) {
         try {
           const urlParts = category.image.split('/');
@@ -316,8 +315,11 @@ const updateCategoryImage = async (req, res) => {
       }
     }
 
-    // Upload new image to Cloudinary
-    const result = await cloudinary.uploader.upload(req.file.path, {
+    // Upload new image to Cloudinary using buffer
+    const b64 = Buffer.from(req.file.buffer).toString('base64');
+    let dataURI = 'data:' + req.file.mimetype + ';base64,' + b64;
+    
+    const result = await cloudinary.uploader.upload(dataURI, {
       folder: 'categories',
       resource_type: 'image'
     });
