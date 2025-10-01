@@ -239,7 +239,7 @@ const AllCategories = () => {
       setIsDeleting(true);
       try {
         const deletePromises = deleteModal.categoryId.map(id =>
-          axios.delete(`http://localhost:3000/api/category/delete-category/${id}`, { withCredentials: true })
+          axios.delete(`https://api.simplyrks.cloud/api/category/delete-category/${id}`, { withCredentials: true })
         );
         await Promise.all(deletePromises);
 
@@ -282,7 +282,7 @@ const AllCategories = () => {
       setIsDeleting(true);
       try {
         await axios.delete(
-          `http://localhost:3000/api/category/delete-category/${deleteModal.categoryId}`,
+          `https://api.simplyrks.cloud/api/category/delete-category/${deleteModal.categoryId}`,
           { withCredentials: true }
         );
         
@@ -394,7 +394,7 @@ const AllCategories = () => {
       setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: true }));
       try {
         await axios.put(
-          `http://localhost:3000/api/category/update-category/${unsavedChanges.categoryId}`,
+          `https://api.simplyrks.cloud/api/category/update-category/${unsavedChanges.categoryId}`,
           { categoryName: editingValue },
           { withCredentials: true }
         );
@@ -428,7 +428,7 @@ const AllCategories = () => {
         formData.append('image', selectedImage);
 
         const response = await axios.put(
-          `http://localhost:3000/api/category/update-category-image/${uploadCategoryId}`,
+          `https://api.simplyrks.cloud/api/category/update-category-image/${uploadCategoryId}`,
           formData,
           { 
             withCredentials: true,
@@ -493,7 +493,7 @@ const AllCategories = () => {
     setLoadingStates(prev => ({ ...prev, [categoryId]: true }));
     try {
       await axios.put(
-        `http://localhost:3000/api/category/update-category/${categoryId}`,
+        `https://api.simplyrks.cloud/api/category/update-category/${categoryId}`,
         { categoryName: editingValue },
         { withCredentials: true }
       );
@@ -539,7 +539,7 @@ const AllCategories = () => {
     setLoadingStates(prev => ({ ...prev, [`add-${parentId}`]: true }));
     try {
       const response = await axios.post(
-        `http://localhost:3000/api/category/add-subcategory`,
+        `https://api.simplyrks.cloud/api/category/add-subcategory`,
         { categoryName: newSubcategoryName, parent_category_id: parentId },
         { withCredentials: true }
       );
@@ -597,7 +597,7 @@ const AllCategories = () => {
       formData.append('image', selectedImage);
 
       const response = await axios.put(
-        `http://localhost:3000/api/category/update-category-image/${uploadCategoryId}`,
+        `https://api.simplyrks.cloud/api/category/update-category-image/${uploadCategoryId}`,
         formData,
         { 
           withCredentials: true,
@@ -641,7 +641,7 @@ const AllCategories = () => {
 
     try {
       await axios.put(
-        `http://localhost:3000/api/category/update-category-image/${categoryId}`,
+        `https://api.simplyrks.cloud/api/category/update-category-image/${categoryId}`,
         { removeImage: true },
         { 
           withCredentials: true,
@@ -726,7 +726,7 @@ const AllCategories = () => {
       setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: true }));
       try {
         await axios.put(
-          `http://localhost:3000/api/category/update-category/${unsavedChanges.categoryId}`,
+          `https://api.simplyrks.cloud/api/category/update-category/${unsavedChanges.categoryId}`,
           { categoryName: editingValue },
           { withCredentials: true }
         );
@@ -753,7 +753,7 @@ const AllCategories = () => {
         formData.append('image', selectedImage);
 
         const response = await axios.put(
-          `http://localhost:3000/api/category/update-category-image/${uploadCategoryId}`,
+          `https://api.simplyrks.cloud/api/category/update-category-image/${uploadCategoryId}`,
           formData,
           { 
             withCredentials: true,
