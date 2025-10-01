@@ -1,12 +1,6 @@
-Woo you did it but with some problems. Great, The UI was exactly the same as I expected. 
-Problems:
-1. We can't update the image, deleting works fine. Error from cmd where backend is started :- Error updating category image: {
-  message: 'Missing required parameter - file',
-  name: 'Error',
-  http_code: 400
-}
-2. When we update the name of category or add new sub category then it is not reflected in the edit modal immediately, we need to close the modal and then when we reopen the edit modal at that time we can see updated data.
-3. When we click on delete button in hierarchy in edit modal so nothing happens but as soon as when we click on close button of the modal at that time the confirmation for delete is displayed and when we confirm the deletion takes place.
-4. When we are editing the category and then click the edit for another category in the hierarchy of edit modal so nothing happens and the category which we were currently editing remains intact and no modal of discarding data is displayed and then when we try to close the modal at that time it asks for this confirmaion modal
+Okay you did it very great but there are some little minor problems that can't be ignored
+1. Whenever I try to add new imageby clicking on 'Add image' button, I need to click on it two times. When I click first time below it some box appears and then I need to click on it again and then file explorer opens.
+2. The same happens when clicked on 'Change Image' button.
+3. Okay now when we edit some category name and don't save it and clicks on close button of edit modal so it prompts the discard changes modal and this is very good. Now I want this same functionality for image as well then when someone selects the image and then don't save it at that time this discard changes modal should be prompted. Also when user has selected the image for one category and haven't saved it, and then tries to select the image for another category at that also show discard changes prompt.
 
-Please fix all these errors at once. Do it in one go, I should not again complain yopu
+I hope so you have understood and kudos to you for solving mine complex problems
