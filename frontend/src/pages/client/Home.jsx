@@ -108,7 +108,7 @@ const [isSearching, setIsSearching] = useState(false)
   const outOfStockRef = useRef(null)
   const { user, setUser } = useContext(AuthContext)
 
-  const handleSearch = (query) => {
+ const handleSearch = (query) => {
   setSearchQuery(query)
   
   if (!query.trim()) {
@@ -118,20 +118,24 @@ const [isSearching, setIsSearching] = useState(false)
   }
 
   setIsSearching(true)
-  const lowerQuery = query.toLowerCase()
+  const searchTerms = query.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0)
   const results = []
 
   products.forEach((product) => {
-    const productNameMatch = product.name.toLowerCase().includes(lowerQuery)
+    const productNameLower = product.name.toLowerCase()
+    const productNameMatch = searchTerms.every(term => productNameLower.includes(term))
     
     if (product.hasVariants && product.variants) {
       product.variants.forEach((variant) => {
-        const variantMatch = variant.colorName.toLowerCase().includes(lowerQuery)
+        const variantNameLower = variant.colorName.toLowerCase()
+        const fullName = `${product.name} ${variant.colorName}`.toLowerCase()
+        const variantMatch = searchTerms.every(term => fullName.includes(term))
         
         if (variant.moreDetails && variant.moreDetails.length > 0) {
           variant.moreDetails.forEach((sizeDetail) => {
             const sizeString = formatSize(sizeDetail.size)
-            const sizeMatch = sizeString.toLowerCase().includes(lowerQuery)
+            const fullNameWithSize = `${product.name} ${variant.colorName} ${sizeString}`.toLowerCase()
+            const sizeMatch = searchTerms.every(term => fullNameWithSize.includes(term))
             
             if (productNameMatch || variantMatch || sizeMatch) {
               results.push({
@@ -144,7 +148,7 @@ const [isSearching, setIsSearching] = useState(false)
                 image: variant.variantImage || product.image,
                 price: getDisplayPrice(product, variant, sizeDetail),
                 stock: sizeDetail.stock,
-                matchType: productNameMatch ? 'product' : (variantMatch ? 'variant' : 'size')
+                fullDisplayName: `${product.name} - ${variant.colorName} - ${sizeString}`
               })
             }
           })
@@ -160,7 +164,7 @@ const [isSearching, setIsSearching] = useState(false)
               image: variant.variantImage || product.image,
               price: getDisplayPrice(product, variant, null),
               stock: variant.commonStock,
-              matchType: productNameMatch ? 'product' : 'variant'
+              fullDisplayName: `${product.name} - ${variant.colorName}`
             })
           }
         }
@@ -177,7 +181,7 @@ const [isSearching, setIsSearching] = useState(false)
           image: product.image,
           price: getDisplayPrice(product, null, null),
           stock: product.stock,
-          matchType: 'product'
+          fullDisplayName: product.name
         })
       }
     }
@@ -186,6 +190,56 @@ const [isSearching, setIsSearching] = useState(false)
   setSearchResults(results)
   setShowSearchResults(results.length > 0)
   setIsSearching(false)
+}
+
+// Helper function that will highlight the matching text
+const highlightMatchedText = (text, searchQuery) => {
+  if (!searchQuery.trim()) return text
+  
+  const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0)
+  let highlightedText = text
+  
+  // Create a map of matches with their positions
+  const matches = []
+  searchTerms.forEach(term => {
+    let index = 0
+    const lowerText = text.toLowerCase()
+    while ((index = lowerText.indexOf(term, index)) !== -1) {
+      matches.push({ start: index, end: index + term.length })
+      index += term.length
+    }
+  })
+  
+  // Sort and merge overlapping matches
+  matches.sort((a, b) => a.start - b.start)
+  const merged = []
+  matches.forEach(match => {
+    if (merged.length === 0 || merged[merged.length - 1].end < match.start) {
+      merged.push(match)
+    } else {
+      merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, match.end)
+    }
+  })
+  
+  // Build the result with bold tags
+  if (merged.length === 0) return text
+  
+  const parts = []
+  let lastIndex = 0
+  
+  merged.forEach(match => {
+    if (match.start > lastIndex) {
+      parts.push(text.substring(lastIndex, match.start))
+    }
+    parts.push(<strong key={`bold-${match.start}`} className="font-bold text-gray-900">{text.substring(match.start, match.end)}</strong>)
+    lastIndex = match.end
+  })
+  
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex))
+  }
+  
+  return <>{parts}</>
 }
 
 const handleSearchResultClick = (result) => {
@@ -201,12 +255,16 @@ const getFilteredProducts = () => {
     return products
   }
   
-  const lowerQuery = searchQuery.toLowerCase()
+  const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0)
   return products.filter(product => {
-    const nameMatch = product.name.toLowerCase().includes(lowerQuery)
-    const variantMatch = product.variants?.some(v => 
-      v.colorName.toLowerCase().includes(lowerQuery)
-    )
+    const productNameLower = product.name.toLowerCase()
+    const nameMatch = searchTerms.every(term => productNameLower.includes(term))
+    
+    const variantMatch = product.variants?.some(v => {
+      const fullName = `${product.name} ${v.colorName}`.toLowerCase()
+      return searchTerms.every(term => fullName.includes(term))
+    })
+    
     return nameMatch || variantMatch
   })
 }
@@ -2288,34 +2346,32 @@ const CartModal = () => {
             </p>
           </div>
           <div className="py-2">
-            {searchResults.map((result, index) => (
-              <button
-                key={`${result.productId}-${result.variantId}-${index}`}
-                onClick={() => handleSearchResultClick(result)}
-                className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
-              >
-                <img
-                  src={result.image || "/placeholder.svg"}
-                  alt={result.productName}
-                  className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
-                />
-                <div className="flex-1 text-left">
-                  <p className="font-medium text-gray-900 text-sm">
-                    {result.productName}
-                    {result.colorName && ` - ${result.colorName}`}
-                    {result.sizeString && ` - ${result.sizeString}`}
-                  </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm font-semibold text-blue-600">
-                      ${result.price.toFixed(2)}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      Stock: {result.stock}
-                    </span>
-                  </div>
-                </div>
-              </button>
-            ))}
+           {searchResults.map((result, index) => (
+  <button
+    key={`${result.productId}-${result.variantId}-${index}`}
+    onClick={() => handleSearchResultClick(result)}
+    className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+  >
+    <img
+      src={result.image || "/placeholder.svg"}
+      alt={result.productName}
+      className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+    />
+    <div className="flex-1 text-left">
+      <p className="text-gray-900 text-sm">
+        {highlightMatchedText(result.fullDisplayName, searchQuery)}
+      </p>
+      <div className="flex items-center gap-2 mt-1">
+        <span className="text-sm font-semibold text-blue-600">
+          ${result.price.toFixed(2)}
+        </span>
+        <span className="text-xs text-gray-500">
+          Stock: {result.stock}
+        </span>
+      </div>
+    </div>
+  </button>
+))}
           </div>
         </>
       ) : (
