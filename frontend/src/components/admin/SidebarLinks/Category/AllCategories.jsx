@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useContext, useRef } from 'react';
+import React, { useState, useMemo, useContext, useRef, useEffect } from 'react';
 import { 
   Search, 
   Edit2, 
@@ -19,10 +19,11 @@ import {
   Image as ImageIcon,
   Upload
 } from 'lucide-react';
-import { CategoryContext } from '../../../../../context/CategoryContext';
+import { CategoryContext } from '../../../../../Context/CategoryContext';
 import axios from 'axios';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import * as XLSX from 'xlsx';
 
 const AllCategories = () => {
   const { categories, loadingCategories, setCategories } = useContext(CategoryContext);
@@ -44,8 +45,22 @@ const AllCategories = () => {
   const [imagePreview, setImagePreview] = useState(null);
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageUpload, setShowImageUpload] = useState(false);
-  const [unsavedChanges, setUnsavedChanges] = useState({ hasChanges: false, categoryId: null, value: '' });
-  const [confirmModal, setConfirmModal] = useState({ isOpen: false, pendingCategoryId: null });
+  const [uploadCategoryId, setUploadCategoryId] = useState(null);
+  const [unsavedChanges, setUnsavedChanges] = useState({ 
+    hasChanges: false, 
+    categoryId: null, 
+    value: '', 
+    hasImageChanges: false 
+  });
+  const [confirmModal, setConfirmModal] = useState({ 
+    isOpen: false, 
+    pendingCategoryId: null, 
+    pendingValue: '', 
+    isClosing: false,
+    isImageChange: false 
+  });
+  const [imageModal, setImageModal] = useState({ isOpen: false, url: '' });
+  const [shouldClickFileInput, setShouldClickFileInput] = useState(false);
   const fileInputRef = useRef(null);
   
   const [filters, setFilters] = useState({
@@ -92,6 +107,22 @@ const AllCategories = () => {
         children: buildHierarchy(childId)
       };
     });
+  };
+
+  const refreshEditModal = () => {
+    if (editModal.isOpen && editModal.category) {
+      const updatedMainCategory = categories.find(cat => {
+        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+        const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
+        return catId === editCatId;
+      });
+      
+      if (updatedMainCategory) {
+        const categoryId = typeof updatedMainCategory._id === 'object' ? updatedMainCategory._id.$oid : updatedMainCategory._id;
+        const hierarchy = buildHierarchy(categoryId);
+        setEditModal({ isOpen: true, category: { ...updatedMainCategory, children: hierarchy } });
+      }
+    }
   };
 
   const applyFilters = () => {
@@ -164,6 +195,18 @@ const AllCategories = () => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);
 
+  React.useEffect(() => {
+    refreshEditModal();
+  }, [categories]);
+
+  useEffect(() => {
+    if (showImageUpload && shouldClickFileInput && fileInputRef.current) {
+      fileInputRef.current.value = '';
+      fileInputRef.current.click();
+      setShouldClickFileInput(false);
+    }
+  }, [showImageUpload, shouldClickFileInput]);
+
   const handleSelectAll = (e) => {
     if (e.target.checked) {
       const allIds = currentData.map(item => typeof item._id === 'object' ? item._id.$oid : item._id);
@@ -196,7 +239,7 @@ const AllCategories = () => {
       setIsDeleting(true);
       try {
         const deletePromises = deleteModal.categoryId.map(id =>
-          axios.delete(`https://api.simplyrks.cloud/api/category/delete-category/${id}`, { withCredentials: true })
+          axios.delete(`http://localhost:3000/api/category/delete-category/${id}`, { withCredentials: true })
         );
         await Promise.all(deletePromises);
 
@@ -239,7 +282,7 @@ const AllCategories = () => {
       setIsDeleting(true);
       try {
         await axios.delete(
-          `https://api.simplyrks.cloud/api/category/delete-category/${deleteModal.categoryId}`,
+          `http://localhost:3000/api/category/delete-category/${deleteModal.categoryId}`,
           { withCredentials: true }
         );
         
@@ -269,19 +312,6 @@ const AllCategories = () => {
         toast.success('Category deleted successfully!');
         setDeleteModal({ isOpen: false, categoryId: null, categoryName: '' });
         setSelectedRows([]);
-        
-        if (editModal.isOpen) {
-          const updatedCategory = categories.find(cat => {
-            const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-            const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
-            return catId === editCatId;
-          });
-          if (updatedCategory) {
-            const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
-            const hierarchy = buildHierarchy(categoryId);
-            setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
-          }
-        }
       } catch (error) {
         console.error('Error deleting category:', error);
         toast.error(error.response?.data?.message || 'Failed to delete category');
@@ -334,72 +364,124 @@ const AllCategories = () => {
     setImagePreview(null);
     setSelectedImage(null);
     setShowImageUpload(false);
+    setUploadCategoryId(null);
+    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '', hasImageChanges: false });
   };
 
   const handleEditClick = (categoryId, currentName) => {
-    if (unsavedChanges.hasChanges && unsavedChanges.categoryId !== categoryId) {
+    if (unsavedChanges.hasChanges || unsavedChanges.hasImageChanges) {
       setConfirmModal({
         isOpen: true,
         pendingCategoryId: categoryId,
-        pendingValue: currentName
+        pendingValue: currentName,
+        isImageChange: false
       });
     } else {
       setEditingCategoryId(categoryId);
       setEditingValue(currentName);
-      setUnsavedChanges({ hasChanges: true, categoryId, value: currentName });
+      setUnsavedChanges({ hasChanges: false, categoryId, value: currentName, hasImageChanges: false });
       setAddingSubcategoryTo(null);
     }
   };
 
+  const handleEditingChange = (e) => {
+    setEditingValue(e.target.value);
+    setUnsavedChanges(prev => ({ ...prev, hasChanges: e.target.value !== prev.value }));
+  };
+
   const handleSaveUnsavedChanges = async () => {
-    setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: true }));
-    try {
-      await axios.put(
-        `https://api.simplyrks.cloud/api/category/update-category/${unsavedChanges.categoryId}`,
-        { categoryName: editingValue },
-        { withCredentials: true }
-      );
+    if (unsavedChanges.hasChanges) {
+      setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: true }));
+      try {
+        await axios.put(
+          `http://localhost:3000/api/category/update-category/${unsavedChanges.categoryId}`,
+          { categoryName: editingValue },
+          { withCredentials: true }
+        );
 
-      setCategories(prev => prev.map(cat => {
-        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-        if (catId === unsavedChanges.categoryId) {
-          return { ...cat, categoryName: editingValue };
-        }
-        return cat;
-      }));
-
-      toast.success('Category updated successfully!');
-      setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
-      setEditingCategoryId(confirmModal.pendingCategoryId);
-      setEditingValue(confirmModal.pendingValue);
-      setUnsavedChanges({ hasChanges: true, categoryId: confirmModal.pendingCategoryId, value: confirmModal.pendingValue });
-      setConfirmModal({ isOpen: false, pendingCategoryId: null });
-
-      if (editModal.isOpen) {
-        const updatedCategory = categories.find(cat => {
+        setCategories(prev => prev.map(cat => {
           const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-          const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
-          return catId === editCatId;
-        });
-        if (updatedCategory) {
-          const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
-          const hierarchy = buildHierarchy(categoryId);
-          setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
+          if (catId === unsavedChanges.categoryId) {
+            return { ...cat, categoryName: editingValue };
+          }
+          return cat;
+        }));
+
+        toast.success('Category updated successfully!');
+        setUnsavedChanges({ hasChanges: false, categoryId: null, value: '', hasImageChanges: false });
+        if (confirmModal.pendingCategoryId) {
+          setEditingCategoryId(confirmModal.pendingCategoryId);
+          setEditingValue(confirmModal.pendingValue);
+          setUnsavedChanges({ hasChanges: false, categoryId: confirmModal.pendingCategoryId, value: confirmModal.pendingValue, hasImageChanges: false });
         }
+        setConfirmModal({ isOpen: false, pendingCategoryId: null, pendingValue: '', isClosing: false, isImageChange: false });
+      } catch (error) {
+        console.error('Error updating category:', error);
+        toast.error(error.response?.data?.message || 'Failed to update category');
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: false }));
       }
-    } catch (error) {
-      console.error('Error updating category:', error);
-      toast.error(error.response?.data?.message || 'Failed to update category');
-    } finally {
-      setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: false }));
+    } else if (unsavedChanges.hasImageChanges) {
+      setLoadingStates(prev => ({ ...prev, [`image-${uploadCategoryId}`]: true }));
+      try {
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+
+        const response = await axios.put(
+          `http://localhost:3000/api/category/update-category-image/${uploadCategoryId}`,
+          formData,
+          { 
+            withCredentials: true,
+            headers: { 'Content-Type': 'multipart/form-data' }
+          }
+        );
+
+        setCategories(prev => prev.map(cat => {
+          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+          if (catId === uploadCategoryId) {
+            return { ...cat, image: response.data.imageUrl };
+          }
+          return cat;
+        }));
+
+        toast.success('Image updated successfully!');
+        setUnsavedChanges({ hasChanges: false, categoryId: null, value: '', hasImageChanges: false });
+        setShowImageUpload(false);
+        setImagePreview(null);
+        setSelectedImage(null);
+        if (confirmModal.pendingCategoryId) {
+          setUploadCategoryId(confirmModal.pendingCategoryId);
+          setShowImageUpload(true);
+          setShouldClickFileInput(true);
+        }
+        setConfirmModal({ isOpen: false, pendingCategoryId: null, pendingValue: '', isClosing: false, isImageChange: false });
+      } catch (error) {
+        console.error('Error updating image:', error);
+        toast.error(error.response?.data?.message || 'Failed to update image');
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [`image-${uploadCategoryId}`]: false }));
+      }
     }
   };
 
   const handleDiscardChanges = () => {
-    setEditingCategoryId(confirmModal.pendingCategoryId);
-    setEditingValue(confirmModal.pendingValue);
-    setUnsavedChanges({ hasChanges: true, categoryId: confirmModal.pendingCategoryId, value: confirmModal.pendingValue });
-    setConfirmModal({ isOpen: false, pendingCategoryId: null });
+    if (unsavedChanges.hasChanges) {
+      setEditingCategoryId(confirmModal.pendingCategoryId);
+      setEditingValue(confirmModal.pendingValue);
+      setUnsavedChanges({ hasChanges: false, categoryId: confirmModal.pendingCategoryId, value: confirmModal.pendingValue, hasImageChanges: false });
+      setConfirmModal({ isOpen: false, pendingCategoryId: null, pendingValue: '', isClosing: false, isImageChange: false });
+    } else if (unsavedChanges.hasImageChanges) {
+      setShowImageUpload(false);
+      setImagePreview(null);
+      setSelectedImage(null);
+      setUnsavedChanges({ hasChanges: false, categoryId: null, value: '', hasImageChanges: false });
+      if (confirmModal.pendingCategoryId) {
+        setUploadCategoryId(confirmModal.pendingCategoryId);
+        setShowImageUpload(true);
+        setShouldClickFileInput(true);
+      }
+      setConfirmModal({ isOpen: false, pendingCategoryId: null, pendingValue: '', isClosing: false, isImageChange: false });
+    }
   };
 
   const handleSaveEdit = async (categoryId) => {
@@ -411,7 +493,7 @@ const AllCategories = () => {
     setLoadingStates(prev => ({ ...prev, [categoryId]: true }));
     try {
       await axios.put(
-        `https://api.simplyrks.cloud/api/category/update-category/${categoryId}`,
+        `http://localhost:3000/api/category/update-category/${categoryId}`,
         { categoryName: editingValue },
         { withCredentials: true }
       );
@@ -427,20 +509,7 @@ const AllCategories = () => {
       toast.success('Category updated successfully!');
       setEditingCategoryId(null);
       setEditingValue('');
-      setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
-
-      if (editModal.isOpen) {
-        const updatedCategory = categories.find(cat => {
-          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-          const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
-          return catId === editCatId;
-        });
-        if (updatedCategory) {
-          const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
-          const hierarchy = buildHierarchy(categoryId);
-          setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
-        }
-      }
+      setUnsavedChanges({ hasChanges: false, categoryId: null, value: '', hasImageChanges: false });
     } catch (error) {
       console.error('Error updating category:', error);
       toast.error(error.response?.data?.message || 'Failed to update category');
@@ -452,7 +521,7 @@ const AllCategories = () => {
   const handleCancelEdit = () => {
     setEditingCategoryId(null);
     setEditingValue('');
-    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
+    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '', hasImageChanges: false });
   };
 
   const handleAddSubcategory = (parentId) => {
@@ -470,7 +539,7 @@ const AllCategories = () => {
     setLoadingStates(prev => ({ ...prev, [`add-${parentId}`]: true }));
     try {
       const response = await axios.post(
-        `https://api.simplyrks.cloud/api/category/add-subcategory`,
+        `http://localhost:3000/api/category/add-subcategory`,
         { categoryName: newSubcategoryName, parent_category_id: parentId },
         { withCredentials: true }
       );
@@ -479,19 +548,6 @@ const AllCategories = () => {
       toast.success('Subcategory added successfully!');
       setAddingSubcategoryTo(null);
       setNewSubcategoryName('');
-
-      if (editModal.isOpen) {
-        const updatedCategory = categories.find(cat => {
-          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-          const editCatId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
-          return catId === editCatId;
-        });
-        if (updatedCategory) {
-          const categoryId = typeof updatedCategory._id === 'object' ? updatedCategory._id.$oid : updatedCategory._id;
-          const hierarchy = buildHierarchy(categoryId);
-          setEditModal({ isOpen: true, category: { ...updatedCategory, children: hierarchy } });
-        }
-      }
     } catch (error) {
       console.error('Error adding subcategory:', error);
       toast.error(error.response?.data?.message || 'Failed to add subcategory');
@@ -516,8 +572,15 @@ const AllCategories = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result);
+        setUnsavedChanges(prev => ({ ...prev, hasImageChanges: true }));
       };
       reader.readAsDataURL(file);
+    } else {
+      setShowImageUpload(false);
+      setImagePreview(null);
+      setSelectedImage(null);
+      setUnsavedChanges(prev => ({ ...prev, hasImageChanges: false }));
+      if (fileInputRef.current) fileInputRef.current.value = '';
     }
   };
 
@@ -527,15 +590,14 @@ const AllCategories = () => {
       return;
     }
 
-    const categoryId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
-    setLoadingStates(prev => ({ ...prev, [`image-${categoryId}`]: true }));
+    setLoadingStates(prev => ({ ...prev, [`image-${uploadCategoryId}`]: true }));
 
     try {
       const formData = new FormData();
       formData.append('image', selectedImage);
 
       const response = await axios.put(
-        `https://api.simplyrks.cloud/api/category/update-category-image/${categoryId}`,
+        `http://localhost:3000/api/category/update-category-image/${uploadCategoryId}`,
         formData,
         { 
           withCredentials: true,
@@ -545,7 +607,7 @@ const AllCategories = () => {
 
       setCategories(prev => prev.map(cat => {
         const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-        if (catId === categoryId) {
+        if (catId === uploadCategoryId) {
           return { ...cat, image: response.data.imageUrl };
         }
         return cat;
@@ -555,32 +617,36 @@ const AllCategories = () => {
       setShowImageUpload(false);
       setImagePreview(null);
       setSelectedImage(null);
-
-      const updatedCategory = categories.find(cat => {
-        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-        return catId === categoryId;
-      });
-      if (updatedCategory) {
-        const hierarchy = buildHierarchy(categoryId);
-        setEditModal({ isOpen: true, category: { ...updatedCategory, image: response.data.imageUrl, children: hierarchy } });
-      }
+      setUploadCategoryId(null);
+      setUnsavedChanges(prev => ({ ...prev, hasImageChanges: false }));
     } catch (error) {
       console.error('Error updating image:', error);
       toast.error(error.response?.data?.message || 'Failed to update image');
     } finally {
-      setLoadingStates(prev => ({ ...prev, [`image-${categoryId}`]: false }));
+      setLoadingStates(prev => ({ ...prev, [`image-${uploadCategoryId}`]: false }));
     }
   };
 
-  const handleRemoveImage = async () => {
-    const categoryId = typeof editModal.category._id === 'object' ? editModal.category._id.$oid : editModal.category._id;
+  const handleCancelImageUpload = () => {
+    setShowImageUpload(false);
+    setImagePreview(null);
+    setSelectedImage(null);
+    setUploadCategoryId(null);
+    setUnsavedChanges(prev => ({ ...prev, hasImageChanges: false }));
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const handleRemoveImage = async (categoryId) => {
     setLoadingStates(prev => ({ ...prev, [`remove-image-${categoryId}`]: true }));
 
     try {
       await axios.put(
-        `https://api.simplyrks.cloud/api/category/update-category-image/${categoryId}`,
+        `http://localhost:3000/api/category/update-category-image/${categoryId}`,
         { removeImage: true },
-        { withCredentials: true }
+        { 
+          withCredentials: true,
+          headers: { 'Content-Type': 'application/json' }
+        }
       );
 
       setCategories(prev => prev.map(cat => {
@@ -592,15 +658,6 @@ const AllCategories = () => {
       }));
 
       toast.success('Image removed successfully!');
-
-      const updatedCategory = categories.find(cat => {
-        const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
-        return catId === categoryId;
-      });
-      if (updatedCategory) {
-        const hierarchy = buildHierarchy(categoryId);
-        setEditModal({ isOpen: true, category: { ...updatedCategory, image: null, children: hierarchy } });
-      }
     } catch (error) {
       console.error('Error removing image:', error);
       toast.error(error.response?.data?.message || 'Failed to remove image');
@@ -609,22 +666,202 @@ const AllCategories = () => {
     }
   };
 
-  const renderHierarchyTree = (category, level = 0, isEditMode = false) => {
+  const handleChangeImage = (categoryId) => {
+    if (unsavedChanges.hasChanges || unsavedChanges.hasImageChanges) {
+      setConfirmModal({
+        isOpen: true,
+        pendingCategoryId: categoryId,
+        pendingValue: '',
+        isClosing: false,
+        isImageChange: true
+      });
+    } else {
+      setUploadCategoryId(categoryId);
+      setShowImageUpload(true);
+      setShouldClickFileInput(true);
+      setImagePreview(null);
+      setSelectedImage(null);
+    }
+  };
+
+  const handleDeleteFromEditModal = (categoryId, categoryName) => {
+    const hasChildren = categories.some(cat => {
+      const parentIdValue = cat.parent_category_id 
+        ? (typeof cat.parent_category_id === 'object' ? cat.parent_category_id.$oid : cat.parent_category_id)
+        : null;
+      return parentIdValue === categoryId;
+    });
+
+    setDeleteModal({
+      isOpen: true,
+      categoryId: categoryId,
+      categoryName: categoryName,
+      hasChildren: hasChildren
+    });
+  };
+
+  const handleCloseEditModal = () => {
+    if (unsavedChanges.hasChanges || unsavedChanges.hasImageChanges) {
+      setConfirmModal({
+        isOpen: true,
+        pendingCategoryId: null,
+        pendingValue: '',
+        isClosing: true,
+        isImageChange: false
+      });
+    } else {
+      setEditModal({ isOpen: false, category: null });
+      setEditingCategoryId(null);
+      setAddingSubcategoryTo(null);
+      setImagePreview(null);
+      setSelectedImage(null);
+      setShowImageUpload(false);
+      setUploadCategoryId(null);
+      setUnsavedChanges({ hasChanges: false, categoryId: null, value: '', hasImageChanges: false });
+    }
+  };
+
+  const handleConfirmCloseModal = async () => {
+    if (unsavedChanges.hasChanges) {
+      setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: true }));
+      try {
+        await axios.put(
+          `http://localhost:3000/api/category/update-category/${unsavedChanges.categoryId}`,
+          { categoryName: editingValue },
+          { withCredentials: true }
+        );
+
+        setCategories(prev => prev.map(cat => {
+          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+          if (catId === unsavedChanges.categoryId) {
+            return { ...cat, categoryName: editingValue };
+          }
+          return cat;
+        }));
+
+        toast.success('Category updated successfully!');
+      } catch (error) {
+        console.error('Error updating category:', error);
+        toast.error(error.response?.data?.message || 'Failed to update category');
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: false }));
+      }
+    } else if (unsavedChanges.hasImageChanges) {
+      setLoadingStates(prev => ({ ...prev, [`image-${uploadCategoryId}`]: true }));
+      try {
+        const formData = new FormData();
+        formData.append('image', selectedImage);
+
+        const response = await axios.put(
+          `http://localhost:3000/api/category/update-category-image/${uploadCategoryId}`,
+          formData,
+          { 
+            withCredentials: true,
+            headers: { 'Content-Type': 'multipart/form-data' }
+          }
+        );
+
+        setCategories(prev => prev.map(cat => {
+          const catId = typeof cat._id === 'object' ? cat._id.$oid : cat._id;
+          if (catId === uploadCategoryId) {
+            return { ...cat, image: response.data.imageUrl };
+          }
+          return cat;
+        }));
+
+        toast.success('Image updated successfully!');
+      } catch (error) {
+        console.error('Error updating image:', error);
+        toast.error(error.response?.data?.message || 'Failed to update image');
+      } finally {
+        setLoadingStates(prev => ({ ...prev, [`image-${uploadCategoryId}`]: false }));
+      }
+    }
+    
+    setEditModal({ isOpen: false, category: null });
+    setEditingCategoryId(null);
+    setAddingSubcategoryTo(null);
+    setImagePreview(null);
+    setSelectedImage(null);
+    setShowImageUpload(false);
+    setUploadCategoryId(null);
+    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '', hasImageChanges: false });
+    setConfirmModal({ isOpen: false, pendingCategoryId: null, pendingValue: '', isClosing: false, isImageChange: false });
+  };
+
+  const handleDiscardCloseModal = () => {
+    setEditModal({ isOpen: false, category: null });
+    setEditingCategoryId(null);
+    setAddingSubcategoryTo(null);
+    setImagePreview(null);
+    setSelectedImage(null);
+    setShowImageUpload(false);
+    setUploadCategoryId(null);
+    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '', hasImageChanges: false });
+    setConfirmModal({ isOpen: false, pendingCategoryId: null, pendingValue: '', isClosing: false, isImageChange: false });
+  };
+
+  const handleExport = () => {
+    function getHierarchyRows(cat, level = 0) {
+      const indent = '  '.repeat(level);
+      let rows = [[`${indent}${cat.categoryName}`, cat.image || '', new Date(cat.createdAt.$date || cat.createdAt).toLocaleDateString()]];
+      if (cat.children) {
+        cat.children.forEach(child => {
+          rows = rows.concat(getHierarchyRows(child, level + 1));
+        });
+      }
+      return rows;
+    }
+
+    let data = [['Name', 'Image URL', 'Created At']];
+    parentCategories.forEach(parent => {
+      const categoryId = typeof parent._id === 'object' ? parent._id.$oid : parent._id;
+      const hierarchy = buildHierarchy(categoryId);
+      data = data.concat(getHierarchyRows({ ...parent, children: hierarchy }));
+    });
+
+    const wb = XLSX.utils.book_new();
+    const ws = XLSX.utils.aoa_to_sheet(data);
+    XLSX.utils.book_append_sheet(wb, ws, "Categories");
+    XLSX.writeFile(wb, "categories.xlsx");
+  };
+
+  const renderHierarchyTree = (category, level = 0, isEditMode = false, isLast = false, parentLines = []) => {
     const categoryId = typeof category._id === 'object' ? category._id.$oid : category._id;
     const hasChildren = category.children && category.children.length > 0;
     const isMainParent = level === 0;
     const isEditing = editingCategoryId === categoryId;
     const isAddingChild = addingSubcategoryTo === categoryId;
+    const isUploading = showImageUpload && uploadCategoryId === categoryId;
 
     return (
-      <div key={categoryId} className="mb-2">
-        <div 
-          className={`flex items-center gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors`}
-          style={{ marginLeft: level > 0 ? `${level * 24}px` : '0' }}
-        >
-          {isEditMode && isMainParent && (
-            <>
-              {showImageUpload && imagePreview ? (
+      <div key={categoryId} className="mb-1">
+        <div className="flex items-start">
+          {level > 0 && (
+            <div className="flex items-start pt-3" style={{ width: `${level * 32}px` }}>
+              {parentLines.map((showLine, idx) => (
+                <div key={idx} className="relative" style={{ width: '32px', height: '100%' }}>
+                  {showLine && (
+                    <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-300"></div>
+                  )}
+                </div>
+              ))}
+              <div className="relative" style={{ width: '32px' }}>
+                <div className="absolute left-4 top-0 w-px bg-gray-300" style={{ height: '24px' }}></div>
+                <div className="absolute left-4 top-6 h-px bg-gray-300" style={{ width: '12px' }}></div>
+                {!isLast && (
+                  <div className="absolute left-4 bottom-0 w-px bg-gray-300" style={{ top: '24px' }}></div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          <div className="flex-1">
+            <div 
+              className={`flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 transition-colors ${isMainParent ? 'bg-blue-50' : ''} ${category.image && !isEditMode ? 'cursor-pointer' : ''}`}
+              onClick={() => !isEditMode && category.image && setImageModal({ isOpen: true, url: category.image })}
+            >
+              {showImageUpload && imagePreview && isUploading ? (
                 <img 
                   src={imagePreview} 
                   alt="Preview"
@@ -641,184 +878,166 @@ const AllCategories = () => {
                   <FolderTree className="w-6 h-6 text-gray-400" />
                 </div>
               )}
-            </>
-          )}
 
-          {isEditing ? (
-            <>
-              <input
-                type="text"
-                value={editingValue}
-                onChange={(e) => setEditingValue(e.target.value)}
-                className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                autoFocus
-              />
-              <button
-                onClick={() => handleSaveEdit(categoryId)}
-                disabled={loadingStates[categoryId]}
-                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
-                title="Save"
-              >
-                {loadingStates[categoryId] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-              </button>
-              <button
-                onClick={handleCancelEdit}
-                className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                title="Cancel"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </>
-          ) : (
-            <p className="flex-1 font-medium text-gray-900">{category.categoryName}</p>
-          )}
+              {isEditing ? (
+                <>
+                  <input
+                    type="text"
+                    value={editingValue}
+                    onChange={handleEditingChange}
+                    className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    autoFocus
+                  />
+                  <button
+                    onClick={() => handleSaveEdit(categoryId)}
+                    disabled={loadingStates[categoryId]}
+                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
+                    title="Save"
+                  >
+                    {loadingStates[categoryId] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                  </button>
+                  <button
+                    onClick={handleCancelEdit}
+                    className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                    title="Cancel"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </>
+              ) : (
+                <p className="flex-1 font-medium text-gray-900">{category.categoryName}</p>
+              )}
 
-          {isEditMode && !isEditing && (
-            <div className="flex items-center gap-1">
-              <button
-                onClick={() => handleAddSubcategory(categoryId)}
-                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                title="Add Subcategory"
-              >
-                <Plus className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => handleEditClick(categoryId, category.categoryName)}
-                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                title="Edit"
-              >
-                <Edit2 className="w-4 h-4" />
-              </button>
-              <button
-                onClick={() => setDeleteModal({
-                  isOpen: true,
-                  categoryId: categoryId,
-                  categoryName: category.categoryName,
-                  hasChildren: hasChildren
-                })}
-                className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                title="Delete"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
+              {isEditMode && !isEditing && (
+                <div className="flex items-center gap-1">
+                  <button
+                    onClick={() => handleAddSubcategory(categoryId)}
+                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                    title="Add Subcategory"
+                  >
+                    <Plus className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleEditClick(categoryId, category.categoryName)}
+                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                    title="Edit"
+                  >
+                    <Edit2 className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDeleteFromEditModal(categoryId, category.categoryName)}
+                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                    title="Delete"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
             </div>
-          )}
-        </div>
 
-        {isEditMode && isMainParent && !showImageUpload && (
-          <div className="flex gap-2 mt-2 ml-0">
-            <button
-              onClick={() => {
-                setShowImageUpload(true);
-                setImagePreview(null);
-                setSelectedImage(null);
-              }}
-              className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors border border-blue-200"
-            >
-              Change Image
-            </button>
-            {category.image && (
-              <button
-                onClick={handleRemoveImage}
-                disabled={loadingStates[`remove-image-${categoryId}`]}
-                className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200 disabled:opacity-50"
-              >
-                {loadingStates[`remove-image-${categoryId}`] ? (
-                  <Loader2 className="w-4 h-4 animate-spin inline" />
-                ) : (
-                  'Remove Image'
-                )}
-              </button>
-            )}
-          </div>
-        )}
-
-        {isEditMode && isMainParent && showImageUpload && (
-          <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleImageSelect}
-              accept="image/*"
-              className="hidden"
-            />
-            <button
-              onClick={() => fileInputRef.current?.click()}
-              className="w-full px-4 py-2 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-500 transition-colors flex items-center justify-center gap-2 text-gray-600 hover:text-blue-600"
-            >
-              <Upload className="w-5 h-5" />
-              Select Image
-            </button>
-            {imagePreview && (
-              <div className="mt-3 flex gap-2">
+            {isEditMode && !isEditing && (
+              <div className="flex gap-2 mt-2 ml-0">
                 <button
-                  onClick={handleSaveImage}
-                  disabled={loadingStates[`image-${categoryId}`]}
-                  className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  onClick={() => handleChangeImage(categoryId)}
+                  className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors border border-blue-200"
                 >
-                  {loadingStates[`image-${categoryId}`] ? (
-                    <>
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      Saving...
-                    </>
+                  {category.image ? 'Change Image' : 'Add Image'}
+                </button>
+                {category.image && (
+                  <button
+                    onClick={() => handleRemoveImage(categoryId)}
+                    disabled={loadingStates[`remove-image-${categoryId}`]}
+                    className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200 disabled:opacity-50"
+                  >
+                    {loadingStates[`remove-image-${categoryId}`] ? (
+                      <Loader2 className="w-4 h-4 animate-spin inline" />
+                    ) : (
+                      'Remove Image'
+                    )}
+                  </button>
+                )}
+              </div>
+            )}
+
+            {isUploading && (
+              <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleImageSelect}
+                  accept="image/*"
+                  className="hidden"
+                />
+                {imagePreview && (
+                  <div className="mt-3 flex gap-2">
+                    <button
+                      onClick={handleSaveImage}
+                      disabled={loadingStates[`image-${uploadCategoryId}`]}
+                      className="flex-1 px-4 py-2 bg-blue-600 text-green-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {loadingStates[`image-${uploadCategoryId}`] ? (
+                        <>
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                          Saving...
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-4 h-4" />
+                          Save Image
+                        </>
+                      )}
+                    </button>
+                    <button
+                      onClick={handleCancelImageUpload}
+                      className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {isAddingChild && (
+              <div className="mt-2 flex items-center gap-2" style={{ marginLeft: level > 0 ? `${(level + 1) * 24}px` : '24px' }}>
+                <input
+                  type="text"
+                  value={newSubcategoryName}
+                  onChange={(e) => setNewSubcategoryName(e.target.value)}
+                  placeholder="Enter subcategory name"
+                  className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  autoFocus
+                />
+                <button
+                  onClick={() => handleSaveSubcategory(categoryId)}
+                  disabled={loadingStates[`add-${categoryId}`]}
+                  className="px-3 py-1.5 bg-blue-600 text-green-600 text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                >
+                  {loadingStates[`add-${categoryId}`] ? (
+                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
                   ) : (
-                    <>
-                      <Save className="w-4 h-4" />
-                      Save Image
-                    </>
+                    <Save className="w-3.5 h-3.5" />
                   )}
+                  Save
                 </button>
                 <button
-                  onClick={() => {
-                    setShowImageUpload(false);
-                    setImagePreview(null);
-                    setSelectedImage(null);
-                  }}
-                  className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  onClick={handleCancelAddSubcategory}
+                  className="px-3 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-50 transition-colors"
                 >
                   Cancel
                 </button>
               </div>
             )}
-          </div>
-        )}
 
-        {isAddingChild && (
-          <div className="mt-2 flex items-center gap-2" style={{ marginLeft: level > 0 ? `${(level + 1) * 24}px` : '24px' }}>
-            <input
-              type="text"
-              value={newSubcategoryName}
-              onChange={(e) => setNewSubcategoryName(e.target.value)}
-              placeholder="Enter subcategory name"
-              className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              autoFocus
-            />
-            <button
-              onClick={() => handleSaveSubcategory(categoryId)}
-              disabled={loadingStates[`add-${categoryId}`]}
-              className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
-            >
-              {loadingStates[`add-${categoryId}`] ? (
-                <Loader2 className="w-3.5 h-3.5 animate-spin" />
-              ) : (
-                <Save className="w-3.5 h-3.5" />
-              )}
-              Save
-            </button>
-            <button
-              onClick={handleCancelAddSubcategory}
-              className="px-3 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
+            {hasChildren && (
+              <div className="mt-2">
+                {category.children.map((child, idx) => 
+                  renderHierarchyTree(child, level + 1, isEditMode, idx === category.children.length - 1, [...parentLines, !isLast])
+                )}
+              </div>
+            )}
           </div>
-        )}
-
-        {hasChildren && (
-          <div className="mt-2">
-            {category.children.map(child => renderHierarchyTree(child, level + 1, isEditMode))}
-          </div>
-        )}
+        </div>
       </div>
     );
   };
@@ -900,7 +1119,10 @@ const AllCategories = () => {
                     <Filter className="w-4 h-4 mr-2" />
                     Filter
                   </button>
-                  <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors">
+                  <button 
+                    onClick={handleExport}
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                  >
                     <Download className="w-4 h-4 mr-2" />
                     Export
                   </button>
@@ -980,7 +1202,11 @@ const AllCategories = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
                             {startIndex + index + 1}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '100px' }}>
+                          <td 
+                            className="px-6 py-4 whitespace-nowrap text-sm text-center cursor-pointer" 
+                            style={{ minWidth: '100px' }} 
+                            onClick={() => item.image && setImageModal({ isOpen: true, url: item.image })}
+                          >
                             {item.image ? (
                               <img 
                                 src={item.image} 
@@ -1049,10 +1275,10 @@ const AllCategories = () => {
                     onChange={(e) => setItemsPerPage(Number(e.target.value))}
                     className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
+                    <option value="5">5</option>
+                    <option value="10">10</option>
+                    <option value="25">25</option>
+                    <option value="50">50</option>
                   </select>
                   <span className="text-sm text-gray-700">entries per page</span>
                 </div>
@@ -1209,7 +1435,7 @@ const AllCategories = () => {
               <button
                 type="button"
                 onClick={applyFilters}
-                className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Apply Filters
               </button>
@@ -1227,7 +1453,7 @@ const AllCategories = () => {
 
       {/* Unsaved Changes Confirmation Modal */}
       {confirmModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
             <div className="px-6 py-4">
               <div className="flex items-start">
@@ -1249,14 +1475,14 @@ const AllCategories = () => {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse gap-2">
               <button
                 type="button"
-                onClick={handleSaveUnsavedChanges}
-                className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-white hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                onClick={confirmModal.isClosing ? handleConfirmCloseModal : handleSaveUnsavedChanges}
+                className="inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-blue-600 text-sm font-medium text-gren-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Save
               </button>
               <button
                 type="button"
-                onClick={handleDiscardChanges}
+                onClick={confirmModal.isClosing ? handleDiscardCloseModal : handleDiscardChanges}
                 className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Discard
@@ -1268,7 +1494,7 @@ const AllCategories = () => {
 
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black bg-opacity-50">
           <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
             <div className="px-6 py-4">
               <div className="flex items-start">
@@ -1303,7 +1529,7 @@ const AllCategories = () => {
                 type="button"
                 disabled={isDeleting}
                 onClick={handleDeleteConfirm}
-                className="inline-flex justify-center items-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-sm font-medium text-white hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex justify-center items-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-red-600 text-sm font-medium text-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 {isDeleting ? (
                   <>
@@ -1358,29 +1584,7 @@ const AllCategories = () => {
             <div className="px-6 py-4 max-h-96 overflow-y-auto">
               {hierarchyModal.category && (
                 <div className="space-y-2">
-                  <div className="flex items-center gap-3 p-3 rounded-lg border border-gray-200 bg-gray-50">
-                    {hierarchyModal.category.image ? (
-                      <img 
-                        src={hierarchyModal.category.image} 
-                        alt={hierarchyModal.category.categoryName}
-                        className="w-12 h-12 object-cover rounded-md border border-gray-200"
-                      />
-                    ) : (
-                      <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">
-                        <FolderTree className="w-6 h-6 text-gray-400" />
-                      </div>
-                    )}
-                    <p className="flex-1 font-medium text-gray-900">{hierarchyModal.category.categoryName}</p>
-                  </div>
-                  {hierarchyModal.category.children && hierarchyModal.category.children.length > 0 && (
-                    <div className="mt-2">
-                      {hierarchyModal.category.children.map(child => (
-                        <div key={typeof child._id === 'object' ? child._id.$oid : child._id} className="ml-6">
-                          {renderHierarchyTree(child, 1, false)}
-                        </div>
-                      ))}
-                    </div>
-                  )}
+                  {renderHierarchyTree(hierarchyModal.category, 0, false)}
                 </div>
               )}
               
@@ -1425,15 +1629,7 @@ const AllCategories = () => {
                   </div>
                 </div>
                 <button
-                  onClick={() => {
-                    setEditModal({ isOpen: false, category: null });
-                    setEditingCategoryId(null);
-                    setAddingSubcategoryTo(null);
-                    setImagePreview(null);
-                    setSelectedImage(null);
-                    setShowImageUpload(false);
-                    setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
-                  }}
+                  onClick={handleCloseEditModal}
                   className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
                 >
                   <X className="h-6 w-6" />
@@ -1448,20 +1644,31 @@ const AllCategories = () => {
             <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse">
               <button
                 type="button"
-                onClick={() => {
-                  setEditModal({ isOpen: false, category: null });
-                  setEditingCategoryId(null);
-                  setAddingSubcategoryTo(null);
-                  setImagePreview(null);
-                  setSelectedImage(null);
-                  setShowImageUpload(false);
-                  setUnsavedChanges({ hasChanges: false, categoryId: null, value: '' });
-                }}
+                onClick={handleCloseEditModal}
                 className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Close
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Image Viewer Modal */}
+      {imageModal.isOpen && (
+        <div className="fixed inset-0 z-[80] flex items-center justify-center bg-black bg-opacity-75">
+          <div className="relative max-w-4xl max-h-[80vh]">
+            <img 
+              src={imageModal.url} 
+              alt="Category Image" 
+              className="max-h-[80vh] max-w-[80vw] object-contain"
+            />
+            <button 
+              onClick={() => setImageModal({ isOpen: false, url: '' })} 
+              className="absolute top-2 right-2 text-black bg-black bg-opacity-50 rounded-full p-1 hover:bg-opacity-75"
+            >
+              <X className="w-6 h-6" />
+            </button>
           </div>
         </div>
       )}
