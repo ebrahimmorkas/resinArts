@@ -94,8 +94,9 @@ export default function Home() {
   const { announcement, loadingAnnouncement, announcementError } = useContext(AnnouncementContext);
   const { categories, loadingCategories, categoriesErrors } = useContext(CategoryContext);
   const [searchResults, setSearchResults] = useState([])
-const [showSearchResults, setShowSearchResults] = useState(false)
-const [isSearching, setIsSearching] = useState(false)
+  const [showSearchResults, setShowSearchResults] = useState(false)
+  const [isSearching, setIsSearching] = useState(false)
+  const [showSearchSection, setShowSearchSection] = useState(false)
 
   const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
   const { products, loading, error } = contextData
@@ -192,6 +193,25 @@ const [isSearching, setIsSearching] = useState(false)
   setIsSearching(false)
 }
 
+// Function that will listen the event -> clicking of enter key
+const handleSearchKeyPress = (e) => {
+  if (e.key === 'Enter' && searchQuery.trim()) {
+    setShowSearchSection(true)
+    setShowSearchResults(false)
+    // Scroll to search results section
+    setTimeout(() => {
+      document.getElementById('search-results-section')?.scrollIntoView({ behavior: 'smooth' })
+    }, 100)
+  }
+}
+
+const clearSearch = () => {
+  setSearchQuery('')
+  setSearchResults([])
+  setShowSearchResults(false)
+  setShowSearchSection(false)
+}
+
 // Helper function that will highlight the matching text
 const highlightMatchedText = (text, searchQuery) => {
   if (!searchQuery.trim()) return text
@@ -269,16 +289,16 @@ const getFilteredProducts = () => {
   })
 }
 
-  // Close dropdowns when clicking outside
+  // Close dropdowns of search when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (isProfileOpen && !event.target.closest(".profile-dropdown")) {
-        setIsProfileOpen(false)
-      }
+  const handleClickOutside = (event) => {
+    if (!event.target.closest('.relative.flex-1')) {
+      setShowSearchResults(false)
     }
-    document.addEventListener("mousedown", handleClickOutside)
-    return () => document.removeEventListener("mousedown", handleClickOutside)
-  }, [isProfileOpen])
+  }
+  document.addEventListener('mousedown', handleClickOutside)
+  return () => document.removeEventListener('mousedown', handleClickOutside)
+}, [])
 
   useEffect(() => {
   const handleClickOutside = (event) => {
@@ -2328,9 +2348,18 @@ const CartModal = () => {
       value={searchQuery}
       onChange={(e) => handleSearch(e.target.value)}
       onFocus={() => searchQuery && setShowSearchResults(true)}
-      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      onKeyPress={handleSearchKeyPress}
+      className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
     />
     <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+    {searchQuery && (
+      <button
+        onClick={clearSearch}
+        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors"
+      >
+        <X className="h-5 w-5" />
+      </button>
+    )}
   </div>
   
   {/* Search Results Dropdown */}
@@ -2344,34 +2373,37 @@ const CartModal = () => {
             <p className="text-sm font-semibold text-gray-700">
               Results for: "{searchQuery}" ({searchResults.length})
             </p>
+            <p className="text-xs text-gray-500 mt-0.5">
+              Press Enter to see all results in main section
+            </p>
           </div>
           <div className="py-2">
-           {searchResults.map((result, index) => (
-  <button
-    key={`${result.productId}-${result.variantId}-${index}`}
-    onClick={() => handleSearchResultClick(result)}
-    className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
-  >
-    <img
-      src={result.image || "/placeholder.svg"}
-      alt={result.productName}
-      className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
-    />
-    <div className="flex-1 text-left">
-      <p className="text-gray-900 text-sm">
-        {highlightMatchedText(result.fullDisplayName, searchQuery)}
-      </p>
-      <div className="flex items-center gap-2 mt-1">
-        <span className="text-sm font-semibold text-blue-600">
-          ${result.price.toFixed(2)}
-        </span>
-        <span className="text-xs text-gray-500">
-          Stock: {result.stock}
-        </span>
-      </div>
-    </div>
-  </button>
-))}
+            {searchResults.map((result, index) => (
+              <button
+                key={`${result.productId}-${result.variantId}-${index}`}
+                onClick={() => handleSearchResultClick(result)}
+                className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+              >
+                <img
+                  src={result.image || "/placeholder.svg"}
+                  alt={result.productName}
+                  className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                />
+                <div className="flex-1 text-left">
+                  <p className="text-gray-900 text-sm">
+                    {highlightMatchedText(result.fullDisplayName, searchQuery)}
+                  </p>
+                  <div className="flex items-center gap-2 mt-1">
+                    <span className="text-sm font-semibold text-blue-600">
+                      ${result.price.toFixed(2)}
+                    </span>
+                    <span className="text-xs text-gray-500">
+                      Stock: {result.stock}
+                    </span>
+                  </div>
+                </div>
+              </button>
+            ))}
           </div>
         </>
       ) : (
@@ -2502,6 +2534,40 @@ const CartModal = () => {
             ))}
           </div>
         </section>
+
+            {showSearchSection && searchQuery && (
+  <section className="mb-12" id="search-results-section">
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold text-gray-800">
+        Results for: "{searchQuery}"
+      </h2>
+      <button
+        onClick={clearSearch}
+        className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
+      >
+        <X className="w-4 h-4" />
+        Clear Search
+      </button>
+    </div>
+    {getFilteredProducts().length > 0 ? (
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
+        {sortProductsByPrice(getFilteredProducts()).map((product) => (
+          <ProductCard key={`search-${product._id}`} product={product} />
+        ))}
+      </div>
+    ) : (
+      <div className="text-center py-12">
+        <p className="text-gray-500 text-lg">No products found for "{searchQuery}"</p>
+        <button
+          onClick={clearSearch}
+          className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+        >
+          Clear search and browse all products
+        </button>
+      </div>
+    )}
+  </section>
+)}
 
         {showCategoryFilter && selectedCategory && (
           <section className="mb-12">
