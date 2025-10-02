@@ -17,6 +17,7 @@ import AddAnnouncement from '../../components/admin/SidebarLinks/Announcement/Ad
 import AllAnnouncement from '../../components/admin/SidebarLinks/Announcement/AllAnnouncement';
 import BulkUpload from '../../components/admin/SidebarLinks/products/BulkUpload';
 import AllCategories from '../../components/admin/SidebarLinks/Category/AllCategories';
+import EditProduct from '../../components/admin/SidebarLinks/products/EditProduct';
 
 function AdminPanel() {
   // State to manage sidebar open/close - starts closed
@@ -48,24 +49,45 @@ function AdminPanel() {
             <Routes>
               <Route index element={<Orders />} /> {/* Default route for /admin/panel */}
               <Route path="dashboard" element={<div className="bg-white rounded-lg shadow p-6 w-full">Dashboard Component</div>} />
+
+              {/* Start Product routes */}
               <Route path="products" element={<AllProducts />} />
               <Route path="products/add" element={<AddProduct />} />
-              <Route path="orders" element={<Orders />} /> {/* Route for /admin/panel/orders */}
-              <Route path="orders/pending" element={<OrdersPanel />} />
-              <Route path="orders/completed" element={<OrdersAccepted />} />
+              <Route path="products/edit/:id" element={<EditProduct />} />
+              <Route path="products/b" element={<BulkUpload />} />
+              {/* End of product routes */}
+
+              {/* Start of orders routes */}
+              <Route path="orders" element={<Orders />} />
+              {/* End of orders routes */}
+              {/* <Route path="orders/pending" element={<OrdersPanel />} /> */}
+              {/* <Route path="orders/completed" element={<OrdersAccepted />} /> */}
+
+              {/* Start of customers routes */}
               <Route path="customers" element={<Users />} />
+              {/* End of customers routes */}
+
+              {/* Start of discount routes */}
               <Route path="discount" element={<Discount />} />
-              <Route path="products/restock" element={<RestockPanel />} />
+              {/* End of discount routes */}
+
+              {/* Start of banners routes */}
               <Route path="banner/add" element={<AddBanner />} />
               <Route path="banner/all" element={<AllBanners />} />
+              {/* End of banners routes */}
+
+              {/* Start of banners routes */}
               <Route path="announcement/add" element={<AddAnnouncement />} />
               <Route path="announcement/all" element={<AllAnnouncement />} />
-              <Route path="products/b" element={<BulkUpload />} />
+              {/* End of banners routes */}
+
+              {/* Start of categories routes */}
               <Route path="categories/add" element={<AddCategory />} />
               <Route path="categories/all" element={<AllCategories />} />
+              {/* End of categories routes */}
               
               {/* Additional routes for new menu items */}
-              <Route path="analytics/sales" element={<div className="bg-white rounded-lg shadow p-6 w-full">Sales Report Component</div>} />
+              {/* <Route path="analytics/sales" element={<div className="bg-white rounded-lg shadow p-6 w-full">Sales Report Component</div>} />
               <Route path="analytics/revenue" element={<div className="bg-white rounded-lg shadow p-6 w-full">Revenue Component</div>} />
               <Route path="analytics/products" element={<div className="bg-white rounded-lg shadow p-6 w-full">Product Performance Component</div>} />
               <Route path="analytics/customers" element={<div className="bg-white rounded-lg shadow p-6 w-full">Customer Insights Component</div>} />
@@ -76,7 +98,7 @@ function AdminPanel() {
               
               <Route path="payments/transactions" element={<div className="bg-white rounded-lg shadow p-6 w-full">Transactions Component</div>} />
               <Route path="payments/payouts" element={<div className="bg-white rounded-lg shadow p-6 w-full">Payouts Component</div>} />
-              <Route path="payments/methods" element={<div className="bg-white rounded-lg shadow p-6 w-full">Payment Methods Component</div>} />
+              <Route path="payments/methods" element={<div className="bg-white rounded-lg shadow p-6 w-full">Payment Methods Component</div>} /> */}
               
               <Route path="store/info" element={<div className="bg-white rounded-lg shadow p-6 w-full">Store Information Component</div>} />
               <Route path="store/appearance" element={<div className="bg-white rounded-lg shadow p-6 w-full">Store Appearance Component</div>} />

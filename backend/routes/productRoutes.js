@@ -1,6 +1,6 @@
 const express = require("express")
 const router = express.Router()
-const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, deleteProduct } = require("../controllers/productController")
+const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, deleteProduct, editProduct, getProductById } = require("../controllers/productController")
 const authenticate = require("../middlewares/authenticate") // Assuming these exist
 const authorize = require("../middlewares/authorize") // Assuming these exist
 const productController = require("../controllers/productController")
@@ -15,5 +15,7 @@ router.post("/mass-revised-rate", authenticate, authorize(['admin']), massRevise
 router.post("/revised-rate", authenticate, authorize(['admin']), revisedRate);
 router.post("/bulk-upload", authenticate, authorize(['admin']), upload.single('file'), bulkUploadProducts);
 router.delete("/delete-product/:id", authenticate, authorize(['admin']), deleteProduct)
+router.put('/edit-product/:id', upload.any(), editProduct);
+router.get('/:id', authenticate, authorize(['admin']), getProductById);
 
 module.exports = router
