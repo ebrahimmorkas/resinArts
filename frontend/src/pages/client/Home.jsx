@@ -265,7 +265,13 @@ const highlightMatchedText = (text, searchQuery) => {
 const handleSearchResultClick = (result) => {
   const product = products.find(p => p._id === result.productId)
   if (product) {
-    setSelectedProduct(product)
+    // Store the selected variant and size info to pass to modal
+    const selectedVariantInfo = {
+      variantId: result.variantId,
+      colorName: result.colorName,
+      sizeDetailId: result.sizeDetail?._id
+    }
+    setSelectedProduct({ ...product, preSelectedVariant: selectedVariantInfo })
     setShowSearchResults(false)
   }
 }
@@ -840,9 +846,9 @@ const handleLogout = async () => {
 
     return (
       <div 
-    className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group w-full cursor-pointer"
-    onClick={() => setSelectedProduct(product)}
-  >
+  className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group w-full cursor-pointer"
+  onClick={() => setSelectedProduct({ ...product, preSelectedVariant: null })}
+>
         <div className="relative">
           <div className="relative">
             <img
@@ -1681,14 +1687,37 @@ const ProductDetailsModal = ({ product, onClose }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
 
   useEffect(() => {
-    if (product && product.hasVariants && product.variants && product.variants.length > 0) {
-      const defaultVariant = product.variants.find(v => v.isDefault) || product.variants[0];
-      setSelectedVariant(defaultVariant);
-      if (defaultVariant.moreDetails && defaultVariant.moreDetails.length > 0) {
-        setSelectedSize(defaultVariant.moreDetails[0]);
+  if (product && product.hasVariants && product.variants && product.variants.length > 0) {
+    // Check if there's a pre-selected variant from search
+    if (product.preSelectedVariant) {
+      const preSelected = product.variants.find(v => v._id === product.preSelectedVariant.variantId);
+      if (preSelected) {
+        setSelectedVariant(preSelected);
+        // Also set the pre-selected size if available
+        if (product.preSelectedVariant.sizeDetailId && preSelected.moreDetails) {
+          const preSelectedSize = preSelected.moreDetails.find(
+            md => md._id === product.preSelectedVariant.sizeDetailId
+          );
+          if (preSelectedSize) {
+            setSelectedSize(preSelectedSize);
+            return;
+          }
+        }
+        if (preSelected.moreDetails && preSelected.moreDetails.length > 0) {
+          setSelectedSize(preSelected.moreDetails[0]);
+        }
+        return;
       }
     }
-  }, [product]);
+    
+    // Fall back to default variant
+    const defaultVariant = product.variants.find(v => v.isDefault) || product.variants[0];
+    setSelectedVariant(defaultVariant);
+    if (defaultVariant.moreDetails && defaultVariant.moreDetails.length > 0) {
+      setSelectedSize(defaultVariant.moreDetails[0]);
+    }
+  }
+}, [product]);
 
   if (!product) return null;
 
