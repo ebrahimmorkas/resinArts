@@ -93,6 +93,9 @@ export default function Home() {
   const { discountData, loadingDiscount, loadingErrors, isDiscountAvailable } = useContext(DiscountContext);
   const { announcement, loadingAnnouncement, announcementError } = useContext(AnnouncementContext);
   const { categories, loadingCategories, categoriesErrors } = useContext(CategoryContext);
+  const [searchResults, setSearchResults] = useState([])
+const [showSearchResults, setShowSearchResults] = useState(false)
+const [isSearching, setIsSearching] = useState(false)
 
   const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
   const { products, loading, error } = contextData
@@ -105,6 +108,167 @@ export default function Home() {
   const outOfStockRef = useRef(null)
   const { user, setUser } = useContext(AuthContext)
 
+ const handleSearch = (query) => {
+  setSearchQuery(query)
+  
+  if (!query.trim()) {
+    setSearchResults([])
+    setShowSearchResults(false)
+    return
+  }
+
+  setIsSearching(true)
+  const searchTerms = query.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0)
+  const results = []
+
+  products.forEach((product) => {
+    const productNameLower = product.name.toLowerCase()
+    const productNameMatch = searchTerms.every(term => productNameLower.includes(term))
+    
+    if (product.hasVariants && product.variants) {
+      product.variants.forEach((variant) => {
+        const variantNameLower = variant.colorName.toLowerCase()
+        const fullName = `${product.name} ${variant.colorName}`.toLowerCase()
+        const variantMatch = searchTerms.every(term => fullName.includes(term))
+        
+        if (variant.moreDetails && variant.moreDetails.length > 0) {
+          variant.moreDetails.forEach((sizeDetail) => {
+            const sizeString = formatSize(sizeDetail.size)
+            const fullNameWithSize = `${product.name} ${variant.colorName} ${sizeString}`.toLowerCase()
+            const sizeMatch = searchTerms.every(term => fullNameWithSize.includes(term))
+            
+            if (productNameMatch || variantMatch || sizeMatch) {
+              results.push({
+                productId: product._id,
+                productName: product.name,
+                variantId: variant._id,
+                colorName: variant.colorName,
+                sizeDetail: sizeDetail,
+                sizeString: sizeString,
+                image: variant.variantImage || product.image,
+                price: getDisplayPrice(product, variant, sizeDetail),
+                stock: sizeDetail.stock,
+                fullDisplayName: `${product.name} - ${variant.colorName} - ${sizeString}`
+              })
+            }
+          })
+        } else {
+          if (productNameMatch || variantMatch) {
+            results.push({
+              productId: product._id,
+              productName: product.name,
+              variantId: variant._id,
+              colorName: variant.colorName,
+              sizeDetail: null,
+              sizeString: null,
+              image: variant.variantImage || product.image,
+              price: getDisplayPrice(product, variant, null),
+              stock: variant.commonStock,
+              fullDisplayName: `${product.name} - ${variant.colorName}`
+            })
+          }
+        }
+      })
+    } else {
+      if (productNameMatch) {
+        results.push({
+          productId: product._id,
+          productName: product.name,
+          variantId: null,
+          colorName: null,
+          sizeDetail: null,
+          sizeString: null,
+          image: product.image,
+          price: getDisplayPrice(product, null, null),
+          stock: product.stock,
+          fullDisplayName: product.name
+        })
+      }
+    }
+  })
+
+  setSearchResults(results)
+  setShowSearchResults(results.length > 0)
+  setIsSearching(false)
+}
+
+// Helper function that will highlight the matching text
+const highlightMatchedText = (text, searchQuery) => {
+  if (!searchQuery.trim()) return text
+  
+  const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0)
+  let highlightedText = text
+  
+  // Create a map of matches with their positions
+  const matches = []
+  searchTerms.forEach(term => {
+    let index = 0
+    const lowerText = text.toLowerCase()
+    while ((index = lowerText.indexOf(term, index)) !== -1) {
+      matches.push({ start: index, end: index + term.length })
+      index += term.length
+    }
+  })
+  
+  // Sort and merge overlapping matches
+  matches.sort((a, b) => a.start - b.start)
+  const merged = []
+  matches.forEach(match => {
+    if (merged.length === 0 || merged[merged.length - 1].end < match.start) {
+      merged.push(match)
+    } else {
+      merged[merged.length - 1].end = Math.max(merged[merged.length - 1].end, match.end)
+    }
+  })
+  
+  // Build the result with bold tags
+  if (merged.length === 0) return text
+  
+  const parts = []
+  let lastIndex = 0
+  
+  merged.forEach(match => {
+    if (match.start > lastIndex) {
+      parts.push(text.substring(lastIndex, match.start))
+    }
+    parts.push(<strong key={`bold-${match.start}`} className="font-bold text-gray-900">{text.substring(match.start, match.end)}</strong>)
+    lastIndex = match.end
+  })
+  
+  if (lastIndex < text.length) {
+    parts.push(text.substring(lastIndex))
+  }
+  
+  return <>{parts}</>
+}
+
+const handleSearchResultClick = (result) => {
+  const product = products.find(p => p._id === result.productId)
+  if (product) {
+    setSelectedProduct(product)
+    setShowSearchResults(false)
+  }
+}
+
+const getFilteredProducts = () => {
+  if (!searchQuery.trim()) {
+    return products
+  }
+  
+  const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0)
+  return products.filter(product => {
+    const productNameLower = product.name.toLowerCase()
+    const nameMatch = searchTerms.every(term => productNameLower.includes(term))
+    
+    const variantMatch = product.variants?.some(v => {
+      const fullName = `${product.name} ${v.colorName}`.toLowerCase()
+      return searchTerms.every(term => fullName.includes(term))
+    })
+    
+    return nameMatch || variantMatch
+  })
+}
+
   // Close dropdowns when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -115,6 +279,16 @@ export default function Home() {
     document.addEventListener("mousedown", handleClickOutside)
     return () => document.removeEventListener("mousedown", handleClickOutside)
   }, [isProfileOpen])
+
+  useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (!event.target.closest('.relative.flex-1')) {
+      setShowSearchResults(false)
+    }
+  }
+  document.addEventListener('mousedown', handleClickOutside)
+  return () => document.removeEventListener('mousedown', handleClickOutside)
+}, [])
 
   const isDiscountActive = (product, variant = null, sizeDetail = null) => {
     let discountStartDate, discountEndDate
@@ -2074,12 +2248,12 @@ const CartModal = () => {
 };
 
   const getJustArrivedProducts = () => {
-    const filteredProducts = products.filter((product) => isNew(product) && !isOutOfStock(product));
+    const filteredProducts =getFilteredProducts().filter((product) => isNew(product) && !isOutOfStock(product));
     return sortProductsByPrice(filteredProducts);
   }
 
   const getRestockedProducts = () => {
-    const filteredProducts = products.filter((product) => !isOutOfStock(product) && (
+    const filteredProducts =getFilteredProducts().filter((product) => !isOutOfStock(product) && (
         isRecentlyRestocked(product) ||
         product.variants?.some((variant) =>
           variant.moreDetails?.some((sizeDetail) => isRecentlyRestocked(product, variant, sizeDetail)),
@@ -2089,7 +2263,7 @@ const CartModal = () => {
   }
 
   const getRevisedRatesProducts = () => {
-    const filteredProducts = products.filter((product) => !isOutOfStock(product) && (
+    const filteredProducts =getFilteredProducts().filter((product) => !isOutOfStock(product) && (
         isDiscountActive(product) ||
         product.variants?.some((variant) =>
           variant.moreDetails?.some((sizeDetail) => isDiscountActive(product, variant, sizeDetail)),
@@ -2099,7 +2273,7 @@ const CartModal = () => {
   }
 
   const getOutOfStockProducts = () => {
-    const filteredProducts = products.filter(isOutOfStock);
+    const filteredProducts =getFilteredProducts().filter(isOutOfStock);
     return sortProductsByPrice(filteredProducts);
   }
 
@@ -2146,19 +2320,68 @@ const CartModal = () => {
                 className="h-12 w-auto"
               />
             </div>
-            <div className="flex-1 max-w-lg mx-4">
-              <div className="relative">
-                <input
-                  type="text"
-                  placeholder="Search products..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
-                <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
-              </div>
-              
-            </div>
+            <div className="flex-1 max-w-lg mx-4 relative">
+  <div className="relative">
+    <input
+      type="text"
+      placeholder="Search products..."
+      value={searchQuery}
+      onChange={(e) => handleSearch(e.target.value)}
+      onFocus={() => searchQuery && setShowSearchResults(true)}
+      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+    />
+    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
+  </div>
+  
+  {/* Search Results Dropdown */}
+  {showSearchResults && (
+    <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200">
+      {isSearching ? (
+        <div className="p-4 text-center text-gray-500">Searching...</div>
+      ) : searchResults.length > 0 ? (
+        <>
+          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 sticky top-0">
+            <p className="text-sm font-semibold text-gray-700">
+              Results for: "{searchQuery}" ({searchResults.length})
+            </p>
+          </div>
+          <div className="py-2">
+           {searchResults.map((result, index) => (
+  <button
+    key={`${result.productId}-${result.variantId}-${index}`}
+    onClick={() => handleSearchResultClick(result)}
+    className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+  >
+    <img
+      src={result.image || "/placeholder.svg"}
+      alt={result.productName}
+      className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+    />
+    <div className="flex-1 text-left">
+      <p className="text-gray-900 text-sm">
+        {highlightMatchedText(result.fullDisplayName, searchQuery)}
+      </p>
+      <div className="flex items-center gap-2 mt-1">
+        <span className="text-sm font-semibold text-blue-600">
+          ${result.price.toFixed(2)}
+        </span>
+        <span className="text-xs text-gray-500">
+          Stock: {result.stock}
+        </span>
+      </div>
+    </div>
+  </button>
+))}
+          </div>
+        </>
+      ) : (
+        <div className="p-4 text-center text-gray-500">
+          No items found for "{searchQuery}"
+        </div>
+      )}
+    </div>
+  )}
+</div>
             <div className="flex items-center space-x-4">
               <div className="relative profile-dropdown">
                 <button
@@ -2285,7 +2508,7 @@ const CartModal = () => {
             <h2 className="text-2xl font-bold text-gray-800 mb-6">{selectedCategory}</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
               {sortProductsByPrice(
-                products.filter((product) => product.categoryPath?.includes(selectedCategory))
+               getFilteredProducts().filter((product) => product.categoryPath?.includes(selectedCategory))
               ).map((product) => (
                 <ProductCard key={product._id} product={product} />
               ))}
