@@ -2371,6 +2371,7 @@ const CartModal = () => {
             </div>
             <div className="flex-1 max-w-lg mx-4 relative">
   <div className="relative">
+    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
     <input
       type="text"
       placeholder="Search products..."
@@ -2380,13 +2381,13 @@ const CartModal = () => {
       onKeyPress={handleSearchKeyPress}
       className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
     />
-    <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-400" />
     {searchQuery && (
       <button
         onClick={clearSearch}
-        className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 transition-colors"
+        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5"
+        aria-label="Clear search"
       >
-        <X className="h-5 w-5" />
+        <X className="h-4 w-4" />
       </button>
     )}
   </div>
