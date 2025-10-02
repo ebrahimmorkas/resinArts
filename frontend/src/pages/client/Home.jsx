@@ -934,9 +934,9 @@ const handleLogout = async () => {
           <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
 
           <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg font-bold text-gray-900">${displayPrice.toFixed(2)}</span>
+            <span className="text-lg font-bold text-gray-900">₹ {displayPrice.toFixed(2)}</span>
             {strikePrice && (
-              <span className="text-sm text-gray-500 line-through">${strikePrice.toFixed(2)}</span>
+              <span className="text-sm text-gray-500 line-through">₹ {strikePrice.toFixed(2)}</span>
             )}
           </div>
 
@@ -953,7 +953,7 @@ const handleLogout = async () => {
       {bulkPricing.map((tier, index) => (
         <div key={index} className="flex justify-between text-xs">
           <span>{tier.quantity}+ pcs</span>
-          <span className="font-semibold">${tier.wholesalePrice.toFixed(2)} each</span>
+          <span className="font-semibold">₹ {tier.wholesalePrice.toFixed(2)} each</span>
         </div>
       ))}
     </div>
@@ -1039,7 +1039,7 @@ const handleLogout = async () => {
                         {bulkPricing.map((tier, index) => (
                           <div key={index} className="flex justify-between text-xs">
                             <span>{tier.quantity}+ pcs</span>
-                            <span className="font-semibold">${tier.wholesalePrice.toFixed(2)} each</span>
+                            <span className="font-semibold">₹ {tier.wholesalePrice.toFixed(2)} each</span>
                           </div>
                         ))}
                       </div>
@@ -1238,11 +1238,11 @@ const handleLogout = async () => {
             {/* Price */}
             <div className="flex items-center gap-3">
               <span className="text-3xl font-bold text-gray-900">
-                ${currentPrice || getDisplayPrice(product, selectedVariant, selectedSize)}
+                ₹ {currentPrice || getDisplayPrice(product, selectedVariant, selectedSize)}
               </span>
               {hasDiscount && (
                 <span className="text-xl text-gray-500 line-through">
-                  ${originalPrice}
+                  ₹ {originalPrice}
                 </span>
               )}
             </div>
@@ -1288,7 +1288,7 @@ const handleLogout = async () => {
                         {formatSize(detail.size)}
                       </div>
                       <div className="text-sm text-gray-600">
-                        ${detail.discountPrice && isDiscountValid(detail.discountStartDate, detail.discountEndDate) 
+                        ₹ {detail.discountPrice && isDiscountValid(detail.discountStartDate, detail.discountEndDate) 
                           ? detail.discountPrice 
                           : detail.price}
                       </div>
@@ -1346,7 +1346,7 @@ const handleLogout = async () => {
               className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
             >
               <ShoppingCart className="w-5 h-5" />
-              Add to Cart • ${((currentPrice || getDisplayPrice(product, selectedVariant, selectedSize)) * quantity).toFixed(2)}
+              Add to Cart • ₹ {((currentPrice || getDisplayPrice(product, selectedVariant, selectedSize)) * quantity).toFixed(2)}
             </button>
 
             {/* Product Features */}
@@ -1515,7 +1515,7 @@ const handleLogout = async () => {
               </div>
 
               <h3 className="font-semibold text-lg">{product.name}</h3>
-              <p className="text-2xl font-bold text-blue-600">${displayPrice.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-blue-600">₹ {displayPrice.toFixed(2)}</p>
             </div>
 
             <div className="mb-6">
@@ -1579,7 +1579,7 @@ const handleLogout = async () => {
                 <h4 className="font-semibold text-gray-800 mb-2">Selected Variant Details</h4>
                 <div className="space-y-1 text-sm">
                   <div>
-                    Price: <span className="font-semibold">${displayPrice.toFixed(2)}</span>
+                    Price: <span className="font-semibold">₹ {displayPrice.toFixed(2)}</span>
                   </div>
                   <div>
                     Stock: <span className="font-semibold">${selectedSizeDetail.stock} available</span>
@@ -1604,7 +1604,7 @@ const handleLogout = async () => {
                   {bulkPricing.map((tier, index) => (
                     <div key={index} className="flex justify-between text-sm">
                       <span>{tier.quantity}+ pcs</span>
-                      <span className="font-semibold">${tier.wholesalePrice.toFixed(2)} each</span>
+                      <span className="font-semibold">₹ {tier.wholesalePrice.toFixed(2)} each</span>
                     </div>
                   ))}
                 </div>
@@ -1931,7 +1931,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
               <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
                 <div>
                   <span className="text-2xl sm:text-3xl font-bold text-blue-600">
-                    ${effectiveUnitPrice.toFixed(2)}
+                    ₹ {effectiveUnitPrice.toFixed(2)}
                   </span>
                   {effectiveUnitPrice < displayPrice && (
                     <span className="text-sm text-green-600 ml-2">(Bulk discount applied)</span>
@@ -1939,7 +1939,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                 </div>
                 {hasActiveDiscount && originalPrice > displayPrice && (
                   <span className="text-lg sm:text-xl text-gray-500 line-through">
-                    ${originalPrice.toFixed(2)}
+                    ₹ {originalPrice.toFixed(2)}
                   </span>
                 )}
               </div>
@@ -2033,7 +2033,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                     {bulkPricing.map((tier, index) => (
                       <div key={index} className="flex justify-between text-xs sm:text-sm">
                         <span>{tier.quantity}+ pcs</span>
-                        <span className="font-semibold">${tier.wholesalePrice.toFixed(2)} each</span>
+                        <span className="font-semibold">₹  {tier.wholesalePrice.toFixed(2)} each</span>
                       </div>
                     ))}
                   </div>
@@ -2046,7 +2046,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
               >
                 <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                {currentStock === 0 ? "Out of Stock" : `Add ${quantity} to Cart • ${totalPrice.toFixed(2)}`}
+                {currentStock === 0 ? "Out of Stock" : `Add ${quantity} to Cart • ₹  ${totalPrice.toFixed(2)}`}
               </button>
 
               {product.productDetails && product.productDetails.length > 0 && (
