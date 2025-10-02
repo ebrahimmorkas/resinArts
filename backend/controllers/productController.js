@@ -8,8 +8,6 @@ const path = require('path');
 const fs = require('fs');
 const Category = require('../models/Category');
 
-
-
 // Start of function to check the file extension
 const fileFilter = (req, file, cb) => {
   // Check file extensions
@@ -34,6 +32,20 @@ const upload = multer({
   }
 })
 
+// Start of function that will find the product by ID
+const getProductById = async (req, res) => {
+  try {
+    const product = await Product.findById(req.params.id);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+    res.json(product);
+  } catch (error) {
+    res.status(500).json({ message: 'Error fetching product', error: error.message });
+  }
+};
+// End of function that will find the product by ID
+
 // Helper function to upload a single product's image to Cloudinary
 // Start of function to add product to cloudinary for single product
 const uploadImageToCloudinary = async (fileBuffer, folder) => {
@@ -48,6 +60,28 @@ const uploadImageToCloudinary = async (fileBuffer, folder) => {
   })
 }
 // End of function to add product's image to cloudinary
+
+// Start of function that will handle the deletion of product's image from cloudinary
+// Helper function to delete image from Cloudinary
+const deleteFromCloudinary = async (imageUrl) => {
+  if (!imageUrl) return;
+  try {
+    // Extract the public_id from the full Cloudinary URL
+    const urlParts = imageUrl.split('/');
+    const uploadIndex = urlParts.indexOf('upload');
+    if (uploadIndex !== -1 && uploadIndex + 2 < urlParts.length) {
+      // Get everything after 'upload/v123456789/' (the folder path + filename)
+      const pathAfterUpload = urlParts.slice(uploadIndex + 2).join('/');
+      // Remove file extension
+      const publicId = pathAfterUpload.substring(0, pathAfterUpload.lastIndexOf('.'));
+      await cloudinary.uploader.destroy(publicId);
+      console.log(`Deleted image: ${publicId}`);
+    }
+  } catch (error) {
+    console.error('Error deleting from Cloudinary:', error);
+  }
+};
+// End of function that will handle the deletion of product's immage from cloudinary
 
 // Start of function to upload image to cloudinary for bulk edit
 const BulkUploadImageToCloudinary = async (imagePath, folder = 'products') => {
@@ -1423,7 +1457,117 @@ const deleteProduct = async (req, res) => {
 };
 // End of funcion that will handle the deletion of product
 
+// Start of function that will handle the ediing of product
+const editProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const productData = JSON.parse(req.body.productData);
 
+    const existingProduct = await Product.findById(id);
+    if (!existingProduct) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    const imagesToDelete = [];
+
+    // Organize files by fieldname
+    const filesByField = {};
+    if (req.files) {
+      req.files.forEach(file => {
+        if (!filesByField[file.fieldname]) {
+          filesByField[file.fieldname] = [];
+        }
+        filesByField[file.fieldname].push(file);
+      });
+    }
+
+    // Handle main image
+    if (filesByField['image'] && filesByField['image'][0]) {
+      if (existingProduct.image) {
+        imagesToDelete.push(existingProduct.image);
+      }
+      productData.image = await uploadImageToCloudinary(filesByField['image'][0].buffer, 'products');
+    } else {
+      productData.image = existingProduct.image;
+    }
+
+    // Handle additional images
+    if (filesByField['additionalImages']) {
+      if (existingProduct.additionalImages && existingProduct.additionalImages.length > 0) {
+        imagesToDelete.push(...existingProduct.additionalImages);
+      }
+      const additionalImagesUrls = await Promise.all(
+        filesByField['additionalImages'].map(file => uploadImageToCloudinary(file.buffer, 'products'))
+      );
+      productData.additionalImages = additionalImagesUrls;
+    } else {
+      productData.additionalImages = existingProduct.additionalImages || [];
+    }
+
+    // Handle variants dynamically
+    if (productData.hasVariants && productData.variants) {
+      for (let variantIndex = 0; variantIndex < productData.variants.length; variantIndex++) {
+        const variant = productData.variants[variantIndex];
+        const existingVariant = existingProduct.variants?.[variantIndex];
+
+        // Handle variant image
+        const variantImageKey = `variants[${variantIndex}].variantImage`;
+        if (filesByField[variantImageKey] && filesByField[variantImageKey][0]) {
+          if (existingVariant?.variantImage) {
+            imagesToDelete.push(existingVariant.variantImage);
+          }
+          variant.variantImage = await uploadImageToCloudinary(filesByField[variantImageKey][0].buffer, 'products/variants');
+        } else if (existingVariant?.variantImage) {
+          variant.variantImage = existingVariant.variantImage;
+        }
+
+        // Handle moreDetails additional images dynamically
+        if (variant.moreDetails) {
+          for (let mdIndex = 0; mdIndex < variant.moreDetails.length; mdIndex++) {
+            const mdImagesKey = `variants[${variantIndex}].moreDetails[${mdIndex}].additionalImages`;
+            if (filesByField[mdImagesKey]) {
+              if (existingVariant?.moreDetails?.[mdIndex]?.additionalImages) {
+                imagesToDelete.push(...existingVariant.moreDetails[mdIndex].additionalImages);
+              }
+              const mdImagesUrls = await Promise.all(
+                filesByField[mdImagesKey].map(file => uploadImageToCloudinary(file.buffer, 'products/variants'))
+              );
+              variant.moreDetails[mdIndex].additionalImages = mdImagesUrls;
+            } else if (existingVariant?.moreDetails?.[mdIndex]?.additionalImages) {
+              variant.moreDetails[mdIndex].additionalImages = existingVariant.moreDetails[mdIndex].additionalImages;
+            } else {
+              variant.moreDetails[mdIndex].additionalImages = [];
+            }
+          }
+        }
+      }
+    }
+
+    // Update product
+    const updatedProduct = await Product.findByIdAndUpdate(
+      id,
+      productData,
+      { new: true, runValidators: true }
+    );
+
+    // Delete old images from Cloudinary
+    if (imagesToDelete.length > 0) {
+      await Promise.all(imagesToDelete.map(url => deleteFromCloudinary(url)));
+    }
+
+    res.status(200).json({
+      message: 'Product updated successfully',
+      product: updatedProduct
+    });
+  } catch (error) {
+    console.error('Error updating product:', error);
+    res.status(500).json({ 
+      message: 'Error updating product', 
+      error: error.message 
+    });
+  }
+};
+// End of function that will handle the editing of product
 
 // Export addProduct with upload.any() middleware directly
 module.exports = {
@@ -1435,5 +1579,7 @@ module.exports = {
   revisedRate,
   upload,
   bulkUploadProducts,
-  deleteProduct
+  deleteProduct,
+  editProduct,
+  getProductById
 }

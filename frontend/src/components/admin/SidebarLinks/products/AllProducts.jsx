@@ -4,6 +4,7 @@ import { ProductContext } from '../../../../../Context/ProductContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
+import { useNavigate } from 'react-router-dom';
 
 export default function AdminProductsPage() {
   const { products, loading, error } = useContext(ProductContext);
@@ -29,13 +30,14 @@ export default function AdminProductsPage() {
   const [showViewPriceModal, setShowViewPriceModal] = useState(false);
   const [selectedProductForView, setSelectedProductForView] = useState(null);
   const [showViewDetailsModal, setShowViewDetailsModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedProductForEdit, setSelectedProductForEdit] = useState(null);
+  // const [showEditModal, setShowEditModal] = useState(false);
+  // const [selectedProductForEdit, setSelectedProductForEdit] = useState(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [selectedProductForDelete, setSelectedProductForDelete] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorDetails, setErrorDetails] = useState({ type: 'general', message: '' });
+  const navigate = useNavigate();
 
   // Effects
   useEffect(() => {
@@ -170,9 +172,8 @@ export default function AdminProductsPage() {
   };
 
   const openEditModal = (product) => {
-    setSelectedProductForEdit(product);
-    setShowEditModal(true);
-  };
+  navigate(`/admin/panel/products/edit/${product._id}`);
+};
 
   const openDeleteModal = (product) => {
     setSelectedProductForDelete(product);
@@ -721,55 +722,55 @@ const DeleteConfirmationModal = () => {
     );
   };
 
-  const EditModal = ({ product, onClose }) => {
-    if (!product) return null;
+  // const EditModal = ({ product, onClose }) => {
+  //   if (!product) return null;
 
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-gray-900">Edit Product - {product.name}</h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="p-6 overflow-y-auto flex-1">
-            <div className="text-center py-8">
-              <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Edit Product Form</h3>
-              <p className="text-gray-600">
-                The edit functionality will be implemented with the same form structure as AddProduct.jsx
-                with all current values pre-filled for editing.
-              </p>
-              <div className="mt-6 space-y-2 text-sm text-gray-500">
-                <p>• Product Name: {product.name}</p>
-                <p>• Category: {product.categoryPath || product.category}</p>
-                <p>• Has Variants: {product.hasVariants ? 'Yes' : 'No'}</p>
-                <p>• Created: {formatDate(product.createdAt)}</p>
-              </div>
-            </div>
-          </div>
-          <div className="flex justify-end gap-3 p-6 border-t border-gray-200 flex-shrink-0">
-            <button
-              onClick={onClose}
-              className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
-            >
-              Cancel
-            </button>
-            <button
-              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
-              onClick={() => {
-                toast.info('Edit functionality will be implemented with full form');
-                onClose();
-              }}
-            >
-              Save Changes
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  };
+  //   return (
+  //     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+  //       <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
+  //         <div className="flex justify-between items-center p-6 border-b border-gray-200 flex-shrink-0">
+  //           <h2 className="text-xl font-semibold text-gray-900">Edit Product - {product.name}</h2>
+  //           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+  //             <X className="w-5 h-5" />
+  //           </button>
+  //         </div>
+  //         <div className="p-6 overflow-y-auto flex-1">
+  //           <div className="text-center py-8">
+  //             <Package className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+  //             <h3 className="text-lg font-medium text-gray-900 mb-2">Edit Product Form</h3>
+  //             <p className="text-gray-600">
+  //               The edit functionality will be implemented with the same form structure as AddProduct.jsx
+  //               with all current values pre-filled for editing.
+  //             </p>
+  //             <div className="mt-6 space-y-2 text-sm text-gray-500">
+  //               <p>• Product Name: {product.name}</p>
+  //               <p>• Category: {product.categoryPath || product.category}</p>
+  //               <p>• Has Variants: {product.hasVariants ? 'Yes' : 'No'}</p>
+  //               <p>• Created: {formatDate(product.createdAt)}</p>
+  //             </div>
+  //           </div>
+  //         </div>
+  //         <div className="flex justify-end gap-3 p-6 border-t border-gray-200 flex-shrink-0">
+  //           <button
+  //             onClick={onClose}
+  //             className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 transition-colors"
+  //           >
+  //             Cancel
+  //           </button>
+  //           <button
+  //             className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors"
+  //             onClick={() => {
+  //               toast.info('Edit functionality will be implemented with full form');
+  //               onClose();
+  //             }}
+  //           >
+  //             Save Changes
+  //           </button>
+  //         </div>
+  //       </div>
+  //     </div>
+  //   );
+  // };
 
   const ViewStockModal = ({ product, onClose }) => {
     if (!product) return null;
@@ -2236,7 +2237,7 @@ const DeleteConfirmationModal = () => {
       {showViewStockModal && <ViewStockModal product={selectedProductForView} onClose={() => setShowViewStockModal(false)} />}
       {showViewPriceModal && <ViewPriceModal product={selectedProductForView} onClose={() => setShowViewPriceModal(false)} />}
       {showViewDetailsModal && <ViewDetailsModal product={selectedProductForView} onClose={() => setShowViewDetailsModal(false)} />}
-      {showEditModal && <EditModal product={selectedProductForEdit} onClose={() => setShowEditModal(false)} />}
+      {/* {showEditModal && <EditModal product={selectedProductForEdit} onClose={() => setShowEditModal(false)} />} */}
       <DeleteConfirmationModal />
       <ErrorModal />
     </div>
