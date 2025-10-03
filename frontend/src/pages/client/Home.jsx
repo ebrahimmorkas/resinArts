@@ -59,24 +59,43 @@ export default function Home() {
 
   const navigate = useNavigate();
 
-  const handleCartCheckout = async () => {
+// Add this updated handleCartCheckout function to your Home.jsx
+// Replace the existing handleCartCheckout function with this:
+
+const handleCartCheckout = async () => {
   try {
+    // Check if user is logged in
     if (!user?.id) {
-      console.error("User not logged in");
+      // User is not logged in - redirect to login
+      // Save current cart state so it can be restored after login
+      localStorage.setItem('redirectAfterLogin', '/');
+      localStorage.setItem('checkoutIntent', 'true');
+      navigate('/auth/login');
       return;
     }
+
+    // User is logged in - proceed with checkout
     const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
       withCredentials: true,
     });
+    
     console.log("Checkout response:", res.data);
+    
     if (res.status === 201) {
-      await clearCart(); // Clear cart after successful order
-      clearFreeCashCache(); // Clear free cash cache
-      await checkFreeCashEligibility(); // Refresh free cash state
-      setIsCartOpen(false); // Close cart modal
+      await clearCart();
+      clearFreeCashCache();
+      await checkFreeCashEligibility();
+      setIsCartOpen(false);
+      
+      // Show success message
+      alert('Order placed successfully!');
+      
+      // Optionally redirect to orders page
+      navigate(`/orders/${user.id}`);
     }
   } catch (error) {
     console.error("Checkout error:", error);
+    alert('Failed to place order. Please try again.');
   }
 };
 

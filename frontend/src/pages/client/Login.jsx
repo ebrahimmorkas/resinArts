@@ -26,42 +26,65 @@ const Login = () => {
           formData,
           {withCredentials: true}
         )
+        
         // Setting the global state of the user
         setUser(res.data.user);
 
-
-        setLoading(false)
+        setLoading(false);
+        
+        // Check if there's a redirect intention or checkout intent
+        const redirectAfterLogin = localStorage.getItem('redirectAfterLogin');
+        const checkoutIntent = localStorage.getItem('checkoutIntent');
+        
+        // Clear the stored intents
+        localStorage.removeItem('redirectAfterLogin');
+        localStorage.removeItem('checkoutIntent');
+        
+        // Determine where to redirect
         if(res.data.user.role === 'admin') {
           navigate('/admin/panel');
         } else {
-          navigate('/');
+          // User role
+          if (checkoutIntent === 'true') {
+            // User was trying to checkout - redirect to home and open cart
+            navigate('/');
+            // Trigger cart opening after navigation (you may need to adjust this based on your state management)
+            setTimeout(() => {
+              // This will be handled by the cart context after login
+              window.dispatchEvent(new CustomEvent('openCartAfterLogin'));
+            }, 500);
+          } else if (redirectAfterLogin) {
+            // Redirect to the stored location
+            navigate(redirectAfterLogin);
+          } else {
+            // Default redirect to home
+            navigate('/');
+          }
         }
 
     } catch(err) {
-      setLoading(false)
+      setLoading(false);
       setPassword('');
-        // console.log(err);
-        if(err.response && err.response.data) {
-          setErrorMessages(err.response.data.message);
-        }
-        else {
-          setErrorMessages('Something went wrong. Please try again');
-        }
+      
+      if(err.response && err.response.data) {
+        setErrorMessages(err.response.data.message);
+      } else {
+        setErrorMessages('Something went wrong. Please try again');
+      }
     }
-    
-    console.log('Login submitted:', { email, password });
   };
 
   return (
     <div className="w-screen h-screen flex items-center justify-center bg-gradient-to-br from-purple-600 via-pink-500 to-blue-500 bg-cover bg-center bg-no-repeat p-0">
       <div className="bg-white bg-opacity-90 backdrop-blur-md rounded-2xl shadow-2xl p-8 w-full max-w-md">
-        {/* <div className="flex justify-center mb-6">
-          <img src="/assets/mouldmarket-logo.png" alt="Mouldmarket Logo" className="h-16" />
-        </div> */}
         <h2 className="text-3xl font-bold text-center text-gray-800 mb-6">Mouldmarket</h2>
         <p className="text-center text-gray-600 mb-8">Sign in to your creative marketplace</p>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className='bg-red-200 rounded py-4'>{errorMessages}</div>
+          {errorMessages && (
+            <div className='bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative'>
+              {errorMessages}
+            </div>
+          )}
           <div>
             <label htmlFor="email" className="block text-sm font-medium text-gray-700">
               Email
@@ -104,9 +127,10 @@ const Login = () => {
           </div>
           <button
             type="submit"
-            className="w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all"
+            disabled={isLoading}
+            className="w-full py-2 px-4 bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold rounded-lg hover:from-purple-700 hover:to-pink-600 focus:ring-2 focus:ring-purple-500 focus:ring-offset-2 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            Sign In
+            {isLoading ? 'Signing in...' : 'Sign In'}
           </button>
           <div className="text-center">
             <a href="/forgot-password" className="text-purple-600 hover:text-purple-800 text-sm font-medium">
@@ -117,10 +141,7 @@ const Login = () => {
         <p className="mt-6 text-center text-sm text-gray-600">
           Don't have an account?{' '}
           <Link to="/auth/signup" className="text-purple-600 hover:text-purple-800 font-medium">
-          {
-            isLoading ? 'Signing in' : 'Sign up'
-          }
-            
+            Sign up
           </Link>
         </p>
       </div>

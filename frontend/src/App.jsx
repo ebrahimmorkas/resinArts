@@ -15,27 +15,29 @@ function App() {
       <Routes>
         <Route path='/auth/signup' element={<Signup />} />
         <Route path='/auth/login' element={<Login />} />
+        
+        {/* Admin routes - protected */}
         <Route path='/admin/panel/*' element={
           <ProtectedRoute allowedRole="admin">
             <AdminPanel />
           </ProtectedRoute>
-          } />
-        <Route path='/' element={
-            <ProtectedRoute allowedRole="user">
-              <Home />
-            </ProtectedRoute>
-          } />
+        } />
+        
+        {/* Home route - PUBLIC (no protection) */}
+        <Route path='/' element={<Home />} />
+        
+        {/* User-specific routes - protected */}
         <Route path='/user/update-profile' element={
-            <ProtectedRoute allowedRole="user">
-              <UpdateUser />
-            </ProtectedRoute>
-          } />
+          <ProtectedRoute allowedRole="user">
+            <UpdateUser />
+          </ProtectedRoute>
+        } />
+        
         <Route path='/orders/:userId' element={
-            <ProtectedRoute allowedRole="user">
-              <Orders />
-            </ProtectedRoute>
-          } />
-          
+          <ProtectedRoute allowedRole="user">
+            <Orders />
+          </ProtectedRoute>
+        } />
         
         <Route path='/admin' element={<OrdersPanel />} />
       </Routes>

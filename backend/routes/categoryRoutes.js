@@ -4,15 +4,18 @@ const { addCategory } = require('../controllers/addCategoryController');
 const getAllCategories = require('../controllers/getAllCategoriesController');
 const {fetchCategories, upload, bulkUploadCategories, deleteCategory, updateCategoryName, updateCategoryImage, addSubcategory} = require("../controllers/categoryController");
 const authorize = require('../middlewares/authorize');
+const authenticate = require('../middlewares/authenticate');
 
-router.post('/add', authorize(['admin']), ...addCategory);
-router.get('/all', authorize(['admin']), getAllCategories);
-// This route is for fetching categories for paying cash to user and this route is not intended for fetchibg categoris on AddProduct.jsx page
-router.get('/fetch-categories', authorize(['admin', 'user']), fetchCategories);
-router.post('/bulk-upload', authorize(['admin']), upload.single('file'), bulkUploadCategories);
-router.delete('/delete-category/:id', deleteCategory);
-router.put('/update-category/:id', updateCategoryName);
-router.put('/update-category-image/:id', upload.single('image'), updateCategoryImage);
-router.post('/add-subcategory', addSubcategory);
+// PUBLIC ROUTES (No authentication required)
+router.get('/fetch-categories', fetchCategories); // Make public for guest browsing
+
+// ADMIN ONLY ROUTES (Authentication + Authorization required)
+router.post('/add', authenticate, authorize(['admin']), ...addCategory);
+router.get('/all', authenticate, authorize(['admin']), getAllCategories);
+router.post('/bulk-upload', authenticate, authorize(['admin']), upload.single('file'), bulkUploadCategories);
+router.delete('/delete-category/:id', authenticate, authorize(['admin']), deleteCategory);
+router.put('/update-category/:id', authenticate, authorize(['admin']), updateCategoryName);
+router.put('/update-category-image/:id', authenticate, authorize(['admin']), upload.single('image'), updateCategoryImage);
+router.post('/add-subcategory', authenticate, authorize(['admin']), addSubcategory);
 
 module.exports = router;

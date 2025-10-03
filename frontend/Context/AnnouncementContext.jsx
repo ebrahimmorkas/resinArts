@@ -11,9 +11,17 @@ export const AnnouncementProvider = ({ children }) => {
   useEffect(() => {
     const fetchAnnouncement = async () => {
       try {
-        const res = await axios.get('http://localhost:3000/api/announcement/all');
+        const res = await axios.get('http://localhost:3000/api/announcement/all', {
+          withCredentials: true
+        });
+        
         const now = new Date();
-        const activeAnnouncements = res.data.filter(a => !a.isDefault && new Date(a.startDate) <= now && new Date(a.endDate) >= now);
+        const activeAnnouncements = res.data.filter(a => 
+          !a.isDefault && 
+          new Date(a.startDate) <= now && 
+          new Date(a.endDate) >= now
+        );
+        
         let currentText = '';
         if (activeAnnouncements.length > 0) {
           currentText = activeAnnouncements[0].text; // Assume no overlaps, take first
@@ -23,6 +31,7 @@ export const AnnouncementProvider = ({ children }) => {
             currentText = defaultAnnouncement.text;
           }
         }
+        
         setAnnouncement(currentText);
         setAnnouncementError(null);
       } catch (error) {
@@ -32,6 +41,7 @@ export const AnnouncementProvider = ({ children }) => {
         setLoadingAnnouncement(false);
       }
     };
+    
     fetchAnnouncement();
   }, []);
 
