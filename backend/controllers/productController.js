@@ -761,7 +761,7 @@ const fetchProducts = async (req, res) => {
   }
 }
 
-// Function that will restock products that are single. (Both condition that is variants and non-variant product will be handled over here)
+// start of Function that will restock products that are single. (Both condition that is variants and non-variant product will be handled over here)
 const restock = async (req, res) => {
   console.log("Request received")
   try {
