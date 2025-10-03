@@ -479,7 +479,7 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
 
         const hasVariants = firstRow.hasVariants === 'TRUE' || firstRow.hasVariants === true;
 
-        // Create base product object
+        // Create base product object 
         const productData = {
           name: productName,
           mainCategory: mainCategory._id,
@@ -768,7 +768,7 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
     });
   }
 };
-// End of function for bulk adding product
+// End of function for bulk adding products
 
 const fetchProducts = async (req, res) => {
   try {
