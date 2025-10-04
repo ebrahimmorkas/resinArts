@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { fetchCategories } from "../../../../../utils/api"
-import { X, Plus, AlertCircle, Upload, Image as ImageIcon, Package, Tag, DollarSign, Layers, Check, ArrowLeft, Save } from "lucide-react"
+import { X, Plus, AlertCircle, Upload, Image as ImageIcon, Package, Tag, DollarSign, Layers, Check, ArrowLeft, Save, Edit } from "lucide-react"
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import axios from 'axios'
@@ -65,6 +65,7 @@ export default function EditProduct() {
 
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([])
   const [categoryPath, setCategoryPath] = useState("")
+  const [isCategoryEditable, setIsCategoryEditable] = useState(false)
 
   const [productDetails, setProductDetails] = useState([{ key: "", value: "" }])
   const [stock, setStock] = useState("")
@@ -522,6 +523,8 @@ export default function EditProduct() {
   }
 
   const renderCategoryDropdowns = () => {
+    if (!isCategoryEditable) return null
+
     const dropdowns = []
 
     const mainCategoryOptions = allCategoriesTree.filter((cat) => !cat.parentCategoryId && !cat.parent_category_id)
@@ -647,9 +650,19 @@ export default function EditProduct() {
 
                 {categoryPath && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
-                    <div className="flex items-center gap-2 text-blue-800 font-medium">
-                      <Check className="w-5 h-5" />
-                      Category Path: {categoryPath}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2 text-blue-800 font-medium">
+                        <Check className="w-5 h-5" />
+                        Category Path: {categoryPath}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => setIsCategoryEditable(!isCategoryEditable)}
+                        className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                      >
+                        <Edit className="w-4 h-4" />
+                        {isCategoryEditable ? 'Done' : 'Edit Category'}
+                      </button>
                     </div>
                   </div>
                 )}
@@ -907,41 +920,553 @@ export default function EditProduct() {
                         </div>
                       ))}
                     </div>
+
+                    {/* Button to add variants when no variants */}
+                    <div className="flex justify-center pt-6">
+                      <button
+                        type="button"
+                        className={primaryButtonClass}
+                        onClick={addVariant}
+                      >
+                        <Plus className="w-4 h-4" />
+                        Add Product Variants
+                      </button>
+                    </div>
                   </>
                 )}
               </div>
             </div>
           </div>
 
-          {/* Form Actions */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center pt-8">
-            <button 
-              type="submit" 
-              disabled={isLoading}
-              className={`${primaryButtonClass} text-lg px-12 py-4 shadow-2xl ${isLoading ? 'opacity-75 cursor-not-allowed' : ''}`}
-            >
-              {isLoading ? (
-                <>
-                  <div className="animate-spin rounded-full h-5 w-5 border-2 border-white border-t-transparent"></div>
-                  Updating Product...
-                </>
-              ) : (
-                <>
-                  <Save className="w-5 h-5" />
+          {/* Product Variants Section - Complete copy from AddProduct */}
+          {hasVariants && (
+            <div className={cardClass}>
+              <div className={headerClass}>
+                <h2 className={titleClass}>
+                  <Layers className="w-8 h-8 text-purple-600" />
+                  Product Variants
+                </h2>
+                <p className={subtitleClass}>Create different variations of your product</p>
+              </div>
+              <div className={sectionClass}>
+                <div className="space-y-10">
+                  {variants.map((variant, variantIndex) => (
+                    <div
+                      key={variantIndex}
+                      className="bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-200 p-8 space-y-8"
+                    >
+                      <div className="flex justify-between items-center">
+                        <h3 className="text-2xl font-bold text-gray-900">
+                          Variant {variantIndex + 1}
+                          {variant.isDefault && (
+                            <span className="ml-3 px-3 py-1 bg-blue-100 text-blue-800 text-sm font-medium rounded-full">
+                              Default
+                            </span>
+                          )}
+                        </h3>
+                        <button
+                          type="button"
+                          className={dangerButtonClass}
+                          onClick={() => removeVariant(variantIndex)}
+                        >
+                          <X className="w-4 h-4" />
+                          Remove Variant
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                        <div className="space-y-2">
+                          <label className={labelClass}>Color/Variant Name</label>
+                          <input
+                            type="text"
+                            value={variant.colorName}
+                            onChange={(e) => updateVariantField(variantIndex, "colorName", e.target.value)}
+                            placeholder="e.g., Red, Blue, Large"
+                            className={inputClass}
+                          />
+                        </div>
+                        <div className="space-y-4">
+                          <label className={labelClass}>Variant Image</label>
+                          <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                            <input
+                              id={`variant-image-${variantIndex}`}
+                              type="file"
+                              accept="image/*"
+                              ref={(el) => (variantImageInputRefs.current[variantIndex] = el)}
+                              onChange={(e) =>
+                                updateVariantField(variantIndex, "variantImage", {
+                                  file: e.target.files[0],
+                                  preview: e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : null,
+                                })
+                              }
+                              className="hidden"
+                            />
+                            <label htmlFor={`variant-image-${variantIndex}`} className="cursor-pointer block">
+                              {variant.variantImage.preview ? (
+                                <img
+                                  src={variant.variantImage.preview}
+                                  alt="Variant Preview"
+                                  className="h-20 w-20 object-cover rounded-xl mx-auto shadow-md"
+                                />
+                              ) : (
+                                <div className="space-y-2">
+                                  <Upload className="h-8 w-8 text-gray-400 mx-auto" />
+                                  <p className="text-sm text-gray-600">Upload variant image</p>
+                                </div>
+                              )}
+                            </label>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Default Variant Checkbox */}
+                      <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
+                        <input
+                          id={`default-variant-${variantIndex}`}
+                          type="checkbox"
+                          checked={variant.isDefault}
+                          onChange={(e) => updateVariantField(variantIndex, "isDefault", e.target.checked)}
+                          className="w-5 h-5 text-blue-600 rounded focus:ring-blue-500"
+                        />
+                        <label htmlFor={`default-variant-${variantIndex}`} className="font-medium text-blue-900 cursor-pointer">
+                          Set as default variant
+                        </label>
+                      </div>
+
+                      {/* Variant Optional Details */}
+                      <div className="bg-white rounded-xl p-6 border border-gray-100 space-y-6">
+                        <div className="flex justify-between items-center">
+                          <h4 className="text-lg font-semibold text-gray-900">Variant Specifications</h4>
+                          <button
+                            type="button"
+                            className={secondaryButtonClass}
+                            onClick={() => {
+                              updateVariantField(variantIndex, "optionalDetails", [
+                                ...variant.optionalDetails,
+                                { key: "", value: "" },
+                              ])
+                            }}
+                          >
+                            <Plus className="w-4 h-4" />
+                            Add Detail
+                          </button>
+                        </div>
+                        {variant.optionalDetails.map((detail, index) => (
+                          <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <label className={labelClass}>Specification</label>
+                              <input
+                                type="text"
+                                value={detail.key}
+                                onChange={(e) => {
+                                  const newDetails = [...variant.optionalDetails]
+                                  newDetails[index].key = e.target.value
+                                  updateVariantField(variantIndex, "optionalDetails", newDetails)
+                                }}
+                                placeholder="e.g., Material"
+                                className={inputClass}
+                              />
+                            </div>
+                            <div className="space-y-2 flex gap-4 items-end">
+                              <div className="flex-1">
+                                <label className={labelClass}>Value</label>
+                                <input
+                                  type="text"
+                                  value={detail.value}
+                                  onChange={(e) => {
+                                    const newDetails = [...variant.optionalDetails]
+                                    newDetails[index].value = e.target.value
+                                    updateVariantField(variantIndex, "optionalDetails", newDetails)
+                                  }}
+                                  placeholder="e.g., Cotton"
+                                  className={inputClass}
+                                />
+                              </div>
+                              <button
+                                type="button"
+                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                onClick={() => {
+                                  const newDetails = variant.optionalDetails.filter((_, i) => i !== index)
+                                  updateVariantField(variantIndex, "optionalDetails", newDetails)
+                                }}
+                              >
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Size Sections */}
+                      <div className="space-y-6">
+                        <div className="flex justify-between items-center">
+                          <h3 className="text-xl font-semibold text-gray-900">Size Configurations</h3>
+                          <button type="button" className={secondaryButtonClass} onClick={() => addSizeSection(variantIndex)}>
+                            <Plus className="w-4 h-4" />
+                            Add Size
+                          </button>
+                        </div>
+                        {variant.moreDetails.map((md, mdIndex) => (
+                          <div key={mdIndex} className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+                            <div className="flex justify-between items-center">
+                              <h4 className="text-lg font-semibold text-gray-800">Size Configuration {mdIndex + 1}</h4>
+                              <button type="button" className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" onClick={() => removeSizeSection(variantIndex, mdIndex)}>
+                                <X className="w-4 h-4" />
+                              </button>
+                            </div>
+
+                            <div className="bg-gray-50 rounded-xl p-4 space-y-4">
+                              <h5 className="font-semibold text-gray-800">Dimensions</h5>
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Length</label>
+                                  <input type="number" value={md.size.length} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "length", e.target.value)} placeholder="0" className={inputClass} />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Width</label>
+                                  <input type="number" value={md.size.breadth} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "breadth", e.target.value)} placeholder="0" className={inputClass} />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Height</label>
+                                  <input type="number" value={md.size.height} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "height", e.target.value)} placeholder="0" className={inputClass} />
+                                </div>
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Unit</label>
+                                  <select value={md.size.unit} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "unit", e.target.value)} className={selectClass}>
+                                    <option value="cm">cm</option>
+                                    <option value="m">m</option>
+                                    <option value="inch">inch</option>
+                                  </select>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                              <div className="flex justify-between items-center">
+                                <h5 className="text-md font-semibold text-gray-800">Additional Images for this Size (Optional)</h5>
+                                <button type="button" className={secondaryButtonClass} onClick={() => {
+                                  const setter = (arr) => updateSizeSectionField(variantIndex, mdIndex, "additionalImages", arr);
+                                  addImageField(setter, md.additionalImages)
+                                  setTimeout(() => {
+                                    if (mdAdditionalImageInputRefs.current[`${variantIndex}-${mdIndex}-${md.additionalImages.length}`]) {
+                                      mdAdditionalImageInputRefs.current[`${variantIndex}-${mdIndex}-${md.additionalImages.length}`].click()
+                                    }
+                                  }, 0)
+                                }}>
+                                  <Plus className="w-4 h-4" />
+                                  Add Image
+                                </button>
+                              </div>
+                              {getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Do you want to reuse additional images?</label>
+                                  <select value={md.reuseAdditionalImages} onChange={(e) => {
+                                    updateSizeSectionField(variantIndex, mdIndex, "reuseAdditionalImages", e.target.value)
+                                    if (e.target.value === "no") {
+                                      updateSizeSectionField(variantIndex, mdIndex, "additionalImages", [{ file: null, preview: null }])
+                                      updateSizeSectionField(variantIndex, mdIndex, "reusedImageSource", "")
+                                    }
+                                  }} className={selectClass}>
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
+                                  </select>
+                                </div>
+                              )}
+                              {md.reuseAdditionalImages === "yes" && getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Select source</label>
+                                  <select value={md.reusedImageSource} onChange={(e) => handleReuseSelection(variantIndex, mdIndex, "images", e.target.value)} className={selectClass}>
+                                    <option value="">Select source</option>
+                                    {getReuseOptions(variantIndex, mdIndex, "images").map((option) => (
+                                      <option key={option.id} value={option.id}>{option.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                              {md.reuseAdditionalImages === "no" && (
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                  {md.additionalImages.map((image, index) => (
+                                    <div key={index} className="relative">
+                                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 transition-colors">
+                                        <input id={`md-additional-image-${variantIndex}-${mdIndex}-${index}`} type="file" accept="image/*" ref={(el) => (mdAdditionalImageInputRefs.current[`${variantIndex}-${mdIndex}-${index}`] = el)} onChange={(e) => {
+                                          const newImages = [...md.additionalImages]
+                                          if (newImages[index]?.preview && !newImages[index].preview.startsWith('http')) URL.revokeObjectURL(newImages[index].preview)
+                                          newImages[index] = { file: e.target.files[0], preview: e.target.files[0] ? URL.createObjectURL(e.target.files[0]) : null }
+                                          updateSizeSectionField(variantIndex, mdIndex, "additionalImages", newImages)
+                                        }} className="hidden" />
+                                        <label htmlFor={`md-additional-image-${variantIndex}-${mdIndex}-${index}`} className="cursor-pointer block">
+                                          {image.preview ? (
+                                            <img src={image.preview} alt={`Additional ${index + 1}`} className="h-24 w-24 object-cover rounded-lg mx-auto shadow-md" />
+                                          ) : (
+                                            <div className="space-y-2">
+                                              <ImageIcon className="h-8 w-8 text-gray-400 mx-auto" />
+                                              <p className="text-sm text-gray-600">Image {index + 1}</p>
+                                            </div>
+                                          )}
+                                        </label>
+                                      </div>
+                                      <button type="button" className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors" onClick={() => {
+                                        const newImages = md.additionalImages.filter((_, i) => i !== index)
+                                        if (md.additionalImages[index]?.preview && !md.additionalImages[index].preview.startsWith('http')) URL.revokeObjectURL(md.additionalImages[index].preview)
+                                        updateSizeSectionField(variantIndex, mdIndex, "additionalImages", newImages)
+                                      }}>
+                                        <X className="w-3 h-3" />
+                                      </button>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                              <div className="flex justify-between items-center">
+                                <h5 className="text-md font-semibold text-gray-800">Optional Details for this Size (Optional)</h5>
+                                <button type="button" className={secondaryButtonClass} onClick={() => {
+                                  updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", [...md.optionalDetails, { key: "", value: "" }])
+                                }}>
+                                  <Plus className="w-4 h-4" />
+                                  Add Detail
+                                </button>
+                              </div>
+                              {getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Do you want to reuse optional details?</label>
+                                  <select value={md.reuseOptionalDetails} onChange={(e) => {
+                                    updateSizeSectionField(variantIndex, mdIndex, "reuseOptionalDetails", e.target.value)
+                                    if (e.target.value === "no") {
+                                      updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", [{ key: "", value: "" }])
+                                      updateSizeSectionField(variantIndex, mdIndex, "reusedOptionalDetailSource", "")
+                                    }
+                                  }} className={selectClass}>
+                                    <option value="no">No</option>
+                                    <option value="yes">Yes</option>
+                                  </select>
+                                </div>
+                              )}
+                              {md.reuseOptionalDetails === "yes" && getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
+                                <div className="space-y-2">
+                                  <label className={labelClass}>Select source</label>
+                                  <select value={md.reusedOptionalDetailSource} onChange={(e) => handleReuseSelection(variantIndex, mdIndex, "optionalDetails", e.target.value)} className={selectClass}>
+                                    <option value="">Select source</option>
+                                    {getReuseOptions(variantIndex, mdIndex, "optionalDetails").map((option) => (
+                                      <option key={option.id} value={option.id}>{option.label}</option>
+                                    ))}
+                                  </select>
+                                </div>
+                              )}
+                              {md.reuseOptionalDetails === "no" && (
+                                <div className="space-y-4">
+                                  {md.optionalDetails.map((detail, index) => (
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                      <div className="space-y-2">
+                                        <label className={labelClass}>Key</label>
+                                        <input type="text" value={detail.key} onChange={(e) => {
+                                          const newDetails = [...md.optionalDetails]
+                                          newDetails[index].key = e.target.value
+                                          updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
+                                        }} placeholder="e.g., Feature" className={inputClass} />
+                                      </div>
+                                      <div className="space-y-2 flex gap-4 items-end">
+                                        <div className="flex-1">
+                                          <label className={labelClass}>Value</label>
+                                          <input type="text" value={detail.value} onChange={(e) => {
+                                            const newDetails = [...md.optionalDetails]
+                                            newDetails[index].value = e.target.value
+                                            updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
+                                          }} placeholder="e.g., Waterproof" className={inputClass} />
+                                        </div>
+                                        <button type="button" className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" onClick={() => {
+                                          const newDetails = md.optionalDetails.filter((_, i) => i !== index)
+                                          updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
+                                        }}>
+                                          <X className="w-4 h-4" />
+                                        </button>
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+
+                            {variant.moreDetails.length > 1 && variant.isPriceSame === "no" && (
+                              <div className="space-y-2">
+                                <label className={labelClass}>Price ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})</label>
+                                <input type="number" value={md.price} onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "price", e.target.value)} placeholder="Enter price" className={inputClass} />
+                              </div>
+                            )}
+                            {variant.moreDetails.length > 1 && variant.isStockSame === "no" && (
+                              <div className="space-y-2">
+                                <label className={labelClass}>Stock ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})</label>
+                                <input type="number" value={md.stock} onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "stock", e.target.value)} placeholder="Enter stock" className={inputClass} />
+                              </div>
+                            )}
+                            {variant.moreDetails.length > 1 && variant.isPriceSame === "no" && (
+                              <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                                <div className="flex justify-between items-center">
+                                  <h5 className="text-md font-semibold text-gray-800">Bulk Pricing Combinations ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})</h5>
+                                  <button type="button" className={secondaryButtonClass} onClick={() => {
+                                    updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", [...md.bulkPricingCombinations, { wholesalePrice: "", quantity: "" }])
+                                  }}>
+                                    <Plus className="w-4 h-4" />
+                                    Add Bulk Pricing
+                                  </button>
+                                </div>
+                                {md.bulkPricingCombinations.map((bpc, index) => (
+                                  <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                                    <div className="space-y-2">
+                                      <label className={labelClass}>Wholesale Price ($)</label>
+                                      <input type="number" value={bpc.wholesalePrice} onChange={(e) => {
+                                        const newBPC = [...md.bulkPricingCombinations]
+                                        newBPC[index].wholesalePrice = e.target.value
+                                        updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
+                                      }} placeholder="Enter wholesale price" className={inputClass} />
+                                      {md.price && bpc.wholesalePrice && Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(md.price) && (
+                                        <p className="text-red-500 text-sm">Wholesale price must be less than this price.</p>
+                                      )}
+                                    </div>
+                                    <div className="space-y-2 flex gap-4 items-end">
+                                      <div className="flex-1">
+                                        <label className={labelClass}>Quantity</label>
+                                        <input type="number" value={bpc.quantity} onChange={(e) => {
+                                          const newBPC = [...md.bulkPricingCombinations]
+                                          newBPC[index].quantity = e.target.value
+                                          updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
+                                        }} placeholder="Enter quantity" className={inputClass} />
+                                      </div>
+                                      <button type="button" className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" onClick={() => {
+                                        const newBPC = md.bulkPricingCombinations.filter((_, i) => i !== index)
+                                        updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
+                                      }}>
+                                        <X className="w-4 h-4" />
+                                      </button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+
+                      {variant.moreDetails.length > 1 && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className={labelClass}>Same price for all sizes?</label>
+                            <select value={variant.isPriceSame} onChange={(e) => updateVariantField(variantIndex, "isPriceSame", e.target.value)} className={selectClass}>
+                              <option value="yes">Yes</option>
+                              <option value="no">No</option>
+                            </select>
+                          </div>
+                          <div className="space-y-2">
+                            <label className={labelClass}>Same stock for all sizes?</label>
+                            <select value={variant.isStockSame} onChange={(e) => updateVariantField(variantIndex, "isStockSame", e.target.value)} className={selectClass}>
+                              <option value="yes">Yes</option>
+                              <option value="no">No</option>
+                            </select>
+                          </div>
+                        </div>
+                      )}
+
+                      {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                          <div className="space-y-2">
+                            <label className={labelClass}>Price ($)</label>
+                            <input type="number" value={variant.commonPrice} onChange={(e) => updateVariantField(variantIndex, "commonPrice", e.target.value)} placeholder="Variant price" className={inputClass} />
+                          </div>
+                          <div className="space-y-2">
+                            <label className={labelClass}>Stock</label>
+                            <input type="number" value={variant.commonStock} onChange={(e) => updateVariantField(variantIndex, "commonStock", e.target.value)} placeholder="Stock quantity" className={inputClass} />
+                          </div>
+                        </div>
+                      )}
+
+                      {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
+                        <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                          <div className="flex justify-between items-center">
+                            <h4 className="text-xl font-semibold text-gray-900">Common Bulk Pricing Combinations</h4>
+                            <button type="button" className={secondaryButtonClass} onClick={() => {
+                              updateVariantField(variantIndex, "commonBulkPricingCombinations", [...variant.commonBulkPricingCombinations, { wholesalePrice: "", quantity: "" }])
+                            }}>
+                              <Plus className="w-4 h-4" />
+                              Add Bulk Pricing
+                            </button>
+                          </div>
+                          {variant.commonBulkPricingCombinations.map((bpc, index) => (
+                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                              <div className="space-y-2">
+                                <label className={labelClass}>Wholesale Price ($)</label>
+                                <input type="number" value={bpc.wholesalePrice} onChange={(e) => {
+                                  const newBPC = [...variant.commonBulkPricingCombinations]
+                                  newBPC[index].wholesalePrice = e.target.value
+                                  updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
+                                }} placeholder="Enter wholesale price" className={inputClass} />
+                                {variant.commonPrice && bpc.wholesalePrice && Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(variant.commonPrice) && (
+                                  <p className="text-red-500 text-sm">Wholesale price must be less than common price.</p>
+                                )}
+                              </div>
+                              <div className="space-y-2 flex gap-4 items-end">
+                                <div className="flex-1">
+                                  <label className={labelClass}>Quantity</label>
+                                  <input type="number" value={bpc.quantity} onChange={(e) => {
+                                    const newBPC = [...variant.commonBulkPricingCombinations]
+                                    newBPC[index].quantity = e.target.value
+                                    updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
+                                  }} placeholder="Enter quantity" className={inputClass} />
+                                </div>
+                                <button type="button" className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" onClick={() => {
+                                  const newBPC = variant.commonBulkPricingCombinations.filter((_, i) => i !== index)
+                                  updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
+                                }}>
+                                  <X className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  ))}
+
+                  <div className="flex justify-end pt-6">
+                    <button
+                      type="button"
+                      className={primaryButtonClass}
+                      onClick={addVariant}
+                    >
+                      <Plus className="w-4 h-4" />
+                      Add Another Variant
+                    </button>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Submit Section */}
+          <div className={cardClass}>
+            <div className={headerClass}>
+              <h2 className={titleClass}>
+                <Save className="w-8 h-8 text-green-600" />
+                Save Changes
+              </h2>
+            </div>
+            <div className={sectionClass}>
+              <div className="flex justify-end gap-4">
+                <button
+                  type="button"
+                  className={secondaryButtonClass}
+                  onClick={() => navigate('/admin/panel/products')}
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className={primaryButtonClass}
+                >
                   Update Product
-                </>
-              )}
-            </button>
-            {!hasVariants && (
-              <button
-                type="button"
-                className={`${secondaryButtonClass} text-lg px-8 py-4`}
-                onClick={() => setHasVariants(true)}
-              >
-                <Layers className="w-5 h-5" />
-                Add Variants
-              </button>
-            )}
+                </button>
+              </div>
+            </div>
           </div>
         </form>
       </div>
