@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Package, Users, Info } from 'lucide-react';
+import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Package, Users, Info, Archive } from 'lucide-react';
 import axios from 'axios';
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:3000'); // Assuming your backend server is at port 3000 and has socket.io set up
+const socket = io('http://localhost:3000');
 
 // Toast Component
 const Toast = ({ message, type, onClose }) => {
@@ -102,7 +102,250 @@ const ProgressBar = ({ progress }) => {
   );
 };
 
-// Upload Section Component
+// File Upload Card Component (for individual files)
+const FileUploadCard = ({ file, onRemove, icon: Icon, label, acceptedFormats }) => {
+  if (!file) return null;
+
+  return (
+    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="p-2 bg-white rounded-lg shadow-sm">
+            <Icon className="w-5 h-5 text-blue-500" />
+          </div>
+          <div>
+            <p className="text-xs text-gray-500 font-medium">{label}</p>
+            <p className="font-semibold text-gray-900">{file.name}</p>
+            <p className="text-sm text-gray-600">
+              {(file.size / 1024 / 1024).toFixed(2)} MB
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={onRemove}
+          className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
+        >
+          <X className="w-5 h-5" />
+        </button>
+      </div>
+    </div>
+  );
+};
+
+// Product Upload Section with Excel + ZIP
+const ProductUploadSection = ({ 
+  excelFile,
+  zipFile,
+  onExcelChange,
+  onZipChange,
+  onSubmit,
+  progress,
+  response,
+  error
+}) => {
+  const [isDragOver, setIsDragOver] = useState(false);
+
+  const handleDragOver = (e) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const handleDrop = (e) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  };
+
+  const bothFilesSelected = excelFile && zipFile;
+
+  return (
+    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
+      <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white">
+        <div className="flex items-center space-x-3">
+          <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+            <Package className="w-6 h-6" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold">Products</h2>
+            <p className="text-white text-opacity-90 text-sm">Upload Excel file and images ZIP</p>
+          </div>
+        </div>
+      </div>
+      
+      <div className="p-8 space-y-6">
+        {/* Upload Areas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* Excel File Upload */}
+          <div 
+            className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300 ${
+              excelFile 
+                ? 'border-green-300 bg-green-50' 
+                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="space-y-3">
+              <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center ${
+                excelFile ? 'bg-green-100' : 'bg-gray-100'
+              }`}>
+                {excelFile ? (
+                  <CheckCircle className="w-6 h-6 text-green-500" />
+                ) : (
+                  <FileSpreadsheet className="w-6 h-6 text-gray-400" />
+                )}
+              </div>
+              
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Excel File</p>
+                <p className="text-xs text-gray-500 mt-1">XLSX or CSV</p>
+              </div>
+              
+              {!excelFile && (
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".xlsx,.csv"
+                    onChange={onExcelChange}
+                    className="hidden"
+                  />
+                  <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all duration-200 text-sm font-medium">
+                    Browse
+                  </div>
+                </label>
+              )}
+            </div>
+          </div>
+
+          {/* ZIP File Upload */}
+          <div 
+            className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300 ${
+              zipFile 
+                ? 'border-green-300 bg-green-50' 
+                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+            }`}
+            onDragOver={handleDragOver}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+          >
+            <div className="space-y-3">
+              <div className={`mx-auto w-12 h-12 rounded-full flex items-center justify-center ${
+                zipFile ? 'bg-green-100' : 'bg-gray-100'
+              }`}>
+                {zipFile ? (
+                  <CheckCircle className="w-6 h-6 text-green-500" />
+                ) : (
+                  <Archive className="w-6 h-6 text-gray-400" />
+                )}
+              </div>
+              
+              <div>
+                <p className="text-sm font-semibold text-gray-700">Images ZIP</p>
+                <p className="text-xs text-gray-500 mt-1">All product images</p>
+              </div>
+              
+              {!zipFile && (
+                <label className="cursor-pointer">
+                  <input
+                    type="file"
+                    accept=".zip"
+                    onChange={onZipChange}
+                    className="hidden"
+                  />
+                  <div className="inline-flex items-center px-4 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-all duration-200 text-sm font-medium">
+                    Browse
+                  </div>
+                </label>
+              )}
+            </div>
+          </div>
+        </div>
+
+        {/* Selected Files Info */}
+        {(excelFile || zipFile) && (
+          <div className="space-y-3">
+            <FileUploadCard 
+              file={excelFile}
+              onRemove={() => onExcelChange({ target: { files: [] } })}
+              icon={FileSpreadsheet}
+              label="Excel File"
+            />
+            <FileUploadCard 
+              file={zipFile}
+              onRemove={() => onZipChange({ target: { files: [] } })}
+              icon={Archive}
+              label="Images ZIP"
+            />
+          </div>
+        )}
+        
+        {/* Upload Button */}
+        <button
+          onClick={onSubmit}
+          disabled={!bothFilesSelected || progress}
+          className={`w-full py-4 px-6 rounded-xl font-bold text-white transition-all duration-300 transform ${
+            !bothFilesSelected || progress
+              ? 'bg-gray-400 cursor-not-allowed'
+              : 'bg-gradient-to-r from-blue-500 to-blue-600 hover:shadow-lg hover:scale-[1.02] active:scale-[0.98] shadow-md'
+          }`}
+        >
+          {progress ? (
+            <div className="flex items-center justify-center space-x-2">
+              <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+              <span>Processing...</span>
+            </div>
+          ) : (
+            'Upload Products'
+          )}
+        </button>
+        
+        {/* Progress */}
+        {progress && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+            <ProgressBar progress={progress} />
+          </div>
+        )}
+        
+        {/* Success Response */}
+        {response && !progress && (
+          <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
+            <div className="flex items-start space-x-3">
+              <div className="p-2 bg-green-100 rounded-full">
+                <CheckCircle className="w-6 h-6 text-green-600" />
+              </div>
+              <div className="flex-1">
+                <h4 className="font-bold text-green-800 text-lg">Upload Successful!</h4>
+                <div className="mt-3 space-y-2">
+                  <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
+                    <span className="text-green-700 font-medium">Total Products:</span>
+                    <span className="text-green-800 font-bold">{response.results?.totalProcessed || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
+                    <span className="text-green-700 font-medium">Successful:</span>
+                    <span className="text-green-800 font-bold">{response.results?.successCount || 'N/A'}</span>
+                  </div>
+                  {response.results?.failCount > 0 && (
+                    <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
+                      <span className="text-orange-700 font-medium">Failed:</span>
+                      <span className="text-orange-800 font-bold">{response.results.failCount}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Regular Upload Section (for Categories)
 const UploadSection = ({ 
   title, 
   icon: Icon, 
@@ -112,8 +355,8 @@ const UploadSection = ({
   progress, 
   response, 
   error,
-  gradientFrom = "from-blue-500",
-  gradientTo = "to-blue-600"
+  gradientFrom = "from-purple-500",
+  gradientTo = "to-purple-600"
 }) => {
   const [isDragOver, setIsDragOver] = useState(false);
 
@@ -151,14 +394,13 @@ const UploadSection = ({
       </div>
       
       <div className="p-8 space-y-6">
-        {/* File Upload Area */}
         <div 
           className={`border-2 border-dashed rounded-xl p-8 text-center transition-all duration-300 ${
             isDragOver 
-              ? 'border-blue-400 bg-blue-50' 
+              ? 'border-purple-400 bg-purple-50' 
               : file 
               ? 'border-green-300 bg-green-50' 
-              : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+              : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -180,55 +422,36 @@ const UploadSection = ({
                 {file ? file.name : isDragOver ? 'Drop file here' : 'Drag & drop or click to upload'}
               </span>
               <p className="text-sm text-gray-500 mt-2">
-                Supported formats: XLSX, CSV • Maximum size: 10MB
+                Supported formats: XLSX, CSV
               </p>
             </div>
             
             {!file && (
-              <div className="flex flex-col sm:flex-row gap-3 justify-center items-center">
-                <label className="cursor-pointer">
-                  <input
-                    type="file"
-                    accept=".xlsx,.csv"
-                    onChange={onFileChange}
-                    className="hidden"
-                  />
-                  <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all duration-200 font-medium">
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Browse Files
-                  </div>
-                </label>
-              </div>
+              <label className="cursor-pointer">
+                <input
+                  type="file"
+                  accept=".xlsx,.csv"
+                  onChange={onFileChange}
+                  className="hidden"
+                />
+                <div className="inline-flex items-center px-6 py-3 bg-gradient-to-r from-gray-100 to-gray-200 text-gray-700 rounded-lg hover:from-gray-200 hover:to-gray-300 transition-all duration-200 font-medium">
+                  <FileSpreadsheet className="w-4 h-4 mr-2" />
+                  Browse Files
+                </div>
+              </label>
             )}
           </div>
         </div>
         
-        {/* File Info */}
         {file && (
-          <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-3">
-                <div className="p-2 bg-white rounded-lg shadow-sm">
-                  <FileSpreadsheet className="w-5 h-5 text-blue-500" />
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{file.name}</p>
-                  <p className="text-sm text-gray-600">
-                    {(file.size / 1024 / 1024).toFixed(2)} MB • {file.type || 'Unknown type'}
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => onFileChange({ target: { files: [] } })}
-                className="p-2 text-red-500 hover:text-red-700 hover:bg-red-50 rounded-lg transition-all duration-200"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
+          <FileUploadCard 
+            file={file}
+            onRemove={() => onFileChange({ target: { files: [] } })}
+            icon={FileSpreadsheet}
+            label="Selected File"
+          />
         )}
         
-        {/* Upload Button */}
         <button
           onClick={onSubmit}
           disabled={!file || progress}
@@ -248,14 +471,12 @@ const UploadSection = ({
           )}
         </button>
         
-        {/* Progress */}
         {progress && (
-          <div className="bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl p-6 border border-blue-100">
+          <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-6 border border-purple-100">
             <ProgressBar progress={progress} />
           </div>
         )}
         
-        {/* Success Response */}
         {response && !progress && (
           <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-xl p-6">
             <div className="flex items-start space-x-3">
@@ -263,7 +484,7 @@ const UploadSection = ({
                 <CheckCircle className="w-6 h-6 text-green-600" />
               </div>
               <div className="flex-1">
-                <h4 className="font-bold text-green-800 text-lg">Upload Successful! 🎉</h4>
+                <h4 className="font-bold text-green-800 text-lg">Upload Successful!</h4>
                 <div className="mt-3 space-y-2">
                   <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
                     <span className="text-green-700 font-medium">Total Records:</span>
@@ -290,8 +511,14 @@ const UploadSection = ({
 };
 
 const BulkUpload = () => {
-  const [productFile, setProductFile] = useState(null);
+  // Product files
+  const [productExcelFile, setProductExcelFile] = useState(null);
+  const [productZipFile, setProductZipFile] = useState(null);
+  
+  // Category files
   const [categoryFile, setCategoryFile] = useState(null);
+  
+  // Responses and progress
   const [productResponse, setProductResponse] = useState(null);
   const [categoryResponse, setCategoryResponse] = useState(null);
   const [productProgress, setProductProgress] = useState(null);
@@ -326,9 +553,17 @@ const BulkUpload = () => {
     setErrorModal({ isOpen: true, title, message, details });
   };
 
-  const handleProductFileChange = (e) => {
+  const handleProductExcelChange = (e) => {
     const file = e.target.files[0];
-    setProductFile(file || null);
+    setProductExcelFile(file || null);
+    setProductResponse(null);
+    setProductError(null);
+    setProductProgress(null);
+  };
+
+  const handleProductZipChange = (e) => {
+    const file = e.target.files[0];
+    setProductZipFile(file || null);
     setProductResponse(null);
     setProductError(null);
     setProductProgress(null);
@@ -343,13 +578,14 @@ const BulkUpload = () => {
   };
 
   const handleProductSubmit = async () => {
-    if (!productFile) {
-      showErrorModal('No File Selected', 'Please select a product file to upload.');
+    if (!productExcelFile || !productZipFile) {
+      showErrorModal('Missing Files', 'Please select both Excel file and images ZIP file.');
       return;
     }
 
     const formData = new FormData();
-    formData.append('file', productFile);
+    formData.append('excelFile', productExcelFile);
+    formData.append('imagesZip', productZipFile);
 
     try {
       const res = await axios.post('http://localhost:3000/api/product/bulk-upload', formData, {
@@ -361,7 +597,7 @@ const BulkUpload = () => {
       setProductResponse(res.data);
       setProductError(null);
       setProductProgress(null);
-      showToast('Products uploaded successfully! 🎉', 'success');
+      showToast('Products uploaded successfully!', 'success');
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Upload failed.';
       setProductError(errorMessage);
@@ -394,7 +630,7 @@ const BulkUpload = () => {
       setCategoryResponse(res.data);
       setCategoryError(null);
       setCategoryProgress(null);
-      showToast('Categories uploaded successfully! 🎉', 'success');
+      showToast('Categories uploaded successfully!', 'success');
     } catch (err) {
       const errorMessage = err.response?.data?.message || 'Upload failed.';
       setCategoryError(errorMessage);
@@ -427,7 +663,7 @@ const BulkUpload = () => {
             </div>
             <div className="flex items-center space-x-2 text-sm text-gray-500">
               <Info className="w-4 h-4" />
-              <span>Supports XLSX & CSV formats</span>
+              <span>Excel + ZIP for products</span>
             </div>
           </div>
         </div>
@@ -437,17 +673,15 @@ const BulkUpload = () => {
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
           {/* Product Upload */}
-          <UploadSection
-            title="Products"
-            icon={Package}
-            file={productFile}
-            onFileChange={handleProductFileChange}
+          <ProductUploadSection
+            excelFile={productExcelFile}
+            zipFile={productZipFile}
+            onExcelChange={handleProductExcelChange}
+            onZipChange={handleProductZipChange}
             onSubmit={handleProductSubmit}
             progress={productProgress}
             response={productResponse}
             error={productError}
-            gradientFrom="from-blue-500"
-            gradientTo="to-blue-600"
           />
 
           {/* Category Upload */}
@@ -489,19 +723,23 @@ const BulkUpload = () => {
                 <ul className="text-blue-800 space-y-3">
                   <li className="flex items-start space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span>Excel (.xlsx) or CSV (.csv) format supported</span>
+                    <span>Excel file with product data (XLSX or CSV)</span>
                   </li>
                   <li className="flex items-start space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span>Maximum file size: 10MB per upload</span>
+                    <span>ZIP file containing all product images</span>
                   </li>
                   <li className="flex items-start space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span>Include all required product fields</span>
+                    <span>Reference images by filename in Excel (e.g., product1.jpg)</span>
                   </li>
                   <li className="flex items-start space-x-3">
                     <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
-                    <span>Ensure data validation before upload</span>
+                    <span>Maximum file size: 10MB per file</span>
+                  </li>
+                  <li className="flex items-start space-x-3">
+                    <div className="w-2 h-2 bg-blue-500 rounded-full mt-2 flex-shrink-0"></div>
+                    <span>Images: JPG, JPEG, PNG formats only</span>
                   </li>
                 </ul>
               </div>
@@ -531,6 +769,23 @@ const BulkUpload = () => {
                     <span>Check for duplicate entries</span>
                   </li>
                 </ul>
+              </div>
+            </div>
+
+            {/* Additional Instructions */}
+            <div className="mt-8 bg-gradient-to-r from-amber-50 to-orange-50 rounded-2xl p-6 border border-amber-200">
+              <div className="flex items-start space-x-3">
+                <Info className="w-5 h-5 text-amber-600 mt-1 flex-shrink-0" />
+                <div>
+                  <h5 className="font-bold text-amber-900 mb-2">Important Notes:</h5>
+                  <ul className="text-amber-800 space-y-2 text-sm">
+                    <li>• For products: Upload BOTH Excel and ZIP files together</li>
+                    <li>• In Excel, reference images using only filenames (not full paths)</li>
+                    <li>• ZIP file should contain images in root or organized in folders</li>
+                    <li>• Multiple images: use comma-separated filenames (image1.jpg,image2.jpg)</li>
+                    <li>• Images are automatically uploaded to Cloudinary after processing</li>
+                  </ul>
+                </div>
               </div>
             </div>
           </div>
