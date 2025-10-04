@@ -11,7 +11,7 @@ const Category = require('../models/Category');
 // Start of function to check the file extension
 const fileFilter = (req, file, cb) => {
   // Check file extensions
-  const allowedExtensions = ['.xlsx', '.csv', '.jpg', '.jpeg', '.png'];
+  const allowedExtensions = ['.xlsx', '.csv', '.jpg', '.jpeg', '.png', '.zip'];
   const fileExtension = path.extname(file.originalname).toLowerCase();
   
   if (allowedExtensions.includes(fileExtension)) {
@@ -347,19 +347,69 @@ const checkIfCategoryIsUnderParent = async (categoryId, parentId) => {
 
 // Updated bulkUploadProducts function - Replace the category validation section
 const bulkUploadProducts = async (req, res) => {
+  let tempDir = null;
+  
   try {
-    if (!req.file) {
+    console.log('=== BULK UPLOAD STARTED ===');
+    
+    // Check if files are uploaded
+    if (!req.files || !req.files.excelFile || !req.files.imagesZip) {
+      console.log('Missing files:', req.files);
       return res.status(400).json({
         success: false,
-        message: 'No file uploaded. Please upload an Excel (.xlsx) or CSV file.'
+        message: 'Please upload both Excel file and images ZIP file.'
       });
     }
 
-    // Parse Excel/CSV file
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const excelFile = req.files.excelFile[0];
+    const zipFile = req.files.imagesZip[0];
+
+    console.log('Excel file:', excelFile.originalname, excelFile.size, 'bytes');
+    console.log('ZIP file:', zipFile.originalname, zipFile.size, 'bytes');
+
+    // Extract ZIP file to temporary directory
+    const AdmZip = require('adm-zip');
+    tempDir = path.join(__dirname, '../temp', `upload_${Date.now()}`);
+    
+    console.log('Creating temp directory:', tempDir);
+    
+    // Create temp directory if it doesn't exist
+    if (!fs.existsSync(path.join(__dirname, '../temp'))) {
+      fs.mkdirSync(path.join(__dirname, '../temp'), { recursive: true });
+    }
+    
+    try {
+      const zip = new AdmZip(zipFile.buffer);
+      const zipEntries = zip.getEntries();
+      
+      console.log(`ZIP contains ${zipEntries.length} entries`);
+      
+      // Log all entries in the ZIP
+      zipEntries.forEach((entry, index) => {
+        console.log(`Entry ${index + 1}: ${entry.entryName} (isDirectory: ${entry.isDirectory})`);
+      });
+      
+      // Extract all files
+      zip.extractAllTo(tempDir, true);
+      console.log('Extraction completed to:', tempDir);
+      
+      // Verify extraction by listing files
+      const extractedFiles = fs.readdirSync(tempDir, { recursive: true });
+      console.log('Extracted files:', extractedFiles);
+      
+    } catch (zipError) {
+      console.error('ZIP extraction error:', zipError);
+      throw new Error(`Failed to extract ZIP file: ${zipError.message}`);
+    }
+
+    // Parse Excel file
+    console.log('Parsing Excel file...');
+    const workbook = xlsx.read(excelFile.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+    console.log(`Excel parsed: ${jsonData.length} rows found`);
 
     if (jsonData.length === 0) {
       return res.status(400).json({
@@ -388,7 +438,7 @@ const bulkUploadProducts = async (req, res) => {
         results.failed.push({
           productName: 'N/A',
           error: 'Missing product name',
-          rowsAffected: [index + 2] // +2 because Excel starts at 1 and has header row
+          rowsAffected: [index + 2]
         });
         results.failCount++;
         continue;
@@ -396,7 +446,6 @@ const bulkUploadProducts = async (req, res) => {
 
       const productNameLower = productName.toLowerCase();
 
-      // Check if product exists in database
       if (!seenProductNames.has(productNameLower)) {
         const existingProduct = await Product.findOne({
           name: { $regex: `^${productName}$`, $options: 'i' }
@@ -421,6 +470,49 @@ const bulkUploadProducts = async (req, res) => {
     }
 
     results.totalProcessed = Object.keys(productGroups).length;
+    console.log(`Processing ${results.totalProcessed} products...`);
+
+    // Helper function to find image in extracted folder
+    const findImageInTemp = (filename) => {
+      if (!filename || filename.trim() === '') return null;
+      
+      const cleanFilename = filename.trim();
+      
+      // Try direct path first
+      const directPath = path.join(tempDir, cleanFilename);
+      if (fs.existsSync(directPath)) {
+        console.log(`Found image (direct): ${cleanFilename}`);
+        return directPath;
+      }
+      
+      // Search recursively in all subdirectories
+      const findInDir = (dir) => {
+        try {
+          const files = fs.readdirSync(dir);
+          for (const file of files) {
+            const fullPath = path.join(dir, file);
+            const stat = fs.statSync(fullPath);
+            
+            if (stat.isDirectory()) {
+              const found = findInDir(fullPath);
+              if (found) return found;
+            } else if (file.toLowerCase() === cleanFilename.toLowerCase()) {
+              console.log(`Found image (recursive): ${cleanFilename} at ${fullPath}`);
+              return fullPath;
+            }
+          }
+        } catch (err) {
+          console.error(`Error reading directory ${dir}:`, err);
+        }
+        return null;
+      };
+      
+      const foundPath = findInDir(tempDir);
+      if (!foundPath) {
+        console.warn(`Image not found: ${cleanFilename}`);
+      }
+      return foundPath;
+    };
 
     // Process each product group
     for (const [productNameLower, productRows] of Object.entries(productGroups)) {
@@ -428,42 +520,45 @@ const bulkUploadProducts = async (req, res) => {
         const firstRow = productRows[0];
         const productName = firstRow.productName.trim();
 
-        // Validate required fields
-        // Validate required fields
-if (!firstRow.mainCategory) {
-  throw new Error('Missing required field: mainCategory');
-}
+        console.log(`\n=== Processing product: ${productName} ===`);
 
-// Validate and get categories
-let mainCategory, subCategory;
+        // Only mainCategory is required
+        if (!firstRow.mainCategory) {
+          throw new Error('Missing required field: mainCategory');
+        }
 
-if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
-  // No subcategory provided - use mainCategory for both
-  mainCategory = await Category.findOne({
-    categoryName: { $regex: `^${firstRow.mainCategory.trim()}$`, $options: 'i' },
-    parent_category_id: null
-  });
-  
-  if (!mainCategory) {
-    throw new Error(`Main category not found: ${firstRow.mainCategory}`);
-  }
-  
-  // Set subCategory same as mainCategory
-  subCategory = mainCategory;
-} else {
-  // Both mainCategory and subCategory provided - validate hierarchy
-  const result = await validateCategoryHierarchy(
-    firstRow.mainCategory, 
-    firstRow.subCategory
-  );
-  mainCategory = result.mainCategory;
-  subCategory = result.subCategory;
-}
+        // Validate main category
+        const mainCategory = await Category.findOne({
+          categoryName: { $regex: `^${firstRow.mainCategory.trim()}$`, $options: 'i' },
+          parent_category_id: null
+        });
 
-        // Auto-generate category path
-        const autoGeneratedCategoryPath = await buildCategoryPath(subCategory._id);
+        if (!mainCategory) {
+          throw new Error(`Main category not found: ${firstRow.mainCategory}`);
+        }
 
-        // Parse product details
+        let subCategory = null;
+        let autoGeneratedCategoryPath = mainCategory.categoryName;
+
+        // If subCategory is provided, validate it
+        if (firstRow.subCategory && firstRow.subCategory.trim() !== '') {
+          subCategory = await findCategoryByName(firstRow.subCategory);
+          
+          if (!subCategory) {
+            throw new Error(`Sub category not found: ${firstRow.subCategory}`);
+          }
+
+          // Check if subCategory is actually under the mainCategory hierarchy
+          const isUnderMainCategory = await checkIfCategoryIsUnderParent(subCategory._id, mainCategory._id);
+          
+          if (!isUnderMainCategory) {
+            throw new Error(`Sub category '${firstRow.subCategory}' is not under main category '${firstRow.mainCategory}'`);
+          }
+
+          // Generate category path with subcategory
+          autoGeneratedCategoryPath = await buildCategoryPath(subCategory._id);
+        }
+
         let productDetails = [];
         if (firstRow.productDetails) {
           try {
@@ -479,39 +574,44 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
 
         const hasVariants = firstRow.hasVariants === 'TRUE' || firstRow.hasVariants === true;
 
-        // Create base product object 
         const productData = {
           name: productName,
           mainCategory: mainCategory._id,
-          subCategory: subCategory._id,
+          subCategory: subCategory ? subCategory._id : mainCategory._id,
           categoryPath: autoGeneratedCategoryPath,
           productDetails: productDetails,
           hasVariants: hasVariants,
         };
 
         if (!hasVariants) {
-          // Handle simple product (no variants)
+          console.log('Processing simple product...');
+          
+          // Handle simple product
           let mainImageUrl = '';
-          if (firstRow.mainImage && firstRow.mainImage.trim() !== '') {
-            const imagePath = firstRow.mainImage.trim();
-            if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+          if (firstRow.mainImage) {
+            console.log(`Looking for main image: ${firstRow.mainImage}`);
+            const imagePath = findImageInTemp(firstRow.mainImage);
+            if (imagePath) {
               mainImageUrl = await BulkUploadImageToCloudinary(imagePath, 'products');
+              console.log(`Main image uploaded: ${mainImageUrl}`);
             } else {
-              mainImageUrl = imagePath;
+              throw new Error(`Main image not found: ${firstRow.mainImage}`);
             }
           }
 
           let additionalImageUrls = [];
           if (firstRow.additionalImages && firstRow.additionalImages.trim() !== '') {
-            const imagePaths = firstRow.additionalImages.split(',').map(p => p.trim());
-            for (const imagePath of imagePaths) {
-              let imageUrl;
-              if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
-                imageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/additional');
+            const imageFilenames = firstRow.additionalImages.split(',').map(f => f.trim());
+            console.log(`Looking for additional images: ${imageFilenames.join(', ')}`);
+            for (const filename of imageFilenames) {
+              const imagePath = findImageInTemp(filename);
+              if (imagePath) {
+                const url = await BulkUploadImageToCloudinary(imagePath, 'products/additional');
+                additionalImageUrls.push(url);
+                console.log(`Additional image uploaded: ${url}`);
               } else {
-                imageUrl = imagePath;
+                console.warn(`Additional image not found: ${filename}`);
               }
-              additionalImageUrls.push(imageUrl);
             }
           }
 
@@ -529,7 +629,7 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
             try {
               discountBulkPricing = JSON.parse(firstRow.discountBulkPricing);
             } catch (e) {
-              console.error('Invalid discount bulk pricing JSON:', firstRow.discountBulkPricing);
+              console.error('Invalid discount bulk pricing JSON');
             }
           }
 
@@ -540,7 +640,6 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
           productData.bulkPricing = bulkPricing;
           productData.variants = [];
 
-          // Handle discount fields for simple products
           if (firstRow.discountStartDate) {
             productData.discountStartDate = new Date(firstRow.discountStartDate);
           }
@@ -558,6 +657,8 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
           }
 
         } else {
+          console.log('Processing product with variants...');
+          
           // Handle product with variants
           productData.image = '';
           productData.additionalImages = [];
@@ -565,7 +666,6 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
           productData.stock = null;
           productData.price = null;
 
-          // Group rows by variant color name
           const variantGroups = {};
           for (const row of productRows) {
             const colorName = row.variantColorName?.trim();
@@ -582,20 +682,21 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
           let defaultVariantFound = false;
 
           for (const [colorName, variantRows] of Object.entries(variantGroups)) {
+            console.log(`Processing variant: ${colorName}`);
             const firstVariantRow = variantRows[0];
 
-            // Upload variant image
             let variantImageUrl = '';
-            if (firstVariantRow.variantImage && firstVariantRow.variantImage.trim() !== '') {
-              const imagePath = firstVariantRow.variantImage.trim();
-              if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
+            if (firstVariantRow.variantImage) {
+              console.log(`Looking for variant image: ${firstVariantRow.variantImage}`);
+              const imagePath = findImageInTemp(firstVariantRow.variantImage);
+              if (imagePath) {
                 variantImageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/variants');
+                console.log(`Variant image uploaded: ${variantImageUrl}`);
               } else {
-                variantImageUrl = imagePath;
+                console.warn(`Variant image not found: ${firstVariantRow.variantImage}`);
               }
             }
 
-            // Parse variant optional details
             let variantOptionalDetails = [];
             if (firstVariantRow.variantOptionalDetails && firstVariantRow.variantOptionalDetails.trim() !== '' && firstVariantRow.variantOptionalDetails !== '[]') {
               try {
@@ -609,7 +710,6 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
               }
             }
 
-            // Check if this is the default variant
             const isDefault = firstVariantRow.isDefaultVariant === 'TRUE' || firstVariantRow.isDefaultVariant === true;
             if (isDefault) {
               if (defaultVariantFound) {
@@ -618,25 +718,22 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
               defaultVariantFound = true;
             }
 
-            // Process all sizes for this variant
             const moreDetails = [];
             for (const sizeRow of variantRows) {
-              // Parse size additional images
               let sizeAdditionalImages = [];
               if (sizeRow.sizeAdditionalImages && sizeRow.sizeAdditionalImages.trim() !== '' && sizeRow.sizeAdditionalImages !== '[]') {
-                const imagePaths = sizeRow.sizeAdditionalImages.split(',').map(p => p.trim());
-                for (const imagePath of imagePaths) {
-                  let imageUrl;
-                  if (!imagePath.startsWith('http://') && !imagePath.startsWith('https://')) {
-                    imageUrl = await BulkUploadImageToCloudinary(imagePath, 'products/variants/more-details');
+                const imageFilenames = sizeRow.sizeAdditionalImages.split(',').map(f => f.trim());
+                for (const filename of imageFilenames) {
+                  const imagePath = findImageInTemp(filename);
+                  if (imagePath) {
+                    const url = await BulkUploadImageToCloudinary(imagePath, 'products/variants/more-details');
+                    sizeAdditionalImages.push(url);
                   } else {
-                    imageUrl = imagePath;
+                    console.warn(`Size additional image not found: ${filename}`);
                   }
-                  sizeAdditionalImages.push(imageUrl);
                 }
               }
 
-              // Parse size optional details
               let sizeOptionalDetails = [];
               if (sizeRow.sizeOptionalDetails && sizeRow.sizeOptionalDetails.trim() !== '' && sizeRow.sizeOptionalDetails !== '[]') {
                 try {
@@ -650,7 +747,6 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
                 }
               }
 
-              // Parse size bulk pricing
               let sizeBulkPricing = [];
               if (sizeRow.sizeBulkPricing && sizeRow.sizeBulkPricing.trim() !== '' && sizeRow.sizeBulkPricing !== '[]') {
                 try {
@@ -660,7 +756,6 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
                 }
               }
 
-              // Parse discount bulk pricing for this size
               let discountBulkPricing = [];
               if (sizeRow.discountBulkPricing && sizeRow.discountBulkPricing.trim() !== '' && sizeRow.discountBulkPricing !== '[]') {
                 try {
@@ -684,7 +779,6 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
                 bulkPricingCombinations: sizeBulkPricing
               };
 
-              // Add discount fields for size
               if (sizeRow.discountStartDate) {
                 sizeDetail.discountStartDate = new Date(sizeRow.discountStartDate);
               }
@@ -719,9 +813,10 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
           productData.variants = variants;
         }
 
-        // Create and save product
+        console.log('Saving product to database...');
         const newProduct = new Product(productData);
         await newProduct.save();
+        console.log(`Product saved successfully: ${newProduct._id}`);
 
         results.successful.push({
           productName: productName,
@@ -734,6 +829,7 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
         results.successCount++;
 
       } catch (error) {
+        console.error(`Error processing product ${productRows[0].productName}:`, error);
         results.failed.push({
           productName: productRows[0].productName.trim(),
           error: error.message,
@@ -742,7 +838,6 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
         results.failCount++;
       }
 
-      // Send progress update
       if (req.io) {
         const processed = results.successCount + results.failCount;
         req.io.emit('productUploadProgress', {
@@ -754,6 +849,16 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
       }
     }
 
+    // Clean up temp directory
+    if (tempDir && fs.existsSync(tempDir)) {
+      console.log('Cleaning up temp directory...');
+      fs.rmSync(tempDir, { recursive: true, force: true });
+      console.log('Temporary files cleaned up');
+    }
+
+    console.log('=== BULK UPLOAD COMPLETED ===');
+    console.log(`Success: ${results.successCount}, Failed: ${results.failCount}`);
+
     return res.status(200).json({
       success: true,
       message: `Product upload completed. ${results.successCount} successful, ${results.failCount} failed.`,
@@ -761,6 +866,19 @@ if (!firstRow.subCategory || firstRow.subCategory.trim() === '') {
     });
 
   } catch (error) {
+    console.error('=== BULK UPLOAD ERROR ===');
+    console.error(error);
+    
+    // Clean up temp directory in case of error
+    if (tempDir && fs.existsSync(tempDir)) {
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+        console.log('Temp directory cleaned up after error');
+      } catch (cleanupError) {
+        console.error('Error cleaning up temp directory:', cleanupError);
+      }
+    }
+    
     return res.status(500).json({
       success: false,
       message: 'Server error during product upload',
