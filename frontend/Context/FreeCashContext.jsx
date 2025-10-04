@@ -7,16 +7,16 @@ export const FreeCashContext = createContext();
 export const FreeCashProvider = ({ children }) => {
   const [loadingFreeCash, setLoadingFreeCash] = useState(false);
   const [freeCashErrors, setFreeCashErrors] = useState(null);
-  const [freeCash, setFreeCash] = useState(null); // Stores available free cash
+  const [freeCash, setFreeCash] = useState(null);
   const { user } = useContext(AuthContext);
 
-  // Fetch free cash eligibility
+  // Fetch free cash eligibility (only for logged-in users)
   const checkFreeCashEligibility = async () => {
     if (!user?.id) {
       setFreeCash(null);
       return;
     }
-
+    
     setLoadingFreeCash(true);
     try {
       const res = await axios.get('https://api.simplyrks.cloud/api/free-cash/check-eligibility', {
@@ -25,11 +25,11 @@ export const FreeCashProvider = ({ children }) => {
           "Content-Type": "application/json",
         },
       });
-      
+     
       const freeCashData = res.data.freeCash || null;
       setFreeCash(freeCashData);
       setFreeCashErrors(null);
-      
+     
       if (freeCashData) {
         localStorage.setItem(`freeCash_${user.id}`, JSON.stringify(freeCashData));
         console.log('Free cash found:', freeCashData);
@@ -41,7 +41,9 @@ export const FreeCashProvider = ({ children }) => {
       console.error('Error fetching free cash:', err);
       setFreeCashErrors(err.response?.data?.message || 'Error fetching free cash');
       setFreeCash(null);
-      localStorage.removeItem(`freeCash_${user.id}`);
+      if (user?.id) {
+        localStorage.removeItem(`freeCash_${user.id}`);
+      }
     } finally {
       setLoadingFreeCash(false);
     }
@@ -55,7 +57,7 @@ export const FreeCashProvider = ({ children }) => {
     }
   };
 
-  // Load cached free cash on mount
+  // Load cached free cash on mount or when user changes
   useEffect(() => {
     if (user?.id) {
       const cachedFreeCash = localStorage.getItem(`freeCash_${user.id}`);
@@ -64,7 +66,7 @@ export const FreeCashProvider = ({ children }) => {
           const parsedFreeCash = JSON.parse(cachedFreeCash);
           // Verify it's still valid
           const now = new Date();
-          if (!parsedFreeCash.is_cash_used && 
+          if (!parsedFreeCash.is_cash_used &&
               !parsedFreeCash.is_cash_expired &&
               new Date(parsedFreeCash.end_date) >= now) {
             setFreeCash(parsedFreeCash);
@@ -78,6 +80,7 @@ export const FreeCashProvider = ({ children }) => {
       // Always check for fresh data
       checkFreeCashEligibility();
     } else {
+      // Guest user - no free cash
       setFreeCash(null);
     }
   }, [user?.id]);
