@@ -2463,57 +2463,86 @@ const CartModal = () => {
     </div>
   )}
 </div>
-            <div className="flex items-center space-x-4">
-              <div className="relative profile-dropdown">
-                <button
-                  onClick={() => setIsProfileOpen(!isProfileOpen)}
-                  className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors duration-200"
-                >
-                  <User className="h-6 w-6" />
-                  <ChevronDown className="h-4 w-4" />
-                </button>
-                {isProfileOpen && (
-                  <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
-                    <Link
-                      to="/user/update-profile"
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <Settings className="w-4 h-4" />
-                      Edit Profile
-                    </Link>
-                    <Link
-                      to={`/orders/${user.id}`}
-                      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-                    >
-                      <Package className="w-4 h-4" />
-                      My Orders
-                    </Link>
-                    <a
-      href="#"
-      onClick={(e) => {
-        e.preventDefault();
-        handleLogout();
-      }}
-      className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+
+<div className="flex items-center space-x-4">
+  <div className="relative profile-dropdown">
+    <button
+      onClick={() => setIsProfileOpen(!isProfileOpen)}
+      className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors duration-200"
     >
-      <LogOut className="w-4 h-4" />
-      Logout
-    </a>
-                  </div>
-                )}
-              </div>
-              <button
-                onClick={() => setIsCartOpen(true)}
-                className="relative text-gray-700 hover:text-blue-600 transition-colors duration-200"
-              >
-                <ShoppingCart className="h-6 w-6" />
-                {getUniqueCartItemsCount() > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                    {getUniqueCartItemsCount()}
-                  </span>
-                )}
-              </button>
-            </div>
+      <User className="h-6 w-6" />
+      <ChevronDown className="h-4 w-4" />
+    </button>
+    {isProfileOpen && (
+      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+        {user ? (
+          // Authenticated user menu
+          <>
+            <Link
+              to="/user/update-profile"
+              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              onClick={() => setIsProfileOpen(false)}
+            >
+              <Settings className="w-4 h-4" />
+              Edit Profile
+            </Link>
+            <Link
+              to={`/orders/${user.id}`}
+              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              onClick={() => setIsProfileOpen(false)}
+            >
+              <Package className="w-4 h-4" />
+              My Orders
+            </Link>
+            <a
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                handleLogout();
+                setIsProfileOpen(false);
+              }}
+              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+            >
+              <LogOut className="w-4 h-4" />
+              Logout
+            </a>
+          </>
+        ) : (
+          // Guest user menu
+          <>
+            <Link
+              to="/auth/login"
+              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              onClick={() => setIsProfileOpen(false)}
+            >
+              <LogOut className="w-4 h-4 rotate-180" />
+              Login
+            </Link>
+            <Link
+              to="/auth/signup"
+              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+              onClick={() => setIsProfileOpen(false)}
+            >
+              <User className="w-4 h-4" />
+              Sign Up
+            </Link>
+          </>
+        )}
+      </div>
+    )}
+  </div>
+  <button
+    onClick={() => setIsCartOpen(true)}
+    className="relative text-gray-700 hover:text-blue-600 transition-colors duration-200"
+  >
+    <ShoppingCart className="h-6 w-6" />
+    {getUniqueCartItemsCount() > 0 && (
+      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+        {getUniqueCartItemsCount()}
+      </span>
+    )}
+  </button>
+</div>
           </div>
         </div>
       </nav>

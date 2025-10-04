@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../../../hooks/useAuth';
@@ -9,8 +9,17 @@ const Login = () => {
   const [showPassword, setShowPassword] = useState(false);
   const [errorMessages, setErrorMessages] = useState('');
   const [isLoading, setLoading] = useState(false);
+  const [checkoutMessage, setCheckoutMessage] = useState('');
   const navigate = useNavigate();
   const {setUser} = useAuth();
+
+  // Check if user was redirected from checkout
+  useEffect(() => {
+    const checkoutIntent = localStorage.getItem('checkoutIntent');
+    if (checkoutIntent === 'true') {
+      setCheckoutMessage("You're almost there! Log in to complete your purchase and track your order easily.");
+    }
+  }, []);
 
   const handleSubmit = async (e) => {
     setLoading(true);
