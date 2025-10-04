@@ -75,7 +75,7 @@ const handleCartCheckout = async () => {
     }
 
     // User is logged in - proceed with checkout
-    const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
+    const res = await axios.post('https://api.simplyrks.cloud/api/order/place-order', cartItems, {
       withCredentials: true,
     });
     
@@ -510,7 +510,7 @@ const getFilteredProducts = () => {
 // Function that will handle logout
 const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true });
+      await axios.post('https://api.simplyrks.cloud/api/auth/logout', {}, { withCredentials: true });
       setUser(null);
       navigate('/auth/login');
     } catch (error) {

@@ -3,7 +3,7 @@ import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Package, Users, I
 import axios from 'axios';
 import io from 'socket.io-client';
 
-const socket = io('http://localhost:3000');
+const socket = io('https://api.simplyrks.cloud');
 
 // Toast Component
 const Toast = ({ message, type, onClose }) => {

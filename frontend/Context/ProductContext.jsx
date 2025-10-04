@@ -12,7 +12,7 @@ export const ProductProvider = ({ children }) => {
     const fetchProducts = async () => {
       try {
         const response = await axios.get(
-          "http://localhost:3000/api/product/all",
+          "https://api.simplyrks.cloud/api/product/all",
           { withCredentials: true } // Keep for potential user-specific features
         );
         setProducts(response.data.products);

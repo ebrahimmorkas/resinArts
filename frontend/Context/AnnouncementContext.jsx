@@ -11,7 +11,7 @@ export const AnnouncementProvider = ({ children }) => {
   useEffect(() => {
     const fetchAnnouncement = async () => {
       try {
-        const res = await axios.get('http://localhost:3000/api/announcement/all', {
+        const res = await axios.get('https://api.simplyrks.cloud/api/announcement/all', {
           withCredentials: true
         });
         

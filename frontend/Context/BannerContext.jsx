@@ -13,7 +13,7 @@ export const BannerProvider = ({ children }) => {
       setLoadingBanners(true);
       setBannersError(null);
      
-      const res = await axios.get('http://localhost:3000/api/banner/fetch-banners', {
+      const res = await axios.get('https://api.simplyrks.cloud/api/banner/fetch-banners', {
         withCredentials: true
       });
      

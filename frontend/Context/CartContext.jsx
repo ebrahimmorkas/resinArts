@@ -90,7 +90,7 @@ export const CartProvider = ({ children }) => {
             const guestCart = localStorage.getItem('guestCart');
             
             // Fetch backend cart first
-            const response = await axios.get("http://localhost:3000/api/cart", {
+            const response = await axios.get("https://api.simplyrks.cloud/api/cart", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -129,7 +129,7 @@ export const CartProvider = ({ children }) => {
                     if (backendCart[cartKey]) {
                         // Item exists in backend, increase quantity
                         await axios.put(
-                            "http://localhost:3000/api/cart",
+                            "https://api.simplyrks.cloud/api/cart",
                             {
                                 product_id: guestItem.productId,
                                 variant_name: guestItem.variantName,
@@ -163,7 +163,7 @@ export const CartProvider = ({ children }) => {
                         if (guestItem.variantName) cartItemData.variant_name = guestItem.variantName;
                         if (guestItem.sizeString) cartItemData.size = guestItem.sizeString;
 
-                        await axios.post("http://localhost:3000/api/cart", cartItemData, {
+                        await axios.post("https://api.simplyrks.cloud/api/cart", cartItemData, {
                             withCredentials: true,
                             headers: {
                                 "Content-Type": "application/json",
@@ -393,7 +393,7 @@ export const CartProvider = ({ children }) => {
             }
 
             // Logged in user - remove from backend
-            const response = await axios.delete("http://localhost:3000/api/cart", {
+            const response = await axios.delete("https://api.simplyrks.cloud/api/cart", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -565,7 +565,7 @@ export const CartProvider = ({ children }) => {
             }
 
             // Logged in user - clear backend
-            const response = await axios.delete("http://localhost:3000/api/cart/clear", {
+            const response = await axios.delete("https://api.simplyrks.cloud/api/cart/clear", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
