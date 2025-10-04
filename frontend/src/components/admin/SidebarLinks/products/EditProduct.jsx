@@ -389,41 +389,59 @@ commonStock: variant.commonStock?.toString() || "",
     setVariants(newVariants)
   }
 
-  const handleSubmit = async (e) => {
-    e.preventDefault()
-    setIsLoading(true)
+ const handleSubmit = async (e) => {
+  e.preventDefault()
+  setIsLoading(true)
 
-    try {
-      const formData = new FormData()
-      const finalCategoryId = selectedCategoryIds[selectedCategoryIds.length - 1] || ""
+  try {
+    const formData = new FormData()
+    const finalCategoryId = selectedCategoryIds[selectedCategoryIds.length - 1] || ""
 
-      const productData = {
-        name: productName,
-        mainCategory: selectedCategoryIds[0] || "",
-        subCategory: finalCategoryId,
-        categoryPath: categoryPath,
-        productDetails: productDetails.filter((pd) => pd.key && pd.value),
-        hasVariants: hasVariants,
+    const productData = {
+      name: productName,
+      mainCategory: selectedCategoryIds[0] || "",
+      subCategory: finalCategoryId,
+      categoryPath: categoryPath,
+      productDetails: productDetails.filter((pd) => pd.key && pd.value),
+      hasVariants: hasVariants,
+    }
+
+    if (!hasVariants) {
+      productData.stock = stock
+      productData.price = price
+      productData.bulkPricing = bulkPricing.filter((bp) => bp.wholesalePrice && bp.quantity)
+    }
+
+    // Handle main image
+    if (mainImage) {
+      formData.append("image", mainImage)
+    }
+
+    // Handle additional images - track which existing ones to keep
+    const existingAdditionalImagesToKeep = []
+    const newAdditionalImages = []
+
+    additionalImages.forEach((img) => {
+      if (img.file) {
+        // This is a new file to upload
+        newAdditionalImages.push(img.file)
+      } else if (img.preview && img.preview.startsWith('http')) {
+        // This is an existing image URL to keep
+        existingAdditionalImagesToKeep.push(img.preview)
       }
+    })
 
-      if (!hasVariants) {
-        productData.stock = stock
-        productData.price = price
-        productData.bulkPricing = bulkPricing.filter((bp) => bp.wholesalePrice && bp.quantity)
-      }
+    // Add the URLs of existing images we want to keep
+    productData.existingAdditionalImages = existingAdditionalImagesToKeep
 
-      if (mainImage) {
-        formData.append("image", mainImage)
-      }
+    // Append new image files
+    newAdditionalImages.forEach((file) => {
+      formData.append('additionalImages', file)
+    })
 
-      additionalImages.forEach((img) => {
-        if (img.file) {
-          formData.append(`additionalImages`, img.file)
-        }
-      })
-
-      if (hasVariants) {
-        productData.variants = variants.map((variant) => ({
+    if (hasVariants) {
+      productData.variants = variants.map((variant, variantIndex) => {
+        const variantObj = {
           colorName: variant.colorName,
           optionalDetails: variant.optionalDetails.filter((od) => od.key && od.value),
           isDefault: variant.isDefault,
@@ -437,7 +455,16 @@ commonStock: variant.commonStock?.toString() || "",
             variant.moreDetails.length === 1 || variant.isPriceSame === "yes"
               ? variant.commonBulkPricingCombinations.filter((bpc) => bpc.wholesalePrice && bpc.quantity)
               : [],
-          moreDetails: variant.moreDetails.map((md) => {
+          moreDetails: variant.moreDetails.map((md, mdIndex) => {
+            // Track existing images to keep for this moreDetail
+            const existingMdImagesToKeep = []
+            
+            md.additionalImages.forEach((img) => {
+              if (img.preview && img.preview.startsWith('http')) {
+                existingMdImagesToKeep.push(img.preview)
+              }
+            })
+
             const mdObj = {
               size: md.size,
               optionalDetails:
@@ -445,7 +472,9 @@ commonStock: variant.commonStock?.toString() || "",
                   ? md.optionalDetails
                   : md.optionalDetails.filter((od) => od.key && od.value),
               additionalImages: [],
+              existingAdditionalImages: existingMdImagesToKeep, // Track existing images to keep
             }
+            
             if (variant.isPriceSame === "no" && variant.moreDetails.length > 1) {
               mdObj.price = md.price
               mdObj.bulkPricingCombinations = md.bulkPricingCombinations.filter(
@@ -457,49 +486,58 @@ commonStock: variant.commonStock?.toString() || "",
             }
             return mdObj
           }),
-        }))
+        }
 
-        variants.forEach((variant, variantIndex) => {
-          if (variant.variantImage.file) {
-            formData.append(`variants[${variantIndex}].variantImage`, variant.variantImage.file)
-          }
-          variant.moreDetails.forEach((md, mdIndex) => {
-            md.additionalImages.forEach((img) => {
-              if (img.file) {
-                formData.append(`variants[${variantIndex}].moreDetails[${mdIndex}].additionalImages`, img.file)
-              }
-            })
+        // Track existing variant image
+        if (variant.variantImage.preview && variant.variantImage.preview.startsWith('http')) {
+          variantObj.existingVariantImage = variant.variantImage.preview
+        }
+
+        return variantObj
+      })
+
+      // Append variant images and moreDetails images
+      variants.forEach((variant, variantIndex) => {
+        if (variant.variantImage.file) {
+          formData.append(`variants[${variantIndex}].variantImage`, variant.variantImage.file)
+        }
+        variant.moreDetails.forEach((md, mdIndex) => {
+          md.additionalImages.forEach((img) => {
+            if (img.file) {
+              formData.append(`variants[${variantIndex}].moreDetails[${mdIndex}].additionalImages`, img.file)
+            }
           })
         })
-      }
-
-      formData.append("productData", JSON.stringify(productData))
-
-      const response = await axios.put(`http://localhost:3000/api/product/edit-product/${id}`, formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data'
-        }
       })
-
-      toast.success("Product updated successfully!", {
-        position: "top-right",
-        autoClose: 3000,
-      })
-      
-      setTimeout(() => {
-        navigate('/admin/panel/products')
-      }, 2000)
-
-    } catch (error) {
-      console.error("Error updating product:", error.message)
-      toast.error(`Error updating product: ${error.response?.data?.message || error.message}`, {
-        position: "top-right",
-        autoClose: 5000,
-      })
-    } finally {
-      setIsLoading(false)
     }
+
+    formData.append("productData", JSON.stringify(productData))
+
+    const response = await axios.put(`http://localhost:3000/api/product/edit-product/${id}`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data'
+      }
+    })
+
+    toast.success("Product updated successfully!", {
+      position: "top-right",
+      autoClose: 3000,
+    })
+    
+    setTimeout(() => {
+      navigate('/admin/panel/products')
+    }, 2000)
+
+  } catch (error) {
+    console.error("Error updating product:", error.message)
+    toast.error(`Error updating product: ${error.response?.data?.message || error.message}`, {
+      position: "top-right",
+      autoClose: 5000,
+    })
+  } finally {
+    setIsLoading(false)
   }
+}
 
   const cardClass = "bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
   const sectionClass = "p-8"

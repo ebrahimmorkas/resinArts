@@ -1776,17 +1776,29 @@ const editProduct = async (req, res) => {
     }
 
     // Handle additional images
-    if (filesByField['additionalImages']) {
-      if (existingProduct.additionalImages && existingProduct.additionalImages.length > 0) {
-        imagesToDelete.push(...existingProduct.additionalImages);
+    const existingImagesToKeep = productData.existingAdditionalImages || [];
+    const newImageFiles = filesByField['additionalImages'] || [];
+
+    // Determine which existing images to delete
+    const imagesToDeleteFromAdditional = (existingProduct.additionalImages || []).filter(
+      url => !existingImagesToKeep.includes(url)
+    );
+    imagesToDelete.push(...imagesToDeleteFromAdditional);
+
+    // Upload new images
+    const newImageUrls = [];
+    if (newImageFiles.length > 0) {
+      for (const file of newImageFiles) {
+        const url = await uploadImageToCloudinary(file.buffer, 'products');
+        newImageUrls.push(url);
       }
-      const additionalImagesUrls = await Promise.all(
-        filesByField['additionalImages'].map(file => uploadImageToCloudinary(file.buffer, 'products'))
-      );
-      productData.additionalImages = additionalImagesUrls;
-    } else {
-      productData.additionalImages = existingProduct.additionalImages || [];
     }
+
+    // Combine kept existing images with new ones
+    productData.additionalImages = [...existingImagesToKeep, ...newImageUrls];
+
+    // Remove the temporary tracking field
+    delete productData.existingAdditionalImages;
 
     // Handle variants dynamically
     if (productData.hasVariants && productData.variants) {
@@ -1797,31 +1809,52 @@ const editProduct = async (req, res) => {
         // Handle variant image
         const variantImageKey = `variants[${variantIndex}].variantImage`;
         if (filesByField[variantImageKey] && filesByField[variantImageKey][0]) {
+          // New variant image uploaded
           if (existingVariant?.variantImage) {
             imagesToDelete.push(existingVariant.variantImage);
           }
           variant.variantImage = await uploadImageToCloudinary(filesByField[variantImageKey][0].buffer, 'products/variants');
+        } else if (variant.existingVariantImage) {
+          // Keep existing variant image
+          variant.variantImage = variant.existingVariantImage;
         } else if (existingVariant?.variantImage) {
+          // No change, keep existing
           variant.variantImage = existingVariant.variantImage;
         }
+
+        // Remove temporary tracking field
+        delete variant.existingVariantImage;
 
         // Handle moreDetails additional images dynamically
         if (variant.moreDetails) {
           for (let mdIndex = 0; mdIndex < variant.moreDetails.length; mdIndex++) {
             const mdImagesKey = `variants[${variantIndex}].moreDetails[${mdIndex}].additionalImages`;
-            if (filesByField[mdImagesKey]) {
-              if (existingVariant?.moreDetails?.[mdIndex]?.additionalImages) {
-                imagesToDelete.push(...existingVariant.moreDetails[mdIndex].additionalImages);
+            const md = variant.moreDetails[mdIndex];
+            const existingMd = existingVariant?.moreDetails?.[mdIndex];
+
+            const existingMdImagesToKeep = md.existingAdditionalImages || [];
+            const newMdImageFiles = filesByField[mdImagesKey] || [];
+
+            // Determine which existing moreDetail images to delete
+            const mdImagesToDelete = (existingMd?.additionalImages || []).filter(
+              url => !existingMdImagesToKeep.includes(url)
+            );
+            imagesToDelete.push(...mdImagesToDelete);
+
+            // Upload new moreDetail images
+            const newMdImageUrls = [];
+            if (newMdImageFiles.length > 0) {
+              for (const file of newMdImageFiles) {
+                const url = await uploadImageToCloudinary(file.buffer, 'products/variants');
+                newMdImageUrls.push(url);
               }
-              const mdImagesUrls = await Promise.all(
-                filesByField[mdImagesKey].map(file => uploadImageToCloudinary(file.buffer, 'products/variants'))
-              );
-              variant.moreDetails[mdIndex].additionalImages = mdImagesUrls;
-            } else if (existingVariant?.moreDetails?.[mdIndex]?.additionalImages) {
-              variant.moreDetails[mdIndex].additionalImages = existingVariant.moreDetails[mdIndex].additionalImages;
-            } else {
-              variant.moreDetails[mdIndex].additionalImages = [];
             }
+
+            // Combine kept existing images with new ones
+            variant.moreDetails[mdIndex].additionalImages = [...existingMdImagesToKeep, ...newMdImageUrls];
+
+            // Remove temporary tracking field
+            delete variant.moreDetails[mdIndex].existingAdditionalImages;
           }
         }
       }
