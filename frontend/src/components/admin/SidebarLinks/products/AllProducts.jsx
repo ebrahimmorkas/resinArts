@@ -2032,15 +2032,25 @@ const DeleteConfirmationModal = () => {
                 <div className="flex items-center justify-between">
                   <span className="text-blue-800 font-medium">{selectedProducts.length} products selected</span>
                   <div className="flex items-center space-x-2">
-                    <button onClick={() => setShowRevisedRateModal(true)} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                    <button onClick={() => setShowRevisedRateModal(true)} className="bg-green-500 hover:bg-green-600 text-green-500 px-3 py-1 rounded-md text-sm font-medium transition-colors">
                       Add Revised Rate
                     </button>
-                    <button onClick={() => setShowRestockModal(true)} className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors">
+                    <button onClick={() => setShowRestockModal(true)} className="bg-blue-500 hover:bg-green-600 text-green-500 px-3 py-1 rounded-md text-sm font-medium transition-colors">
                       Restock
                     </button>
                     <button 
+          onClick={() => {
+            const productIds = selectedProducts.map(p => p._id).join(',');
+            navigate(`/admin/panel/products/bulk-edit/${productIds}`);
+          }}
+          className="bg-purple-500 hover:bg-purple-600 text-blue-500 px-3 py-1 rounded-md text-sm font-medium transition-colors"
+        >
+          <Edit2 className="w-4 h-4 inline mr-1" />
+          Bulk Edit
+        </button>
+                    <button 
   onClick={() => setShowDeleteModal(true)} 
-  className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded-md text-sm font-medium transition-colors"
+  className="bg-red-500 hover:bg-red-600 text-red-600 px-3 py-1 rounded-md text-sm font-medium transition-colors"
 >
   Delete Selected
 </button>

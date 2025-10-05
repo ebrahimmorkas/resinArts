@@ -1776,17 +1776,29 @@ const editProduct = async (req, res) => {
     }
 
     // Handle additional images
-    if (filesByField['additionalImages']) {
-      if (existingProduct.additionalImages && existingProduct.additionalImages.length > 0) {
-        imagesToDelete.push(...existingProduct.additionalImages);
+    const existingImagesToKeep = productData.existingAdditionalImages || [];
+    const newImageFiles = filesByField['additionalImages'] || [];
+
+    // Determine which existing images to delete
+    const imagesToDeleteFromAdditional = (existingProduct.additionalImages || []).filter(
+      url => !existingImagesToKeep.includes(url)
+    );
+    imagesToDelete.push(...imagesToDeleteFromAdditional);
+
+    // Upload new images
+    const newImageUrls = [];
+    if (newImageFiles.length > 0) {
+      for (const file of newImageFiles) {
+        const url = await uploadImageToCloudinary(file.buffer, 'products');
+        newImageUrls.push(url);
       }
-      const additionalImagesUrls = await Promise.all(
-        filesByField['additionalImages'].map(file => uploadImageToCloudinary(file.buffer, 'products'))
-      );
-      productData.additionalImages = additionalImagesUrls;
-    } else {
-      productData.additionalImages = existingProduct.additionalImages || [];
     }
+
+    // Combine kept existing images with new ones
+    productData.additionalImages = [...existingImagesToKeep, ...newImageUrls];
+
+    // Remove the temporary tracking field
+    delete productData.existingAdditionalImages;
 
     // Handle variants dynamically
     if (productData.hasVariants && productData.variants) {
@@ -1797,31 +1809,52 @@ const editProduct = async (req, res) => {
         // Handle variant image
         const variantImageKey = `variants[${variantIndex}].variantImage`;
         if (filesByField[variantImageKey] && filesByField[variantImageKey][0]) {
+          // New variant image uploaded
           if (existingVariant?.variantImage) {
             imagesToDelete.push(existingVariant.variantImage);
           }
           variant.variantImage = await uploadImageToCloudinary(filesByField[variantImageKey][0].buffer, 'products/variants');
+        } else if (variant.existingVariantImage) {
+          // Keep existing variant image
+          variant.variantImage = variant.existingVariantImage;
         } else if (existingVariant?.variantImage) {
+          // No change, keep existing
           variant.variantImage = existingVariant.variantImage;
         }
+
+        // Remove temporary tracking field
+        delete variant.existingVariantImage;
 
         // Handle moreDetails additional images dynamically
         if (variant.moreDetails) {
           for (let mdIndex = 0; mdIndex < variant.moreDetails.length; mdIndex++) {
             const mdImagesKey = `variants[${variantIndex}].moreDetails[${mdIndex}].additionalImages`;
-            if (filesByField[mdImagesKey]) {
-              if (existingVariant?.moreDetails?.[mdIndex]?.additionalImages) {
-                imagesToDelete.push(...existingVariant.moreDetails[mdIndex].additionalImages);
+            const md = variant.moreDetails[mdIndex];
+            const existingMd = existingVariant?.moreDetails?.[mdIndex];
+
+            const existingMdImagesToKeep = md.existingAdditionalImages || [];
+            const newMdImageFiles = filesByField[mdImagesKey] || [];
+
+            // Determine which existing moreDetail images to delete
+            const mdImagesToDelete = (existingMd?.additionalImages || []).filter(
+              url => !existingMdImagesToKeep.includes(url)
+            );
+            imagesToDelete.push(...mdImagesToDelete);
+
+            // Upload new moreDetail images
+            const newMdImageUrls = [];
+            if (newMdImageFiles.length > 0) {
+              for (const file of newMdImageFiles) {
+                const url = await uploadImageToCloudinary(file.buffer, 'products/variants');
+                newMdImageUrls.push(url);
               }
-              const mdImagesUrls = await Promise.all(
-                filesByField[mdImagesKey].map(file => uploadImageToCloudinary(file.buffer, 'products/variants'))
-              );
-              variant.moreDetails[mdIndex].additionalImages = mdImagesUrls;
-            } else if (existingVariant?.moreDetails?.[mdIndex]?.additionalImages) {
-              variant.moreDetails[mdIndex].additionalImages = existingVariant.moreDetails[mdIndex].additionalImages;
-            } else {
-              variant.moreDetails[mdIndex].additionalImages = [];
             }
+
+            // Combine kept existing images with new ones
+            variant.moreDetails[mdIndex].additionalImages = [...existingMdImagesToKeep, ...newMdImageUrls];
+
+            // Remove temporary tracking field
+            delete variant.moreDetails[mdIndex].existingAdditionalImages;
           }
         }
       }
@@ -1853,6 +1886,241 @@ const editProduct = async (req, res) => {
 };
 // End of function that will handle the editing of product
 
+// Start of function that will handle bulk editing of products
+const bulkEditProducts = async (req, res) => {
+  try {
+    const productsData = JSON.parse(req.body.productsData);
+    
+    if (!Array.isArray(productsData) || productsData.length === 0) {
+      return res.status(400).json({ message: 'No products data provided' });
+    }
+
+    // Organize files by product index and field
+    const filesByProduct = {};
+    if (req.files) {
+      req.files.forEach(file => {
+        // Parse fieldname like: products[0].image or products[1].additionalImages
+        const match = file.fieldname.match(/products\[(\d+)\]\.(.+)/);
+        if (match) {
+          const productIndex = parseInt(match[1]);
+          const fieldPath = match[2];
+          
+          if (!filesByProduct[productIndex]) {
+            filesByProduct[productIndex] = {};
+          }
+          
+          if (!filesByProduct[productIndex][fieldPath]) {
+            filesByProduct[productIndex][fieldPath] = [];
+          }
+          
+          filesByProduct[productIndex][fieldPath].push(file);
+        }
+      });
+    }
+
+    const updateResults = [];
+    const imagesToDelete = [];
+
+    // Process each product
+    for (let i = 0; i < productsData.length; i++) {
+      const productData = productsData[i];
+      const productFiles = filesByProduct[i] || {};
+      const { productId } = productData;
+
+      try {
+        const existingProduct = await Product.findById(productId);
+        if (!existingProduct) {
+          updateResults.push({
+            productId,
+            success: false,
+            error: 'Product not found'
+          });
+          continue;
+        }
+
+        const productImagesToDelete = [];
+        const finalProductData = {
+          name: productData.name,
+          mainCategory: productData.mainCategory,
+          subCategory: productData.subCategory,
+          categoryPath: productData.categoryPath,
+          productDetails: productData.productDetails || [],
+          hasVariants: productData.hasVariants
+        };
+
+        // Handle main image
+        if (productFiles['image'] && productFiles['image'][0]) {
+          if (existingProduct.image) {
+            productImagesToDelete.push(existingProduct.image);
+          }
+          finalProductData.image = await uploadImageToCloudinary(
+            productFiles['image'][0].buffer,
+            'products'
+          );
+        } else if (productData.existingImage) {
+          finalProductData.image = productData.existingImage;
+        } else {
+          finalProductData.image = existingProduct.image;
+        }
+
+        // Handle additional images
+        const existingImagesToKeep = productData.existingAdditionalImages || [];
+        const newImageFiles = productFiles['additionalImages'] || [];
+
+        const imagesToDeleteFromAdditional = (existingProduct.additionalImages || []).filter(
+          url => !existingImagesToKeep.includes(url)
+        );
+        productImagesToDelete.push(...imagesToDeleteFromAdditional);
+
+        const newImageUrls = [];
+        if (newImageFiles.length > 0) {
+          for (const file of newImageFiles) {
+            const url = await uploadImageToCloudinary(file.buffer, 'products');
+            newImageUrls.push(url);
+          }
+        }
+
+        finalProductData.additionalImages = [...existingImagesToKeep, ...newImageUrls];
+
+        // Handle non-variant product fields
+        if (!productData.hasVariants) {
+          finalProductData.stock = productData.stock;
+          finalProductData.price = productData.price;
+          finalProductData.bulkPricing = productData.bulkPricing || [];
+        }
+
+        // Handle variants
+        if (productData.hasVariants && productData.variants) {
+          finalProductData.variants = [];
+
+          for (let variantIndex = 0; variantIndex < productData.variants.length; variantIndex++) {
+            const variant = productData.variants[variantIndex];
+            const existingVariant = existingProduct.variants?.[variantIndex];
+
+            const variantObj = {
+              colorName: variant.colorName,
+              optionalDetails: variant.optionalDetails || [],
+              isDefault: variant.isDefault,
+              isPriceSame: variant.isPriceSame,
+              isStockSame: variant.isStockSame,
+              commonPrice: variant.commonPrice,
+              commonStock: variant.commonStock,
+              commonBulkPricingCombinations: variant.commonBulkPricingCombinations || [],
+              moreDetails: []
+            };
+
+            // Handle variant image
+            const variantImageKey = `variants[${variantIndex}].variantImage`;
+            if (productFiles[variantImageKey] && productFiles[variantImageKey][0]) {
+              if (existingVariant?.variantImage) {
+                productImagesToDelete.push(existingVariant.variantImage);
+              }
+              variantObj.variantImage = await uploadImageToCloudinary(
+                productFiles[variantImageKey][0].buffer,
+                'products/variants'
+              );
+            } else if (variant.existingVariantImage) {
+              variantObj.variantImage = variant.existingVariantImage;
+            } else if (existingVariant?.variantImage) {
+              variantObj.variantImage = existingVariant.variantImage;
+            }
+
+            // Handle moreDetails
+            if (variant.moreDetails) {
+              for (let mdIndex = 0; mdIndex < variant.moreDetails.length; mdIndex++) {
+                const md = variant.moreDetails[mdIndex];
+                const existingMd = existingVariant?.moreDetails?.[mdIndex];
+
+                const mdImagesKey = `variants[${variantIndex}].moreDetails[${mdIndex}].additionalImages`;
+                const existingMdImagesToKeep = md.existingAdditionalImages || [];
+                const newMdImageFiles = productFiles[mdImagesKey] || [];
+
+                const mdImagesToDelete = (existingMd?.additionalImages || []).filter(
+                  url => !existingMdImagesToKeep.includes(url)
+                );
+                productImagesToDelete.push(...mdImagesToDelete);
+
+                const newMdImageUrls = [];
+                if (newMdImageFiles.length > 0) {
+                  for (const file of newMdImageFiles) {
+                    const url = await uploadImageToCloudinary(file.buffer, 'products/variants');
+                    newMdImageUrls.push(url);
+                  }
+                }
+
+                const mdObj = {
+                  size: md.size,
+                  optionalDetails: md.optionalDetails || [],
+                  additionalImages: [...existingMdImagesToKeep, ...newMdImageUrls]
+                };
+
+                if (variant.isPriceSame === "no" && variant.moreDetails.length > 1) {
+                  mdObj.price = md.price;
+                  mdObj.bulkPricingCombinations = md.bulkPricingCombinations || [];
+                }
+                if (variant.isStockSame === "no" && variant.moreDetails.length > 1) {
+                  mdObj.stock = md.stock;
+                }
+
+                variantObj.moreDetails.push(mdObj);
+              }
+            }
+
+            finalProductData.variants.push(variantObj);
+          }
+        }
+
+        // Update product in database
+        const updatedProduct = await Product.findByIdAndUpdate(
+          productId,
+          finalProductData,
+          { new: true, runValidators: true }
+        );
+
+        // Delete old images from Cloudinary
+        if (productImagesToDelete.length > 0) {
+          await Promise.all(productImagesToDelete.map(url => deleteFromCloudinary(url)));
+        }
+
+        imagesToDelete.push(...productImagesToDelete);
+
+        updateResults.push({
+          productId,
+          success: true,
+          product: updatedProduct
+        });
+
+      } catch (error) {
+        console.error(`Error updating product ${productId}:`, error);
+        updateResults.push({
+          productId,
+          success: false,
+          error: error.message
+        });
+      }
+    }
+
+    // Check if all updates were successful
+    const allSuccessful = updateResults.every(result => result.success);
+    const successCount = updateResults.filter(result => result.success).length;
+
+    res.status(allSuccessful ? 200 : 207).json({
+      message: `${successCount} out of ${productsData.length} products updated successfully`,
+      results: updateResults,
+      totalDeleted: imagesToDelete.length
+    });
+
+  } catch (error) {
+    console.error('Bulk edit error:', error);
+    res.status(500).json({
+      message: 'Error updating products',
+      error: error.message
+    });
+  }
+};
+
+// End of function that will handle bulk editing of products
+
 // Export addProduct with upload.any() middleware directly
 module.exports = {
   addProduct: [upload.any(), addProduct],
@@ -1865,5 +2133,6 @@ module.exports = {
   bulkUploadProducts,
   deleteProduct,
   editProduct,
-  getProductById
+  getProductById,
+  bulkEditProducts
 }
