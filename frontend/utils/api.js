@@ -34,3 +34,25 @@ export const addProduct = async (formData) => {
     throw error
   }
 }
+
+export const duplicateProducts = async (productIds) => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/product/duplicate`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ productIds }),
+      credentials: "include",
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+    }
+    return await response.json();
+  } catch (error) {
+    console.error("Error duplicating products:", error);
+    throw error;
+  }
+};

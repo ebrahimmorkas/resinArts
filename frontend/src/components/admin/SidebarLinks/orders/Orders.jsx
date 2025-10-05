@@ -164,7 +164,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   setShowShippingPriceModal(true);
 
                 }}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Accepted"}
               >
                 <Check className="h-4 w-4 mr-2" />
@@ -176,7 +176,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                     onStatusChange(order._id, "Rejected")
                     handleStatusChangeBackend("Rejected", order._id);
                   }}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 bg-red-600 text-red-600 text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Rejected"}
               >
                 <X className="h-4 w-4 mr-2" />
@@ -188,7 +188,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                     onStatusChange(order._id, "Confirm")
                     handleStatusChangeBackend("Confirm", order._id);
                   }}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Confirm"}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -210,7 +210,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   onStatusChange(order._id, "Dispatched");
                   handleStatusChangeBackend("Dispatched", order._id)
                 }}
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-white text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-green-600 text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Dispatched"}
               >
                 <Truck className="h-4 w-4 mr-2" />
@@ -221,7 +221,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   onStatusChange(order._id, "Completed");
                   handleStatusChangeBackend("Completed", order._id);
                 }}
-                className="inline-flex items-center px-4 py-2 bg-purple-600 text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 bg-purple-600 text-green-600 text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Completed"}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
@@ -232,7 +232,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   handleEdit(order)
                   setOrderId(order._id);
                 }}
-                className="inline-flex items-center px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                className="inline-flex items-center px-4 py-2 bg-gray-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
               >
                 <User className="h-4 w-4 mr-2" />
                 Edit
