@@ -5,6 +5,8 @@ import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
+import { Copy } from "lucide-react"; // Add Copy icon
+import { duplicateProducts } from "../../../../../utils/api";
 
 export default function AdminProductsPage() {
   const { products, loading, error } = useContext(ProductContext);
@@ -230,6 +232,43 @@ const handleDeleteSelected = async () => {
     setIsLoading(false);
     setShowDeleteModal(false);
     setSelectedProductForDelete(null);
+  }
+};
+
+// Function that will duplicate products
+const handleDuplicateProduct = async (product) => {
+  setIsLoading(true);
+  try {
+    const res = await duplicateProducts([product._id]);
+    if (res.products && res.products.length > 0) {
+      toast.success(`Product duplicated successfully as "${res.products[0].name}"!`);
+      // Refresh products - you might need to add a context method for this
+    }
+  } catch (error) {
+    console.error("Duplicate error:", error);
+    toast.error(`Failed to duplicate product: ${error.message}`);
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+const handleDuplicateSelected = async () => {
+  if (selectedProducts.length === 0) return;
+  setIsLoading(true);
+  
+  try {
+    const productIds = selectedProducts.map(p => p._id);
+    const res = await duplicateProducts(productIds);
+    
+    toast.success(`${res.products.length} products duplicated successfully!`);
+    setSelectedProducts([]);
+    // Refresh products - you might need to add a context method for this
+    
+  } catch (error) {
+    console.error("Duplicate selected error:", error);
+    toast.error(`Failed to duplicate products: ${error.message}`);
+  } finally {
+    setIsLoading(false);
   }
 };
 
@@ -2039,6 +2078,13 @@ const DeleteConfirmationModal = () => {
                       Restock
                     </button>
                     <button 
+          onClick={handleDuplicateSelected} 
+          className="bg-indigo-500 hover:bg-indigo-600 text-blue-600 px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center"
+        >
+          <Copy className="w-4 h-4 mr-1" />
+          Duplicate Selected
+        </button>
+                    <button 
           onClick={() => {
             const productIds = selectedProducts.map(p => p._id).join(',');
             navigate(`/admin/panel/products/bulk-edit/${productIds}`);
@@ -2155,6 +2201,13 @@ const DeleteConfirmationModal = () => {
                           <button onClick={() => { setRestockProduct(product); setShowRestockModal(true); }} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors" title="Restock">
                             <Package className="w-4 h-4" />
                           </button>
+                          <button 
+        onClick={() => handleDuplicateProduct(product)} 
+        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" 
+        title="Duplicate"
+      >
+        <Copy className="w-4 h-4" />
+      </button>
                           <button onClick={() => openEditModal(product)} className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-md transition-colors" title="Edit">
                             <Edit2 className="w-4 h-4" />
                           </button>

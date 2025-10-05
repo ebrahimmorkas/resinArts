@@ -83,6 +83,32 @@ const deleteFromCloudinary = async (imageUrl) => {
 };
 // End of function that will handle the deletion of product's immage from cloudinary
 
+// Helper function to duplicate image on Cloudinary
+const duplicateCloudinaryImage = async (imageUrl) => {
+  if (!imageUrl) return null;
+  
+  try {
+    // Extract public_id from Cloudinary URL
+    const urlParts = imageUrl.split('/');
+    const uploadIndex = urlParts.indexOf('upload');
+    if (uploadIndex !== -1 && uploadIndex + 2 < urlParts.length) {
+      const pathAfterUpload = urlParts.slice(uploadIndex + 2).join('/');
+      const publicId = pathAfterUpload.substring(0, pathAfterUpload.lastIndexOf('.'));
+      
+      // Upload a copy with a new public_id
+      const result = await cloudinary.uploader.upload(imageUrl, {
+        folder: urlParts.slice(uploadIndex + 2, -1).join('/'), // Preserve folder structure
+      });
+      
+      return result.secure_url;
+    }
+  } catch (error) {
+    console.error('Error duplicating image:', error);
+    return null;
+  }
+  return null;
+};
+
 // Start of function to upload image to cloudinary for bulk edit
 const BulkUploadImageToCloudinary = async (imagePath, folder = 'products') => {
   try {
@@ -2118,10 +2144,132 @@ const bulkEditProducts = async (req, res) => {
     });
   }
 };
-
 // End of function that will handle bulk editing of products
 
-// Export addProduct with upload.any() middleware directly
+// Start of function that will handle duplication of products
+const duplicateProducts = async (req, res) => {
+  try {
+    const { productIds } = req.body;
+    
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ error: "Product IDs array is required" });
+    }
+
+    const duplicatedProducts = [];
+    
+    for (const productId of productIds) {
+      const originalProduct = await Product.findById(productId).lean();
+      
+      if (!originalProduct) {
+        continue;
+      }
+
+      // Generate unique name
+      let copyNumber = 1;
+      let newName = `${originalProduct.name}-copy${copyNumber}`;
+      
+      while (await Product.findOne({ name: newName })) {
+        copyNumber++;
+        newName = `${originalProduct.name}-copy${copyNumber}`;
+      }
+
+      // Create new product data
+      const newProductData = {
+        ...originalProduct,
+        _id: undefined,
+        name: newName,
+        createdAt: undefined,
+        updatedAt: undefined,
+        __v: undefined,
+      };
+
+      // Duplicate main product image
+      if (newProductData.image) {
+        const duplicatedImage = await duplicateCloudinaryImage(newProductData.image);
+        newProductData.image = duplicatedImage || newProductData.image;
+      }
+
+      // Duplicate additional images for non-variant products
+      if (newProductData.additionalImages && newProductData.additionalImages.length > 0) {
+        const duplicatedAdditionalImages = [];
+        for (const imageUrl of newProductData.additionalImages) {
+          const duplicatedImage = await duplicateCloudinaryImage(imageUrl);
+          duplicatedAdditionalImages.push(duplicatedImage || imageUrl);
+        }
+        newProductData.additionalImages = duplicatedAdditionalImages;
+      }
+
+      // Handle variants
+      if (newProductData.hasVariants && newProductData.variants) {
+        const duplicatedVariants = [];
+        
+        for (const variant of newProductData.variants) {
+          const newVariant = {
+            ...variant,
+            _id: undefined,
+          };
+          
+          // Duplicate variant image
+          if (newVariant.variantImage) {
+            const duplicatedVariantImage = await duplicateCloudinaryImage(newVariant.variantImage);
+            newVariant.variantImage = duplicatedVariantImage || newVariant.variantImage;
+          }
+          
+          // Handle moreDetails (size configurations)
+          if (newVariant.moreDetails && newVariant.moreDetails.length > 0) {
+            const duplicatedMoreDetails = [];
+            
+            for (const md of newVariant.moreDetails) {
+              const newMd = {
+                ...md,
+                _id: undefined,
+                size: {
+                  ...md.size,
+                  _id: undefined,
+                },
+              };
+              
+              // Duplicate additional images for this size configuration
+              if (newMd.additionalImages && newMd.additionalImages.length > 0) {
+                const duplicatedMdImages = [];
+                for (const imageUrl of newMd.additionalImages) {
+                  const duplicatedImage = await duplicateCloudinaryImage(imageUrl);
+                  duplicatedMdImages.push(duplicatedImage || imageUrl);
+                }
+                newMd.additionalImages = duplicatedMdImages;
+              }
+              
+              duplicatedMoreDetails.push(newMd);
+            }
+            
+            newVariant.moreDetails = duplicatedMoreDetails;
+          }
+          
+          duplicatedVariants.push(newVariant);
+        }
+        
+        newProductData.variants = duplicatedVariants;
+      }
+
+      const duplicatedProduct = new Product(newProductData);
+      const savedProduct = await duplicatedProduct.save();
+      duplicatedProducts.push(savedProduct);
+    }
+
+    res.status(201).json({
+      message: `Successfully duplicated ${duplicatedProducts.length} product(s)`,
+      products: duplicatedProducts,
+    });
+
+  } catch (error) {
+    console.error("Error duplicating products:", error);
+    res.status(500).json({ 
+      error: "Internal server error", 
+      details: error.message 
+    });
+  }
+};
+// End of function that will handle duplication of products
 module.exports = {
   addProduct: [upload.any(), addProduct],
   fetchProducts,
@@ -2134,5 +2282,6 @@ module.exports = {
   deleteProduct,
   editProduct,
   getProductById,
-  bulkEditProducts
+  bulkEditProducts,
+  duplicateProducts
 }
