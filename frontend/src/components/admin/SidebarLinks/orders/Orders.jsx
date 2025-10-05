@@ -199,7 +199,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   onStatusChange(order._id, "In Progress")
                   handleStatusChangeBackend("In Progress", order._id);
                 }}
-                className="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                className="inline-flex items-center px-4 py-2 bg-orange-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "In Progress"}
               >
                 <Clock className="h-4 w-4 mr-2" />
