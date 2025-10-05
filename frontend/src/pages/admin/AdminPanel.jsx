@@ -18,6 +18,7 @@ import AllAnnouncement from '../../components/admin/SidebarLinks/Announcement/Al
 import BulkUpload from '../../components/admin/SidebarLinks/products/BulkUpload';
 import AllCategories from '../../components/admin/SidebarLinks/Category/AllCategories';
 import EditProduct from '../../components/admin/SidebarLinks/products/EditProduct';
+import BulkEditProducts from '../../components/admin/SidebarLinks/products/BulkEditProducts';
 
 function AdminPanel() {
   // State to manage sidebar open/close - starts closed
@@ -55,6 +56,7 @@ function AdminPanel() {
               <Route path="products/add" element={<AddProduct />} />
               <Route path="products/edit/:id" element={<EditProduct />} />
               <Route path="products/b" element={<BulkUpload />} />
+              <Route path="products/bulk-edit/:ids" element={<BulkEditProducts />} />
               {/* End of product routes */}
 
               {/* Start of orders routes */}

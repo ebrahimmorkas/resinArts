@@ -1,6 +1,6 @@
 const express = require("express")
 const router = express.Router()
-const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, deleteProduct, editProduct, getProductById } = require("../controllers/productController")
+const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, deleteProduct, editProduct, getProductById, bulkEditProducts } = require("../controllers/productController")
 const authenticate = require("../middlewares/authenticate")
 const authorize = require("../middlewares/authorize")
 const productController = require("../controllers/productController")
@@ -21,5 +21,6 @@ router.post("/bulk-upload", authenticate, authorize(['admin']), upload.fields([
 router.delete("/delete-product/:id", authenticate, authorize(['admin']), deleteProduct)
 router.put('/edit-product/:id', authenticate, authorize(['admin']), upload.any(), editProduct);
 router.get('/:id', authenticate, authorize(['admin']), getProductById);
+router.put('/bulk-edit', authenticate, authorize(['admin']), upload.any(), bulkEditProducts);
 
 module.exports = router
