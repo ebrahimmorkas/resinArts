@@ -19,6 +19,7 @@ import BulkUpload from '../../components/admin/SidebarLinks/products/BulkUpload'
 import AllCategories from '../../components/admin/SidebarLinks/Category/AllCategories';
 import EditProduct from '../../components/admin/SidebarLinks/products/EditProduct';
 import BulkEditProducts from '../../components/admin/SidebarLinks/products/BulkEditProducts';
+import CompanySettings from '../../components/admin/SidebarLinks/CompanySettings/CompanySettings';
 
 function AdminPanel() {
   // State to manage sidebar open/close - starts closed
@@ -87,6 +88,10 @@ function AdminPanel() {
               <Route path="categories/add" element={<AddCategory />} />
               <Route path="categories/all" element={<AllCategories />} />
               {/* End of categories routes */}
+
+              {/* Start of company settings routes */}
+              <Route path="company-settings" element={<CompanySettings />} />
+              {/* End of company settings routes */}
               
               {/* Additional routes for new menu items */}
               {/* <Route path="analytics/sales" element={<div className="bg-white rounded-lg shadow p-6 w-full">Sales Report Component</div>} />
