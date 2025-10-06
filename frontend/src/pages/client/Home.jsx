@@ -701,10 +701,13 @@ const handleCategoryClick = (category) => {
   if (selectedCategory === category.categoryName) {
     setSelectedCategory(null);
     setSelectedCategoryPath([]);
+    setSelectedFilters(['all']); // Reset to "All Products"
   } else {
     setSelectedCategory(category.categoryName);
     const path = buildCategoryPathFromId(category._id);
     setSelectedCategoryPath(path);
+    // Remove "all" from filters when category is selected
+    setSelectedFilters((prev) => prev.filter(f => f !== 'all'));
     // Scroll to category section after a brief delay
     setTimeout(() => {
       document.getElementById('selected-category-section')?.scrollIntoView({ behavior: 'smooth' })
@@ -712,15 +715,15 @@ const handleCategoryClick = (category) => {
   }
 }
 
-  const handleFilterChange = (filter) => {
+ const handleFilterChange = (filter) => {
   const wasSelected = selectedFilters.includes(filter)
 
   setSelectedFilters((prev) => {
     if (filter === "all") {
-    setSelectedCategory(null); // Clear category selection when "All Products" is clicked
-    setSelectedCategoryPath([]); // Clear category path
-    return ["all"]
-  }
+      setSelectedCategory(null); // Clear category selection when "All Products" is clicked
+      setSelectedCategoryPath([]); // Clear category path
+      return ["all"]
+    }
     const newFilters = prev.filter((f) => f !== "all")
     if (newFilters.includes(filter)) {
       const filtered = newFilters.filter((f) => f !== filter)
@@ -728,21 +731,21 @@ const handleCategoryClick = (category) => {
     }
     return [...newFilters, filter]
   })
-  
 
-  if (!wasSelected) {
+  // Always scroll when filter is clicked (whether selecting or deselecting)
+  setTimeout(() => {
     if (filter === "all") {
-      setTimeout(() => document.getElementById('all-products-section')?.scrollIntoView({ behavior: "smooth" }), 100)
+      document.getElementById('all-products-section')?.scrollIntoView({ behavior: "smooth" })
     } else if (filter === "just-arrived") {
-      setTimeout(() => justArrivedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+      justArrivedRef.current?.scrollIntoView({ behavior: "smooth" })
     } else if (filter === "restocked") {
-      setTimeout(() => restockedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+      restockedRef.current?.scrollIntoView({ behavior: "smooth" })
     } else if (filter === "revised-rates") {
-      setTimeout(() => revisedRatesRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+      revisedRatesRef.current?.scrollIntoView({ behavior: "smooth" })
     } else if (filter === "out-of-stock") {
-      setTimeout(() => outOfStockRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+      outOfStockRef.current?.scrollIntoView({ behavior: "smooth" })
     }
-  }
+  }, 100)
 }
 
   const toggleWishlist = (productId) => {
@@ -836,23 +839,23 @@ const CategoryNavigationBar = () => {
     <div className="sticky top-16 z-30 bg-white shadow-md border-b border-gray-200">
       <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
         <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-          {/* Breadcrumb Navigation */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-sm font-semibold text-gray-600">Category Path:</span>
-            {selectedCategoryPath.map((cat, index) => (
-              <div key={cat._id} className="flex items-center gap-2">
-                <button
-                  onClick={() => handleBreadcrumbClick(index)}
-                  className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors hover:underline"
-                >
-                  {cat.categoryName}
-                </button>
-                {index < selectedCategoryPath.length - 1 && (
-                  <ChevronRight className="w-4 h-4 text-gray-400" />
-                )}
-              </div>
-            ))}
-          </div>
+         {/* Breadcrumb Navigation */}
+<div className="flex items-center gap-2 flex-wrap">
+  <span className="text-xs font-medium text-gray-500">Path:</span>
+  {selectedCategoryPath.map((cat, index) => (
+    <div key={cat._id} className="flex items-center gap-2">
+      <button
+        onClick={() => handleBreadcrumbClick(index)}
+        className="text-blue-600 hover:text-blue-800 text-xs transition-colors hover:underline"
+      >
+        {cat.categoryName}
+      </button>
+      {index < selectedCategoryPath.length - 1 && (
+        <ChevronRight className="w-3 h-3 text-gray-400" />
+      )}
+    </div>
+  ))}
+</div>
 
           {/* Category Dropdowns */}
           <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
@@ -898,13 +901,27 @@ const CategoryNavigationBar = () => {
             )}
 
             {/* Back to Categories Button */}
-            <button
-              onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })}
-              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-blue-600 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap self-end sm:self-auto"
-            >
-              <ChevronLeft className="w-4 h-4" />
-              Go to Categories
-            </button>
+            {/* Action Buttons */}
+<div className="flex gap-2">
+  <button
+    onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })}
+    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
+  >
+    <ChevronLeft className="w-4 h-4" />
+    Go to Categories
+  </button>
+  <button
+    onClick={() => {
+      setSelectedCategory(null);
+      setSelectedCategoryPath([]);
+      setSelectedFilters(['all']);
+    }}
+    className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium whitespace-nowrap"
+  >
+    <X className="w-4 h-4" />
+    Clear
+  </button>
+</div>
           </div>
         </div>
       </div>
@@ -2794,7 +2811,7 @@ const CartModal = () => {
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-12" ref={categoriesRef} id="categories-section">
   <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Categories</h2>
-          <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
+  <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
             {mainCategories.slice(0, 10).map((category) => (
               <div
                 key={category._id}
