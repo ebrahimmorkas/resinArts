@@ -613,7 +613,9 @@ const handleLogout = async () => {
   })
 
   if (!wasSelected) {
-    if (filter === "just-arrived") {
+    if (filter === "all") {
+      setTimeout(() => document.getElementById('all-products-section')?.scrollIntoView({ behavior: "smooth" }), 100)
+    } else if (filter === "just-arrived") {
       setTimeout(() => justArrivedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
     } else if (filter === "restocked") {
       setTimeout(() => restockedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
@@ -2607,12 +2609,12 @@ const CartModal = () => {
   onClick={() => handleFilterChange(filter.key)}
   className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
     selectedFilters.includes(filter.key)
-      ? "bg-blue-600 text-white shadow-lg scale-105"
+      ? "bg-white text-blue-600 shadow-lg scale-105"
       : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-blue-300"
   }`}
 >
   {selectedFilters.includes(filter.key) && <Check className="w-4 h-4" />}
-  <span>{filter.label}</span>
+  {filter.label}
 </button>
             ))}
           </div>
@@ -2654,25 +2656,46 @@ const CartModal = () => {
 
         {selectedCategory && (
   <section className="mb-12" id="selected-category-section">
-    <div className="flex items-center justify-between mb-6">
+    <div className="flex items-center justify-center mb-6 relative">
       <h2 className="text-2xl font-bold text-gray-800">{selectedCategory}</h2>
       <button
         onClick={() => {
           categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })
         }}
-        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+        className="absolute right-0 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
       >
         <ChevronLeft className="w-4 h-4" />
         Go to Categories
       </button>
     </div>
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-      {sortProductsByPrice(
-       getFilteredProducts().filter((product) => product.categoryPath?.includes(selectedCategory))
-      ).map((product) => (
-        <ProductCard key={product._id} product={product} />
-      ))}
-    </div>
+    {(() => {
+      const categoryProducts = sortProductsByPrice(
+        getFilteredProducts().filter((product) => product.categoryPath?.includes(selectedCategory))
+      );
+      return categoryProducts.length > 0 ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
+          {categoryProducts.map((product) => (
+            <ProductCard key={product._id} product={product} />
+          ))}
+        </div>
+      ) : (
+        <div className="flex flex-col items-center justify-center py-16 px-4">
+          <div className="bg-gray-100 rounded-full p-6 mb-4">
+            <Package className="w-16 h-16 text-gray-400" />
+          </div>
+          <h3 className="text-xl font-semibold text-gray-800 mb-2">No Products Available</h3>
+          <p className="text-gray-600 text-center mb-6">
+            We couldn't find any products in the "{selectedCategory}" category at the moment.
+          </p>
+          <button
+            onClick={() => setSelectedCategory(null)}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+          >
+            Browse All Products
+          </button>
+        </div>
+      );
+    })()}
   </section>
 )}
 
@@ -2722,8 +2745,8 @@ const CartModal = () => {
           </section>
         )}
 
-        <section>
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">All Products</h2>
+        <section id="all-products-section">
+  <h2 className="text-2xl font-bold text-gray-800 mb-6">All Products</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
             {sortProductsByPrice(products).map((product) => (
               <ProductCard key={product._id} product={product} />
