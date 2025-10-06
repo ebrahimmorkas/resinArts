@@ -104,6 +104,7 @@ const handleCartCheckout = async () => {
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [searchQuery, setSearchQuery] = useState("")
+  const [selectedCategoryPath, setSelectedCategoryPath] = useState([])
   const [wishlist, setWishlist] = useState([])
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
@@ -542,6 +543,86 @@ const getFilteredProducts = () => {
     return null;
   }
 
+  // Helper function to build nested category tree from flat array
+const buildCategoryTree = (categories) => {
+  const categoryMap = {};
+  const tree = [];
+
+  // Create a map of all categories
+  categories.forEach(cat => {
+    categoryMap[cat._id] = { ...cat, subcategories: [] };
+  });
+
+  // Build the tree structure
+  categories.forEach(cat => {
+    if (cat.parent_category_id) {
+      const parent = categoryMap[cat.parent_category_id];
+      if (parent) {
+        parent.subcategories.push(categoryMap[cat._id]);
+      }
+    } else {
+      tree.push(categoryMap[cat._id]);
+    }
+  });
+
+  return tree;
+};
+
+// Helper function to find all descendant category IDs (recursive)
+const getAllDescendantCategoryIds = (categoryId, categoriesTree) => {
+  const ids = [categoryId];
+  
+  const findInTree = (cats) => {
+    for (const cat of cats) {
+      if (cat._id === categoryId) {
+        const collectIds = (c) => {
+          ids.push(c._id);
+          if (c.subcategories && c.subcategories.length > 0) {
+            c.subcategories.forEach(collectIds);
+          }
+        };
+        if (cat.subcategories && cat.subcategories.length > 0) {
+          cat.subcategories.forEach(collectIds);
+        }
+        return true;
+      }
+      if (cat.subcategories && cat.subcategories.length > 0) {
+        if (findInTree(cat.subcategories)) return true;
+      }
+    }
+    return false;
+  };
+  
+  const categoriesTree_built = buildCategoryTree(categories);
+  findInTree(categoriesTree_built);
+  return ids;
+};
+
+// Helper function to build category path from ID
+const buildCategoryPathFromId = (categoryId) => {
+  const path = [];
+  let currentCat = categories.find(cat => cat._id === categoryId);
+  
+  while (currentCat) {
+    path.unshift(currentCat);
+    if (currentCat.parent_category_id) {
+      currentCat = categories.find(cat => cat._id === currentCat.parent_category_id);
+    } else {
+      currentCat = null;
+    }
+  }
+  
+  return path;
+};
+
+// Helper function to get immediate children of a category
+const getCategoryChildren = (categoryId) => {
+  if (!categoryId) {
+    return categories.filter(cat => !cat.parent_category_id);
+  }
+  return categories.filter(cat => cat.parent_category_id === categoryId);
+};
+
 // Function that will handle logout
 const handleLogout = async () => {
     try {
@@ -616,15 +697,18 @@ const handleLogout = async () => {
     await removeFromCart(cartKey)
   }
 
-  const handleCategoryClick = (category) => {
+const handleCategoryClick = (category) => {
   if (selectedCategory === category.categoryName) {
-    setSelectedCategory(null)
+    setSelectedCategory(null);
+    setSelectedCategoryPath([]);
   } else {
-    setSelectedCategory(category.categoryName)
+    setSelectedCategory(category.categoryName);
+    const path = buildCategoryPathFromId(category._id);
+    setSelectedCategoryPath(path);
     // Scroll to category section after a brief delay
     setTimeout(() => {
       document.getElementById('selected-category-section')?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
+    }, 100);
   }
 }
 
@@ -633,9 +717,10 @@ const handleLogout = async () => {
 
   setSelectedFilters((prev) => {
     if (filter === "all") {
-      setSelectedCategory(null) // Clear category selection when "All Products" is clicked
-      return ["all"]
-    }
+    setSelectedCategory(null); // Clear category selection when "All Products" is clicked
+    setSelectedCategoryPath([]); // Clear category path
+    return ["all"]
+  }
     const newFilters = prev.filter((f) => f !== "all")
     if (newFilters.includes(filter)) {
       const filtered = newFilters.filter((f) => f !== filter)
@@ -643,6 +728,7 @@ const handleLogout = async () => {
     }
     return [...newFilters, filter]
   })
+  
 
   if (!wasSelected) {
     if (filter === "all") {
@@ -712,6 +798,119 @@ const handleLogout = async () => {
 
   if (loadingDiscount || loadingCategories || loadingFreeCash) return <div>Loading...</div>
   if (categoriesErrors || freeCashErrors) return <div>Error: {categoriesErrors || freeCashErrors}</div>
+
+      // Sticky Category Navigation Bar Component
+const CategoryNavigationBar = () => {
+  if (selectedCategoryPath.length === 0) return null;
+
+  const categoriesTree = buildCategoryTree(categories);
+  const currentCategory = selectedCategoryPath[selectedCategoryPath.length - 1];
+  const mainCategory = selectedCategoryPath[0];
+  const subCategoryOptions = getCategoryChildren(currentCategory._id);
+
+  const handleMainCategoryChange = (categoryId) => {
+    if (!categoryId) {
+      setSelectedCategory(null);
+      setSelectedCategoryPath([]);
+      return;
+    }
+    const newPath = buildCategoryPathFromId(categoryId);
+    setSelectedCategory(newPath[newPath.length - 1].categoryName);
+    setSelectedCategoryPath(newPath);
+  };
+
+  const handleSubCategoryChange = (categoryId) => {
+    if (!categoryId) return;
+    const newPath = buildCategoryPathFromId(categoryId);
+    setSelectedCategory(newPath[newPath.length - 1].categoryName);
+    setSelectedCategoryPath(newPath);
+  };
+
+  const handleBreadcrumbClick = (index) => {
+    const newPath = selectedCategoryPath.slice(0, index + 1);
+    setSelectedCategory(newPath[newPath.length - 1].categoryName);
+    setSelectedCategoryPath(newPath);
+  };
+
+  return (
+    <div className="sticky top-16 z-30 bg-white shadow-md border-b border-gray-200">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
+        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
+          {/* Breadcrumb Navigation */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-sm font-semibold text-gray-600">Category Path:</span>
+            {selectedCategoryPath.map((cat, index) => (
+              <div key={cat._id} className="flex items-center gap-2">
+                <button
+                  onClick={() => handleBreadcrumbClick(index)}
+                  className="text-blue-600 hover:text-blue-800 font-medium text-sm transition-colors hover:underline"
+                >
+                  {cat.categoryName}
+                </button>
+                {index < selectedCategoryPath.length - 1 && (
+                  <ChevronRight className="w-4 h-4 text-gray-400" />
+                )}
+              </div>
+            ))}
+          </div>
+
+          {/* Category Dropdowns */}
+          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
+            {/* Main Category Dropdown */}
+            <div className="flex-1 sm:min-w-[200px]">
+              <label className="block text-xs font-semibold text-gray-600 mb-1">
+                Main Category
+              </label>
+              <select
+                value={mainCategory._id}
+                onChange={(e) => handleMainCategoryChange(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+              >
+                {mainCategories.map((cat) => (
+                  <option key={cat._id} value={cat._id}>
+                    {cat.categoryName}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Sub Category Dropdown */}
+            {subCategoryOptions.length > 0 && (
+              <div className="flex-1 sm:min-w-[200px]">
+                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  Sub Category
+                </label>
+                <select
+                  value={currentCategory._id}
+                  onChange={(e) => handleSubCategoryChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                >
+                  <option value={currentCategory._id}>
+                    {currentCategory.categoryName} (Current)
+                  </option>
+                  {subCategoryOptions.map((cat) => (
+                    <option key={cat._id} value={cat._id}>
+                      {cat.categoryName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Back to Categories Button */}
+            <button
+              onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })}
+              className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-blue-600 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap self-end sm:self-auto"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Go to Categories
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
 
   const BannerCarousel = () => {
     const { banners, loadingBanner, Bannerserror } = useContext(BannerContext);
@@ -2590,6 +2789,8 @@ const CartModal = () => {
 
       <BannerCarousel />
 
+      <CategoryNavigationBar />
+
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-12" ref={categoriesRef} id="categories-section">
   <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Categories</h2>
@@ -2686,24 +2887,24 @@ const CartModal = () => {
   </section>
 )}
 
-        {selectedCategory && (
+        {selectedCategoryPath.length > 0 && (
   <section className="mb-12" id="selected-category-section">
-    <div className="flex items-center justify-center mb-6 relative">
+    <div className="flex items-center justify-center mb-6">
       <h2 className="text-2xl font-bold text-gray-800">{selectedCategory}</h2>
-      <button
-        onClick={() => {
-          categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })
-        }}
-        className="absolute right-0 flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
-      >
-        <ChevronLeft className="w-4 h-4" />
-        Go to Categories
-      </button>
     </div>
     {(() => {
+      const currentCategoryId = selectedCategoryPath[selectedCategoryPath.length - 1]._id;
+      const allRelevantCategoryIds = getAllDescendantCategoryIds(currentCategoryId, buildCategoryTree(categories));
+      
       const categoryProducts = sortProductsByPrice(
-        getFilteredProducts().filter((product) => product.categoryPath?.includes(selectedCategory))
+        getFilteredProducts().filter((product) => {
+          const productMainCat = typeof product.mainCategory === 'object' ? product.mainCategory._id : product.mainCategory;
+          const productSubCat = typeof product.subCategory === 'object' ? product.subCategory._id : product.subCategory;
+          
+          return allRelevantCategoryIds.includes(productMainCat) || allRelevantCategoryIds.includes(productSubCat);
+        })
       );
+      
       return categoryProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
           {categoryProducts.map((product) => (
@@ -2720,7 +2921,10 @@ const CartModal = () => {
             We couldn't find any products in the "{selectedCategory}" category at the moment.
           </p>
           <button
-            onClick={() => setSelectedCategory(null)}
+            onClick={() => {
+              setSelectedCategory(null);
+              setSelectedCategoryPath([]);
+            }}
             className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
           >
             Browse All Products
