@@ -296,26 +296,58 @@ const handleSearchResultClick = (result) => {
 }
 
 const getFilteredProducts = () => {
-  // Filter out inactive products
-  let activeProducts = products.filter(product => product.isActive !== false);
-  
+  // Log initial product and category data for debugging
+  console.log("Products:", products);
+  console.log("Categories:", categories);
+
+  // Filter out inactive products and products with inactive categories
+  let activeProducts = products.filter(product => {
+    // Check if product is active
+    if (product.isActive === false) {
+      console.log(`Filtered out inactive product: ${product.name} (${product._id})`);
+      return false;
+    }
+
+    // Find the mainCategory and subCategory
+    const mainCat = categories.find(cat => cat._id.toString() === product.mainCategory?.toString());
+    const subCat = product.subCategory ? categories.find(cat => cat._id.toString() === product.subCategory?.toString()) : null;
+
+    // Log category details for debugging
+    console.log(`Product: ${product.name}, Main Category:`, mainCat, `Sub Category:`, subCat);
+
+    // Filter out if mainCategory is inactive
+    if (mainCat && mainCat.isActive === false) {
+      console.log(`Filtered out product ${product.name} due to inactive mainCategory: ${mainCat.categoryName}`);
+      return false;
+    }
+
+    // Filter out if subCategory is inactive
+    if (subCat && subCat.isActive === false) {
+      console.log(`Filtered out product ${product.name} due to inactive subCategory: ${subCat.categoryName}`);
+      return false;
+    }
+
+    return true;
+  });
+
+  // Apply search query filtering if present
   if (!searchQuery.trim()) {
     return activeProducts;
   }
-  
+
   const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
   return activeProducts.filter(product => {
     const productNameLower = product.name.toLowerCase();
     const nameMatch = searchTerms.every(term => productNameLower.includes(term));
-    
+
     const variantMatch = product.variants?.some(v => {
       const fullName = `${product.name} ${v.colorName}`.toLowerCase();
       return searchTerms.every(term => fullName.includes(term));
     });
-    
+
     return nameMatch || variantMatch;
   });
-}
+};
 
   // Close dropdowns of search when clicking outside
   useEffect(() => {
@@ -2745,14 +2777,14 @@ const CartModal = () => {
           </section>
         )}
 
-        <section id="all-products-section">
+        <section>
   <h2 className="text-2xl font-bold text-gray-800 mb-6">All Products</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-            {sortProductsByPrice(products).map((product) => (
-              <ProductCard key={product._id} product={product} />
-            ))}
-          </div>
-        </section>
+  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
+    {sortProductsByPrice(getFilteredProducts()).map((product) => (
+      <ProductCard key={product._id} product={product} />
+    ))}
+  </div>
+</section>
       </div>
 
       <footer className="bg-gray-800 text-white py-8 mt-12">
