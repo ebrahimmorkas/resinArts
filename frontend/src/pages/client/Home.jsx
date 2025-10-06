@@ -106,7 +106,6 @@ const handleCartCheckout = async () => {
   const [searchQuery, setSearchQuery] = useState("")
   const [wishlist, setWishlist] = useState([])
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null)
-  const [showCategoryFilter, setShowCategoryFilter] = useState(false)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
   const { discountData, loadingDiscount, loadingErrors, isDiscountAvailable } = useContext(DiscountContext);
@@ -122,6 +121,7 @@ const handleCartCheckout = async () => {
   console.log("Products from context:", contextData)
 
   // Refs for scrolling to sections
+  const categoriesRef = useRef(null)
   const justArrivedRef = useRef(null)
   const restockedRef = useRef(null)
   const revisedRatesRef = useRef(null)
@@ -585,61 +585,45 @@ const handleLogout = async () => {
   }
 
   const handleCategoryClick = (category) => {
-    if (selectedCategory === category.categoryName) {
-      setSelectedCategory(null)
-    } else {
-      setSelectedCategory(category.categoryName)
-    }
+  if (selectedCategory === category.categoryName) {
+    setSelectedCategory(null)
+  } else {
+    setSelectedCategory(category.categoryName)
+    // Scroll to category section after a brief delay
+    setTimeout(() => {
+      document.getElementById('selected-category-section')?.scrollIntoView({ behavior: 'smooth' })
+    }, 100)
   }
+}
 
   const handleFilterChange = (filter) => {
-    const wasSelected = selectedFilters.includes(filter)
+  const wasSelected = selectedFilters.includes(filter)
 
-    if (filter === "category") {
-      if (wasSelected) {
-        setShowCategoryFilter(false)
-        setSelectedCategory(null)
-        setSelectedFilters((prev) => {
-          const filtered = prev.filter((f) => f !== "category")
-          return filtered.length === 0 ? ["all"] : filtered
-        })
-      } else {
-        setShowCategoryFilter(true)
-        setSelectedCategory(mainCategories[0]?.categoryName || null)
-        setSelectedFilters((prev) => {
-          const newFilters = prev.filter((f) => f !== "all")
-          return [...newFilters, "category"]
-        })
-      }
-      return
+  setSelectedFilters((prev) => {
+    if (filter === "all") {
+      setSelectedCategory(null) // Clear category selection when "All Products" is clicked
+      return ["all"]
     }
+    const newFilters = prev.filter((f) => f !== "all")
+    if (newFilters.includes(filter)) {
+      const filtered = newFilters.filter((f) => f !== filter)
+      return filtered.length === 0 ? ["all"] : filtered
+    }
+    return [...newFilters, filter]
+  })
 
-    setSelectedFilters((prev) => {
-      if (filter === "all") {
-        setShowCategoryFilter(false)
-        setSelectedCategory(null)
-        return ["all"]
-      }
-      const newFilters = prev.filter((f) => f !== "all")
-      if (newFilters.includes(filter)) {
-        const filtered = newFilters.filter((f) => f !== filter)
-        return filtered.length === 0 ? ["all"] : filtered
-      }
-      return [...newFilters, filter]
-    })
-
-    if (!wasSelected) {
-      if (filter === "just-arrived") {
-        setTimeout(() => justArrivedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
-      } else if (filter === "restocked") {
-        setTimeout(() => restockedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
-      } else if (filter === "revised-rates") {
-        setTimeout(() => revisedRatesRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
-      } else if (filter === "out-of-stock") {
-        setTimeout(() => outOfStockRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
-      }
+  if (!wasSelected) {
+    if (filter === "just-arrived") {
+      setTimeout(() => justArrivedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+    } else if (filter === "restocked") {
+      setTimeout(() => restockedRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+    } else if (filter === "revised-rates") {
+      setTimeout(() => revisedRatesRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
+    } else if (filter === "out-of-stock") {
+      setTimeout(() => outOfStockRef.current?.scrollIntoView({ behavior: "smooth" }), 100)
     }
   }
+}
 
   const toggleWishlist = (productId) => {
     setWishlist((prev) => (prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]))
@@ -2369,7 +2353,6 @@ const CartModal = () => {
 
   const filterOptions = [
     { key: "all", label: "All Products" },
-    { key: "category", label: "Shop by Category" },
   ];
 
   if (getJustArrivedProducts().length > 0) {
@@ -2574,8 +2557,8 @@ const CartModal = () => {
       <BannerCarousel />
 
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-        <section className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Categories</h2>
+        <section className="mb-12" ref={categoriesRef} id="categories-section">
+  <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Categories</h2>
           <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
             {mainCategories.slice(0, 10).map((category) => (
               <div
@@ -2620,17 +2603,17 @@ const CartModal = () => {
           <div className="flex flex-wrap gap-3 justify-center">
             {filterOptions.map((filter) => (
               <button
-                key={filter.key}
-                onClick={() => handleFilterChange(filter.key)}
-                className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
-                  selectedFilters.includes(filter.key)
-                    ? "bg-blue-600 text-white shadow-lg scale-105"
-                    : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-blue-300"
-                }`}
-              >
-                {selectedFilters.includes(filter.key) && <Check className="w-4 h-4 text-white" />}
-                {filter.label}
-              </button>
+  key={filter.key}
+  onClick={() => handleFilterChange(filter.key)}
+  className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
+    selectedFilters.includes(filter.key)
+      ? "bg-blue-600 text-white shadow-lg scale-105"
+      : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-blue-300"
+  }`}
+>
+  {selectedFilters.includes(filter.key) && <Check className="w-4 h-4" />}
+  <span>{filter.label}</span>
+</button>
             ))}
           </div>
         </section>
@@ -2669,18 +2652,29 @@ const CartModal = () => {
   </section>
 )}
 
-        {showCategoryFilter && selectedCategory && (
-          <section className="mb-12">
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">{selectedCategory}</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-              {sortProductsByPrice(
-               getFilteredProducts().filter((product) => product.categoryPath?.includes(selectedCategory))
-              ).map((product) => (
-                <ProductCard key={product._id} product={product} />
-              ))}
-            </div>
-          </section>
-        )}
+        {selectedCategory && (
+  <section className="mb-12" id="selected-category-section">
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold text-gray-800">{selectedCategory}</h2>
+      <button
+        onClick={() => {
+          categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })
+        }}
+        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200"
+      >
+        <ChevronLeft className="w-4 h-4" />
+        Go to Categories
+      </button>
+    </div>
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
+      {sortProductsByPrice(
+       getFilteredProducts().filter((product) => product.categoryPath?.includes(selectedCategory))
+      ).map((product) => (
+        <ProductCard key={product._id} product={product} />
+      ))}
+    </div>
+  </section>
+)}
 
         {getJustArrivedProducts().length > 0 && (
           <section className="mb-12" ref={justArrivedRef}>

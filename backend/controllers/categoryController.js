@@ -5,6 +5,7 @@ const xlsx = require('xlsx');
 const path = require('path');
 const fs = require('fs');
 const {cloudinary} = require('../utils/cloudinary');
+const mongoose = require('mongoose');
 
 // Fetching all the categories (This function is not intended for fteching the categories while the adding the product)
 const fetchCategories = async (req, res) => {
