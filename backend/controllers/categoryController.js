@@ -1,4 +1,5 @@
 const Category = require('../models/Category');
+const Product = require('../models/Product');
 const multer = require('multer');
 const xlsx = require('xlsx');
 const path = require('path');
@@ -434,6 +435,242 @@ const deleteCategory = async (req, res) => {
   }
 };
 
+// Start of function to activate/deactivate category
+const toggleCategoryStatus = async (req, res) => {
+  try {
+    const { categoryId, isActive, reactivateProducts } = req.body;
+
+    if (!categoryId) {
+      return res.status(400).json({ message: 'Category ID is required' });
+    }
+
+    const category = await Category.findById(categoryId);
+    
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    if (isActive) {
+      // Activating category
+      category.isActive = true;
+
+      // Get all descendant categories
+      const getAllDescendantIds = async (parentId) => {
+        const children = await Category.find({ parent_category_id: parentId });
+        let allIds = children.map(child => child._id);
+        
+        for (const child of children) {
+          const descendantIds = await getAllDescendantIds(child._id);
+          allIds = allIds.concat(descendantIds);
+        }
+        
+        return allIds;
+      };
+
+      const descendantIds = await getAllDescendantIds(categoryId);
+      const allCategoryIds = [categoryId, ...descendantIds];
+
+      // Activate all descendant categories
+      await Category.updateMany(
+        { _id: { $in: allCategoryIds } },
+        { $set: { isActive: true } }
+      );
+
+      // Handle product reactivation
+      if (reactivateProducts && category.deactivatedProducts && category.deactivatedProducts.length > 0) {
+        const productsToReactivate = [];
+        
+        for (const productId of category.deactivatedProducts) {
+          const product = await Product.findById(productId).populate('mainCategory subCategory');
+          
+          if (!product) continue;
+
+          // Check if both categories are active
+          let canReactivate = true;
+          
+          if (!product.mainCategory || !product.mainCategory.isActive) {
+            canReactivate = false;
+          }
+          
+          if (product.subCategory && !product.subCategory.isActive) {
+            canReactivate = false;
+          }
+
+          if (canReactivate) {
+            product.isActive = true;
+            product.deactivatedBy = null;
+            product.deactivatedDueToCategory = null;
+            
+            if (product.hasVariants) {
+              product.variants.forEach(variant => {
+                variant.isActive = true;
+                variant.moreDetails.forEach(md => {
+                  md.isActive = true;
+                });
+              });
+            }
+            
+            await product.save();
+            productsToReactivate.push(productId);
+          }
+        }
+
+        // Clear deactivated products list
+        category.deactivatedProducts = [];
+        await category.save();
+
+        // Clear from other categories' deactivatedProducts arrays
+        await Category.updateMany(
+          { _id: { $in: allCategoryIds } },
+          { $set: { deactivatedProducts: [] } }
+        );
+
+        return res.status(200).json({ 
+          message: 'Category activated successfully',
+          reactivatedProducts: productsToReactivate.length,
+          categoryIds: allCategoryIds
+        });
+      }
+
+      await category.save();
+      return res.status(200).json({ 
+        message: 'Category activated successfully',
+        categoryIds: allCategoryIds
+      });
+
+    } else {
+      // Deactivating category
+      category.isActive = false;
+
+      // Get all descendant categories
+      const getAllDescendantIds = async (parentId) => {
+        const children = await Category.find({ parent_category_id: parentId });
+        let allIds = children.map(child => child._id);
+        
+        for (const child of children) {
+          const descendantIds = await getAllDescendantIds(child._id);
+          allIds = allIds.concat(descendantIds);
+        }
+        
+        return allIds;
+      };
+
+      const descendantIds = await getAllDescendantIds(categoryId);
+      const allCategoryIds = [categoryId, ...descendantIds];
+
+      // Deactivate all descendant categories
+      await Category.updateMany(
+        { _id: { $in: allCategoryIds } },
+        { $set: { isActive: false } }
+      );
+
+      // Find and deactivate all products with these categories
+      const affectedProducts = await Product.find({
+        $or: [
+          { mainCategory: { $in: allCategoryIds } },
+          { subCategory: { $in: allCategoryIds } }
+        ],
+        isActive: true
+      });
+
+      const deactivatedProductIds = [];
+
+      for (const product of affectedProducts) {
+        product.isActive = false;
+        product.deactivatedBy = 'category';
+        product.deactivatedDueToCategory = categoryId;
+        
+        if (product.hasVariants) {
+          product.variants.forEach(variant => {
+            variant.isActive = false;
+            variant.moreDetails.forEach(md => {
+              md.isActive = false;
+            });
+          });
+        }
+        
+        await product.save();
+        deactivatedProductIds.push(product._id);
+      }
+
+      // Store deactivated products in category
+      category.deactivatedProducts = deactivatedProductIds;
+      await category.save();
+
+      return res.status(200).json({ 
+        message: 'Category deactivated successfully',
+        deactivatedProducts: deactivatedProductIds.length,
+        categoryIds: allCategoryIds
+      });
+    }
+
+  } catch (error) {
+    console.error('Toggle category status error:', error);
+    return res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error.message 
+    });
+  }
+};
+// End of function to activate/deactivate category
+
+// Start of function to bulk activate/deactivate categories
+const bulkToggleCategoryStatus = async (req, res) => {
+  try {
+    const { categoryIds, isActive, reactivateProducts } = req.body;
+
+    if (!categoryIds || !Array.isArray(categoryIds) || categoryIds.length === 0) {
+      return res.status(400).json({ message: 'Category IDs array is required' });
+    }
+
+    const results = {
+      successful: [],
+      failed: []
+    };
+
+    for (const categoryId of categoryIds) {
+      try {
+        const requestBody = { categoryId, isActive };
+        if (reactivateProducts !== undefined) {
+          requestBody.reactivateProducts = reactivateProducts;
+        }
+
+        // Reuse single toggle function
+        await toggleCategoryStatus({ body: requestBody }, {
+          status: (code) => ({
+            json: (data) => {
+              if (code === 200) {
+                results.successful.push({ categoryId, ...data });
+              } else {
+                results.failed.push({ categoryId, error: data.message });
+              }
+            }
+          })
+        });
+
+      } catch (error) {
+        results.failed.push({
+          categoryId,
+          error: error.message
+        });
+      }
+    }
+
+    return res.status(200).json({
+      message: `${results.successful.length} categories updated successfully`,
+      results
+    });
+
+  } catch (error) {
+    console.error('Bulk toggle category status error:', error);
+    return res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error.message 
+    });
+  }
+};
+// End of function to bulk activate/deactivate categories
+
 module.exports = {
     fetchCategories,
     findCategoryById,
@@ -443,5 +680,7 @@ module.exports = {
     deleteCategory,
     updateCategoryName, 
     updateCategoryImage, 
-    addSubcategory 
+    addSubcategory,
+    toggleCategoryStatus,
+    bulkToggleCategoryStatus
 }

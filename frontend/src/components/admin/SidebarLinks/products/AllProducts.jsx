@@ -1,5 +1,5 @@
 import React, { useContext, useState, useEffect, useMemo } from "react";
-import { Edit2, Trash2, X, AlertTriangle, Calendar, Clock, DollarSign, Check, Package, Search, Filter, Download, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit2, Trash2, X, AlertTriangle, Calendar, Clock, DollarSign, Check, Package, Search, Filter, Download, Eye, ChevronLeft, ChevronRight, Power, PowerOff } from "lucide-react";
 import { ProductContext } from '../../../../../Context/ProductContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
@@ -39,7 +39,12 @@ export default function AdminProductsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorDetails, setErrorDetails] = useState({ type: 'general', message: '' });
+  const [showStatusModal, setShowStatusModal] = useState(false);
+const [statusModalData, setStatusModalData] = useState({ productId: null, isActive: false, productName: '' });
+const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
+const [bulkStatusAction, setBulkStatusAction] = useState(null);
   const navigate = useNavigate();
+  
 
   // Effects
   useEffect(() => {
@@ -128,7 +133,84 @@ export default function AdminProductsPage() {
     } else {
       setSelectedProducts(filteredData);
     }
-  };
+  };  
+
+  // Handle single product status toggle
+const handleToggleStatus = (productId, newStatus) => {
+  const product = products.find(p => p._id === productId);
+  setStatusModalData({
+    productId,
+    isActive: newStatus,
+    productName: product?.name || 'Unknown Product'
+  });
+  setShowStatusModal(true);
+};
+
+// Confirm single status change
+const confirmStatusChange = async () => {
+  setIsLoading(true);
+  try {
+    const res = await axios.post(
+      'http://localhost:3000/api/product/toggle-status',
+      {
+        productId: statusModalData.productId,
+        isActive: statusModalData.isActive
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      // Refresh products list - you might need to call a context method here
+      window.location.reload(); // Temporary solution
+    }
+  } catch (error) {
+    console.error('Error toggling product status:', error);
+    const errorMsg = error.response?.data?.message || 'Failed to update product status';
+    toast.error(errorMsg);
+  } finally {
+    setIsLoading(false);
+    setShowStatusModal(false);
+  }
+};
+
+// Handle bulk status toggle
+const handleBulkStatusToggle = (activate) => {
+  if (selectedProducts.length === 0) {
+    toast.warning('Please select products first');
+    return;
+  }
+  setBulkStatusAction(activate);
+  setShowBulkStatusModal(true);
+};
+
+// Confirm bulk status change
+const confirmBulkStatusChange = async () => {
+  setIsLoading(true);
+  try {
+    const productIds = selectedProducts.map(p => p._id);
+    const res = await axios.post(
+      'http://localhost:3000/api/product/bulk-toggle-status',
+      {
+        productIds,
+        isActive: bulkStatusAction
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      setSelectedProducts([]);
+      window.location.reload(); // Temporary solution
+    }
+  } catch (error) {
+    console.error('Error bulk toggling status:', error);
+    toast.error(error.response?.data?.message || 'Failed to update products');
+  } finally {
+    setIsLoading(false);
+    setShowBulkStatusModal(false);
+  }
+};
 
   const exportToExcel = () => {
     const exportData = products.map((product, index) => ({
@@ -2094,6 +2176,20 @@ const DeleteConfirmationModal = () => {
           <Edit2 className="w-4 h-4 inline mr-1" />
           Bulk Edit
         </button>
+        <button 
+          onClick={() => handleBulkStatusToggle(true)}
+          className="bg-green-500 hover:bg-green-600 text-green-600 px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center"
+        >
+          <Power className="w-4 h-4 mr-1" />
+          Activate Selected
+        </button>
+        <button 
+          onClick={() => handleBulkStatusToggle(false)}
+          className="bg-orange-500 hover:bg-orange-600 text-red-600 px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center"
+        >
+          <PowerOff className="w-4 h-4 mr-1" />
+          Deactivate Selected
+        </button>
                     <button 
   onClick={() => setShowDeleteModal(true)} 
   className="bg-red-500 hover:bg-red-600 text-red-600 px-3 py-1 rounded-md text-sm font-medium transition-colors"
@@ -2136,6 +2232,9 @@ const DeleteConfirmationModal = () => {
                   </th>
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Created At
+                  </th>
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Status
                   </th>
                   {selectedProducts.length === 0 && (
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -2189,6 +2288,32 @@ const DeleteConfirmationModal = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
                       {formatDate(product.createdAt)}
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      handleToggleStatus(product._id, !product.isActive);
+    }}
+    className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+      product.isActive 
+        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+        : 'bg-red-100 text-red-800 hover:bg-red-200'
+    }`}
+    title={product.isActive ? 'Click to deactivate' : 'Click to activate'}
+  >
+    {product.isActive ? (
+      <>
+        <Power className="w-3 h-3 mr-1" />
+        Active
+      </>
+    ) : (
+      <>
+        <PowerOff className="w-3 h-3 mr-1" />
+        Inactive
+      </>
+    )}
+  </button>
+</td>
                     {selectedProducts.length === 0 && (
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
                         <div className="flex items-center justify-center space-x-2">
@@ -2303,6 +2428,106 @@ const DeleteConfirmationModal = () => {
       {/* {showEditModal && <EditModal product={selectedProductForEdit} onClose={() => setShowEditModal(false)} />} */}
       <DeleteConfirmationModal />
       <ErrorModal />
+      {/* Status Confirmation Modal */}
+{showStatusModal && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {statusModalData.isActive ? 'Activate Product' : 'Deactivate Product'}
+        </h3>
+      </div>
+      <div className="px-6 py-4">
+        <p className="text-gray-600">
+          Are you sure you want to {statusModalData.isActive ? 'activate' : 'deactivate'}{' '}
+          <span className="font-semibold text-gray-900">"{statusModalData.productName}"</span>?
+        </p>
+        {!statusModalData.isActive && (
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              This product will not be visible to customers.
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+        <button
+          onClick={() => setShowStatusModal(false)}
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          disabled={isLoading}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={confirmStatusChange}
+          disabled={isLoading}
+          className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors ${
+            statusModalData.isActive 
+              ? 'bg-green-600 hover:bg-green-700' 
+              : 'bg-orange-600 hover:bg-orange-700'
+          } disabled:opacity-50`}
+        >
+          {isLoading ? 'Processing...' : 'Confirm'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Bulk Status Confirmation Modal */}
+{showBulkStatusModal && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {bulkStatusAction ? 'Activate' : 'Deactivate'} Multiple Products
+        </h3>
+      </div>
+      <div className="px-6 py-4">
+        <p className="text-gray-600">
+          Are you sure you want to {bulkStatusAction ? 'activate' : 'deactivate'}{' '}
+          <span className="font-semibold text-gray-900">{selectedProducts.length} selected products</span>?
+        </p>
+        {bulkStatusAction && (
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              Only products with active categories will be activated.
+            </p>
+          </div>
+        )}
+        {!bulkStatusAction && (
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              These products will not be visible to customers.
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+        <button
+          onClick={() => setShowBulkStatusModal(false)}
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          disabled={isLoading}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={confirmBulkStatusChange}
+          disabled={isLoading}
+          className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors ${
+            bulkStatusAction 
+              ? 'bg-green-600 hover:bg-green-700' 
+              : 'bg-orange-600 hover:bg-orange-700'
+          } disabled:opacity-50`}
+        >
+          {isLoading ? 'Processing...' : 'Confirm'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 }

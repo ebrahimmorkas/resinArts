@@ -2270,6 +2270,300 @@ const duplicateProducts = async (req, res) => {
   }
 };
 // End of function that will handle duplication of products
+
+// Start of function for activating and deacivating products
+const toggleProductStatus = async (req, res) => {
+  try {
+    const { productId, isActive, variantId, sizeId } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({ message: 'Product ID is required' });
+    }
+
+    const product = await Product.findById(productId).populate('mainCategory subCategory');
+    
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // If activating product
+    if (isActive) {
+      // Check if categories exist and are active
+      if (!product.mainCategory) {
+        return res.status(400).json({ 
+          message: 'Cannot activate product: Main category does not exist' 
+        });
+      }
+
+      if (!product.mainCategory.isActive) {
+        return res.status(400).json({ 
+          message: `Cannot activate product: Main category "${product.mainCategory.categoryName}" is inactive` 
+        });
+      }
+
+      if (product.subCategory) {
+        if (!product.subCategory.isActive) {
+          return res.status(400).json({ 
+            message: `Cannot activate product: Sub category "${product.subCategory.categoryName}" is inactive` 
+          });
+        }
+      }
+
+      // If activating specific size
+      if (variantId && sizeId) {
+        const updateResult = await Product.updateOne(
+          { _id: productId },
+          { 
+            $set: { 
+              "variants.$[v].moreDetails.$[md].isActive": true
+            }
+          },
+          {
+            arrayFilters: [
+              { "v._id": variantId },
+              { "md._id": sizeId }
+            ]
+          }
+        );
+
+        if (updateResult.modifiedCount > 0) {
+          return res.status(200).json({ message: 'Size activated successfully' });
+        } else {
+          return res.status(400).json({ message: 'Failed to activate size' });
+        }
+      }
+
+      // If activating specific variant
+      if (variantId && !sizeId) {
+        const updateResult = await Product.updateOne(
+          { _id: productId },
+          { 
+            $set: { 
+              "variants.$[v].isActive": true,
+              "variants.$[v].moreDetails.$[].isActive": true
+            }
+          },
+          {
+            arrayFilters: [
+              { "v._id": variantId }
+            ]
+          }
+        );
+
+        if (updateResult.modifiedCount > 0) {
+          return res.status(200).json({ message: 'Variant activated successfully' });
+        } else {
+          return res.status(400).json({ message: 'Failed to activate variant' });
+        }
+      }
+
+      // Activating entire product
+      product.isActive = true;
+      product.deactivatedBy = null;
+      product.deactivatedDueToCategory = null;
+      
+      if (product.hasVariants) {
+        product.variants.forEach(variant => {
+          variant.isActive = true;
+          variant.moreDetails.forEach(md => {
+            md.isActive = true;
+          });
+        });
+      }
+
+      await product.save();
+      return res.status(200).json({ message: 'Product activated successfully' });
+
+    } else {
+      // Deactivating product/variant/size
+      
+      // If deactivating specific size
+      if (variantId && sizeId) {
+        const updateResult = await Product.updateOne(
+          { _id: productId },
+          { 
+            $set: { 
+              "variants.$[v].moreDetails.$[md].isActive": false
+            }
+          },
+          {
+            arrayFilters: [
+              { "v._id": variantId },
+              { "md._id": sizeId }
+            ]
+          }
+        );
+
+        if (updateResult.modifiedCount > 0) {
+          return res.status(200).json({ message: 'Size deactivated successfully' });
+        } else {
+          return res.status(400).json({ message: 'Failed to deactivate size' });
+        }
+      }
+
+      // If deactivating specific variant
+      if (variantId && !sizeId) {
+        const updateResult = await Product.updateOne(
+          { _id: productId },
+          { 
+            $set: { 
+              "variants.$[v].isActive": false,
+              "variants.$[v].moreDetails.$[].isActive": false
+            }
+          },
+          {
+            arrayFilters: [
+              { "v._id": variantId }
+            ]
+          }
+        );
+
+        if (updateResult.modifiedCount > 0) {
+          return res.status(200).json({ message: 'Variant deactivated successfully' });
+        } else {
+          return res.status(400).json({ message: 'Failed to deactivate variant' });
+        }
+      }
+
+      // Deactivating entire product
+      product.isActive = false;
+      product.deactivatedBy = 'manual';
+      
+      if (product.hasVariants) {
+        product.variants.forEach(variant => {
+          variant.isActive = false;
+          variant.moreDetails.forEach(md => {
+            md.isActive = false;
+          });
+        });
+      }
+
+      await product.save();
+      return res.status(200).json({ message: 'Product deactivated successfully' });
+    }
+
+  } catch (error) {
+    console.error('Toggle product status error:', error);
+    return res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error.message 
+    });
+  }
+};
+// End of function for activating and deacivating products
+
+// Start of function to activate and deactivate products in bulk
+const bulkToggleProductStatus = async (req, res) => {
+  try {
+    const { productIds, isActive } = req.body;
+
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({ message: 'Product IDs array is required' });
+    }
+
+    const results = {
+      successful: [],
+      failed: []
+    };
+
+    for (const productId of productIds) {
+      try {
+        const product = await Product.findById(productId).populate('mainCategory subCategory');
+        
+        if (!product) {
+          results.failed.push({
+            productId,
+            error: 'Product not found'
+          });
+          continue;
+        }
+
+        if (isActive) {
+          // Check categories before activating
+          if (!product.mainCategory) {
+            results.failed.push({
+              productId,
+              productName: product.name,
+              error: 'Main category does not exist'
+            });
+            continue;
+          }
+
+          if (!product.mainCategory.isActive) {
+            results.failed.push({
+              productId,
+              productName: product.name,
+              error: `Main category "${product.mainCategory.categoryName}" is inactive`
+            });
+            continue;
+          }
+
+          if (product.subCategory && !product.subCategory.isActive) {
+            results.failed.push({
+              productId,
+              productName: product.name,
+              error: `Sub category "${product.subCategory.categoryName}" is inactive`
+            });
+            continue;
+          }
+
+          // Activate product
+          product.isActive = true;
+          product.deactivatedBy = null;
+          product.deactivatedDueToCategory = null;
+          
+          if (product.hasVariants) {
+            product.variants.forEach(variant => {
+              variant.isActive = true;
+              variant.moreDetails.forEach(md => {
+                md.isActive = true;
+              });
+            });
+          }
+
+        } else {
+          // Deactivate product
+          product.isActive = false;
+          product.deactivatedBy = 'manual';
+          
+          if (product.hasVariants) {
+            product.variants.forEach(variant => {
+              variant.isActive = false;
+              variant.moreDetails.forEach(md => {
+                md.isActive = false;
+              });
+            });
+          }
+        }
+
+        await product.save();
+        results.successful.push({
+          productId,
+          productName: product.name
+        });
+
+      } catch (error) {
+        results.failed.push({
+          productId,
+          error: error.message
+        });
+      }
+    }
+
+    return res.status(200).json({
+      message: `${results.successful.length} products updated successfully`,
+      results
+    });
+
+  } catch (error) {
+    console.error('Bulk toggle product status error:', error);
+    return res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error.message 
+    });
+  }
+};
+// End of function to activate and deactivate products in bulk
 module.exports = {
   addProduct: [upload.any(), addProduct],
   fetchProducts,
@@ -2283,5 +2577,7 @@ module.exports = {
   editProduct,
   getProductById,
   bulkEditProducts,
-  duplicateProducts
+  duplicateProducts,
+  toggleProductStatus,
+  bulkToggleProductStatus,
 }

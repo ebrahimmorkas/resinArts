@@ -296,22 +296,25 @@ const handleSearchResultClick = (result) => {
 }
 
 const getFilteredProducts = () => {
+  // Filter out inactive products
+  let activeProducts = products.filter(product => product.isActive !== false);
+  
   if (!searchQuery.trim()) {
-    return products
+    return activeProducts;
   }
   
-  const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0)
-  return products.filter(product => {
-    const productNameLower = product.name.toLowerCase()
-    const nameMatch = searchTerms.every(term => productNameLower.includes(term))
+  const searchTerms = searchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
+  return activeProducts.filter(product => {
+    const productNameLower = product.name.toLowerCase();
+    const nameMatch = searchTerms.every(term => productNameLower.includes(term));
     
     const variantMatch = product.variants?.some(v => {
-      const fullName = `${product.name} ${v.colorName}`.toLowerCase()
-      return searchTerms.every(term => fullName.includes(term))
-    })
+      const fullName = `${product.name} ${v.colorName}`.toLowerCase();
+      return searchTerms.every(term => fullName.includes(term));
+    });
     
-    return nameMatch || variantMatch
-  })
+    return nameMatch || variantMatch;
+  });
 }
 
   // Close dropdowns of search when clicking outside
@@ -673,7 +676,9 @@ const handleLogout = async () => {
   }
 
   // Filter main categories (those without a parent_category_id)
-  const mainCategories = categories.filter(category => !category.parent_category_id);
+  const mainCategories = categories.filter(category => 
+  !category.parent_category_id && category.isActive !== false
+);
 
   // Sort products by price if price-low-to-high filter is selected
   const sortProductsByPrice = (products) => {
@@ -765,8 +770,12 @@ const handleLogout = async () => {
 
   const ProductCard = ({ product, forcedBadge = null }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
-    const [selectedVariant, setSelectedVariant] = useState(product.variants?.[0] || null)
-    const [selectedSizeDetail, setSelectedSizeDetail] = useState(selectedVariant?.moreDetails?.[0] || null)
+    const [selectedVariant, setSelectedVariant] = useState(
+  product.variants?.find(v => v.isActive !== false) || null
+)
+    const [selectedSizeDetail, setSelectedSizeDetail] = useState(
+  selectedVariant?.moreDetails?.find(md => md.isActive !== false) || null
+)
     const [addQuantity, setAddQuantity] = useState(1)
     const [showDetails, setShowDetails] = useState(false)
 
@@ -775,12 +784,15 @@ const handleLogout = async () => {
     const initialSizeDetailRef = useRef(selectedVariant?.moreDetails?.[0] || null)
 
     useEffect(() => {
-      if (selectedVariant && selectedVariant.moreDetails && selectedVariant.moreDetails.length > 0) {
-        if (!selectedSizeDetail || !selectedVariant.moreDetails.includes(selectedSizeDetail)) {
-          setSelectedSizeDetail(selectedVariant.moreDetails[0])
-        }
+  if (selectedVariant && selectedVariant.moreDetails) {
+    const activeSizes = selectedVariant.moreDetails.filter(md => md.isActive !== false);
+    if (activeSizes.length > 0) {
+      if (!selectedSizeDetail || !activeSizes.includes(selectedSizeDetail)) {
+        setSelectedSizeDetail(activeSizes[0])
       }
-    }, [selectedVariant, selectedSizeDetail])
+    }
+  }
+}, [selectedVariant, selectedSizeDetail])
 
     const badge = forcedBadge || getProductBadge(product, selectedVariant, selectedSizeDetail)
 
@@ -794,13 +806,16 @@ const handleLogout = async () => {
     const isBulkDiscounted = isDiscountActive(product, selectedVariant, selectedSizeDetail) || getApplicableDiscount(product);
 
     const getVariantAndSizeCount = () => {
-      const variantCount = product.variants?.length || 0
-      const totalSizes =
-        product.variants?.reduce((total, variant) => {
-          return total + (variant.moreDetails?.length || 0)
-        }, 0) || 0
-      return { variantCount, totalSizes }
-    }
+  const activeVariants = product.variants?.filter(v => v.isActive !== false) || []
+  const variantCount = activeVariants.length
+  
+  const totalSizes = activeVariants.reduce((total, variant) => {
+    const activeSizes = variant.moreDetails?.filter(md => md.isActive !== false) || []
+    return total + activeSizes.length
+  }, 0)
+  
+  return { variantCount, totalSizes }
+}
 
     const { variantCount, totalSizes } = getVariantAndSizeCount()
 
@@ -997,9 +1012,9 @@ const handleLogout = async () => {
               ) : (
                 <div className="mb-3 space-y-3">
                   <div className="flex items-center gap-1 mb-2">
-                    <span className="text-xs text-gray-600">Variants:</span>
-                    <div className="flex gap-1 flex-wrap">
-                      {product.variants?.map((variant, index) => (
+  <span className="text-xs text-gray-600">Variants:</span>
+  <div className="flex gap-1 flex-wrap">
+    {product.variants?.filter(v => v.isActive !== false).map((variant, index) => (
                         <button
                           key={index}
                           onClick={() => handleVariantSelect(variant)}
@@ -1026,11 +1041,11 @@ const handleLogout = async () => {
                     </div>
                   )}
 
-                  {selectedVariant && selectedVariant.moreDetails && selectedVariant.moreDetails.length > 1 && (
-                    <div>
-                      <span className="text-xs text-gray-600 mb-1 block">Available Sizes:</span>
-                      <div className="flex gap-1 flex-wrap">
-                        {selectedVariant.moreDetails.map((sizeDetail, index) => (
+                  {selectedVariant && selectedVariant.moreDetails && selectedVariant.moreDetails.filter(md => md.isActive !== false).length > 1 && (
+  <div>
+    <span className="text-xs text-gray-600 mb-1 block">Available Sizes:</span>
+    <div className="flex gap-1 flex-wrap">
+      {selectedVariant.moreDetails.filter(md => md.isActive !== false).map((sizeDetail, index) => (
                           <button
                             key={index}
                             onClick={() => handleSizeSelect(sizeDetail)}
@@ -1407,8 +1422,12 @@ const handleLogout = async () => {
 
 
   const VariantModal = ({ product, onClose }) => {
-    const [selectedVariant, setSelectedVariant] = useState(product?.variants?.[0] || null)
-    const [selectedSizeDetail, setSelectedSizeDetail] = useState(selectedVariant?.moreDetails?.[0] || null)
+    const [selectedVariant, setSelectedVariant] = useState(
+  product.variants?.find(v => v.isActive !== false) || null
+)
+    const [selectedSizeDetail, setSelectedSizeDetail] = useState(
+  selectedVariant?.moreDetails?.find(md => md.isActive !== false) || null
+)
     const [localQuantityToAdd, setLocalQuantityToAdd] = useState(1)
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
 
@@ -1429,12 +1448,15 @@ const handleLogout = async () => {
     }, [])
 
     useEffect(() => {
-      if (selectedVariant && selectedVariant.moreDetails && selectedVariant.moreDetails.length > 0) {
-        if (!selectedSizeDetail || !selectedVariant.moreDetails.includes(selectedSizeDetail)) {
-          setSelectedSizeDetail(selectedVariant.moreDetails[0])
-        }
+  if (selectedVariant && selectedVariant.moreDetails) {
+    const activeSizes = selectedVariant.moreDetails.filter(md => md.isActive !== false);
+    if (activeSizes.length > 0) {
+      if (!selectedSizeDetail || !activeSizes.includes(selectedSizeDetail)) {
+        setSelectedSizeDetail(activeSizes[0])
       }
-    }, [selectedVariant, selectedSizeDetail])
+    }
+  }
+}, [selectedVariant, selectedSizeDetail])
 
     if (!product) return null
 
@@ -1540,7 +1562,7 @@ const handleLogout = async () => {
             <div className="mb-6">
               <h4 className="font-semibold mb-3">Color: {selectedVariant?.colorName || "Select Color"}</h4>
               <div className="flex gap-3 flex-wrap">
-                {product.variants?.map((variant, index) => {
+                {product.variants?.filter(v => v.isActive !== false).map((variant, index) => {
                   const isSelected = selectedVariant?.colorName === variant.colorName
 
                   return (
@@ -1576,7 +1598,7 @@ const handleLogout = async () => {
                   Size: {selectedSizeDetail ? formatSize(selectedSizeDetail.size) : "Select Size"}
                 </h4>
                 <div className="flex gap-2 flex-wrap">
-                  {selectedVariant.moreDetails.map((sizeDetail, index) => (
+                  {selectedVariant.moreDetails.filter(md => md.isActive !== false).map((sizeDetail, index) => (
                     <button
                       key={index}
                       onClick={() => handleSizeSelect(sizeDetail)}
@@ -1884,7 +1906,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                 <div>
                   <h4 className="text-sm font-semibold text-gray-700 mb-2">Variant Images</h4>
                   <div className="flex gap-2 overflow-x-auto pb-2">
-                    {product.variants.map((variant) => (
+                    {product.variants.filter(v => v.isActive !== false).map((variant) => (
                       <button
                         key={variant._id}
                         onClick={() => handleVariantChange(variant)}
@@ -1969,7 +1991,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                     Color: {selectedVariant?.colorName || "Select Color"}
                   </h3>
                   <div className="flex gap-2 flex-wrap">
-                    {product.variants.map((variant) => (
+                    {product.variants.filter(v => v.isActive !== false).map((variant) => (
                       <button
                         key={variant._id}
                         onClick={() => handleVariantChange(variant)}
@@ -1992,7 +2014,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                     Size: {selectedSize ? formatSize(selectedSize.size) : "Select Size"}
                   </h3>
                   <div className="grid grid-cols-2 gap-2 sm:gap-3">
-                    {selectedVariant.moreDetails.map((detail) => (
+                    {selectedVariant.moreDetails.filter(md => md.isActive !== false).map((detail) => (
                       <button
                         key={detail._id}
                         onClick={() => handleSizeChange(detail)}
