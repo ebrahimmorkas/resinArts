@@ -37,6 +37,15 @@ const companySettingsSchema = new mongoose.Schema({
     trim: true,
     lowercase: true
   },
+  companyName: {
+    type: String,
+    trim: true,
+    default: ''
+  },
+    companyLogo: {
+    type: String,
+    default: ''
+  },
   instagramId: {
     type: String,
     trim: true

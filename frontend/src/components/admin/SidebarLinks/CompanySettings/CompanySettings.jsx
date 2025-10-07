@@ -1,12 +1,13 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import JoditEditor from 'jodit-react';
-import { ChevronDown, ChevronUp, Save, Loader2 } from 'lucide-react';
+import { ChevronDown, ChevronUp, Save, Loader2, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
 const CompanySettings = () => {
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(true);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
   const [activeAccordion, setActiveAccordion] = useState(null);
   
   const editor1 = useRef(null);
@@ -16,6 +17,8 @@ const CompanySettings = () => {
   const editor5 = useRef(null);
   
   const [formData, setFormData] = useState({
+    companyName: '',
+    companyLogo: '',
     adminName: '',
     adminWhatsappNumber: '',
     adminPhoneNumber: '',
@@ -32,6 +35,9 @@ const CompanySettings = () => {
     refundPolicy: '',
     termsAndConditions: ''
   });
+
+  const [logoFile, setLogoFile] = useState(null);
+  const [logoPreview, setLogoPreview] = useState('');
 
   // Jodit Editor Configuration
   const editorConfig = useMemo(
@@ -106,10 +112,13 @@ const CompanySettings = () => {
       
       if (data.success) {
         setFormData(data.data);
+        if (data.data.companyLogo) {
+          setLogoPreview(data.data.companyLogo);
+        }
       }
     } catch (error) {
       if (error.response?.status !== 404) {
-        window.toast?.error?.(error.message || 'Failed to fetch settings');
+        toast.error(error.message || 'Failed to fetch settings');
       }
     } finally {
       setFetchLoading(false);
@@ -135,48 +144,83 @@ const CompanySettings = () => {
     setActiveAccordion(activeAccordion === index ? null : index);
   };
 
-  const showToast = (message, type = 'success') => {
-    // Using react-toastify
-    if (window.toast) {
-      if (type === 'success') {
-        window.toast.success(message);
-      } else {
-        window.toast.error(message);
+  const handleLogoChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      if (!file.type.startsWith('image/')) {
+        toast.error('Please select an image file');
+        return;
       }
-    } else {
-      alert(message);
+      
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error('File size should be less than 5MB');
+        return;
+      }
+
+      setLogoFile(file);
+      
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setLogoPreview(reader.result);
+      };
+      reader.readAsDataURL(file);
     }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     
-    // Validation
     if (!formData.adminName || !formData.adminEmail) {
-      showToast('Admin Name and Email are required', 'error');
+      toast.error('Admin Name and Email are required');
       return;
     }
 
     try {
       setLoading(true);
+      
+      const formDataToSend = new FormData();
+      
+      formDataToSend.append('adminName', formData.adminName);
+      formDataToSend.append('adminWhatsappNumber', formData.adminWhatsappNumber);
+      formDataToSend.append('adminPhoneNumber', formData.adminPhoneNumber);
+      formDataToSend.append('adminAddress', formData.adminAddress);
+      formDataToSend.append('adminCity', formData.adminCity);
+      formDataToSend.append('adminState', formData.adminState);
+      formDataToSend.append('adminPincode', formData.adminPincode);
+      formDataToSend.append('adminEmail', formData.adminEmail);
+      formDataToSend.append('companyName', formData.companyName);
+      formDataToSend.append('instagramId', formData.instagramId);
+      formDataToSend.append('facebookId', formData.facebookId);
+      formDataToSend.append('privacyPolicy', formData.privacyPolicy);
+      formDataToSend.append('returnPolicy', formData.returnPolicy);
+      formDataToSend.append('shippingPolicy', formData.shippingPolicy);
+      formDataToSend.append('refundPolicy', formData.refundPolicy);
+      formDataToSend.append('termsAndConditions', formData.termsAndConditions);
+      
+      if (logoFile) {
+        formDataToSend.append('logo', logoFile);
+      }
+
       const response = await fetch('http://localhost:3000/api/company-settings', {
         method: 'PUT',
         credentials: 'include',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(formData)
+        body: formDataToSend
       });
       
       const data = await response.json();
       
       if (data.success) {
-        showToast('Company settings updated successfully!', 'success');
+        toast.success('Company settings updated successfully!');
+        setFormData(data.data);
+        if (data.data.companyLogo) {
+          setLogoPreview(data.data.companyLogo);
+        }
+        setLogoFile(null);
       } else {
-        showToast(data.message || 'Failed to update settings', 'error');
+        toast.error(data.message || 'Failed to update settings');
       }
     } catch (error) {
-      showToast(error.message || 'Failed to update settings', 'error');
+      toast.error(error.message || 'Failed to update settings');
     } finally {
       setLoading(false);
     }
@@ -186,145 +230,225 @@ const CompanySettings = () => {
     {
       title: 'Personal Information',
       content: (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              Admin Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              name="adminName"
-              value={formData.adminName}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter admin name"
-            />
+        <div className="p-4 space-y-6">
+          <div className="border-b border-gray-200 pb-6">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Company Logo</h3>
+            <div className="flex flex-col md:flex-row gap-4 items-start">
+              <div className="flex-shrink-0">
+                <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden">
+                  {logoPreview || formData.companyLogo ? (
+                    <img
+                      src={logoPreview || formData.companyLogo}
+                      alt="Company Logo"
+                      className="w-full h-full object-contain"
+                    />
+                  ) : (
+                    <ImageIcon className="w-12 h-12 text-gray-400" />
+                  )}
+                </div>
+              </div>
+
+              <div className="flex-1 space-y-3">
+                <div className="flex flex-col sm:flex-row gap-2">
+                  <label className="flex-1 cursor-pointer">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleLogoChange}
+                      className="hidden"
+                      disabled={uploadingLogo}
+                    />
+                    <div className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-center border border-blue-200 flex items-center justify-center gap-2">
+                      <Upload className="w-4 h-4" />
+                      <span className="text-sm font-medium">Choose Logo</span>
+                    </div>
+                  </label>
+                  
+                  {(formData.companyLogo || logoPreview) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLogoFile(null);
+                        setLogoPreview('');
+                        setFormData(prev => ({
+                          ...prev,
+                          companyLogo: ''
+                        }));
+                      }}
+                      disabled={uploadingLogo}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                      <span className="text-sm font-medium">Delete</span>
+                    </button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  PNG or JPG. Max size: 5MB. Image will be saved when you click "Save Settings"
+                </p>
+                {logoFile && (
+                  <p className="text-xs text-green-600 font-medium">
+                    Selected: {logoFile.name}
+                  </p>
+                )}
+              </div>
+            </div>
           </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              Admin Email <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="email"
-              name="adminEmail"
-              value={formData.adminEmail}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter admin email"
-            />
-          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                Company Name
+              </label>
+              <input
+                type="text"
+                name="companyName"
+                value={formData.companyName}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter company name"
+              />
+            </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              WhatsApp Number
-            </label>
-            <input
-              type="text"
-              name="adminWhatsappNumber"
-              value={formData.adminWhatsappNumber}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter WhatsApp number"
-            />
-          </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                Admin Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                name="adminName"
+                value={formData.adminName}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter admin name"
+              />
+            </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              Phone Number
-            </label>
-            <input
-              type="text"
-              name="adminPhoneNumber"
-              value={formData.adminPhoneNumber}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter phone number"
-            />
-          </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                Admin Email <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="email"
+                name="adminEmail"
+                value={formData.adminEmail}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter admin email"
+              />
+            </div>
 
-          <div className="flex flex-col md:col-span-2">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              Address
-            </label>
-            <input
-              type="text"
-              name="adminAddress"
-              value={formData.adminAddress}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter address"
-            />
-          </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                WhatsApp Number
+              </label>
+              <input
+                type="text"
+                name="adminWhatsappNumber"
+                value={formData.adminWhatsappNumber}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter WhatsApp number"
+              />
+            </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              City
-            </label>
-            <input
-              type="text"
-              name="adminCity"
-              value={formData.adminCity}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter city"
-            />
-          </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                Phone Number
+              </label>
+              <input
+                type="text"
+                name="adminPhoneNumber"
+                value={formData.adminPhoneNumber}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter phone number"
+              />
+            </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              State
-            </label>
-            <input
-              type="text"
-              name="adminState"
-              value={formData.adminState}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter state"
-            />
-          </div>
+            <div className="flex flex-col md:col-span-2">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                Address
+              </label>
+              <input
+                type="text"
+                name="adminAddress"
+                value={formData.adminAddress}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter address"
+              />
+            </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              Pincode
-            </label>
-            <input
-              type="text"
-              name="adminPincode"
-              value={formData.adminPincode}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter pincode"
-            />
-          </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                City
+              </label>
+              <input
+                type="text"
+                name="adminCity"
+                value={formData.adminCity}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter city"
+              />
+            </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              Instagram ID
-            </label>
-            <input
-              type="text"
-              name="instagramId"
-              value={formData.instagramId}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter Instagram ID"
-            />
-          </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                State
+              </label>
+              <input
+                type="text"
+                name="adminState"
+                value={formData.adminState}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter state"
+              />
+            </div>
 
-          <div className="flex flex-col">
-            <label className="text-sm font-medium text-gray-700 mb-1">
-              Facebook ID
-            </label>
-            <input
-              type="text"
-              name="facebookId"
-              value={formData.facebookId}
-              onChange={handleInputChange}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              placeholder="Enter Facebook ID"
-            />
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                Pincode
+              </label>
+              <input
+                type="text"
+                name="adminPincode"
+                value={formData.adminPincode}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter pincode"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                Instagram ID
+              </label>
+              <input
+                type="text"
+                name="instagramId"
+                value={formData.instagramId}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter Instagram ID"
+              />
+            </div>
+
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-700 mb-1">
+                Facebook ID
+              </label>
+              <input
+                type="text"
+                name="facebookId"
+                value={formData.facebookId}
+                onChange={handleInputChange}
+                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                placeholder="Enter Facebook ID"
+              />
+            </div>
           </div>
         </div>
       )
@@ -421,7 +545,7 @@ const CompanySettings = () => {
             <p className="mt-2 text-blue-100">Manage your company information and policies</p>
           </div>
 
-          <div onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit}>
             <div className="p-6 sm:p-8 space-y-4">
               {accordions.map((accordion, index) => (
                 <div
@@ -446,7 +570,7 @@ const CompanySettings = () => {
                   <div
                     className={`transition-all duration-300 ease-in-out ${
                       activeAccordion === index
-                        ? 'max-h-[700px] opacity-100 overflow-visible'
+                        ? 'max-h-[800px] opacity-100 overflow-auto'
                         : 'max-h-0 opacity-0 overflow-hidden'
                     }`}
                   >
@@ -460,8 +584,7 @@ const CompanySettings = () => {
 
             <div className="px-6 py-6 bg-gray-50 border-t border-gray-200 sm:px-8">
               <button
-                type="button"
-                onClick={handleSubmit}
+                type="submit"
                 disabled={loading}
                 className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
               >
@@ -478,7 +601,7 @@ const CompanySettings = () => {
                 )}
               </button>
             </div>
-          </div>
+          </form>
         </div>
       </div>
     </div>
