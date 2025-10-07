@@ -9,7 +9,7 @@ import { CategoryContext } from "../../../Context/CategoryContext";
 import { FreeCashContext } from "../../../Context/FreeCashContext";
 import { CompanySettingsContext } from "../../../Context/CompanySettingsContext"
 import {
-  Search, User, ShoppingCart, ChevronDown, ChevronLeft, ChevronRight, X, Plus, Minus, Eye, Check, Heart, Palette, Trash2, Settings, Package, LogOut, Share2, MessageCircle, Star, Shield, Truck, Instagram, Facebook
+  Search, User, ShoppingCart, ChevronDown, ChevronLeft, ChevronRight, X, Plus, Minus, Eye, Check, Heart, Palette, Trash2, Settings, Package, LogOut, Share2, MessageCircle, Star, Shield, Truck, Instagram, Facebook, ArrowUp,
 } from "lucide-react"
 import axios from "axios";
 import { AuthContext } from "../../../Context/AuthContext"
@@ -98,6 +98,28 @@ const handleCartCheckout = async () => {
   const [isSearching, setIsSearching] = useState(false)
   const [showSearchSection, setShowSearchSection] = useState(false)
   const [policyModal, setPolicyModal] = useState({ isOpen: false, type: '', content: '' })
+  const [showScrollTop, setShowScrollTop] = useState(false)
+
+  // Scroll to top functionality
+useEffect(() => {
+  const handleScroll = () => {
+    if (window.pageYOffset > 300) {
+      setShowScrollTop(true)
+    } else {
+      setShowScrollTop(false)
+    }
+  }
+
+  window.addEventListener('scroll', handleScroll)
+  return () => window.removeEventListener('scroll', handleScroll)
+}, [])
+
+const scrollToTop = () => {
+  window.scrollTo({
+    top: 0,
+    behavior: 'smooth'
+  })
+}
 
   const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
   const { products, loading, error } = contextData
@@ -111,7 +133,7 @@ const handleCartCheckout = async () => {
   const outOfStockRef = useRef(null)
   const { user, setUser } = useContext(AuthContext)
 
- const handleSearch = (query) => {
+const handleSearch = (query) => {
   setSearchQuery(query)
   
   if (!query.trim()) {
@@ -124,18 +146,31 @@ const handleCartCheckout = async () => {
   const searchTerms = query.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0)
   const results = []
 
-  products.forEach((product) => {
+  // Filter only active products
+  const activeProducts = products.filter(product => {
+    if (product.isActive === false) return false;
+    
+    const mainCat = categories.find(cat => cat._id.toString() === product.mainCategory?.toString());
+    const subCat = product.subCategory ? categories.find(cat => cat._id.toString() === product.subCategory?.toString()) : null;
+    
+    if (mainCat && mainCat.isActive === false) return false;
+    if (subCat && subCat.isActive === false) return false;
+    
+    return true;
+  });
+
+  activeProducts.forEach((product) => {
     const productNameLower = product.name.toLowerCase()
     const productNameMatch = searchTerms.every(term => productNameLower.includes(term))
     
     if (product.hasVariants && product.variants) {
-      product.variants.forEach((variant) => {
+      product.variants.filter(v => v.isActive !== false).forEach((variant) => {
         const variantNameLower = variant.colorName.toLowerCase()
         const fullName = `${product.name} ${variant.colorName}`.toLowerCase()
         const variantMatch = searchTerms.every(term => fullName.includes(term))
         
         if (variant.moreDetails && variant.moreDetails.length > 0) {
-          variant.moreDetails.forEach((sizeDetail) => {
+          variant.moreDetails.filter(md => md.isActive !== false).forEach((sizeDetail) => {
             const sizeString = formatSize(sizeDetail.size)
             const fullNameWithSize = `${product.name} ${variant.colorName} ${sizeString}`.toLowerCase()
             const sizeMatch = searchTerms.every(term => fullNameWithSize.includes(term))
@@ -191,19 +226,28 @@ const handleCartCheckout = async () => {
   })
 
   setSearchResults(results)
-  setShowSearchResults(results.length > 0)
+  setShowSearchResults(true)
   setIsSearching(false)
 }
 
 // Function that will listen the event -> clicking of enter key
 const handleSearchKeyPress = (e) => {
   if (e.key === 'Enter' && searchQuery.trim()) {
-    setShowSearchSection(true)
-    setShowSearchResults(false)
-    // Scroll to search results section
-    setTimeout(() => {
-      document.getElementById('search-results-section')?.scrollIntoView({ behavior: 'smooth' })
-    }, 100)
+    if (searchResults.length === 0) {
+      // If no results, scroll to all products section
+      setShowSearchSection(false)
+      setShowSearchResults(false)
+      setTimeout(() => {
+        document.getElementById('all-products-section')?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    } else {
+      // If results exist, show search section
+      setShowSearchSection(true)
+      setShowSearchResults(false)
+      setTimeout(() => {
+        document.getElementById('search-results-section')?.scrollIntoView({ behavior: 'smooth' })
+      }, 100)
+    }
   }
 }
 
@@ -2665,180 +2709,260 @@ const CartModal = () => {
       )}
 
       <nav className="bg-white shadow-lg sticky top-0 z-40 w-full">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex-shrink-0 h-full flex items-center">
-  {loadingSettings ? (
-    <div className="h-12 w-24 bg-gray-200 animate-pulse rounded"></div>
-  ) : (
-    <img
-      src={companySettings?.companyLogo || "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=120&h=60&fit=crop"}
-      alt={companySettings?.companyName || "Company Logo"}
-      className="h-12 w-auto object-contain"
-      onError={(e) => {
-        e.target.src = "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=120&h=60&fit=crop";
-      }}
-    />
-  )}
-</div>
-            <div className="flex-1 max-w-lg mx-4 relative">
-  <div className="relative">
-    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
-    <input
-      type="text"
-      placeholder="Search products..."
-      value={searchQuery}
-      onChange={(e) => handleSearch(e.target.value)}
-      onFocus={() => searchQuery && setShowSearchResults(true)}
-      onKeyPress={handleSearchKeyPress}
-      className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-    />
-    {searchQuery && (
-      <button
-        onClick={clearSearch}
-        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5"
-        aria-label="Clear search"
-      >
-        <X className="h-4 w-4" />
-      </button>
-    )}
-  </div>
-  
-  {/* Search Results Dropdown */}
-  {showSearchResults && (
-    <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200">
-      {isSearching ? (
-        <div className="p-4 text-center text-gray-500">Searching...</div>
-      ) : searchResults.length > 0 ? (
-        <>
-          <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 sticky top-0">
-            <p className="text-sm font-semibold text-gray-700">
-              Results for: "{searchQuery}" ({searchResults.length})
-            </p>
-            <p className="text-xs text-gray-500 mt-0.5">
-              Press Enter to see all results in main section
-            </p>
-          </div>
-          <div className="py-2">
-            {searchResults.map((result, index) => (
-              <button
-                key={`${result.productId}-${result.variantId}-${index}`}
-                onClick={() => handleSearchResultClick(result)}
-                className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
-              >
-                <img
-                  src={result.image || "/placeholder.svg"}
-                  alt={result.productName}
-                  className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
-                />
-                <div className="flex-1 text-left">
-                  <p className="text-gray-900 text-sm">
-                    {highlightMatchedText(result.fullDisplayName, searchQuery)}
+  <div className="w-full px-4 sm:px-6 lg:px-8">
+    {/* First Row - Logo, Flag, Profile, Cart */}
+    <div className="flex justify-between items-center h-16">
+      {/* Logo and Flag */}
+      <div className="flex items-center gap-3 h-full">
+        <div className="flex-shrink-0">
+          {loadingSettings ? (
+            <div className="h-12 w-24 bg-gray-200 animate-pulse rounded"></div>
+          ) : (
+            <img
+              src={companySettings?.companyLogo || "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=120&h=60&fit=crop"}
+              alt={companySettings?.companyName || "Company Logo"}
+              className="h-12 w-auto object-contain"
+              onError={(e) => {
+                e.target.src = "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=120&h=60&fit=crop";
+              }}
+            />
+          )}
+        </div>
+      </div>
+
+      {/* Search Bar - Desktop Only */}
+      <div className="hidden md:flex flex-1 max-w-lg mx-4 relative">
+        <div className="relative w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Search products..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            onFocus={() => searchQuery && setShowSearchResults(true)}
+            onKeyPress={handleSearchKeyPress}
+            className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+          {searchQuery && (
+            <button
+              onClick={clearSearch}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5"
+              aria-label="Clear search"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+        
+        {/* Search Results Dropdown */}
+        {showSearchResults && (
+          <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200">
+            {isSearching ? (
+              <div className="p-4 text-center text-gray-500">Searching...</div>
+            ) : searchResults.length > 0 ? (
+              <>
+                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 sticky top-0">
+                  <p className="text-sm font-semibold text-gray-700">
+                    Results for: "{searchQuery}" ({searchResults.length})
                   </p>
-                  <div className="flex items-center gap-2 mt-1">
-                    <span className="text-sm font-semibold text-blue-600">
-                      ${result.price.toFixed(2)}
-                    </span>
-                    <span className="text-xs text-gray-500">
-                      Stock: {result.stock}
-                    </span>
-                  </div>
+                  <p className="text-xs text-gray-500 mt-0.5">
+                    Press Enter to see all results in main section
+                  </p>
                 </div>
-              </button>
-            ))}
+                <div className="py-2">
+                  {searchResults.map((result, index) => (
+                    <button
+                      key={`${result.productId}-${result.variantId}-${index}`}
+                      onClick={() => handleSearchResultClick(result)}
+                      className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+                    >
+                      <img
+                        src={result.image || "/placeholder.svg"}
+                        alt={result.productName}
+                        className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                      />
+                      <div className="flex-1 text-left">
+                        <p className="text-gray-900 text-sm">
+                          {highlightMatchedText(result.fullDisplayName, searchQuery)}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <span className="text-sm font-semibold text-blue-600">
+                            ₹{result.price.toFixed(2)}
+                          </span>
+                          <span className="text-xs text-gray-500">
+                            Stock: {result.stock}
+                          </span>
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : (
+              <div className="p-4 text-center text-gray-500">
+                No results for "{searchQuery}"
+              </div>
+            )}
           </div>
-        </>
-      ) : (
-        <div className="p-4 text-center text-gray-500">
-          No items found for "{searchQuery}"
+        )}
+      </div>
+
+      {/* Profile and Cart */}
+      <div className="flex items-center space-x-4">
+        <div className="relative profile-dropdown">
+          <button
+            onClick={() => setIsProfileOpen(!isProfileOpen)}
+            className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+          >
+            <User className="h-6 w-6" />
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          {isProfileOpen && (
+            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+              {user ? (
+                <>
+                  <Link
+                    to="/user/update-profile"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    onClick={() => setIsProfileOpen(false)}
+                  >
+                    <Settings className="w-4 h-4" />
+                    Edit Profile
+                  </Link>
+                  <Link
+                    to={`/orders/${user.id}`}
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    onClick={() => setIsProfileOpen(false)}
+                  >
+                    <Package className="w-4 h-4" />
+                    My Orders
+                  </Link>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsProfileOpen(false);
+                    }}
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors w-full text-left"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <>
+                  <Link
+                    to="/auth/login"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    onClick={() => setIsProfileOpen(false)}
+                  >
+                    <LogOut className="w-4 h-4 rotate-180" />
+                    Login
+                  </Link>
+                  <Link
+                    to="/auth/signup"
+                    className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                    onClick={() => setIsProfileOpen(false)}
+                  >
+                    <User className="w-4 h-4" />
+                    Sign Up
+                  </Link>
+                </>
+              )}
+            </div>
+          )}
+        </div>
+        <button
+          onClick={() => setIsCartOpen(true)}
+          className="relative text-gray-700 hover:text-blue-600 transition-colors duration-200"
+        >
+          <ShoppingCart className="h-6 w-6" />
+          {getUniqueCartItemsCount() > 0 && (
+            <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+              {getUniqueCartItemsCount()}
+            </span>
+          )}
+        </button>
+      </div>
+    </div>
+
+    {/* Second Row - Search Bar (Mobile Only) */}
+    <div className="md:hidden pb-3 relative">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
+        <input
+          type="text"
+          placeholder="Search products..."
+          value={searchQuery}
+          onChange={(e) => handleSearch(e.target.value)}
+          onFocus={() => searchQuery && setShowSearchResults(true)}
+          onKeyPress={handleSearchKeyPress}
+          className="w-full pl-10 pr-10 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        />
+        {searchQuery && (
+          <button
+            onClick={clearSearch}
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5"
+            aria-label="Clear search"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        )}
+      </div>
+      
+      {/* Mobile Search Results Dropdown */}
+      {showSearchResults && (
+        <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200 left-0 right-0">
+          {isSearching ? (
+            <div className="p-4 text-center text-gray-500">Searching...</div>
+          ) : searchResults.length > 0 ? (
+            <>
+              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 sticky top-0">
+                <p className="text-sm font-semibold text-gray-700">
+                  Results for: "{searchQuery}" ({searchResults.length})
+                </p>
+                <p className="text-xs text-gray-500 mt-0.5">
+                  Press Enter to see all results in main section
+                </p>
+              </div>
+              <div className="py-2">
+                {searchResults.map((result, index) => (
+                  <button
+                    key={`${result.productId}-${result.variantId}-${index}`}
+                    onClick={() => handleSearchResultClick(result)}
+                    className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+                  >
+                    <img
+                      src={result.image || "/placeholder.svg"}
+                      alt={result.productName}
+                      className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+                    />
+                    <div className="flex-1 text-left">
+                      <p className="text-gray-900 text-sm">
+                        {highlightMatchedText(result.fullDisplayName, searchQuery)}
+                      </p>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm font-semibold text-blue-600">
+                          ₹{result.price.toFixed(2)}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          Stock: {result.stock}
+                        </span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </>
+          ) : (
+            <div className="p-4 text-center text-gray-500">
+              No results for "{searchQuery}"
+            </div>
+          )}
         </div>
       )}
     </div>
-  )}
-</div>
-
-<div className="flex items-center space-x-4">
-  <div className="relative profile-dropdown">
-    <button
-      onClick={() => setIsProfileOpen(!isProfileOpen)}
-      className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors duration-200"
-    >
-      <User className="h-6 w-6" />
-      <ChevronDown className="h-4 w-4" />
-    </button>
-    {isProfileOpen && (
-      <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
-        {user ? (
-          // Authenticated user menu
-          <>
-            <Link
-              to="/user/update-profile"
-              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-              onClick={() => setIsProfileOpen(false)}
-            >
-              <Settings className="w-4 h-4" />
-              Edit Profile
-            </Link>
-            <Link
-              to={`/orders/${user.id}`}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-              onClick={() => setIsProfileOpen(false)}
-            >
-              <Package className="w-4 h-4" />
-              My Orders
-            </Link>
-            <a
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                handleLogout();
-                setIsProfileOpen(false);
-              }}
-              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-            >
-              <LogOut className="w-4 h-4" />
-              Logout
-            </a>
-          </>
-        ) : (
-          // Guest user menu
-          <>
-            <Link
-              to="/auth/login"
-              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-              onClick={() => setIsProfileOpen(false)}
-            >
-              <LogOut className="w-4 h-4 rotate-180" />
-              Login
-            </Link>
-            <Link
-              to="/auth/signup"
-              className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
-              onClick={() => setIsProfileOpen(false)}
-            >
-              <User className="w-4 h-4" />
-              Sign Up
-            </Link>
-          </>
-        )}
-      </div>
-    )}
   </div>
-  <button
-    onClick={() => setIsCartOpen(true)}
-    className="relative text-gray-700 hover:text-blue-600 transition-colors duration-200"
-  >
-    <ShoppingCart className="h-6 w-6" />
-    {getUniqueCartItemsCount() > 0 && (
-      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-        {getUniqueCartItemsCount()}
-      </span>
-    )}
-  </button>
-</div>
-          </div>
-        </div>
-      </nav>
+</nav>
 
       <CartModal />
 
@@ -3205,6 +3329,17 @@ const CartModal = () => {
       </div>
     </div>
   </div>
+)}
+{/* Scroll to Top Button */}
+{showScrollTop && (
+  <button
+    onClick={scrollToTop}
+    // className="fixed bottom-8 right-8 bg-blue-600 hover:bg-black-700 text-black-600 p-3 rounded-full shadow-lg transition-all duration-300 z-40 hover:scale-110"
+    className="fixed bottom-8 right-8 bg-blue-600 border-2 border-black text-black-600 p-3 rounded-full shadow-lg transition-all duration-300 z-40 hover:scale-110"
+    aria-label="Scroll to top"
+  >
+    <ArrowUp className="w-6 h-6" />
+  </button>
 )}
     </div>
   )
