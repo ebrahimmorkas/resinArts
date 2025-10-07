@@ -7,29 +7,9 @@ import { Link, useNavigate } from 'react-router-dom';
 import Orders from './Orders';
 import { CategoryContext } from "../../../Context/CategoryContext";
 import { FreeCashContext } from "../../../Context/FreeCashContext";
+import { CompanySettingsContext } from "../../../Context/CompanySettingsContext"
 import {
-  Search,
-  User,
-  ShoppingCart,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  X,
-  Plus,
-  Minus,
-  Eye,
-  Check,
-  Heart,
-  Palette,
-  Trash2,
-  Settings,
-  Package,
-  LogOut,
-  Share2,
-  MessageCircle,
-  Star,
-  Shield,
-  Truck
+  Search, User, ShoppingCart, ChevronDown, ChevronLeft, ChevronRight, X, Plus, Minus, Eye, Check, Heart, Palette, Trash2, Settings, Package, LogOut, Share2, MessageCircle, Star, Shield, Truck, Instagram, Facebook
 } from "lucide-react"
 import axios from "axios";
 import { AuthContext } from "../../../Context/AuthContext"
@@ -79,7 +59,7 @@ const handleCartCheckout = async () => {
       withCredentials: true,
     });
     
-    console.log("Checkout response:", res.data);
+    // console.log("Checkout response:", res.data);
     
     if (res.status === 201) {
       await clearCart();
@@ -111,15 +91,17 @@ const handleCartCheckout = async () => {
   const [selectedImage, setSelectedImage] = useState(null)
   const { discountData, loadingDiscount, loadingErrors, isDiscountAvailable } = useContext(DiscountContext);
   const { announcement, loadingAnnouncement, announcementError } = useContext(AnnouncementContext);
+  const { companySettings, loadingSettings, settingsError } = useContext(CompanySettingsContext);
   const { categories, loadingCategories, categoriesErrors } = useContext(CategoryContext);
   const [searchResults, setSearchResults] = useState([])
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [showSearchSection, setShowSearchSection] = useState(false)
+  const [policyModal, setPolicyModal] = useState({ isOpen: false, type: '', content: '' })
 
   const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
   const { products, loading, error } = contextData
-  console.log("Products from context:", contextData)
+  // console.log("Products from context:", contextData)
 
   // Refs for scrolling to sections
   const categoriesRef = useRef(null)
@@ -298,14 +280,14 @@ const handleSearchResultClick = (result) => {
 
 const getFilteredProducts = () => {
   // Log initial product and category data for debugging
-  console.log("Products:", products);
-  console.log("Categories:", categories);
+  // console.log("Products:", products);
+  // console.log("Categories:", categories);
 
   // Filter out inactive products and products with inactive categories
   let activeProducts = products.filter(product => {
     // Check if product is active
     if (product.isActive === false) {
-      console.log(`Filtered out inactive product: ${product.name} (${product._id})`);
+      // console.log(`Filtered out inactive product: ${product.name} (${product._id})`);
       return false;
     }
 
@@ -314,17 +296,17 @@ const getFilteredProducts = () => {
     const subCat = product.subCategory ? categories.find(cat => cat._id.toString() === product.subCategory?.toString()) : null;
 
     // Log category details for debugging
-    console.log(`Product: ${product.name}, Main Category:`, mainCat, `Sub Category:`, subCat);
+    // console.log(`Product: ${product.name}, Main Category:`, mainCat, `Sub Category:`, subCat);
 
     // Filter out if mainCategory is inactive
     if (mainCat && mainCat.isActive === false) {
-      console.log(`Filtered out product ${product.name} due to inactive mainCategory: ${mainCat.categoryName}`);
+      // console.log(`Filtered out product ${product.name} due to inactive mainCategory: ${mainCat.categoryName}`);
       return false;
     }
 
     // Filter out if subCategory is inactive
     if (subCat && subCat.isActive === false) {
-      console.log(`Filtered out product ${product.name} due to inactive subCategory: ${subCat.categoryName}`);
+      // console.log(`Filtered out product ${product.name} due to inactive subCategory: ${subCat.categoryName}`);
       return false;
     }
 
@@ -784,6 +766,48 @@ const handleFilterChange = (filter) => {
     const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`
     window.open(whatsappUrl, "_blank")
   }
+
+const openPolicyModal = (type) => {
+  if (!companySettings) return;
+  
+  let content = '';
+  switch(type) {
+    case 'privacy':
+      content = companySettings.privacyPolicy || 'Privacy Policy content not available.';
+      break;
+    case 'terms':
+      content = companySettings.termsAndConditions || 'Terms and Conditions not available.';
+      break;
+    case 'shipping':
+      content = companySettings.shippingPolicy || 'Shipping Policy not available.';
+      break;
+    case 'return':
+      content = companySettings.returnPolicy || 'Return Policy not available.';
+      break;
+    case 'refund':
+      content = companySettings.refundPolicy || 'Refund Policy not available.';
+      break;
+    default:
+      content = 'Content not available.';
+  }
+  
+  setPolicyModal({ isOpen: true, type, content });
+};
+
+const closePolicyModal = () => {
+  setPolicyModal({ isOpen: false, type: '', content: '' });
+};
+
+const getPolicyTitle = (type) => {
+  switch(type) {
+    case 'privacy': return 'Privacy Policy';
+    case 'terms': return 'Terms and Conditions';
+    case 'shipping': return 'Shipping Policy';
+    case 'return': return 'Return Policy';
+    case 'refund': return 'Refund Policy';
+    default: return 'Policy';
+  }
+};
 
   // Filter main categories (those without a parent_category_id)
   const mainCategories = categories.filter(category => 
@@ -2644,12 +2668,19 @@ const CartModal = () => {
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex-shrink-0 h-full flex items-center">
-              <img
-                src="https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=120&h=60&fit=crop"
-                alt="Oula Market"
-                className="h-12 w-auto"
-              />
-            </div>
+  {loadingSettings ? (
+    <div className="h-12 w-24 bg-gray-200 animate-pulse rounded"></div>
+  ) : (
+    <img
+      src={companySettings?.companyLogo || "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=120&h=60&fit=crop"}
+      alt={companySettings?.companyName || "Company Logo"}
+      className="h-12 w-auto object-contain"
+      onError={(e) => {
+        e.target.src = "https://images.unsplash.com/photo-1599305445671-ac291c95aaa9?w=120&h=60&fit=crop";
+      }}
+    />
+  )}
+</div>
             <div className="flex-1 max-w-lg mx-4 relative">
   <div className="relative">
     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400 pointer-events-none" />
@@ -3014,74 +3045,122 @@ const CartModal = () => {
       </div>
 
       <footer className="bg-gray-800 text-white py-8 mt-12">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-            <div>
-              <h3 className="text-lg font-semibold mb-4">About Us</h3>
-              <p className="text-gray-300 text-sm">
-                Your trusted e-commerce partner for quality products and exceptional service.
-              </p>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Customer Service</h3>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Contact Us
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    FAQ
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Returns
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-              <ul className="space-y-2 text-gray-300 text-sm">
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Privacy Policy
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Terms of Service
-                  </a>
-                </li>
-                <li>
-                  <a href="#" className="hover:text-white transition-colors">
-                    Shipping Info
-                  </a>
-                </li>
-              </ul>
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold mb-4">Follow Us</h3>
-              <div className="flex space-x-4">
-                <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                  Facebook
-                </a>
-                <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                  Twitter
-                </a>
-                <a href="#" className="text-gray-300 hover:text-white transition-colors">
-                  Instagram
-                </a>
-              </div>
-            </div>
-          </div>
-          <div className="border-t border-gray-700 mt-8 pt-8 text-center">
-            <p className="text-gray-300 text-sm">© 2024 Oula Market. All rights reserved.</p>
-          </div>
+  <div className="w-full px-4 sm:px-6 lg:px-8">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
+      {/* About Us */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">About Us</h3>
+        <p className="text-gray-300 text-sm">
+          Your trusted e-commerce partner for quality products and exceptional service.
+        </p>
+      </div>
+
+      {/* Customer Service */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Customer Service</h3>
+        <ul className="space-y-2 text-gray-300 text-sm">
+          <li>
+            <button 
+              onClick={() => openPolicyModal('return')}
+              className="hover:text-white transition-colors text-left"
+            >
+              Return Policy
+            </button>
+          </li>
+          <li>
+            <button 
+              onClick={() => openPolicyModal('refund')}
+              className="hover:text-white transition-colors text-left"
+            >
+              Refund Policy
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      {/* Quick Links */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
+        <ul className="space-y-2 text-gray-300 text-sm">
+          <li>
+            <button 
+              onClick={() => openPolicyModal('privacy')}
+              className="hover:text-white transition-colors text-left"
+            >
+              Privacy Policy
+            </button>
+          </li>
+          <li>
+            <button 
+              onClick={() => openPolicyModal('terms')}
+              className="hover:text-white transition-colors text-left"
+            >
+              Terms and Conditions
+            </button>
+          </li>
+          <li>
+            <button 
+              onClick={() => openPolicyModal('shipping')}
+              className="hover:text-white transition-colors text-left"
+            >
+              Shipping Policy
+            </button>
+          </li>
+        </ul>
+      </div>
+
+      {/* Follow Us */}
+      <div>
+        <h3 className="text-lg font-semibold mb-4">Follow Us</h3>
+        <div className="flex space-x-4">
+          {companySettings?.instagramId && (
+            <a 
+              href={`https://instagram.com/${companySettings.instagramId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-300 hover:text-pink-500 transition-colors"
+              title="Follow us on Instagram"
+            >
+              <Instagram className="w-6 h-6" />
+            </a>
+          )}
+          {companySettings?.facebookId && (
+            <a 
+              href={`https://facebook.com/${companySettings.facebookId}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-300 hover:text-blue-500 transition-colors"
+              title="Follow us on Facebook"
+            >
+              <Facebook className="w-6 h-6" />
+            </a>
+          )}
+          {companySettings?.adminWhatsappNumber && (
+            <a 
+              href={`https://wa.me/${companySettings.adminWhatsappNumber.replace(/[^0-9]/g, '')}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-gray-300 hover:text-green-500 transition-colors"
+              title="Chat on WhatsApp"
+            >
+              <MessageCircle className="w-6 h-6" />
+            </a>
+          )}
         </div>
-      </footer>
+      </div>
+    </div>
+
+    {/* Copyright */}
+    <div className="border-t border-gray-700 mt-8 pt-8 text-center space-y-2">
+      <p className="text-gray-300 text-sm">
+        © 2024 {companySettings?.companyName || 'Our Company'}. All rights reserved.
+      </p>
+      <p className="text-gray-400 text-xs">
+        Designed and Developed by Ebrahim Mustafa Morkas
+      </p>
+    </div>
+  </div>
+</footer>
 
       {/* {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />} */}
       {selectedProduct && <ProductDetailsModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />}
@@ -3089,6 +3168,44 @@ const CartModal = () => {
         <VariantModal product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} />
       )}
       {selectedImage && <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />}
+      {/* Policy Modal */}
+{policyModal.isOpen && (
+  <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+      {/* Modal Header */}
+      <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl z-10">
+        <h2 className="text-2xl font-bold text-gray-900">
+          {getPolicyTitle(policyModal.type)}
+        </h2>
+        <button
+          onClick={closePolicyModal}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+        >
+          <X className="w-6 h-6 text-gray-600" />
+        </button>
+      </div>
+
+      {/* Modal Content */}
+      <div className="flex-1 overflow-y-auto p-6">
+        <div 
+          className="prose prose-sm sm:prose lg:prose-lg max-w-none text-gray-700"
+          dangerouslySetInnerHTML={{ __html: policyModal.content }}
+        />
+      </div>
+
+      {/* Modal Footer */}
+      <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl sticky bottom-0">
+        <button
+          onClick={closePolicyModal}
+          className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2"
+        >
+          <X className="w-5 h-5" />
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   )
 }

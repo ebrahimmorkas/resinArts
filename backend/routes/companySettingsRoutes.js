@@ -30,7 +30,7 @@ const upload = multer({
 router.get(
   '/',
   authenticate,
-  authorize(['admin']),
+  authorize(['admin', 'user']),
   companySettingsController.getCompanySettings
 );
 

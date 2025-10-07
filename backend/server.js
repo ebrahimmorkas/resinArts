@@ -84,7 +84,7 @@ app.use('/api/user', authenticate, userRoutes);
 app.use('/api/free-cash', authenticate, freeCashRoutes);
 
 // Company settings routes
-app.use('/api/company-settings', authenticate, companySettingsRoute);
+app.use('/api/company-settings', companySettingsRoute);
 
 // Authenticated user info
 app.get('/api/auth/me', authenticate, async (req, res) => {
