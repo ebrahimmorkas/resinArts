@@ -13,22 +13,33 @@ export const CompanySettingsProvider = ({ children }) => {
   }, []);
 
   const fetchCompanySettings = async () => {
-    try {
-      setLoadingSettings(true);
-      const response = await axios.get('http://localhost:3000/api/company-settings/contact', {
-        withCredentials: true
+  try {
+    setLoadingSettings(true);
+    
+    // Fetch contact info
+    const contactResponse = await axios.get('http://localhost:3000/api/company-settings/contact', {
+      withCredentials: true
+    });
+    
+    // Fetch policies
+    const policiesResponse = await axios.get('http://localhost:3000/api/company-settings/policies', {
+      withCredentials: true
+    });
+    
+    if (contactResponse.data.success && policiesResponse.data.success) {
+      // Merge contact data and policies data
+      setCompanySettings({
+        ...contactResponse.data.data,
+        ...policiesResponse.data.data
       });
-      
-      if (response.data.success) {
-        setCompanySettings(response.data.data);
-      }
-    } catch (error) {
-      console.error('Error fetching company settings:', error);
-      setSettingsError(error.response?.data?.message || 'Failed to fetch company settings');
-    } finally {
-      setLoadingSettings(false);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching company settings:', error);
+    setSettingsError(error.response?.data?.message || 'Failed to fetch company settings');
+  } finally {
+    setLoadingSettings(false);
+  }
+};
 
   const value = {
     companySettings,
