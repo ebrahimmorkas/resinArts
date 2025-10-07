@@ -715,13 +715,13 @@ const handleCategoryClick = (category) => {
   }
 }
 
- const handleFilterChange = (filter) => {
+const handleFilterChange = (filter) => {
   const wasSelected = selectedFilters.includes(filter)
 
   setSelectedFilters((prev) => {
     if (filter === "all") {
-      setSelectedCategory(null); // Clear category selection when "All Products" is clicked
-      setSelectedCategoryPath([]); // Clear category path
+      setSelectedCategory(null);
+      setSelectedCategoryPath([]);
       return ["all"]
     }
     const newFilters = prev.filter((f) => f !== "all")
@@ -732,7 +732,7 @@ const handleCategoryClick = (category) => {
     return [...newFilters, filter]
   })
 
-  // Always scroll when filter is clicked (whether selecting or deselecting)
+  // Scroll after state updates
   setTimeout(() => {
     if (filter === "all") {
       document.getElementById('all-products-section')?.scrollIntoView({ behavior: "smooth" })
@@ -802,7 +802,7 @@ const handleCategoryClick = (category) => {
   if (loadingDiscount || loadingCategories || loadingFreeCash) return <div>Loading...</div>
   if (categoriesErrors || freeCashErrors) return <div>Error: {categoriesErrors || freeCashErrors}</div>
 
-      // Sticky Category Navigation Bar Component
+// Sticky Category Navigation Bar Component
 const CategoryNavigationBar = () => {
   if (selectedCategoryPath.length === 0) return null;
 
@@ -836,92 +836,96 @@ const CategoryNavigationBar = () => {
   };
 
   return (
-    <div className="sticky top-16 z-30 bg-white shadow-md border-b border-gray-200">
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-4">
-        <div className="flex flex-col lg:flex-row gap-4 items-start lg:items-center justify-between">
-         {/* Breadcrumb Navigation */}
-<div className="flex items-center gap-2 flex-wrap">
-  <span className="text-xs font-medium text-gray-500">Path:</span>
-  {selectedCategoryPath.map((cat, index) => (
-    <div key={cat._id} className="flex items-center gap-2">
-      <button
-        onClick={() => handleBreadcrumbClick(index)}
-        className="text-blue-600 hover:text-blue-800 text-xs transition-colors hover:underline"
-      >
-        {cat.categoryName}
-      </button>
-      {index < selectedCategoryPath.length - 1 && (
-        <ChevronRight className="w-3 h-3 text-gray-400" />
-      )}
-    </div>
-  ))}
-</div>
+  <div className="sticky top-16 z-30 bg-white border-b border-gray-200 py-4 shadow-sm">
+      <div className="w-full px-4 sm:px-6 lg:px-8">
+        <div className="flex flex-col gap-4">
+          {/* Breadcrumb Navigation */}
+          <div className="flex items-center gap-2 flex-wrap">
+            <span className="text-xs text-gray-500">Path:</span>
+            {selectedCategoryPath.map((cat, index) => (
+              <div key={cat._id} className="flex items-center gap-2">
+                <button
+                  onClick={() => handleBreadcrumbClick(index)}
+                  className="text-blue-600 hover:text-blue-800 text-xs transition-colors hover:underline"
+                >
+                  {cat.categoryName}
+                </button>
+                {index < selectedCategoryPath.length - 1 && (
+                  <ChevronRight className="w-3 h-3 text-gray-400" />
+                )}
+              </div>
+            ))}
+          </div>
 
-          {/* Category Dropdowns */}
-          <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
-            {/* Main Category Dropdown */}
-            <div className="flex-1 sm:min-w-[200px]">
-              <label className="block text-xs font-semibold text-gray-600 mb-1">
-                Main Category
-              </label>
-              <select
-                value={mainCategory._id}
-                onChange={(e) => handleMainCategoryChange(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
-              >
-                {mainCategories.map((cat) => (
-                  <option key={cat._id} value={cat._id}>
-                    {cat.categoryName}
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            {/* Sub Category Dropdown */}
-            {subCategoryOptions.length > 0 && (
+          {/* Category Dropdowns and Actions */}
+          <div className="flex flex-col sm:flex-row gap-3 items-start sm:items-center justify-between">
+            <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
+              {/* Main Category Dropdown */}
               <div className="flex-1 sm:min-w-[200px]">
                 <label className="block text-xs font-semibold text-gray-600 mb-1">
-                  Sub Category
+                  Main Category
                 </label>
                 <select
-                  value={currentCategory._id}
-                  onChange={(e) => handleSubCategoryChange(e.target.value)}
+                  value={mainCategory._id}
+                  onChange={(e) => handleMainCategoryChange(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
                 >
-                  <option value={currentCategory._id}>
-                    {currentCategory.categoryName} (Current)
-                  </option>
-                  {subCategoryOptions.map((cat) => (
+                  {mainCategories.map((cat) => (
                     <option key={cat._id} value={cat._id}>
                       {cat.categoryName}
                     </option>
                   ))}
                 </select>
               </div>
-            )}
 
-            {/* Back to Categories Button */}
+              {/* Sub Category Dropdown */}
+              {subCategoryOptions.length > 0 && (
+                <div className="flex-1 sm:min-w-[200px]">
+                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                    Sub Category
+                  </label>
+                  <select
+                    value={currentCategory._id}
+                    onChange={(e) => handleSubCategoryChange(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                  >
+                    <option value={currentCategory._id}>
+                      {currentCategory.categoryName} (Current)
+                    </option>
+                    {subCategoryOptions.map((cat) => (
+                      <option key={cat._id} value={cat._id}>
+                        {cat.categoryName}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
+            </div>
+
             {/* Action Buttons */}
-<div className="flex gap-2">
-  <button
-    onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })}
-    className="flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
-  >
-    <ChevronLeft className="w-4 h-4" />
-    Go to Categories
-  </button>
-  <button
-    onClick={() => {
-      setSelectedCategory(null);
-      setSelectedCategoryPath([]);
-      setSelectedFilters(['all']);
-    }}
-    className="flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium whitespace-nowrap"
-  >
-    <X className="w-4 h-4" />
-    Clear
-  </button>
-</div>
+            <div className="flex gap-2 w-full sm:w-auto">
+              <button
+                onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-blue-600 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
+              >
+                <ChevronLeft className="w-4 h-4" />
+                Go to Categories
+              </button>
+              <button
+                onClick={() => {
+  setSelectedCategory(null);
+  setSelectedCategoryPath([]);
+  setSelectedFilters(['all']);
+  setTimeout(() => {
+    document.getElementById('all-products-section')?.scrollIntoView({ behavior: 'smooth' });
+  }, 100);
+}}
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-red-600 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium whitespace-nowrap"
+              >
+                <X className="w-4 h-4" />
+                Clear
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -2806,8 +2810,6 @@ const CartModal = () => {
 
       <BannerCarousel />
 
-      <CategoryNavigationBar />
-
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-12" ref={categoriesRef} id="categories-section">
   <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Categories</h2>
@@ -2869,7 +2871,7 @@ const CartModal = () => {
             ))}
           </div>
         </section>
-
+        <CategoryNavigationBar />
             {showSearchSection && searchQuery && (
   <section className="mb-12" id="search-results-section">
     <div className="flex items-center justify-between mb-6">
