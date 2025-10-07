@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { addCategory } = require('../controllers/addCategoryController');
 const getAllCategories = require('../controllers/getAllCategoriesController');
-const {fetchCategories, upload, bulkUploadCategories, deleteCategory, updateCategoryName, updateCategoryImage,  toggleCategoryStatus, bulkToggleCategoryStatus, addSubcategory} = require("../controllers/categoryController");
+const { fetchCategories, upload, bulkUploadCategories, deleteCategory, updateCategoryName, updateCategoryImage,  toggleCategoryStatus, bulkToggleCategoryStatus, addSubcategory, toggleSubcategoryStatus } = require("../controllers/categoryController");
 const authorize = require('../middlewares/authorize');
 const authenticate = require('../middlewares/authenticate');
 
@@ -19,6 +19,7 @@ router.put('/update-category-image/:id', authenticate, authorize(['admin']), upl
 router.post('/add-subcategory', authenticate, authorize(['admin']), addSubcategory);
 router.post('/toggle-status', authenticate, authorize(['admin']), toggleCategoryStatus);
 router.post('/bulk-toggle-status', authenticate, authorize(['admin']), bulkToggleCategoryStatus);
+router.post('/toggle-subcategory-status', authenticate, authorize(['admin']), toggleSubcategoryStatus);
 
 
 module.exports = router;

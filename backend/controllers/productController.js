@@ -2564,6 +2564,86 @@ const bulkToggleProductStatus = async (req, res) => {
   }
 };
 // End of function to activate and deactivate products in bulk
+
+// start of function that will activate and eactivate products variants
+const toggleVariantSizeStatus = async (req, res) => {
+  try {
+    const { productId, variantId, sizeId, isActive } = req.body;
+
+    if (!productId) {
+      return res.status(400).json({ message: 'Product ID is required' });
+    }
+
+    const product = await Product.findById(productId);
+    
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
+
+    // If toggling a specific size
+    if (variantId && sizeId) {
+      const updateResult = await Product.updateOne(
+        { _id: productId },
+        { 
+          $set: { 
+            "variants.$[v].moreDetails.$[md].isActive": isActive
+          }
+        },
+        {
+          arrayFilters: [
+            { "v._id": variantId },
+            { "md._id": sizeId }
+          ]
+        }
+      );
+
+      if (updateResult.modifiedCount > 0) {
+        return res.status(200).json({ 
+          message: `Size ${isActive ? 'activated' : 'deactivated'} successfully` 
+        });
+      } else {
+        return res.status(400).json({ message: 'Failed to update size status' });
+      }
+    }
+
+    // If toggling an entire variant (and all its sizes)
+    if (variantId && !sizeId) {
+      const updateResult = await Product.updateOne(
+        { _id: productId },
+        { 
+          $set: { 
+            "variants.$[v].isActive": isActive,
+            "variants.$[v].moreDetails.$[].isActive": isActive
+          }
+        },
+        {
+          arrayFilters: [
+            { "v._id": variantId }
+          ]
+        }
+      );
+
+      if (updateResult.modifiedCount > 0) {
+        return res.status(200).json({ 
+          message: `Variant ${isActive ? 'activated' : 'deactivated'} successfully` 
+        });
+      } else {
+        return res.status(400).json({ message: 'Failed to update variant status' });
+      }
+    }
+
+    return res.status(400).json({ message: 'Invalid request parameters' });
+
+  } catch (error) {
+    console.error('Toggle variant/size status error:', error);
+    return res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error.message 
+    });
+  }
+};
+// End of function that will activate and deactivate products variants
+
 module.exports = {
   addProduct: [upload.any(), addProduct],
   fetchProducts,
@@ -2580,4 +2660,5 @@ module.exports = {
   duplicateProducts,
   toggleProductStatus,
   bulkToggleProductStatus,
+  toggleVariantSizeStatus
 }

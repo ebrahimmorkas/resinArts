@@ -672,6 +672,92 @@ const bulkToggleCategoryStatus = async (req, res) => {
 };
 // End of function to bulk activate/deactivate categories
 
+// Start of function that will activate and deactivate the sub categories
+const toggleSubcategoryStatus = async (req, res) => {
+  try {
+    const { categoryId, isActive } = req.body;
+
+    if (!categoryId) {
+      return res.status(400).json({ message: 'Category ID is required' });
+    }
+
+    const category = await Category.findById(categoryId);
+    
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Get all descendant categories
+    const getAllDescendantIds = async (parentId) => {
+      const children = await Category.find({ parent_category_id: parentId });
+      let allIds = children.map(child => child._id);
+      
+      for (const child of children) {
+        const descendantIds = await getAllDescendantIds(child._id);
+        allIds = allIds.concat(descendantIds);
+      }
+      
+      return allIds;
+    };
+
+    const descendantIds = await getAllDescendantIds(categoryId);
+    const allCategoryIds = [categoryId, ...descendantIds];
+
+    // Update all categories
+    await Category.updateMany(
+      { _id: { $in: allCategoryIds } },
+      { $set: { isActive: isActive } }
+    );
+
+    // If deactivating, deactivate products
+    if (!isActive) {
+      const affectedProducts = await Product.find({
+        $or: [
+          { mainCategory: { $in: allCategoryIds } },
+          { subCategory: { $in: allCategoryIds } }
+        ],
+        isActive: true
+      });
+
+      const deactivatedProductIds = [];
+
+      for (const product of affectedProducts) {
+        product.isActive = false;
+        product.deactivatedBy = 'category';
+        product.deactivatedDueToCategory = categoryId;
+        
+        if (product.hasVariants) {
+          product.variants.forEach(variant => {
+            variant.isActive = false;
+            variant.moreDetails.forEach(md => {
+              md.isActive = false;
+            });
+          });
+        }
+        
+        await product.save();
+        deactivatedProductIds.push(product._id);
+      }
+
+      category.deactivatedProducts = deactivatedProductIds;
+      await category.save();
+    }
+
+    return res.status(200).json({ 
+      message: `Subcategory ${isActive ? 'activated' : 'deactivated'} successfully`,
+      affectedCategories: allCategoryIds.length
+    });
+
+  } catch (error) {
+    console.error('Toggle subcategory status error:', error);
+    return res.status(500).json({ 
+      message: 'Internal server error', 
+      error: error.message 
+    });
+  }
+};
+// End of function that will activate and deactivate the sub categories
+
 module.exports = {
     fetchCategories,
     findCategoryById,
@@ -683,5 +769,6 @@ module.exports = {
     updateCategoryImage, 
     addSubcategory,
     toggleCategoryStatus,
-    bulkToggleCategoryStatus
+    bulkToggleCategoryStatus,
+    toggleSubcategoryStatus
 }

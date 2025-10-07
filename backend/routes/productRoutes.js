@@ -1,6 +1,6 @@
 const express = require("express")
 const router = express.Router()
-const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, deleteProduct, editProduct, getProductById, bulkEditProducts, duplicateProducts, toggleProductStatus, bulkToggleProductStatus } = require("../controllers/productController")
+const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, deleteProduct, editProduct, getProductById, bulkEditProducts, duplicateProducts, toggleProductStatus, bulkToggleProductStatus, toggleVariantSizeStatus } = require("../controllers/productController")
 const authenticate = require("../middlewares/authenticate")
 const authorize = require("../middlewares/authorize")
 const productController = require("../controllers/productController")
@@ -25,5 +25,6 @@ router.put('/bulk-edit', authenticate, authorize(['admin']), upload.any(), bulkE
 router.post("/duplicate", authenticate, authorize(['admin']), duplicateProducts);
 router.post("/toggle-status", authenticate, authorize(['admin']), toggleProductStatus);
 router.post("/bulk-toggle-status", authenticate, authorize(['admin']), bulkToggleProductStatus);
+router.post("/toggle-variant-size-status", authenticate, authorize(['admin']), toggleVariantSizeStatus);
 
 module.exports = router

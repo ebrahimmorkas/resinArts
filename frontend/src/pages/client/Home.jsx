@@ -716,37 +716,40 @@ const handleCategoryClick = (category) => {
 }
 
 const handleFilterChange = (filter) => {
-  const wasSelected = selectedFilters.includes(filter)
+  const wasSelected = selectedFilters.includes(filter);
 
   setSelectedFilters((prev) => {
     if (filter === "all") {
       setSelectedCategory(null);
       setSelectedCategoryPath([]);
-      return ["all"]
+      return ["all"];
     }
-    const newFilters = prev.filter((f) => f !== "all")
+    const newFilters = prev.filter((f) => f !== "all");
     if (newFilters.includes(filter)) {
-      const filtered = newFilters.filter((f) => f !== filter)
-      return filtered.length === 0 ? ["all"] : filtered
+      const filtered = newFilters.filter((f) => f !== filter);
+      return filtered.length === 0 ? ["all"] : filtered;
     }
-    return [...newFilters, filter]
-  })
+    return [...newFilters, filter];
+  });
 
   // Scroll after state updates
   setTimeout(() => {
     if (filter === "all") {
-      document.getElementById('all-products-section')?.scrollIntoView({ behavior: "smooth" })
+      const allProductsSection = document.getElementById("all-products-section");
+      if (allProductsSection) {
+        allProductsSection.scrollIntoView({ behavior: "smooth" });
+      }
     } else if (filter === "just-arrived") {
-      justArrivedRef.current?.scrollIntoView({ behavior: "smooth" })
+      justArrivedRef.current?.scrollIntoView({ behavior: "smooth" });
     } else if (filter === "restocked") {
-      restockedRef.current?.scrollIntoView({ behavior: "smooth" })
+      restockedRef.current?.scrollIntoView({ behavior: "smooth" });
     } else if (filter === "revised-rates") {
-      revisedRatesRef.current?.scrollIntoView({ behavior: "smooth" })
+      revisedRatesRef.current?.scrollIntoView({ behavior: "smooth" });
     } else if (filter === "out-of-stock") {
-      outOfStockRef.current?.scrollIntoView({ behavior: "smooth" })
+      outOfStockRef.current?.scrollIntoView({ behavior: "smooth" });
     }
-  }, 100)
-}
+  }, 100);
+};
 
   const toggleWishlist = (productId) => {
     setWishlist((prev) => (prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]))

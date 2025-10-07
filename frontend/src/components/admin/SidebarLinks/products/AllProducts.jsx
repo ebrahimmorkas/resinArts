@@ -894,145 +894,344 @@ const DeleteConfirmationModal = () => {
   // };
 
   const ViewStockModal = ({ product, onClose }) => {
-    if (!product) return null;
+  const [toggleLoading, setToggleLoading] = useState({});
 
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-lg md:text-xl font-semibold text-gray-900">Stock Details - {product.name}</h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="p-4 md:p-6 overflow-y-auto flex-1">
-            <div className="space-y-6">
-              {product.variants.map(variant => (
-                <div key={variant._id} className="border border-gray-200 rounded-lg p-4">
+  const handleToggleVariantStatus = async (variantId, currentStatus) => {
+    setToggleLoading({ [`variant-${variantId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          isActive: !currentStatus
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error toggling variant:', error);
+      toast.error(error.response?.data?.message || 'Failed to toggle variant');
+    } finally {
+      setToggleLoading({ [`variant-${variantId}`]: false });
+    }
+  };
+
+  const handleToggleSizeStatus = async (variantId, sizeId, currentStatus) => {
+    setToggleLoading({ [`size-${sizeId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          sizeId: sizeId,
+          isActive: !currentStatus
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error toggling size:', error);
+      toast.error(error.response?.data?.message || 'Failed to toggle size');
+    } finally {
+      setToggleLoading({ [`size-${sizeId}`]: false });
+    }
+  };
+
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Stock Details - {product.name}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-4 md:p-6 overflow-y-auto flex-1">
+          <div className="space-y-6">
+            {product.variants.map(variant => {
+              const variantId = typeof variant._id === 'object' ? variant._id.$oid : variant._id;
+              const isVariantActive = variant.isActive !== false;
+              
+              return (
+                <div key={variantId} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
                     <img 
                       src={variant.variantImage || getImageUrl(product)} 
                       alt={variant.colorName} 
                       className="w-16 h-16 rounded-lg object-cover" 
                     />
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
                       <p className="text-sm text-gray-500">Variant</p>
                     </div>
+                    <button
+                      onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
+                      disabled={toggleLoading[`variant-${variantId}`]}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        isVariantActive 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                      } disabled:opacity-50`}
+                    >
+                      {toggleLoading[`variant-${variantId}`] ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : isVariantActive ? (
+                        <Power className="w-3 h-3 mr-1" />
+                      ) : (
+                        <PowerOff className="w-3 h-3 mr-1" />
+                      )}
+                      {isVariantActive ? 'Active' : 'Inactive'}
+                    </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {variant.moreDetails.map(details => (
-                      <div key={details._id} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-700">
-                              Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">Weight: {details.size.weight}kg</p>
+                    {variant.moreDetails.map(details => {
+                      const detailsId = typeof details._id === 'object' ? details._id.$oid : details._id;
+                      const isSizeActive = details.isActive !== false;
+                      
+                      return (
+                        <div key={detailsId} className="bg-gray-50 p-3 rounded-lg">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700">
+                                Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">Weight: {details.size.weight}kg</p>
+                            </div>
+                            <div className="text-right ml-2">
+                              <p className="text-lg font-bold text-blue-600">{details.stock || 0}</p>
+                              <p className="text-xs text-gray-500">in stock</p>
+                            </div>
                           </div>
-                          <div className="text-right ml-2">
-                            <p className="text-lg font-bold text-blue-600">{details.stock || 0}</p>
-                            <p className="text-xs text-gray-500">in stock</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                              (details.stock || 0) > 10 
+                                ? 'bg-green-100 text-green-800' 
+                                : (details.stock || 0) > 0 
+                                  ? 'bg-yellow-100 text-yellow-800' 
+                                  : 'bg-red-100 text-red-800'
+                            }`}>
+                              {(details.stock || 0) > 10 ? 'In Stock' : (details.stock || 0) > 0 ? 'Low Stock' : 'Out of Stock'}
+                            </div>
+                            <button
+                              onClick={() => handleToggleSizeStatus(variantId, detailsId, isSizeActive)}
+                              disabled={toggleLoading[`size-${detailsId}`]}
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                isSizeActive 
+                                  ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                  : 'bg-red-100 text-red-800 hover:bg-red-200'
+                              } disabled:opacity-50`}
+                            >
+                              {toggleLoading[`size-${detailsId}`] ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : isSizeActive ? (
+                                <Power className="w-3 h-3" />
+                              ) : (
+                                <PowerOff className="w-3 h-3" />
+                              )}
+                            </button>
                           </div>
                         </div>
-                        <div className="mt-2">
-                          <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            (details.stock || 0) > 10 
-                              ? 'bg-green-100 text-green-800' 
-                              : (details.stock || 0) > 0 
-                                ? 'bg-yellow-100 text-yellow-800' 
-                                : 'bg-red-100 text-red-800'
-                          }`}>
-                            {(details.stock || 0) > 10 ? 'In Stock' : (details.stock || 0) > 0 ? 'Low Stock' : 'Out of Stock'}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const ViewPriceModal = ({ product, onClose }) => {
-    if (!product) return null;
+  const [toggleLoading, setToggleLoading] = useState({});
 
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-lg md:text-xl font-semibold text-gray-900">Price Details - {product.name}</h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="p-4 md:p-6 overflow-y-auto flex-1">
-            <div className="space-y-6">
-              {product.variants.map(variant => (
-                <div key={variant._id} className="border border-gray-200 rounded-lg p-4">
+  const handleToggleVariantStatus = async (variantId, currentStatus) => {
+    setToggleLoading({ [`variant-${variantId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          isActive: !currentStatus
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error toggling variant:', error);
+      toast.error(error.response?.data?.message || 'Failed to toggle variant');
+    } finally {
+      setToggleLoading({ [`variant-${variantId}`]: false });
+    }
+  };
+
+  const handleToggleSizeStatus = async (variantId, sizeId, currentStatus) => {
+    setToggleLoading({ [`size-${sizeId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          sizeId: sizeId,
+          isActive: !currentStatus
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error toggling size:', error);
+      toast.error(error.response?.data?.message || 'Failed to toggle size');
+    } finally {
+      setToggleLoading({ [`size-${sizeId}`]: false });
+    }
+  };
+
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Price Details - {product.name}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-4 md:p-6 overflow-y-auto flex-1">
+          <div className="space-y-6">
+            {product.variants.map(variant => {
+              const variantId = typeof variant._id === 'object' ? variant._id.$oid : variant._id;
+              const isVariantActive = variant.isActive !== false;
+              
+              return (
+                <div key={variantId} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
                     <img 
                       src={variant.variantImage || getImageUrl(product)} 
                       alt={variant.colorName} 
                       className="w-16 h-16 rounded-lg object-cover" 
                     />
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
                       <p className="text-sm text-gray-500">Variant</p>
                     </div>
+                    <button
+                      onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
+                      disabled={toggleLoading[`variant-${variantId}`]}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        isVariantActive 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                      } disabled:opacity-50`}
+                    >
+                      {toggleLoading[`variant-${variantId}`] ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : isVariantActive ? (
+                        <Power className="w-3 h-3 mr-1" />
+                      ) : (
+                        <PowerOff className="w-3 h-3 mr-1" />
+                      )}
+                      {isVariantActive ? 'Active' : 'Inactive'}
+                    </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {variant.moreDetails.map(details => (
-                      <div key={details._id} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="mb-3">
-                          <p className="text-sm font-medium text-gray-700 mb-1">
-                            Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
-                          </p>
-                          <p className="text-xs text-gray-500">Weight: {details.size.weight}kg</p>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Base Price:</span>
-                            <span className="text-base md:text-lg font-bold text-green-600">${details.price}</span>
+                    {variant.moreDetails.map(details => {
+                      const detailsId = typeof details._id === 'object' ? details._id.$oid : details._id;
+                      const isSizeActive = details.isActive !== false;
+                      
+                      return (
+                        <div key={detailsId} className="bg-gray-50 p-3 rounded-lg">
+                          <div className="mb-3">
+                            <p className="text-sm font-medium text-gray-700 mb-1">
+                              Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
+                            </p>
+                            <p className="text-xs text-gray-500">Weight: {details.size.weight}kg</p>
                           </div>
                           
-                          {details.discountPrice && (
+                          <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Discount Price:</span>
-                              <span className="text-base md:text-lg font-bold text-red-600">${details.discountPrice}</span>
+                              <span className="text-sm text-gray-600">Base Price:</span>
+                              <span className="text-base md:text-lg font-bold text-green-600">${details.price}</span>
                             </div>
-                          )}
-                          
-                          {details.bulkPricing && details.bulkPricing.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <p className="text-xs font-medium text-gray-700 mb-2">Bulk Pricing:</p>
-                              <div className="space-y-1">
-                                {details.bulkPricing.map((bulk, index) => (
-                                  <div key={index} className="flex justify-between text-xs">
-                                    <span className="text-gray-600">{bulk.quantity}+ items:</span>
-                                    <span className="font-medium text-blue-600">${bulk.wholesalePrice}</span>
-                                  </div>
-                                ))}
+                            
+                            {details.discountPrice && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Discount Price:</span>
+                                <span className="text-base md:text-lg font-bold text-red-600">${details.discountPrice}</span>
                               </div>
+                            )}
+                            
+                            {details.bulkPricing && details.bulkPricing.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-xs font-medium text-gray-700 mb-2">Bulk Pricing:</p>
+                                <div className="space-y-1">
+                                  {details.bulkPricing.map((bulk, index) => (
+                                    <div key={index} className="flex justify-between text-xs">
+                                      <span className="text-gray-600">{bulk.quantity}+ items:</span>
+                                      <span className="font-medium text-blue-600">${bulk.wholesalePrice}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex justify-end mt-2">
+                              <button
+                                onClick={() => handleToggleSizeStatus(variantId, detailsId, isSizeActive)}
+                                disabled={toggleLoading[`size-${detailsId}`]}
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                  isSizeActive 
+                                    ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                    : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                } disabled:opacity-50`}
+                              >
+                                {toggleLoading[`size-${detailsId}`] ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : isSizeActive ? (
+                                  <Power className="w-3 h-3" />
+                                ) : (
+                                  <PowerOff className="w-3 h-3" />
+                                )}
+                              </button>
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const RestockModal = ({ product = {}, onClose, selectedProducts = [], multipleToRestockInitial = {} }) => {
     const [stockTextfield, setStockTextfield] = useState("");
