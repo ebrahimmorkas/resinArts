@@ -2,6 +2,7 @@ const Product = require('../models/Product');
 const Order = require('../models/Order');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
+const CompanySettings = require('../models/CompanySettings');
 const FreeCash = require('../models/FreeCash');
 const Discount = require('../models/Discount');
 
@@ -268,6 +269,79 @@ const placeOrder = async (req, res) => {
 
             const newOrder = new Order(orderData);
             await newOrder.save();
+
+            // Send email notification to admin if enabled
+try {
+    const companySettings = await CompanySettings.findOne();
+    
+    if (companySettings && companySettings.receiveOrderEmails && companySettings.adminEmail) {
+        // Format order details for email
+        const orderDetailsText = ordersToAdd.map((item, index) => {
+            let itemDetails = `${index + 1}. ${item.product_name}`;
+            if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+            if (item.size) itemDetails += ` - Size: ${item.size}`;
+            itemDetails += `\n   Quantity: ${item.quantity}`;
+            itemDetails += `\n   Price: ₹${item.price.toFixed(2)}`;
+            itemDetails += `\n   Total: ₹${item.total.toFixed(2)}`;
+            if (item.cash_applied > 0) itemDetails += `\n   Free Cash Applied: ₹${item.cash_applied.toFixed(2)}`;
+            return itemDetails;
+        }).join('\n\n');
+
+        const emailSubject = `New Order Placed - Order #${newOrder._id}`;
+        
+        const emailText = `
+🎉 NEW ORDER RECEIVED!
+
+Order ID: ${newOrder._id}
+Order Date: ${new Date(newOrder.createdAt).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Order Status: ${newOrder.status}
+Payment Status: ${newOrder.payment_status}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CUSTOMER INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Name: ${orderData.user_name}
+Email: ${user.email}
+Phone: ${user.phone_number}
+WhatsApp: ${user.whatsapp_number}
+
+Address: ${user.address || 'Not provided'}
+City: ${user.city || 'Not provided'}
+State: ${user.state || 'Not provided'}
+Pincode: ${user.zip_code || 'Not provided'}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${orderDetailsText}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PRICING SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Subtotal: ₹${totalPrice.toFixed(2)}
+${totalFreeCashApplied > 0 ? `Free Cash Applied: -₹${totalFreeCashApplied.toFixed(2)}` : ''}
+Shipping: ₹${newOrder.shipping_price.toFixed(2)}
+
+TOTAL: ₹${totalPrice.toFixed(2)} + Shipping Price
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Total Items: ${ordersToAdd.length}
+
+${companySettings.companyName ? `\n--\n${companySettings.companyName}` : ''}
+This is an automated email notification.
+        `.trim();
+
+        await sendEmail(companySettings.adminEmail, emailSubject, emailText);
+        console.log(`Order notification email sent to: ${companySettings.adminEmail}`);
+    }
+} catch (emailError) {
+    console.error("Error sending order notification email:", emailError);
+    // Don't fail the order if email fails
+}
 
             return res.status(201).json({
                 success: true,
