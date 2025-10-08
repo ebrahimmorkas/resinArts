@@ -5,6 +5,8 @@ const sendEmail = require('../utils/sendEmail');
 const CompanySettings = require('../models/CompanySettings');
 const FreeCash = require('../models/FreeCash');
 const Discount = require('../models/Discount');
+const { removeAbandonedCartByUserId } = require('./abandonedCartController');
+const Notification = require('../models/Notification');
 
 // Function to check whether the order exists or not
 const findOrder = async (orderId) => {
@@ -40,256 +42,279 @@ const findProduct = async (productId) => {
 
 // Function to add the order
 const placeOrder = async (req, res) => {
-    try {
-        const cartItems = Object.values(req.body);
-        if (!cartItems || cartItems.length === 0) {
-            return res.status(400).json({
-                success: false,
-                message: "Cart is empty",
-            });
+  try {
+    const cartItems = Object.values(req.body);
+    if (!cartItems || cartItems.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: 'Cart is empty',
+      });
+    }
+
+    const userId = req.user.id;
+    if (!userId) {
+      return res.status(401).json({
+        success: false,
+        message: 'Authentication required',
+      });
+    }
+
+    const user = await User.findById(userId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found',
+      });
+    }
+
+    const errors = [];
+    const ordersToAdd = [];
+    let totalFreeCashApplied = 0;
+    let freeCashId = null;
+
+    const freeCash = await FreeCash.findOne({
+      user_id: userId,
+      is_cash_used: false,
+      is_cash_expired: false,
+      start_date: { $lte: new Date() },
+      $or: [{ end_date: { $gte: new Date() } }, { end_date: null }],
+    });
+
+    const now = new Date();
+    const discountData = await Discount.find({
+      startDate: { $lte: now },
+      endDate: { $gte: now },
+      isActive: true,
+    });
+
+    for (const cartData of cartItems) {
+      try {
+        const product = await Product.findById(cartData.productId);
+        if (!product) {
+          errors.push(`Product not found for id ${cartData.productId}`);
+          continue;
         }
 
-        const userId = req.user.id;
-        if (!userId) {
-            return res.status(401).json({
-                success: false,
-                message: "Authentication required",
-            });
-        }
+        let variant = null;
+        let sizeDetail = null;
+        if (cartData.variantId) {
+          variant = product.variants.find((v) => v._id.toString() === cartData.variantId);
+          if (!variant) {
+            errors.push(`Variant not found for product ${cartData.productName}`);
+            continue;
+          }
 
-        const user = await User.findById(userId);
-        if (!user) {
-            return res.status(404).json({
-                success: false,
-                message: "User not found",
-            });
-        }
-
-        const errors = [];
-        const ordersToAdd = [];
-        let totalFreeCashApplied = 0;
-        let freeCashId = null;
-
-        const freeCash = await FreeCash.findOne({
-            user_id: userId,
-            is_cash_used: false,
-            is_cash_expired: false,
-            start_date: { $lte: new Date() },
-            $or: [
-                { end_date: { $gte: new Date() } },
-                { end_date: null },
-            ],
-        });
-
-        // Fetch all active global discounts (mirrors DiscountContext)
-        const now = new Date();
-        const discountData = await Discount.find({
-            startDate: { $lte: now },
-            endDate: { $gte: now },
-            isActive: true,
-        });
-
-        for (const cartData of cartItems) {
-            try {
-                const product = await Product.findById(cartData.productId);
-                if (!product) {
-                    errors.push(`Product not found for id ${cartData.productId}`);
-                    continue;
-                }
-
-                let variant = null;
-                let sizeDetail = null;
-                if (cartData.variantId) {
-                    variant = product.variants.find((v) => v._id.toString() === cartData.variantId);
-                    if (!variant) {
-                        errors.push(`Variant not found for product ${cartData.productName}`);
-                        continue;
-                    }
-
-                    if (cartData.detailsId) {
-                        sizeDetail = variant.moreDetails.find((md) => md._id.toString() === cartData.detailsId);
-                        if (!sizeDetail) {
-                            errors.push(`Size detail not found for variant in product ${cartData.productName}`);
-                            continue;
-                        }
-                    }
-                }
-
-                // Compute if per-product discount is active (mirrors isDiscountActive)
-                let discountStartDate, discountEndDate;
-                if (sizeDetail && sizeDetail.discountStartDate && sizeDetail.discountEndDate) {
-                    discountStartDate = sizeDetail.discountStartDate;
-                    discountEndDate = sizeDetail.discountEndDate;
-                } else if (variant && variant.discountStartDate && variant.discountEndDate) {
-                    discountStartDate = variant.discountStartDate;
-                    discountEndDate = variant.discountEndDate;
-                } else if (product.discountStartDate && product.discountEndDate) {
-                    discountStartDate = product.discountStartDate;
-                    discountEndDate = product.discountEndDate;
-                }
-
-                const isDiscountActive = discountStartDate && discountEndDate
-                    ? now >= new Date(discountStartDate) && now <= new Date(discountEndDate)
-                    : false;
-
-                // Compute base price (original or discounted, mirrors getOriginalPrice and getDisplayPrice without global discount)
-                let basePrice = 0;
-                if (sizeDetail) {
-                    basePrice = parseFloat(isDiscountActive && sizeDetail.discountPrice ? sizeDetail.discountPrice : sizeDetail.price) || 0;
-                } else if (variant && variant.commonPrice !== undefined) {
-                    basePrice = parseFloat(isDiscountActive && variant.discountCommonPrice ? variant.discountCommonPrice : variant.commonPrice) || 0;
-                } else {
-                    basePrice = parseFloat(isDiscountActive && product.discountPrice ? product.discountPrice : product.price) || 0;
-                }
-
-                // Get bulk pricing (mirrors getBulkPricing)
-                let bulkPricing = [];
-                if (sizeDetail) {
-                    if (isDiscountActive && sizeDetail.discountBulkPricing) {
-                        bulkPricing = sizeDetail.discountBulkPricing || [];
-                    } else if (sizeDetail.bulkPricingCombinations) {
-                        bulkPricing = sizeDetail.bulkPricingCombinations || [];
-                    }
-                } else if (variant) {
-                    if (isDiscountActive && variant.discountBulkPricing) {
-                        bulkPricing = variant.discountBulkPricing || [];
-                    } else if (variant.bulkPricing) {
-                        bulkPricing = variant.bulkPricing || [];
-                    }
-                } else {
-                    if (isDiscountActive && product.discountBulkPricing) {
-                        bulkPricing = product.discountBulkPricing || [];
-                    } else if (product.bulkPricing) {
-                        bulkPricing = product.bulkPricing || [];
-                    }
-                }
-
-                // Apply global discount if applicable (mirrors getApplicableDiscount)
-                let globalDiscount = null;
-                for (const discount of discountData) {
-                    if (discount.applicableToAll ||
-                        (discount.selectedMainCategory && product.categoryPath?.includes(discount.selectedMainCategory)) ||
-                        (discount.selectedSubCategory && product.categoryPath?.includes(discount.selectedSubCategory))) {
-                        globalDiscount = discount;
-                        break;
-                    }
-                }
-
-                if (globalDiscount) {
-                    const discountFactor = 1 - (globalDiscount.discountPercentage / 100);
-                    basePrice *= discountFactor;
-                    bulkPricing = bulkPricing.map(tier => ({
-                        ...tier,
-                        wholesalePrice: tier.wholesalePrice * discountFactor,
-                    }));
-                }
-
-                // Compute effective unit price with bulk (mirrors getEffectiveUnitPrice)
-                let effectiveUnitPrice = basePrice;
-                if (bulkPricing.length > 0) {
-                    for (let i = bulkPricing.length - 1; i >= 0; i--) {
-                        if (cartData.quantity >= bulkPricing[i].quantity) {
-                            effectiveUnitPrice = bulkPricing[i].wholesalePrice;
-                            break;
-                        }
-                    }
-                }
-
-                const subtotal = effectiveUnitPrice * cartData.quantity;
-
-                // Handle free cash
-                let cashApplied = cartData.cash_applied || cartData.cashApplied || 0;
-                if (freeCash && cashApplied > 0) {
-                    const isEligible = isFreeCashEligible(product, cartData, freeCash);
-                    if (!isEligible) {
-                        errors.push(`Free cash not eligible for product ${cartData.productName}`);
-                        cashApplied = 0;
-                    } else {
-                        totalFreeCashApplied += cashApplied;
-                        freeCashId = freeCash._id;
-                    }
-                }
-
-                // Push to orders with computed values
-                const orderItem = {
-                    image_url: cartData.imageUrl,
-                    product_id: cartData.productId,
-                    product_name: cartData.productName,
-                    quantity: cartData.quantity,
-                    price: effectiveUnitPrice,  // Effective unit price after bulk/discounts
-                    total: subtotal,  // Effective total after bulk/discounts
-                    cash_applied: cashApplied,
-                };
-
-                if (cartData.variantId) {
-                    orderItem.variant_id = cartData.variantId;
-                    orderItem.variant_name = variant ? variant.colorName : cartData.variantName;
-                }
-
-                if (cartData.sizeId) {
-                    orderItem.size_id = cartData.sizeId;
-                    orderItem.size = sizeDetail ? `${sizeDetail.size.length} × ${sizeDetail.size.breadth} × ${sizeDetail.size.height} ${sizeDetail.size.unit || 'cm'}` : cartData.sizeString;
-                }
-
-                ordersToAdd.push(orderItem);
-            } catch (itemError) {
-                console.error('Error processing cart item:', itemError);
-                errors.push(`Error processing product ${cartData.productId}: ${itemError.message}`);
-                continue;
+          if (cartData.detailsId) {
+            sizeDetail = variant.moreDetails.find((md) => md._id.toString() === cartData.detailsId);
+            if (!sizeDetail) {
+              errors.push(`Size detail not found for variant in product ${cartData.productName}`);
+              continue;
             }
+          }
         }
 
-        if (ordersToAdd.length > 0) {
-            const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.total, 0);
-            const finalPrice = Math.max(0, totalPrice - totalFreeCashApplied);
+        let discountStartDate, discountEndDate;
+        if (sizeDetail && sizeDetail.discountStartDate && sizeDetail.discountEndDate) {
+          discountStartDate = sizeDetail.discountStartDate;
+          discountEndDate = sizeDetail.discountEndDate;
+        } else if (variant && variant.discountStartDate && variant.discountEndDate) {
+          discountStartDate = variant.discountStartDate;
+          discountEndDate = variant.discountEndDate;
+        } else if (product.discountStartDate && product.discountEndDate) {
+          discountStartDate = product.discountStartDate;
+          discountEndDate = product.discountEndDate;
+        }
 
-            const orderData = {
-                user_id: req.user.id,
-                user_name: `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.trim(),
-                email: user.email,
-                phone_number: user.phone_number,
-                whatsapp_number: user.whatsapp_number,
-                orderedProducts: ordersToAdd,
-                price: finalPrice,
-            };
+        const isDiscountActive =
+          discountStartDate && discountEndDate
+            ? now >= new Date(discountStartDate) && now <= new Date(discountEndDate)
+            : false;
 
-            if (totalFreeCashApplied > 0 && freeCashId) {
-                orderData.cash_applied = { amount: totalFreeCashApplied, freeCashId };
-                await FreeCash.findByIdAndUpdate(freeCashId, { is_cash_used: true, cash_used_date: new Date() });
-                try {
-                    await sendEmail(
-                        user.email,
-                        "Free Cash Applied",
-                        `Your free cash of $${totalFreeCashApplied} has been applied to your order. Note: Free cash is single-use and any remaining amount is not credited back.`
-                    );
-                } catch (emailError) {
-                    console.error("Error sending free cash email:", emailError);
-                }
+        let basePrice = 0;
+        if (sizeDetail) {
+          basePrice = parseFloat(isDiscountActive && sizeDetail.discountPrice ? sizeDetail.discountPrice : sizeDetail.price) || 0;
+        } else if (variant && variant.commonPrice !== undefined) {
+          basePrice = parseFloat(isDiscountActive && variant.discountCommonPrice ? variant.discountCommonPrice : variant.commonPrice) || 0;
+        } else {
+          basePrice = parseFloat(isDiscountActive && product.discountPrice ? product.discountPrice : product.price) || 0;
+        }
+
+        let bulkPricing = [];
+        if (sizeDetail) {
+          if (isDiscountActive && sizeDetail.discountBulkPricing) {
+            bulkPricing = sizeDetail.discountBulkPricing || [];
+          } else if (sizeDetail.bulkPricingCombinations) {
+            bulkPricing = sizeDetail.bulkPricingCombinations || [];
+          }
+        } else if (variant) {
+          if (isDiscountActive && variant.discountBulkPricing) {
+            bulkPricing = variant.discountBulkPricing || [];
+          } else if (variant.bulkPricing) {
+            bulkPricing = variant.bulkPricing || [];
+          }
+        } else {
+          if (isDiscountActive && product.discountBulkPricing) {
+            bulkPricing = product.discountBulkPricing || [];
+          } else if (product.bulkPricing) {
+            bulkPricing = product.bulkPricing || [];
+          }
+        }
+
+        let globalDiscount = null;
+        for (const discount of discountData) {
+          if (
+            discount.applicableToAll ||
+            (discount.selectedMainCategory && product.categoryPath?.includes(discount.selectedMainCategory)) ||
+            (discount.selectedSubCategory && product.categoryPath?.includes(discount.selectedSubCategory))
+          ) {
+            globalDiscount = discount;
+            break;
+          }
+        }
+
+        if (globalDiscount) {
+          const discountFactor = 1 - globalDiscount.discountPercentage / 100;
+          basePrice *= discountFactor;
+          bulkPricing = bulkPricing.map((tier) => ({
+            ...tier,
+            wholesalePrice: tier.wholesalePrice * discountFactor,
+          }));
+        }
+
+        let effectiveUnitPrice = basePrice;
+        if (bulkPricing.length > 0) {
+          for (let i = bulkPricing.length - 1; i >= 0; i--) {
+            if (cartData.quantity >= bulkPricing[i].quantity) {
+              effectiveUnitPrice = bulkPricing[i].wholesalePrice;
+              break;
             }
+          }
+        }
 
-            const newOrder = new Order(orderData);
-            await newOrder.save();
+        const subtotal = effectiveUnitPrice * cartData.quantity;
 
-            // Send email notification to admin if enabled
-try {
-    const companySettings = await CompanySettings.findOne();
-    
-    if (companySettings && companySettings.receiveOrderEmails && companySettings.adminEmail) {
-        // Format order details for email
-        const orderDetailsText = ordersToAdd.map((item, index) => {
-            let itemDetails = `${index + 1}. ${item.product_name}`;
-            if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
-            if (item.size) itemDetails += ` - Size: ${item.size}`;
-            itemDetails += `\n   Quantity: ${item.quantity}`;
-            itemDetails += `\n   Price: ₹${item.price.toFixed(2)}`;
-            itemDetails += `\n   Total: ₹${item.total.toFixed(2)}`;
-            if (item.cash_applied > 0) itemDetails += `\n   Free Cash Applied: ₹${item.cash_applied.toFixed(2)}`;
-            return itemDetails;
-        }).join('\n\n');
+        let cashApplied = cartData.cash_applied || cartData.cashApplied || 0;
+        if (freeCash && cashApplied > 0) {
+          const isEligible = isFreeCashEligible(product, cartData, freeCash);
+          if (!isEligible) {
+            errors.push(`Free cash not eligible for product ${cartData.productName}`);
+            cashApplied = 0;
+          } else {
+            totalFreeCashApplied += cashApplied;
+            freeCashId = freeCash._id;
+          }
+        }
 
-        const emailSubject = `New Order Placed - Order #${newOrder._id}`;
-        
-        const emailText = `
+        const orderItem = {
+          image_url: cartData.imageUrl,
+          product_id: cartData.productId,
+          product_name: cartData.productName,
+          quantity: cartData.quantity,
+          price: effectiveUnitPrice,
+          total: subtotal,
+          cash_applied: cashApplied,
+        };
+
+        if (cartData.variantId) {
+          orderItem.variant_id = cartData.variantId;
+          orderItem.variant_name = variant ? variant.colorName : cartData.variantName;
+        }
+
+        if (cartData.sizeId) {
+          orderItem.size_id = cartData.sizeId;
+          orderItem.size = sizeDetail
+            ? `${sizeDetail.size.length} × ${sizeDetail.size.breadth} × ${sizeDetail.size.height} ${sizeDetail.size.unit || 'cm'}`
+            : cartData.sizeString;
+        }
+
+        ordersToAdd.push(orderItem);
+      } catch (itemError) {
+        console.error('Error processing cart item:', itemError);
+        errors.push(`Error processing product ${cartData.productId}: ${itemError.message}`);
+        continue;
+      }
+    }
+
+    if (ordersToAdd.length > 0) {
+      const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.total, 0);
+      const finalPrice = Math.max(0, totalPrice - totalFreeCashApplied);
+
+      const orderData = {
+        user_id: req.user.id,
+        user_name: `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.trim(),
+        email: user.email,
+        phone_number: user.phone_number,
+        whatsapp_number: user.whatsapp_number,
+        orderedProducts: ordersToAdd,
+        price: finalPrice,
+      };
+
+      if (totalFreeCashApplied > 0 && freeCashId) {
+        orderData.cash_applied = { amount: totalFreeCashApplied, freeCashId };
+        await FreeCash.findByIdAndUpdate(freeCashId, { is_cash_used: true, cash_used_date: new Date() });
+        try {
+          await sendEmail(
+            user.email,
+            'Free Cash Applied',
+            `Your free cash of $${totalFreeCashApplied} has been applied to your order. Note: Free cash is single-use and any remaining amount is not credited back.`
+          );
+        } catch (emailError) {
+          console.error('Error sending free cash email:', emailError);
+        }
+      }
+
+      const newOrder = new Order(orderData);
+      await newOrder.save();
+      await removeAbandonedCartByUserId(req.user.id);
+
+      // Create and save notification with formatted list
+      const productList = ordersToAdd
+        .map((item, index) => {
+          let details = `${index + 1}. ${item.product_name} (Qty: ${item.quantity})`;
+          if (item.variant_name) details += ` - ${item.variant_name}`;
+          if (item.size) details += ` - Size: ${item.size}`;
+          return details;
+        })
+        .join('\n');
+      const notification = new Notification({
+        title: 'New Order Received',
+        message: `Order #${newOrder._id} placed by ${orderData.user_name}:\n${productList}`,
+        orderId: newOrder._id,
+        recipient: 'admin',
+      });
+      await notification.save();
+
+      // Emit Socket.IO event to admin room
+      const io = req.app.get('io');
+      console.log('Emitting newOrder event for order:', newOrder._id);
+      io.to('admin_room').emit('newOrder', {
+        id: notification._id,
+        title: notification.title,
+        message: notification.message,
+        time: notification.time,
+        unread: notification.unread,
+        orderId: notification.orderId,
+      });
+
+      // Send email notification to admin if enabled
+      try {
+        const companySettings = await CompanySettings.findOne();
+        if (companySettings && companySettings.receiveOrderEmails && companySettings.adminEmail) {
+          const orderDetailsText = ordersToAdd
+            .map((item, index) => {
+              let itemDetails = `${index + 1}. ${item.product_name}`;
+              if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+              if (item.size) itemDetails += ` - Size: ${item.size}`;
+              itemDetails += `\n   Quantity: ${item.quantity}`;
+              itemDetails += `\n   Price: ₹${item.price.toFixed(2)}`;
+              itemDetails += `\n   Total: ₹${item.total.toFixed(2)}`;
+              if (item.cash_applied > 0) itemDetails += `\n   Free Cash Applied: ₹${item.cash_applied.toFixed(2)}`;
+              return itemDetails;
+            })
+            .join('\n\n');
+
+          const emailSubject = `New Order Placed - Order #${newOrder._id}`;
+          const emailText = `
 🎉 NEW ORDER RECEIVED!
 
 Order ID: ${newOrder._id}
@@ -333,46 +358,45 @@ Total Items: ${ordersToAdd.length}
 
 ${companySettings.companyName ? `\n--\n${companySettings.companyName}` : ''}
 This is an automated email notification.
-        `.trim();
+          `.trim();
 
-        await sendEmail(companySettings.adminEmail, emailSubject, emailText);
-        console.log(`Order notification email sent to: ${companySettings.adminEmail}`);
-    }
-} catch (emailError) {
-    console.error("Error sending order notification email:", emailError);
-    // Don't fail the order if email fails
-}
-
-            return res.status(201).json({
-                success: true,
-                message: "Order placed successfully",
-                order: {
-                    id: newOrder._id,
-                    totalPrice: finalPrice,
-                    itemCount: ordersToAdd.length,
-                    validItems: ordersToAdd.length,
-                    totalItems: cartItems.length,
-                },
-                warnings: errors.length > 0 ? {
-                    message: `${errors.length} items could not be processed`,
-                    details: errors,
-                } : undefined,
-            });
-        } else {
-            return res.status(400).json({
-                success: false,
-                message: "No valid items to order. All items have errors.",
-                errors: errors,
-            });
+          await sendEmail(companySettings.adminEmail, emailSubject, emailText);
+          console.log(`Order notification email sent to: ${companySettings.adminEmail}`);
         }
-    } catch (error) {
-        console.error('Order placement error:', error);
-        return res.status(500).json({
-            success: false,
-            message: "Internal server error while placing order",
-            error: process.env.NODE_ENV === 'development' ? error.message : undefined,
-        });
+      } catch (emailError) {
+        console.error('Error sending order notification email:', emailError);
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: 'Order placed successfully',
+        order: {
+          id: newOrder._id,
+          totalPrice: finalPrice,
+          itemCount: ordersToAdd.length,
+          validItems: ordersToAdd.length,
+          totalItems: cartItems.length,
+        },
+        warnings: errors.length > 0 ? {
+          message: `${errors.length} items could not be processed`,
+          details: errors,
+        } : undefined,
+      });
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'No valid items to order. All items have errors.',
+        errors: errors,
+      });
     }
+  } catch (error) {
+    console.error('Order placement error:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Internal server error while placing order',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
 };
 
 // Function to fetch all the orders

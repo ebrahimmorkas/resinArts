@@ -1,6 +1,7 @@
 const express = require("express")
 const Cart = require("../models/Cart") // Adjust path as needed
 const router = express.Router()
+const { removeAbandonedCartByUserId } = require('../controllers/abandonedCartController');
 
 // Middleware to check authentication
 const requireAuth = (req, res, next) => {
@@ -136,12 +137,16 @@ router.delete("/", async (req, res) => {
 // DELETE /api/cart/clear - Clear entire cart
 router.delete("/clear", async (req, res) => {
   try {
-    await Cart.deleteMany({ user_id: req.user.id })
-    res.status(200).json({ message: "Cart cleared successfully" })
+    await Cart.deleteMany({ user_id: req.user.id });
+    
+    // Remove from abandoned cart when user clears cart
+    await removeAbandonedCartByUserId(req.user.id);
+    
+    res.status(200).json({ message: "Cart cleared successfully" });
   } catch (error) {
-    console.error("Error clearing cart:", error)
-    res.status(500).json({ error: "Failed to clear cart" })
+    console.error("Error clearing cart:", error);
+    res.status(500).json({ error: "Failed to clear cart" });
   }
-})
+});
 
 module.exports = router

@@ -29,7 +29,7 @@ import {
   Clock,
   Map,
   User,
-  Tag
+  Tag,
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -116,7 +116,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
      {
       id: 'store',
-      label: 'Store Settings',
+      label: 'Company Settings',
       icon: Store,
       href: '/admin/panel/company-settings',
       // submenu: [
@@ -124,6 +124,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       //   { id: 'store-appearance', label: 'Appearance', icon: Edit3, href: '/admin/panel/store/appearance' },
       //   { id: 'store-policies', label: 'Policies', icon: Shield, href: '/admin/panel/store/policies' },
       // ]
+    },
+    {
+      id: 'abandonedCart',
+      label: 'Abandoned Cart',
+      icon: ShoppingCart,
+      href: '/admin/panel/abandoned-cart',
     },
     {
       id: 'analytics',
