@@ -99,6 +99,7 @@ const handleCartCheckout = async () => {
   const [showSearchSection, setShowSearchSection] = useState(false)
   const [policyModal, setPolicyModal] = useState({ isOpen: false, type: '', content: '' })
   const [showScrollTop, setShowScrollTop] = useState(false)
+  const [recentSearches, setRecentSearches] = useState([])
 
   // Scroll to top functionality
 useEffect(() => {
@@ -109,6 +110,8 @@ useEffect(() => {
       setShowScrollTop(false)
     }
   }
+
+  
 
   window.addEventListener('scroll', handleScroll)
   return () => window.removeEventListener('scroll', handleScroll)
@@ -1276,12 +1279,30 @@ const CategoryNavigationBar = () => {
         <div className="p-4">
           <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
 
-          <div className="flex items-center gap-2 mb-3">
-            <span className="text-lg font-bold text-gray-900">₹ {displayPrice.toFixed(2)}</span>
-            {strikePrice && (
-              <span className="text-sm text-gray-500 line-through">₹ {strikePrice.toFixed(2)}</span>
-            )}
-          </div>
+         <div className="flex items-center gap-2 mb-3">
+  {(() => {
+    const bulkPrice1Plus = bulkPricing.find(tier => tier.quantity === 1);
+    const showBulkPrice = bulkPrice1Plus && bulkPrice1Plus.wholesalePrice < displayPrice;
+    
+    if (showBulkPrice) {
+      return (
+        <>
+          <span className="text-lg font-bold text-gray-900">₹ {bulkPrice1Plus.wholesalePrice.toFixed(2)}</span>
+          <span className="text-sm text-gray-500 line-through">₹ {displayPrice.toFixed(2)}</span>
+        </>
+      );
+    } else {
+      return (
+        <>
+          <span className="text-lg font-bold text-gray-900">₹ {displayPrice.toFixed(2)}</span>
+          {strikePrice && (
+            <span className="text-sm text-gray-500 line-through">₹ {strikePrice.toFixed(2)}</span>
+          )}
+        </>
+      );
+    }
+  })()}
+</div>
 
           <div className="mb-2">
             <span className="text-xs text-gray-600">
@@ -1289,11 +1310,11 @@ const CategoryNavigationBar = () => {
             </span>
           </div>
 
-          {bulkPricing.length > 0 && (
+          {bulkPricing.filter(tier => tier.quantity > 1).length > 0 && (
   <div className="mb-3 p-2 bg-gray-50 rounded-lg">
     <p className="text-xs font-semibold text-gray-600 mb-1">Bulk Pricing:</p>
     <div className="space-y-1">
-      {bulkPricing.map((tier, index) => (
+      {bulkPricing.filter(tier => tier.quantity > 1).map((tier, index) => (
         <div key={index} className="flex justify-between text-xs">
           <span>{tier.quantity}+ pcs</span>
           <span className="font-semibold">₹ {tier.wholesalePrice.toFixed(2)} each</span>
