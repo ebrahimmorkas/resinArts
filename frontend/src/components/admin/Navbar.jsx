@@ -1,4 +1,4 @@
-import React, { useState, useContext, useEffect } from 'react';
+import React, { useState, useContext, useEffect, useRef } from 'react';
 import { Menu, Bell, User, RefreshCw, ChevronDown, LogOut, UserCircle, X } from 'lucide-react';
 import { AuthContext } from '../../../Context/AuthContext';
 import { useNavigate } from 'react-router-dom';
@@ -9,6 +9,8 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
+  const [viewedNotifications, setViewedNotifications] = useState(new Set());
+  const prevNotificationsOpenRef = useRef(false); // Track previous state of notificationsOpen
   const { user, setUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -17,7 +19,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
     if (!user || user.role !== 'admin') return;
 
     const socket = io('http://localhost:3000', {
-      withCredentials: true, // Send HttpOnly cookies
+      withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
@@ -90,6 +92,22 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
     fetchNotifications();
   }, [user]);
 
+  // Mark notifications as viewed only when panel transitions from closed to open
+  useEffect(() => {
+    if (notificationsOpen && !prevNotificationsOpenRef.current && notifications.length > 0) {
+      setViewedNotifications((prev) => {
+        const newSet = new Set(prev);
+        notifications.forEach((notif) => {
+          if (!newSet.has(notif.id)) {
+            newSet.add(notif.id);
+          }
+        });
+        return newSet;
+      });
+    }
+    prevNotificationsOpenRef.current = notificationsOpen;
+  }, [notificationsOpen]);
+
   const handleLogout = async () => {
     try {
       await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true });
@@ -110,6 +128,11 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
         withCredentials: true,
       });
       setNotifications((prev) => prev.filter((notif) => notif.id !== notificationId));
+      setViewedNotifications((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(notificationId);
+        return newSet;
+      });
     } catch (error) {
       console.error('Error deleting notification:', error);
     }
@@ -297,9 +320,20 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                       <div className="pr-12">
                         <div className="flex items-start justify-between mb-2">
                           <h4 className="text-sm font-semibold text-gray-900 pr-2">{notification.title}</h4>
-                          {notification.unread && (
-                            <span className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></span>
-                          )}
+                          <div className="flex items-center space-x-2">
+                            {notification.unread && (
+                              <span className="w-3 h-3 bg-blue-500 rounded-full flex-shrink-0"></span>
+                            )}
+                            <span
+                              className={`text-xs font-medium px-2 py-1 rounded-full ${
+                                viewedNotifications.has(notification.id)
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-blue-100 text-blue-800'
+                              }`}
+                            >
+                              {viewedNotifications.has(notification.id) ? 'read' : 'new'}
+                            </span>
+                          </div>
                         </div>
                         <p className="text-sm text-gray-600 mb-2 whitespace-pre-wrap">{notification.message}</p>
                         <p className="text-xs text-gray-400">{notification.time}</p>
@@ -323,6 +357,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                             withCredentials: true,
                           });
                           setNotifications([]);
+                          setViewedNotifications(new Set());
                         } catch (error) {
                           console.error('Error clearing notifications:', error);
                         }
