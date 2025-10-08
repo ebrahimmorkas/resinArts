@@ -1,6 +1,7 @@
 const FreeCash = require('../models/FreeCash');
 const { findUserById } = require('./userController');
 const { findCategoryById, findSubCategoryById } = require('./categoryController');
+const sendEmail = require('../utils/sendEmail');
 
 const addFreeCash = async (req, res) => {
     try {
@@ -77,6 +78,20 @@ const addFreeCash = async (req, res) => {
         });
 
         await newFreeCash.save();
+
+        if(isAllProducts) {
+            if(endDate) {
+                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove} valid till ${endDate}`);
+            } else {
+                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove}`);
+            }
+        } else {
+            if(endDate) {
+                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategory.categoryName} and Sub category: ${subCategory.categoryName} valid above on order of ₹ ${validAbove} valid till ${endDate}`);
+            } else {
+                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategory.categoryName} and Sub category: ${subCategory.categoryName} valid above on order of ₹ ${validAbove}`);
+            }
+        }
 
         return res.status(200).json({
             message: `Free cash generated successfully for ${user.first_name} ${user.last_name}`,
