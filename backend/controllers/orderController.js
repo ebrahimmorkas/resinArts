@@ -7,6 +7,7 @@ const FreeCash = require('../models/FreeCash');
 const Discount = require('../models/Discount');
 const { removeAbandonedCartByUserId } = require('./abandonedCartController');
 const Notification = require('../models/Notification');
+const AbandonedCart = require('../models/AbandonedCart');
 
 // Function to check whether the order exists or not
 const findOrder = async (orderId) => {
@@ -265,6 +266,16 @@ const placeOrder = async (req, res) => {
 
       const newOrder = new Order(orderData);
       await newOrder.save();
+      // Remove from abandoned cart when order is placed
+            try {
+                const io = req.app.get('io');
+                await AbandonedCart.findOneAndDelete({ user_id: req.user.id });
+                if (io) {
+                    io.to('admin_room').emit('abandoned_cart_removed', { userId: req.user.id });
+                }
+            } catch (error) {
+                console.error('Error removing abandoned cart:', error);
+            }
       await removeAbandonedCartByUserId(req.user.id);
 
       // Create and save notification with formatted list

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { 
   Search, 
   Trash2, 
@@ -6,8 +6,10 @@ import {
   ChevronRight, 
   Eye,
   X,
-  Mail
+  Mail,
+  Filter
 } from 'lucide-react';
+import io from 'socket.io-client';
 
 const AbandonedCart = () => {
   const [abandonedCarts, setAbandonedCarts] = useState([]);
@@ -19,8 +21,67 @@ const AbandonedCart = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedCart, setSelectedCart] = useState(null);
   const [sendingEmail, setSendingEmail] = useState(null);
+  const [activeFilter, setActiveFilter] = useState('abandoned'); // 'all' or 'abandoned'
+  const socketRef = useRef(null);
 
-  // Fetch abandoned carts
+  // Initialize Socket.IO connection
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    
+    socketRef.current = io('http://localhost:3000', {
+      auth: { token },
+      transports: ['websocket', 'polling']
+    });
+
+    socketRef.current.on('connect', () => {
+      console.log('Socket connected for abandoned carts');
+    });
+
+    socketRef.current.on('abandoned_cart_updated', (data) => {
+      console.log('Abandoned cart updated:', data);
+      setAbandonedCarts(prev => {
+        const existingIndex = prev.findIndex(cart => cart._id === data.abandonedCart._id);
+        if (existingIndex !== -1) {
+          const updated = [...prev];
+          updated[existingIndex] = data.abandonedCart;
+          return updated;
+        } else {
+          return [data.abandonedCart, ...prev];
+        }
+      });
+    });
+
+    socketRef.current.on('abandoned_cart_removed', (data) => {
+      console.log('Abandoned cart removed:', data);
+      setAbandonedCarts(prev => prev.filter(cart => cart.user_id !== data.userId));
+    });
+
+    socketRef.current.on('abandoned_cart_deleted', (data) => {
+      console.log('Abandoned cart deleted by admin:', data);
+      setAbandonedCarts(prev => prev.filter(cart => cart._id !== data.cartId));
+    });
+
+    socketRef.current.on('abandoned_carts_deleted', (data) => {
+      console.log('Multiple abandoned carts deleted:', data);
+      setAbandonedCarts(prev => prev.filter(cart => !data.cartIds.includes(cart._id)));
+    });
+
+    socketRef.current.on('disconnect', () => {
+      console.log('Socket disconnected');
+    });
+
+    socketRef.current.on('connect_error', (error) => {
+      console.error('Socket connection error:', error);
+    });
+
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+      }
+    };
+  }, []);
+
+  // Fetch abandoned carts on mount
   useEffect(() => {
     fetchAbandonedCarts();
   }, []);
@@ -44,15 +105,27 @@ const AbandonedCart = () => {
     }
   };
 
-  // Filter and search functionality
+  // Filter data based on active filter and search
   const filteredData = useMemo(() => {
-    return abandonedCarts.filter(item =>
+    let filtered = abandonedCarts;
+
+    // Apply 15-minute filter for "abandoned" tab
+    if (activeFilter === 'abandoned') {
+      const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+      filtered = abandonedCarts.filter(cart => {
+        const cartDate = new Date(cart.createdAt || cart.last_updated);
+        return cartDate <= fifteenMinutesAgo;
+      });
+    }
+
+    // Apply search filter
+    return filtered.filter(item =>
       item.user_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.phone_number?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.whatsapp_number?.toLowerCase().includes(searchTerm.toLowerCase())
     );
-  }, [abandonedCarts, searchTerm]);
+  }, [abandonedCarts, searchTerm, activeFilter]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
@@ -60,10 +133,10 @@ const AbandonedCart = () => {
   const endIndex = startIndex + itemsPerPage;
   const currentData = filteredData.slice(startIndex, endIndex);
 
-  // Reset to page 1 when search changes
+  // Reset to page 1 when search or filter changes
   useEffect(() => {
     setCurrentPage(1);
-  }, [searchTerm, itemsPerPage]);
+  }, [searchTerm, itemsPerPage, activeFilter]);
 
   // Handle checkbox selection
   const handleSelectAll = (e) => {
@@ -106,7 +179,7 @@ const AbandonedCart = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setAbandonedCarts(prev => prev.filter(item => item._id !== id));
+        // Socket will handle the update
         alert('Abandoned cart deleted successfully');
       }
     } catch (error) {
@@ -134,7 +207,7 @@ const AbandonedCart = () => {
       });
       const data = await response.json();
       if (data.success) {
-        setAbandonedCarts(prev => prev.filter(item => !selectedRows.includes(item._id)));
+        // Socket will handle the update
         setSelectedRows([]);
         alert(`${selectedRows.length} abandoned cart(s) deleted successfully`);
       }
@@ -192,24 +265,14 @@ const AbandonedCart = () => {
       <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
         {/* Table Header */}
         <div className="px-6 py-4 border-b border-gray-200">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
-            <div>
-              <h3 className="text-lg font-medium text-gray-900">Abandoned Carts</h3>
-              <p className="text-sm text-gray-500 mt-1">
-                Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} results
-              </p>
-            </div>
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-2 sm:space-y-0 sm:space-x-3">
-              {/* Search */}
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Search by name, email, phone..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
-                />
+          <div className="flex flex-col space-y-4">
+            {/* Title and Stats */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">Abandoned Carts</h3>
+                <p className="text-sm text-gray-500 mt-1">
+                  Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} results
+                </p>
               </div>
               
               {/* Delete Selected Button */}
@@ -222,6 +285,50 @@ const AbandonedCart = () => {
                   Delete Selected ({selectedRows.length})
                 </button>
               )}
+            </div>
+
+            {/* Filters and Search */}
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
+              {/* Filter Tabs */}
+              <div className="flex items-center space-x-2 bg-gray-100 rounded-lg p-1">
+                <button
+                  onClick={() => setActiveFilter('abandoned')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeFilter === 'abandoned'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  <Filter className="w-4 h-4 inline mr-2" />
+                  Abandoned ({abandonedCarts.filter(cart => {
+                    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000);
+                    const cartDate = new Date(cart.createdAt || cart.last_updated);
+                    return cartDate <= fifteenMinutesAgo;
+                  }).length})
+                </button>
+                <button
+                  onClick={() => setActiveFilter('all')}
+                  className={`px-4 py-2 rounded-md text-sm font-medium transition-colors ${
+                    activeFilter === 'all'
+                      ? 'bg-white text-blue-600 shadow-sm'
+                      : 'text-gray-600 hover:text-gray-900'
+                  }`}
+                >
+                  All ({abandonedCarts.length})
+                </button>
+              </div>
+
+              {/* Search */}
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search by name, email, phone..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
+                />
+              </div>
             </div>
           </div>
         </div>
@@ -258,8 +365,8 @@ const AbandonedCart = () => {
                   <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
                     Items Count
                   </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
-                    Last Updated
+                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                    Time Elapsed
                   </th>
                   {selectedRows.length === 0 && (
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '180px' }}>
@@ -272,73 +379,84 @@ const AbandonedCart = () => {
                 {currentData.length === 0 ? (
                   <tr>
                     <td colSpan={selectedRows.length === 0 ? 9 : 8} className="px-6 py-8 text-center text-gray-500">
-                      No abandoned carts found
+                      {activeFilter === 'abandoned' 
+                        ? 'No abandoned carts found (older than 15 minutes)'
+                        : 'No carts found'}
                     </td>
                   </tr>
                 ) : (
-                  currentData.map((item, index) => (
-                    <tr key={item._id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-center" style={{ minWidth: '60px' }}>
-                        <input
-                          type="checkbox"
-                          checked={selectedRows.includes(item._id)}
-                          onChange={() => handleSelectRow(item._id)}
-                          className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
-                        />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
-                        {startIndex + index + 1}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '150px' }}>
-                        {item.user_name}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '200px' }}>
-                        {item.email}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
-                        {item.whatsapp_number || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
-                        {item.phone_number || 'N/A'}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                          {item.cart_items.length} items
-                        </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '120px' }}>
-                        {new Date(item.last_updated).toLocaleDateString()}
-                      </td>
-                      {selectedRows.length === 0 && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '180px' }}>
-                          <div className="flex items-center justify-center space-x-2">
-                            <button
-                              onClick={() => handleView(item._id)}
-                              className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                              title="View Cart"
-                            >
-                              <Eye className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleSendReminder(item._id)}
-                              disabled={sendingEmail === item._id}
-                              className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
-                              title="Send Reminder Email"
-                            >
-                              <Mail className="w-4 h-4" />
-                            </button>
-                            <button
-                              onClick={() => handleDelete(item._id)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </div>
+                  currentData.map((item, index) => {
+                    const timeElapsed = Math.floor((Date.now() - new Date(item.createdAt || item.last_updated).getTime()) / 60000);
+                    return (
+                      <tr key={item._id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap text-center" style={{ minWidth: '60px' }}>
+                          <input
+                            type="checkbox"
+                            checked={selectedRows.includes(item._id)}
+                            onChange={() => handleSelectRow(item._id)}
+                            className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                          />
                         </td>
-                      )}
-                    </tr>
-                  ))
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
+                          {startIndex + index + 1}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '150px' }}>
+                          {item.user_name}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '200px' }}>
+                          {item.email}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
+                          {item.whatsapp_number || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
+                          {item.phone_number || 'N/A'}
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
+                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {item.cart_items.length} items
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '140px' }}>
+                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                            timeElapsed < 15 ? 'bg-green-100 text-green-800' :
+                            timeElapsed < 60 ? 'bg-yellow-100 text-yellow-800' :
+                            'bg-red-100 text-red-800'
+                          }`}>
+                            {timeElapsed < 60 ? `${timeElapsed}m` : `${Math.floor(timeElapsed / 60)}h ${timeElapsed % 60}m`}
+                          </span>
+                        </td>
+                        {selectedRows.length === 0 && (
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '180px' }}>
+                            <div className="flex items-center justify-center space-x-2">
+                              <button
+                                onClick={() => handleView(item._id)}
+                                className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                                title="View Cart"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleSendReminder(item._id)}
+                                disabled={sendingEmail === item._id}
+                                className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
+                                title="Send Reminder Email"
+                              >
+                                <Mail className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={() => handleDelete(item._id)}
+                                className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        )}
+                      </tr>
+                    );
+                  })
                 )}
               </tbody>
             </table>

@@ -26,6 +26,7 @@ const getAllAbandonedCarts = async (req, res) => {
 const deleteAbandonedCart = async (req, res) => {
     try {
         const { id } = req.params;
+        const io = req.app.get('io');
 
         const deletedCart = await AbandonedCart.findByIdAndDelete(id);
 
@@ -34,6 +35,11 @@ const deleteAbandonedCart = async (req, res) => {
                 success: false,
                 message: 'Abandoned cart not found',
             });
+        }
+
+        // Emit socket event
+        if (io) {
+            io.to('admin_room').emit('abandoned_cart_deleted', { cartId: id });
         }
 
         return res.status(200).json({
@@ -53,6 +59,7 @@ const deleteAbandonedCart = async (req, res) => {
 const deleteMultipleAbandonedCarts = async (req, res) => {
     try {
         const { ids } = req.body;
+        const io = req.app.get('io');
 
         if (!ids || !Array.isArray(ids) || ids.length === 0) {
             return res.status(400).json({
@@ -62,6 +69,11 @@ const deleteMultipleAbandonedCarts = async (req, res) => {
         }
 
         const result = await AbandonedCart.deleteMany({ _id: { $in: ids } });
+
+        // Emit socket event
+        if (io) {
+            io.to('admin_room').emit('abandoned_carts_deleted', { cartIds: ids });
+        }
 
         return res.status(200).json({
             success: true,
@@ -75,7 +87,7 @@ const deleteMultipleAbandonedCarts = async (req, res) => {
             message: 'Internal server error while deleting abandoned carts',
         });
     }
-    };
+};
 
 // Send reminder email to user
 const sendReminderEmail = async (req, res) => {
@@ -158,7 +170,6 @@ This is an automated reminder email.
     }
 };
 
-// Remove abandoned cart for a specific user (used internally when cart is cleared or order is placed)
 const removeAbandonedCartByUserId = async (userId) => {
     try {
         await AbandonedCart.findOneAndDelete({ user_id: userId });
@@ -173,5 +184,5 @@ module.exports = {
     deleteAbandonedCart,
     deleteMultipleAbandonedCarts,
     sendReminderEmail,
-    removeAbandonedCartByUserId,
+    removeAbandonedCartByUserId
 };

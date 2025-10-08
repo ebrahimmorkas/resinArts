@@ -4,111 +4,80 @@ const Cart = require('../models/Cart');
 const User = require('../models/User');
 const AbandonedCart = require('../models/AbandonedCart');
 
-// Function to check and create/update abandoned carts
-const checkAbandonedCarts = async () => {
+// Backup sync function - runs hourly to catch any missed updates
+const syncAbandonedCarts = async () => {
     try {
-        console.log('Running abandoned cart check...');
+        console.log('Running abandoned cart backup sync...');
         
-        const thirtyMinutesAgo = new Date(Date.now() - 30 * 60 * 1000);
-
-        // Find all carts that were updated more than 30 minutes ago
-        const oldCartItems = await Cart.find({
-            updatedAt: { $lte: thirtyMinutesAgo }
-        });
-
-        if (oldCartItems.length === 0) {
-            console.log('No abandoned carts found');
-            return;
-        }
-
-        // Group cart items by user_id
-        const cartsByUser = {};
-        oldCartItems.forEach(item => {
+        // Find all users who have cart items
+        const cartItems = await Cart.find({});
+        
+        // Group by user
+        const userCarts = {};
+        cartItems.forEach(item => {
             const userId = item.user_id.toString();
-            if (!cartsByUser[userId]) {
-                cartsByUser[userId] = [];
+            if (!userCarts[userId]) {
+                userCarts[userId] = [];
             }
-            cartsByUser[userId].push(item);
+            userCarts[userId].push(item);
         });
 
-        // Process each user's abandoned cart
-        for (const [userId, cartItems] of Object.entries(cartsByUser)) {
-            try {
-                // Fetch user details
-                const user = await User.findById(userId);
-                if (!user) {
-                    console.log(`User not found for ID: ${userId}`);
-                    continue;
-                }
+        // Sync each user's cart
+        for (const [userId, items] of Object.entries(userCarts)) {
+            const user = await User.findById(userId);
+            if (!user) continue;
 
-                const userName = `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.trim();
+            const userName = `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.trim();
+            const cartItemsData = items.map(item => ({
+                image_url: item.image_url,
+                product_id: item.product_id,
+                variant_id: item.variant_id,
+                details_id: item.details_id,
+                size_id: item.size_id,
+                product_name: item.product_name,
+                variant_name: item.variant_name,
+                size: item.size,
+                quantity: item.quantity,
+                price: item.price,
+                cash_applied: item.cash_applied,
+                discounted_price: item.discounted_price,
+            }));
 
-                // Prepare cart items data
-                const cartItemsData = cartItems.map(item => ({
-                    image_url: item.image_url,
-                    product_id: item.product_id,
-                    variant_id: item.variant_id,
-                    details_id: item.details_id,
-                    size_id: item.size_id,
-                    product_name: item.product_name,
-                    variant_name: item.variant_name,
-                    size: item.size,
-                    quantity: item.quantity,
-                    price: item.price,
-                    cash_applied: item.cash_applied,
-                    discounted_price: item.discounted_price,
-                }));
-
-                // Check if abandoned cart already exists for this user
-                const existingAbandonedCart = await AbandonedCart.findOne({ user_id: userId });
-
-                if (existingAbandonedCart) {
-                    // Update existing abandoned cart
-                    existingAbandonedCart.cart_items = cartItemsData;
-                    existingAbandonedCart.last_updated = new Date();
-                    existingAbandonedCart.user_name = userName;
-                    existingAbandonedCart.email = user.email;
-                    existingAbandonedCart.phone_number = user.phone_number;
-                    existingAbandonedCart.whatsapp_number = user.whatsapp_number;
-                    await existingAbandonedCart.save();
-                    console.log(`Updated abandoned cart for user: ${userName}`);
-                } else {
-                    // Create new abandoned cart
-                    const newAbandonedCart = new AbandonedCart({
-                        user_id: userId,
-                        user_name: userName,
-                        email: user.email,
-                        phone_number: user.phone_number,
-                        whatsapp_number: user.whatsapp_number,
-                        cart_items: cartItemsData,
-                        last_updated: new Date(),
-                    });
-                    await newAbandonedCart.save();
-                    console.log(`Created abandoned cart for user: ${userName}`);
-                }
-            } catch (error) {
-                console.error(`Error processing abandoned cart for user ${userId}:`, error);
-            }
+            await AbandonedCart.findOneAndUpdate(
+                { user_id: userId },
+                {
+                    user_name: userName,
+                    email: user.email,
+                    phone_number: user.phone_number,
+                    whatsapp_number: user.whatsapp_number,
+                    cart_items: cartItemsData,
+                    last_updated: new Date(),
+                },
+                { upsert: true, new: true }
+            );
         }
 
-        console.log('Abandoned cart check completed');
+        // Clean up abandoned carts for users with no cart items
+        const userIdsWithCarts = Object.keys(userCarts);
+        await AbandonedCart.deleteMany({
+            user_id: { $nin: userIdsWithCarts.map(id => require('mongoose').Types.ObjectId(id)) }
+        });
+
+        console.log('Abandoned cart backup sync completed');
     } catch (error) {
-        console.error('Error in checkAbandonedCarts:', error);
+        console.error('Error in syncAbandonedCarts:', error);
     }
 };
 
-// Schedule the cron job to run every 30 minutes
+// Start cron job - runs every hour as backup
 const startAbandonedCartCron = () => {
-    // Run every 30 minutes: */30 * * * *
-    cron.schedule('*/30 * * * *', () => {
-        console.log('Starting scheduled abandoned cart check...');
-        checkAbandonedCarts();
+    // Run every hour: 0 * * * *
+    cron.schedule('0 * * * *', () => {
+        console.log('Starting backup abandoned cart sync...');
+        syncAbandonedCarts();
     });
 
-    console.log('Abandoned cart cron job started - running every 30 minutes');
-    
-    // Optional: Run immediately on startup
-    checkAbandonedCarts();
+    console.log('Abandoned cart backup sync cron started - running every hour');
 };
 
-module.exports = { startAbandonedCartCron, checkAbandonedCarts };
+module.exports = { startAbandonedCartCron, syncAbandonedCarts };
