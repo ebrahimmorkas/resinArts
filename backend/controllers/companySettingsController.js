@@ -65,7 +65,9 @@ exports.updateCompanySettings = async (req, res) => {
       returnPolicy,
       shippingPolicy,
       refundPolicy,
-      termsAndConditions
+      termsAndConditions,
+      aboutUs,
+      receiveOrderEmails
     } = req.body;
 
     if (!adminName || !adminEmail) {
@@ -94,7 +96,9 @@ exports.updateCompanySettings = async (req, res) => {
         returnPolicy,
         shippingPolicy,
         refundPolicy,
-        termsAndConditions
+        termsAndConditions,
+        aboutUs,
+        receiveOrderEmails
       });
     } else {
       settings.adminName = adminName;
@@ -113,6 +117,8 @@ exports.updateCompanySettings = async (req, res) => {
       settings.shippingPolicy = shippingPolicy;
       settings.refundPolicy = refundPolicy;
       settings.termsAndConditions = termsAndConditions;
+      settings.aboutUs = aboutUs;
+settings.receiveOrderEmails = receiveOrderEmails;
     }
 
     if (req.file) {

@@ -75,6 +75,14 @@ const companySettingsSchema = new mongoose.Schema({
   termsAndConditions: {
     type: String,
     default: ''
+  },
+  aboutUs: {
+    type: String,
+    default: ''
+  },
+  receiveOrderEmails: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true

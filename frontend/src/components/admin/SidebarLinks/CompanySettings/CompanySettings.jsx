@@ -15,6 +15,7 @@ const CompanySettings = () => {
   const editor3 = useRef(null);
   const editor4 = useRef(null);
   const editor5 = useRef(null);
+  const editor6 = useRef(null);
   
   const [formData, setFormData] = useState({
     companyName: '',
@@ -33,7 +34,9 @@ const CompanySettings = () => {
     returnPolicy: '',
     shippingPolicy: '',
     refundPolicy: '',
-    termsAndConditions: ''
+    termsAndConditions: '',
+    aboutUs: '',
+    receiveOrderEmails: true
   });
 
   const [logoFile, setLogoFile] = useState(null);
@@ -167,6 +170,14 @@ const CompanySettings = () => {
     }
   };
 
+  const handleCheckboxChange = (e) => {
+  const { name, checked } = e.target;
+  setFormData(prev => ({
+    ...prev,
+    [name]: checked
+  }));
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -196,6 +207,9 @@ const CompanySettings = () => {
       formDataToSend.append('shippingPolicy', formData.shippingPolicy);
       formDataToSend.append('refundPolicy', formData.refundPolicy);
       formDataToSend.append('termsAndConditions', formData.termsAndConditions);
+      formDataToSend.append('aboutUs', formData.aboutUs);
+      formDataToSend.append('receiveOrderEmails', formData.receiveOrderEmails);
+
       
       if (logoFile) {
         formDataToSend.append('logo', logoFile);
@@ -520,6 +534,52 @@ const CompanySettings = () => {
             onBlur={newContent => handleEditorChange(newContent, 'termsAndConditions')}
             onChange={() => {}}
           />
+        </div>
+      )
+    },
+    {
+      title: 'About Us',
+      content: (
+        <div className="p-4">
+          <JoditEditor
+            ref={editor6}
+            value={formData.aboutUs}
+            config={editorConfig}
+            onBlur={newContent => handleEditorChange(newContent, 'aboutUs')}
+            onChange={() => {}}
+          />
+        </div>
+      )
+    },
+    {
+      title: 'General Settings',
+      content: (
+        <div className="p-4">
+          <div className="space-y-4">
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <label htmlFor="receiveOrderEmails" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  Receive emails when order is placed
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Get notified via email whenever a new order is placed on your store
+                </p>
+              </div>
+              <div className="ml-4">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="receiveOrderEmails"
+                    name="receiveOrderEmails"
+                    checked={formData.receiveOrderEmails}
+                    onChange={handleCheckboxChange}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+          </div>
         </div>
       )
     }
