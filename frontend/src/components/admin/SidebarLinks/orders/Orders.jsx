@@ -30,9 +30,32 @@ const statusIcons = {
   "In Progress": Clock,
 }
 
+// Function to get stock for a product
+const getStock = (details, variantAndSizeDetails) => {
+  console.log(details);
+  console.log("From get stock");
+  
+  for (const detail of details) {
+    if (detail.hasVariants) {
+      console.log("It has variants");
+      variantLoop: for (const variant of detail.variants) {
+        moreDetailLoop: for (const moreDetail of variant.moreDetails) {
+          if (moreDetail.size._id.toString() === variantAndSizeDetails.size_id.toString()) {
+            return moreDetail.stock;
+          }
+        }
+      }
+      console.log(variantAndSizeDetails);
+    } else {
+      console.log("It does not have variants");
+      return detail.stock;
+    }
+  }
+}
+
 // Order Details Modal Component
 function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMappedWithOrderId }) {
-  if (!isOpen || !order) return null
+  if (!isOpen || !order) return null;
 
   const StatusIcon = statusIcons[order.status];
   const [showShippingPriceModal, setShowShippingPriceModal] = useState(false);
@@ -49,32 +72,32 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       day: "numeric",
       hour: "2-digit",
       minute: "2-digit",
-    })
-  }
+    });
+  };
 
-  const totalQuantity = order.orderedProducts.reduce((sum, product) => sum + product.quantity, 0)
+  const totalQuantity = order.orderedProducts.reduce((sum, product) => sum + product.quantity, 0);
 
   // Function to handle status change for backend
   const handleStatusChangeBackend = async (status, orderId) => {
     try {
-      const res = await axios.post('http://localhost:3000/api/order/status-change', {status, orderId}, {withCredentials: true}) ;
-      if(res.status === 200) {
+      const res = await axios.post('http://localhost:3000/api/order/status-change', { status, orderId }, { withCredentials: true });
+      if (res.status === 200) {
         console.log("Order status changed successfully");
         setStatus(status);
-        setShowStatusModal(true)
+        setShowStatusModal(true);
       } else {
-        console.log("Order status change request cannot be processed")
-        }
-    } catch(error) {
+        console.log("Order status change request cannot be processed");
+      }
+    } catch (error) {
       console.log(error);
     }
-  }
+  };
 
-  // Function that will handle the editing of the order:
+  // Function that will handle the editing of the order
   const handleEdit = async (order) => {
     setCurrentOrder(order);
     setShowEditModal(true);
-  }
+  };
 
   // Function to check stock status and return appropriate styling
   const getStockStatus = (orderedQuantity, currentStock) => {
@@ -84,7 +107,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         textColor: "text-gray-600",
         status: "Unknown Stock",
         icon: AlertTriangle,
-      }
+      };
     }
 
     if (orderedQuantity <= currentStock) {
@@ -93,38 +116,16 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         textColor: "text-green-800",
         status: "In Stock",
         icon: Check,
-      }
+      };
     } else {
       return {
         bgColor: "bg-red-100",
         textColor: "text-red-800",
         status: "Low Stock",
         icon: X,
-      }
+      };
     }
-  }
-
-  const getStock = (details, variantAndSizeDetails) => {
-    console.log(details);
-    console.log("From get stock")
-    
-    for (const detail of details) {
-        if(detail.hasVariants) {
-            console.log("It has variants")
-            variantLoop: for (const variant of detail.variants) {
-                moreDetailLoop: for (const moreDetail of variant.moreDetails) {
-                    if(moreDetail.size._id.toString() === variantAndSizeDetails.size_id.toString()) {
-                        return moreDetail.stock
-                    }
-                }
-            }
-            console.log(variantAndSizeDetails)
-        } else {
-            console.log("It does not have variants")
-            return detail.stock;
-        }
-    }
-}
+  };
 
   // Start of order details modal
   return (
@@ -162,20 +163,25 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   onStatusChange(order._id, "Accepted");
                   setOrderId(order._id);
                   setShowShippingPriceModal(true);
-
                 }}
                 className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "Accepted"}
+                disabled={
+                  order.status === "Accepted" ||
+                  !productMappedWithOrderId ||
+                  order.orderedProducts.some((product, index) => {
+                    const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+                    return stock === undefined || stock < product.quantity;
+                  })
+                }
               >
                 <Check className="h-4 w-4 mr-2" />
                 Accept
               </button>
               <button
-                onClick={
-                  () => {
-                    onStatusChange(order._id, "Rejected")
-                    handleStatusChangeBackend("Rejected", order._id);
-                  }}
+                onClick={() => {
+                  onStatusChange(order._id, "Rejected");
+                  handleStatusChangeBackend("Rejected", order._id);
+                }}
                 className="inline-flex items-center px-4 py-2 bg-red-600 text-red-600 text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Rejected"}
               >
@@ -183,32 +189,31 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 Reject
               </button>
               <button
-                onClick={
-                  () => {
-                    onStatusChange(order._id, "Confirm")
-                    handleStatusChangeBackend("Confirm", order._id);
-                  }}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                onClick={() => {
+                  onStatusChange(order._id, "Confirm");
+                  handleStatusChangeBackend("Confirm", order._id);
+                }}
+                className="inline-flex items-center px-4 py-2 bg-blue-600 text-blue-600white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Confirm"}
               >
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Confirm
               </button>
-              <button
+              {/*<button
                 onClick={() => {
-                  onStatusChange(order._id, "In Progress")
+                  onStatusChange(order._id, "In Progress");
                   handleStatusChangeBackend("In Progress", order._id);
                 }}
                 className="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "In Progress"}
-              >
+              > 
                 <Clock className="h-4 w-4 mr-2" />
                 In Progress
-              </button>
+              </button> */}
               <button
                 onClick={() => {
                   onStatusChange(order._id, "Dispatched");
-                  handleStatusChangeBackend("Dispatched", order._id)
+                  handleStatusChangeBackend("Dispatched", order._id);
                 }}
                 className="inline-flex items-center px-4 py-2 bg-indigo-600 text-green-600 text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={order.status === "Dispatched"}
@@ -229,7 +234,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
               </button>
               <button
                 onClick={() => {
-                  handleEdit(order)
+                  handleEdit(order);
                   setOrderId(order._id);
                 }}
                 className="inline-flex items-center px-4 py-2 bg-gray-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
@@ -312,9 +317,9 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
             </div>
             <div className="space-y-4">
               {order.orderedProducts.map((product, index) => {
-                const stock = getStock(productMappedWithOrderId[order._id].products[index], order.orderedProducts[index])
-                const stockStatus = getStockStatus(product.quantity, stock)
-                const StockIcon = stockStatus.icon
+                const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+                const stockStatus = getStockStatus(product.quantity, stock);
+                const StockIcon = stockStatus.icon;
 
                 return (
                   <div key={index} className={`p-4 rounded-lg border-2 ${stockStatus.bgColor} border-gray-200`}>
@@ -323,7 +328,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                         src={product.image_url || "/placeholder.svg?height=80&width=80"}
                         alt={product.product_name}
                         className="h-20 w-20 rounded-lg object-cover flex-shrink-0"
-                      />  
+                      />
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-2">
                           <h4 className="font-semibold text-gray-900 text-lg">{product.product_name}</h4>
@@ -331,7 +336,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                             className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${stockStatus.bgColor} ${stockStatus.textColor}`}
                           >
                             <StockIcon className="h-3 w-3 mr-1" />
-                            {stockStatus.status} 
+                            {stockStatus.status}
                           </div>
                         </div>
 
@@ -409,7 +414,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                       </div>
                     </div>
                   </div>
-                )
+                );
               })}
             </div>
           </div>
@@ -427,34 +432,38 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
           </div>
         </div>
       </div>
-    {showShippingPriceModal && <ShippingPriceModal onClose={() => setShowShippingPriceModal(false)} orderId={orderId} email={order.email} />}
-      {showStatusModal && <StatusModal onClose={() => {
-        setStatus("");
-        setShowStatusModal(false);
-      }} status={status} />}
+      {showShippingPriceModal && <ShippingPriceModal onClose={() => setShowShippingPriceModal(false)} orderId={orderId} email={order.email} />}
+      {showStatusModal && (
+        <StatusModal
+          onClose={() => {
+            setStatus("");
+            setShowStatusModal(false);
+          }}
+          status={status}
+        />
+      )}
       {showEditModal && <EditOrderModal onClose={() => setShowEditModal(false)} order={currentOrder} />}
     </div>
-
-  )
+  );
   // End of order details modal
 }
 
 export default function OrdersManagement() {
-  const [searchTerm, setSearchTerm] = useState("")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [itemsPerPage, setItemsPerPage] = useState(10)
-  const [orders, setOrders] = useState([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [isError, setIsError] = useState(null)
-  const [selectedOrder, setSelectedOrder] = useState(null)
-  const [isModalOpen, setIsModalOpen] = useState(false)
-  const [statusFilter, setStatusFilter] = useState("")
-  const [dateFilter, setDateFilter] = useState("")
-  const [customStartDate, setCustomStartDate] = useState("")
-  const [customEndDate, setCustomEndDate] = useState("")
-  const [singleDate, setSingleDate] = useState("")
-  const {products, loading, error} = useContext(ProductContext);
-  const [orderedProducts, setOrderedProducts] = useState([]);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+  const [orders, setOrders] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isError, setIsError] = useState(null);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState("");
+  const [dateFilter, setDateFilter] = useState("");
+  const [customStartDate, setCustomStartDate] = useState("");
+  const [customEndDate, setCustomEndDate] = useState("");
+  const [singleDate, setSingleDate] = useState("");
+  const { products, loading, error } = useContext(ProductContext);
+  const [orderedProducts, setOrderedProducts] = useState({});
   const [singleOrderedProduct, setSingleOrderedProduct] = useState(null);
 
   // PDF generation function
@@ -663,7 +672,7 @@ export default function OrdersManagement() {
     const baseDate = new Date();
     baseDate.setDate(baseDate.getDate() - Math.floor(Math.random() * 30)); // Random date within last 30 days
     return baseDate.toISOString();
-  }
+  };
 
   // Format date function
   const formatOrderDate = (dateString, index) => {
@@ -673,34 +682,34 @@ export default function OrdersManagement() {
     const date = new Date(dateString);
     const options = { day: 'numeric', month: 'short', year: 'numeric' };
     return date.toLocaleDateString('en-GB', options);
-  }
+  };
 
   // Date filter functions
   const isToday = (dateString) => {
     const today = new Date();
     const orderDate = new Date(dateString);
     return today.toDateString() === orderDate.toDateString();
-  }
+  };
 
   const isYesterday = (dateString) => {
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     const orderDate = new Date(dateString);
     return yesterday.toDateString() === orderDate.toDateString();
-  }
+  };
 
   const isSingleDate = (dateString, targetDate) => {
     const orderDate = new Date(dateString);
     const target = new Date(targetDate);
     return orderDate.toDateString() === target.toDateString();
-  }
+  };
 
   const isInDateRange = (dateString, startDate, endDate) => {
     const orderDate = new Date(dateString);
     const start = new Date(startDate);
     const end = new Date(endDate);
     return orderDate >= start && orderDate <= end;
-  }
+  };
 
   // Excel export function
   const exportToExcel = (data, filename) => {
@@ -724,7 +733,7 @@ export default function OrdersManagement() {
     const wb = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(wb, ws, "Orders");
     XLSX.writeFile(wb, `${filename}.xlsx`);
-  }
+  };
 
   // Fetching the orders
   useEffect(() => {
@@ -732,33 +741,49 @@ export default function OrdersManagement() {
       try {
         const res = await axios.get("http://localhost:3000/api/order/all", {
           withCredentials: true,
-        })
+        });
 
         if (res.status === 200) {
-          console.log(res.data.orders)
-          const ordersData = Array.isArray(res.data.orders) ? res.data.orders : []
-          setOrders(ordersData)
+          console.log(res.data.orders);
+          const ordersData = Array.isArray(res.data.orders) ? res.data.orders : [];
+          setOrders(ordersData);
         }
-      } catch (isError) {
-        console.isError("isError fetching orders:", isError)
-        setIsError("Failed to fetch orders")
-        setOrders([])
+      } catch (error) {
+        console.error("Error fetching orders:", error);
+        setIsError("Failed to fetch orders");
+        setOrders([]);
       } finally {
-        setIsLoading(false)
+        setIsLoading(false);
       }
-    }
+    };
 
-    fetchOrders()
-  }, [])
+    fetchOrders();
+  }, []);
 
   useEffect(() => {
-  const loadProducts = () => {
-    if(!loading) {
-    console.log(products);
+    const loadProducts = () => {
+      if (!loading) {
+        console.log(products);
+      }
+    };
+    loadProducts();
+  }, [loading]);
+
+  // Map products to orders
+  useEffect(() => {
+    const productsMapperWithOrderId = {};
+    if (products.length > 0) {
+      orders.forEach(order => {
+        const p = [];
+        order.orderedProducts.forEach(product => {
+          p.push(products.filter(prod => prod._id.toString() === product.product_id.toString()));
+        });
+        productsMapperWithOrderId[order._id] = { products: p };
+      });
+      setOrderedProducts(productsMapperWithOrderId);
+      console.log(productsMapperWithOrderId);
     }
-  }
-  loadProducts();
-  }, [loading])
+  }, [orders, products]);
 
   // Enhanced filter orders based on search term, status, and date
   const filteredOrders = useMemo(() => {
@@ -776,17 +801,17 @@ export default function OrdersManagement() {
           order.status,
           ...order.orderedProducts.map((p) => p.product_name),
           ...order.orderedProducts.map((p) => p.variant_name).filter(Boolean),
-        ]
+        ];
 
         return searchableFields.some(
           (field) => field && field.toString().toLowerCase().includes(searchTerm.toLowerCase()),
-        )
-      })
+        );
+      });
     }
 
     // Status filter
     if (statusFilter) {
-      filtered = filtered.filter(order => order.status.toLowerCase() === statusFilter.toLowerCase())
+      filtered = filtered.filter(order => order.status.toLowerCase() === statusFilter.toLowerCase());
     }
 
     // Date filter
@@ -812,48 +837,30 @@ export default function OrdersManagement() {
           default:
             return true;
         }
-      })
+      });
     }
 
     return filtered;
-  }, [orders, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, singleDate])
+  }, [orders, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, singleDate]);
 
-  useEffect(() => {
-    const productsMapperWithOrderId = [];
-    if(products.length > 0) {
-    orders.forEach(order => {
-      const p = [];
-      order.orderedProducts.forEach(product => {
-        p.push(products.filter(prod => prod._id.toString() === product.product_id.toString()))
-      })
-      const item = {};
-      item[order._id] = {}
-      item[order._id]["products"] = p
-      productsMapperWithOrderId.push(item)
-    })
-    setOrderedProducts(productsMapperWithOrderId)
-    console.log(productsMapperWithOrderId);
-  }
-  }, [orders, products])
-  
   // Reset to page 1 when search changes
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage, statusFilter, dateFilter]);
 
   // Calculate pagination
-  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage)
-  const startIndex = (currentPage - 1) * itemsPerPage
-  const endIndex = startIndex + itemsPerPage
-  const currentOrders = filteredOrders.slice(startIndex, endIndex)
+  const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const currentOrders = filteredOrders.slice(startIndex, endIndex);
 
   // Calculate stats
   const stats = useMemo(() => {
-    const totalOrders = orders.length
+    const totalOrders = orders.length;
     const statusCounts = orders.reduce((acc, order) => {
-      acc[order.status] = (acc[order.status] || 0) + 1
-      return acc
-    }, {})
+      acc[order.status] = (acc[order.status] || 0) + 1;
+      return acc;
+    }, {});
 
     return {
       total: totalOrders,
@@ -863,8 +870,8 @@ export default function OrdersManagement() {
       rejected: statusCounts.Rejected || 0,
       completed: statusCounts.Completed || 0,
       inProgress: statusCounts["In Progress"] || 0,
-    }
-  }, [orders])
+    };
+  }, [orders]);
 
   // Handle status change
   const handleStatusChange = async (orderId, newStatus) => {
@@ -872,52 +879,51 @@ export default function OrdersManagement() {
       // Update local state immediately for better UX
       setOrders((prevOrders) =>
         prevOrders.map((order) => (order._id === orderId ? { ...order, status: newStatus } : order)),
-      )
+      );
 
       // Update selected order if it's currently open
       if (selectedOrder && selectedOrder._id === orderId) {
-        setSelectedOrder((prev) => ({ ...prev, status: newStatus }))
+        setSelectedOrder((prev) => ({ ...prev, status: newStatus }));
       }
-
-    } catch (isError) {
-      console.isError("isError updating order status:", isError)
+    } catch (error) {
+      console.error("Error updating order status:", error);
     }
-  }
+  };
 
   // Handle order row click
-  const handleOrderClick = (order, orderedProduct) => {
-    setSelectedOrder(order)
-    setSingleOrderedProduct(orderedProduct);
-    setIsModalOpen(true)
-  }
+  const handleOrderClick = (order) => {
+    setSelectedOrder(order);
+    setSingleOrderedProduct(orderedProducts[order._id] || null);
+    setIsModalOpen(true);
+  };
 
   // Handle accept/reject with backend calls
-  const handleAccept = async (e, order, orderedProduct) => {
-    e.stopPropagation()
-    handleStatusChange(order._id, "Accepted")
-    setSelectedOrder(order)
-    setSingleOrderedProduct(orderedProduct);
-    setIsModalOpen(true)
-  }
+  const handleAccept = async (e, order) => {
+    e.stopPropagation();
+    handleStatusChange(order._id, "Accepted");
+    setSelectedOrder(order);
+    setSingleOrderedProduct(orderedProducts[order._id] || null);
+    setIsModalOpen(true);
+  };
 
   const handleReject = async (e, orderId) => {
-    e.stopPropagation()
+    e.stopPropagation();
     try {
-      const res = await axios.post('http://localhost:3000/api/order/status-change', {status: "Rejected", orderId}, {withCredentials: true})
-      if(res.status === 200) {
-        handleStatusChange(orderId, "Rejected")
+      const res = await axios.post('http://localhost:3000/api/order/status-change', { status: "Rejected", orderId }, { withCredentials: true });
+      if (res.status === 200) {
+        handleStatusChange(orderId, "Rejected");
       }
-    } catch(error) {
-      console.log(error)
+    } catch (error) {
+      console.log(error);
     }
-  }
+  };
 
   // Handle download by status
   const handleDownload = (statusType) => {
     let dataToExport = orders;
     let filename = "all_orders";
 
-    switch(statusType) {
+    switch (statusType) {
       case 'pending':
         dataToExport = orders.filter(order => order.status.toLowerCase() === 'pending');
         filename = "pending_orders";
@@ -944,15 +950,15 @@ export default function OrdersManagement() {
     }
 
     exportToExcel(dataToExport, filename);
-  }
+  };
 
   // Truncate order ID for display
   const truncateOrderId = (orderId) => {
     if (orderId.length > 12) {
-      return `${orderId.substring(0, 12)}...`
+      return `${orderId.substring(0, 12)}...`;
     }
-    return orderId
-  }
+    return orderId;
+  };
 
   const getStatusBadge = (status) => {
     const statusStyles = {
@@ -979,7 +985,7 @@ export default function OrdersManagement() {
       <div className="min-h-screen flex justify-center items-center">
         <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
-    )
+    );
   }
 
   if (isError) {
@@ -990,26 +996,26 @@ export default function OrdersManagement() {
           <span className="block sm:inline">{isError}</span>
         </div>
       </div>
-    )
+    );
   }
 
-  if(error) {
-     return (
+  if (error) {
+    return (
       <div className="min-h-screen flex justify-center items-center p-6">
         <div className="bg-red-100 border border-red-400 text-red-700 px-6 py-4 rounded-lg max-w-md">
           <strong className="font-bold">Error: </strong>
           <span className="block sm:inline">{error}</span>
         </div>
       </div>
-    )
+    );
   }
 
-  if(loading) {
-  return (
-    <div className="min-h-screen flex justify-center items-center">
-      <div className="text-lg">Loading products and orders...</div>
-    </div>
-  )
+  if (loading) {
+    return (
+      <div className="min-h-screen flex justify-center items-center">
+        <div className="text-lg">Loading products and orders...</div>
+      </div>
+    );
   }
 
   // Main content starts from here
@@ -1266,7 +1272,7 @@ export default function OrdersManagement() {
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {currentOrders.map((order, index) => (
-                  <tr key={order._id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleOrderClick(order, orderedProducts[startIndex + index])}>
+                  <tr key={order._id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleOrderClick(order)}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {startIndex + index + 1}
                     </td>
@@ -1302,8 +1308,8 @@ export default function OrdersManagement() {
                       <div className="flex items-center justify-center space-x-2">
                         <button
                           onClick={(e) => {
-                            e.stopPropagation()
-                            handleOrderClick(order, orderedProducts[startIndex + index])
+                            e.stopPropagation();
+                            handleOrderClick(order);
                           }}
                           className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                           title="View Details"
@@ -1311,9 +1317,16 @@ export default function OrdersManagement() {
                           <Eye className="w-4 h-4" />
                         </button>
                         <button
-                          onClick={(e) => handleAccept(e, order, orderedProducts[startIndex + index])}
+                          onClick={(e) => handleAccept(e, order)}
                           className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={order.status === "Accepted"}
+                          disabled={
+                            order.status === "Accepted" ||
+                            !orderedProducts[order._id] ||
+                            order.orderedProducts.some((product, idx) => {
+                              const stock = getStock(orderedProducts[order._id].products[idx], order.orderedProducts[idx]);
+                              return stock === undefined || stock < product.quantity;
+                            })
+                          }
                           title="Accept Order"
                         >
                           <Check className="w-4 h-4" />
@@ -1328,8 +1341,8 @@ export default function OrdersManagement() {
                         </button>
                         <button
                           onClick={(e) => {
-                            e.stopPropagation()
-                            generateOrderPDF(order, startIndex + index)
+                            e.stopPropagation();
+                            generateOrderPDF(order, startIndex + index);
                           }}
                           className="p-2 text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
                           title="Download PDF"
@@ -1433,13 +1446,13 @@ export default function OrdersManagement() {
           order={selectedOrder}
           isOpen={isModalOpen}
           onClose={() => {
-            setIsModalOpen(false)
-            setSelectedOrder(null)
+            setIsModalOpen(false);
+            setSelectedOrder(null);
           }}
           onStatusChange={handleStatusChange}
           productMappedWithOrderId={singleOrderedProduct}
         />
       </div>
     </div>
-  )
+  );
 }

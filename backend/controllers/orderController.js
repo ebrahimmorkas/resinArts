@@ -426,11 +426,42 @@ const fetchOrders = async (req, res) => {
 };
 
 // Function where admin will update the shipping price
+// Function where admin will update the shipping price
 const shippingPriceUpdate = async (req, res) => {
     try {
         const { shippingPriceValue, orderId, email } = req.body;
         const order = await Order.findById(orderId);
         if (order) {
+            // Check stock for each ordered product
+            for (const item of order.orderedProducts) {
+                const product = await Product.findById(item.product_id);
+                if (!product) {
+                    return res.status(404).json({ message: `Product not found for ID ${item.product_id}` });
+                }
+
+                if (!item.variant_id) {
+                    // Product without variants
+                    if (product.stock < item.quantity) {
+                        return res.status(400).json({ message: `Insufficient stock for product ${item.product_name}. Cannot accept order.` });
+                    }
+                } else {
+                    // Product with variants
+                    const variant = product.variants.id(item.variant_id);
+                    if (!variant) {
+                        return res.status(404).json({ message: `Variant not found for product ${item.product_name}` });
+                    }
+
+                    const sizeDetail = variant.moreDetails.id(item.size_id);
+                    if (!sizeDetail) {
+                        return res.status(404).json({ message: `Size detail not found for variant in product ${item.product_name}` });
+                    }
+
+                    if (sizeDetail.stock < item.quantity) {
+                        return res.status(400).json({ message: `Insufficient stock for size ${item.size} in variant ${item.variant_name} of product ${item.product_name}. Cannot accept order.` });
+                    }
+                }
+            }
+
             if (parseInt(shippingPriceValue) > 0) {
                 try {
                     const totalPrice = order.price + parseInt(shippingPriceValue);
@@ -460,7 +491,7 @@ const shippingPriceUpdate = async (req, res) => {
                 return res.status(400).json({ message: "Input is not proper" });
             }
         } else {
-            return res.status(400).json({ message: "Product not found" });
+            return res.status(400).json({ message: "Order not found" });
         }
     } catch (error) {
         return res.status(500).json({ message: `Internal server error ${error}` });
