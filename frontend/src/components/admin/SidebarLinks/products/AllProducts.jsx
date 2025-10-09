@@ -1,11 +1,10 @@
 import React, { useContext, useState, useEffect, useMemo } from "react";
-import { Edit2, Trash2, X, AlertTriangle, Calendar, Clock, DollarSign, Check, Package, Search, Filter, Download, Eye, ChevronLeft, ChevronRight, Power, PowerOff } from "lucide-react";
+import { Edit2, Trash2, X, AlertTriangle, Calendar, Clock, DollarSign, Check, Package, Search, Filter, Download, Eye, ChevronLeft, ChevronRight, Power, PowerOff, Loader2, Copy } from "lucide-react";
 import { ProductContext } from '../../../../../Context/ProductContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import { Copy } from "lucide-react"; // Add Copy icon
 import { duplicateProducts } from "../../../../../utils/api";
 
 export default function AdminProductsPage() {
@@ -43,6 +42,7 @@ export default function AdminProductsPage() {
 const [statusModalData, setStatusModalData] = useState({ productId: null, isActive: false, productName: '' });
 const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
 const [bulkStatusAction, setBulkStatusAction] = useState(null);
+const [showViewVariantsModal, setShowViewVariantsModal] = useState(false);
   const navigate = useNavigate();
   
 
@@ -98,6 +98,11 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
   }, [searchTerm, itemsPerPage]);
 
   // Helper functions
+  const openViewVariantsModal = (product) => {
+  setSelectedProductForView(product);
+  setShowViewVariantsModal(true);
+};
+
   const doesProductExist = (product) => {
     return products.some((prod) => prod._id === product._id);
   };
@@ -426,6 +431,103 @@ const handleDuplicateSelected = async () => {
   const currentData = filteredData.slice(startIndex, endIndex);
 
   // Inner Components
+
+  // Coponent that will be shown when clicked on 'view variants' button specialy design for acivating and deactivating the variants of the products
+  const ViewVariantsModal = ({ product, onClose }) => {
+  const [toggleLoading, setToggleLoading] = useState({});
+
+  const handleToggleVariantStatus = async (variantId, currentStatus) => {
+    setToggleLoading({ [`variant-${variantId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          isActive: !currentStatus
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error toggling variant:', error);
+      toast.error(error.response?.data?.message || 'Failed to toggle variant');
+    } finally {
+      setToggleLoading({ [`variant-${variantId}`]: false });
+    }
+  };
+
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Variants - {product.name}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-4 md:p-6 overflow-y-auto flex-1">
+          <div className="space-y-6">
+            {product.hasVariants && product.variants.length > 0 ? (
+              product.variants.map(variant => {
+                const variantId = typeof variant._id === 'object' ? variant._id.$oid : variant._id;
+                const isVariantActive = variant.isActive !== false;
+
+                return (
+                  <div key={variantId} className="border border-gray-200 rounded-lg p-4 flex items-center gap-4">
+                    <img
+                      src={variant.variantImage || getImageUrl(product)}
+                      alt={variant.colorName}
+                      className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                    />
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
+                      <p className="text-sm text-gray-500">Variant</p>
+                    </div>
+                    <button
+                      onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
+                      disabled={toggleLoading[`variant-${variantId}`]}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        isVariantActive
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                      } disabled:opacity-50`}
+                    >
+                      {toggleLoading[`variant-${variantId}`] ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : isVariantActive ? (
+                        <>
+                          <Power className="w-3 h-3 mr-1" />
+                          Active
+                        </>
+                      ) : (
+                        <>
+                          <PowerOff className="w-3 h-3 mr-1" />
+                          Inactive
+                        </>
+                      )}
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No variants available for this product.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+  
   const LoadingOverlay = () => (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60]">
       <div className="bg-white rounded-xl shadow-lg p-8 text-center">
@@ -2404,146 +2506,147 @@ const DeleteConfirmationModal = () => {
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={selectedProducts.length === filteredData.length && filteredData.length > 0} onChange={toggleSelectAll} />
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sr No.
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Image
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stock
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Color Variants
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Size Variants
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created At
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  {selectedProducts.length === 0 && (
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
+  <tr>
+    <th scope="col" className="px-6 py-3">
+      <input
+        type="checkbox"
+        checked={selectedProducts.length === filteredData.length && filteredData.length > 0}
+        onChange={toggleSelectAll}
+        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+      />
+    </th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color Variants</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size Variants</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variants</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created Date</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+  </tr>
+</thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentData.map((product, index) => (
-                  <tr key={product._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={selectedProducts.some(p => p._id === product._id)} onChange={() => toggleCheckbox(product)} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {startIndex + index + 1}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <div className="flex justify-center">
-                        <img src={getImageUrl(product)} alt={product.name} className="w-12 h-12 rounded-lg object-cover" />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                      <div className="text-sm text-gray-500">{product.category}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {product.hasVariants ? (
-                        <button onClick={() => openViewStockModal(product)} className="text-blue-600 hover:text-blue-800 font-medium">
-                          View Stock
-                        </button>
-                      ) : (
-                        <span className="font-medium">{product.stock}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {product.hasVariants ? product.variants.length : 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {getNumberOfSizeVariants(product)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {product.hasVariants ? (
-                        <button onClick={() => openViewPriceModal(product)} className="text-blue-600 hover:text-blue-800 font-medium">
-                          View Price
-                        </button>
-                      ) : (
-                        <span className="font-medium">${product.price}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
-                      {formatDate(product.createdAt)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-  <button
-    onClick={(e) => {
-      e.stopPropagation();
-      handleToggleStatus(product._id, !product.isActive);
-    }}
-    className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-      product.isActive 
-        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-        : 'bg-red-100 text-red-800 hover:bg-red-200'
-    }`}
-    title={product.isActive ? 'Click to deactivate' : 'Click to activate'}
-  >
-    {product.isActive ? (
-      <>
-        <Power className="w-3 h-3 mr-1" />
-        Active
-      </>
-    ) : (
-      <>
-        <PowerOff className="w-3 h-3 mr-1" />
-        Inactive
-      </>
-    )}
-  </button>
-</td>
-                    {selectedProducts.length === 0 && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                        <div className="flex items-center justify-center space-x-2">
-                          <button onClick={() => openViewDetailsModal(product)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="View Details">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => { setRevisedRateProduct(product); setShowRevisedRateModal(true); }} className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Revise Rate">
-                            <DollarSign className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => { setRestockProduct(product); setShowRestockModal(true); }} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors" title="Restock">
-                            <Package className="w-4 h-4" />
-                          </button>
-                          <button 
-        onClick={() => handleDuplicateProduct(product)} 
-        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" 
-        title="Duplicate"
-      >
-        <Copy className="w-4 h-4" />
-      </button>
-                          <button onClick={() => openEditModal(product)} className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-md transition-colors" title="Edit">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => openDeleteModal(product)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
+  {currentData.map((product, index) => (
+    <tr key={product._id} className="hover:bg-gray-50">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <input
+          type="checkbox"
+          checked={selectedProducts.some((p) => p._id === product._id)}
+          onChange={() => toggleCheckbox(product)}
+          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+        />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <img
+          src={getImageUrl(product)}
+          alt={product.name}
+          className="h-12 w-12 rounded-lg object-cover"
+        />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm font-medium text-gray-900">{product.name}</div>
+        <div className="text-sm text-gray-500">{product._id}</div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.categoryPath || product.category}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        {product.hasVariants ? (
+          <button
+            onClick={() => openViewStockModal(product)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            View Stock
+          </button>
+        ) : (
+          <span className={product.stock > 0 ? 'text-green-600' : 'text-red-600'}>
+            {product.stock}
+          </span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {product.hasVariants ? product.variants.length : 0}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {getNumberOfSizeVariants(product)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        {product.hasVariants ? (
+          <button
+            onClick={() => openViewPriceModal(product)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            View Price
+          </button>
+        ) : (
+          <span className="text-green-600">${product.price}</span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        {product.hasVariants ? (
+          <button
+            onClick={() => openViewVariantsModal(product)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            View Variants
+          </button>
+        ) : (
+          <span className="text-gray-500">-</span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(product.createdAt)}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <button
+          onClick={() => handleToggleStatus(product._id, !product.isActive)}
+          className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
+            product.isActive
+              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+              : 'bg-red-100 text-red-800 hover:bg-red-200'
+          }`}
+        >
+          {product.isActive ? (
+            <>
+              <Power className="w-3 h-3 mr-1" />
+              Active
+            </>
+          ) : (
+            <>
+              <PowerOff className="w-3 h-3 mr-1" />
+              Inactive
+            </>
+          )}
+        </button>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+        <button
+          onClick={() => openViewDetailsModal(product)}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          <Eye className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => openEditModal(product)}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          <Edit2 className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => handleDuplicateProduct(product)}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          <Copy className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => openDeleteModal(product)}
+          className="text-red-600 hover:text-red-800"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
             </table>
           </div>
 
@@ -2726,6 +2829,14 @@ const DeleteConfirmationModal = () => {
       </div>
     </div>
   </div>
+)}
+
+{/* Modal that shows variants */}
+{showViewVariantsModal && (
+  <ViewVariantsModal
+    product={selectedProductForView}
+    onClose={() => setShowViewVariantsModal(false)}
+  />
 )}
     </div>
   );
