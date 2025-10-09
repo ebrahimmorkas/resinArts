@@ -18,7 +18,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
 
-    const socket = io('http://localhost:3000', {
+    const socket = io('https://api.simplyrks.cloud', {
       withCredentials: true,
       reconnection: true,
       reconnectionAttempts: 5,
@@ -74,7 +74,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
 
     const fetchNotifications = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/notifications/all', {
+        const response = await axios.get('https://api.simplyrks.cloud/api/notifications/all', {
           withCredentials: true,
         });
         const fetchedNotifications = response.data.notifications.map((notif) => ({
@@ -114,7 +114,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true });
+      await axios.post('https://api.simplyrks.cloud/api/auth/logout', {}, { withCredentials: true });
       setUser(null);
       navigate('/auth/login');
     } catch (error) {
@@ -128,7 +128,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
 
   const deleteNotification = async (notificationId) => {
     try {
-      await axios.delete(`http://localhost:3000/api/notifications/delete/${notificationId}`, {
+      await axios.delete(`https://api.simplyrks.cloud/api/notifications/delete/${notificationId}`, {
         withCredentials: true,
       });
       setNotifications((prev) => prev.filter((notif) => notif.id !== notificationId));
@@ -144,7 +144,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
 
   const markAllAsRead = async () => {
     try {
-      await axios.post('http://localhost:3000/api/notifications/mark-all-read', {}, {
+      await axios.post('https://api.simplyrks.cloud/api/notifications/mark-all-read', {}, {
         withCredentials: true,
       });
       setNotifications((prev) => prev.map((notif) => ({ ...notif, unread: false })));
@@ -363,7 +363,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                     <button
                       onClick={async () => {
                         try {
-                          await axios.delete('http://localhost:3000/api/notifications/clear-all', {
+                          await axios.delete('https://api.simplyrks.cloud/api/notifications/clear-all', {
                             withCredentials: true,
                           });
                           setNotifications([]);

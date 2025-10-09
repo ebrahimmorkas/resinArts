@@ -106,7 +106,7 @@ const CompanySettings = () => {
   const fetchSettings = async () => {
     try {
       setFetchLoading(true);
-      const response = await fetch('http://localhost:3000/api/company-settings', {
+      const response = await fetch('https://api.simplyrks.cloud/api/company-settings', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -220,7 +220,7 @@ const CompanySettings = () => {
         formDataToSend.append('logo', logoFile);
       }
 
-      const response = await fetch('http://localhost:3000/api/company-settings', {
+      const response = await fetch('https://api.simplyrks.cloud/api/company-settings', {
         method: 'PUT',
         credentials: 'include',
         body: formDataToSend

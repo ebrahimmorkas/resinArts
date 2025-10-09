@@ -28,7 +28,7 @@ const AbandonedCart = () => {
     const initSocket = async () => {
       const token = localStorage.getItem('token');
       const { io } = await import('socket.io-client');
-      socketRef.current = io('http://localhost:3000', { auth: { token }, transports: ['websocket', 'polling'] });
+      socketRef.current = io('https://api.simplyrks.cloud', { auth: { token }, transports: ['websocket', 'polling'] });
       socketRef.current.on('abandoned_cart_updated', (data) => {
         setAbandonedCarts(prev => {
           const idx = prev.findIndex(cart => cart._id === data.abandonedCart._id);
@@ -50,7 +50,7 @@ const AbandonedCart = () => {
     try {
       setLoading(true);
       const axios = (await import('axios')).default;
-      const response = await axios.get('http://localhost:3000/api/abandoned-cart', { withCredentials: true });
+      const response = await axios.get('https://api.simplyrks.cloud/api/abandoned-cart', { withCredentials: true });
       if (response.data.success) setAbandonedCarts(response.data.abandonedCarts);
     } catch (error) {
       showToast('Failed to fetch abandoned carts', 'error');
@@ -88,7 +88,7 @@ const AbandonedCart = () => {
   const confirmDelete = async () => {
     try {
       const axios = (await import('axios')).default;
-      const response = await axios.delete(`http://localhost:3000/api/abandoned-cart/${deleteTarget}`, { withCredentials: true });
+      const response = await axios.delete(`https://api.simplyrks.cloud/api/abandoned-cart/${deleteTarget}`, { withCredentials: true });
       if (response.data.success) { showToast('Cart deleted successfully', 'success'); setShowDeleteModal(false); setDeleteTarget(null); }
     } catch (error) {
       showToast('Failed to delete cart', 'error');
@@ -100,7 +100,7 @@ const AbandonedCart = () => {
   const confirmDeleteMultiple = async () => {
     try {
       const axios = (await import('axios')).default;
-      const response = await axios.post('http://localhost:3000/api/abandoned-cart/delete-multiple', { ids: selectedRows }, { withCredentials: true });
+      const response = await axios.post('https://api.simplyrks.cloud/api/abandoned-cart/delete-multiple', { ids: selectedRows }, { withCredentials: true });
       if (response.data.success) { setSelectedRows([]); showToast(`${selectedRows.length} cart(s) deleted`, 'success'); setShowDeleteMultipleModal(false); }
     } catch (error) {
       showToast('Failed to delete carts', 'error');
@@ -112,7 +112,7 @@ const AbandonedCart = () => {
       setSendingEmail(id);
       showToast('Sending email...', 'info');
       const axios = (await import('axios')).default;
-      const response = await axios.post(`http://localhost:3000/api/abandoned-cart/send-reminder/${id}`, {}, { withCredentials: true });
+      const response = await axios.post(`https://api.simplyrks.cloud/api/abandoned-cart/send-reminder/${id}`, {}, { withCredentials: true });
       if (response.data.success) showToast('Email sent successfully!', 'success');
       else showToast(response.data.message || 'Failed to send email', 'error');
     } catch (error) {

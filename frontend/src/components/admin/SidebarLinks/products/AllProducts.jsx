@@ -156,7 +156,7 @@ const confirmStatusChange = async () => {
   setIsLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/product/toggle-status',
+      'https://api.simplyrks.cloud/api/product/toggle-status',
       {
         productId: statusModalData.productId,
         isActive: statusModalData.isActive
@@ -195,7 +195,7 @@ const confirmBulkStatusChange = async () => {
   try {
     const productIds = selectedProducts.map(p => p._id);
     const res = await axios.post(
-      'http://localhost:3000/api/product/bulk-toggle-status',
+      'https://api.simplyrks.cloud/api/product/bulk-toggle-status',
       {
         productIds,
         isActive: bulkStatusAction
@@ -440,7 +440,7 @@ const ViewVariantsModal = ({ product, onClose }) => {
     setToggleLoading({ [`variant-${variantId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.simplyrks.cloud/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -471,7 +471,7 @@ const ViewVariantsModal = ({ product, onClose }) => {
     setToggleLoading({ [`size-${variantId}-${sizeId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.simplyrks.cloud/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -1093,7 +1093,7 @@ const DeleteConfirmationModal = () => {
     setToggleLoading({ [`variant-${variantId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.simplyrks.cloud/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -1118,7 +1118,7 @@ const DeleteConfirmationModal = () => {
     setToggleLoading({ [`size-${sizeId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.simplyrks.cloud/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -1256,7 +1256,7 @@ const DeleteConfirmationModal = () => {
     setToggleLoading({ [`variant-${variantId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.simplyrks.cloud/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -1281,7 +1281,7 @@ const DeleteConfirmationModal = () => {
     setToggleLoading({ [`size-${sizeId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.simplyrks.cloud/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,

@@ -17,12 +17,12 @@ export const CompanySettingsProvider = ({ children }) => {
     setLoadingSettings(true);
     
     // Fetch contact info
-    const contactResponse = await axios.get('http://localhost:3000/api/company-settings/contact', {
+    const contactResponse = await axios.get('https://api.simplyrks.cloud/api/company-settings/contact', {
       withCredentials: true
     });
     
     // Fetch policies
-    const policiesResponse = await axios.get('http://localhost:3000/api/company-settings/policies', {
+    const policiesResponse = await axios.get('https://api.simplyrks.cloud/api/company-settings/policies', {
       withCredentials: true
     });
     

@@ -842,7 +842,7 @@ const confirmStatusChange = async (reactivateProducts = false) => {
   setIsLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/category/toggle-status',
+      'https://api.simplyrks.cloud/api/category/toggle-status',
       {
         categoryId: statusModalData.categoryId,
         isActive: statusModalData.isActive,
@@ -856,7 +856,7 @@ const confirmStatusChange = async (reactivateProducts = false) => {
       
       // Update categories in context
       const updatedCategories = await axios.get(
-        'http://localhost:3000/api/category/fetch-categories',
+        'https://api.simplyrks.cloud/api/category/fetch-categories',
         { withCredentials: true }
       );
       setCategories(updatedCategories.data.categories);
@@ -897,7 +897,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
   setIsLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/category/bulk-toggle-status',
+      'https://api.simplyrks.cloud/api/category/bulk-toggle-status',
       {
         categoryIds: selectedRows,
         isActive: bulkStatusAction,
@@ -911,7 +911,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       
       // Refresh categories
       const updatedCategories = await axios.get(
-        'http://localhost:3000/api/category/fetch-categories',
+        'https://api.simplyrks.cloud/api/category/fetch-categories',
         { withCredentials: true }
       );
       setCategories(updatedCategories.data.categories);
