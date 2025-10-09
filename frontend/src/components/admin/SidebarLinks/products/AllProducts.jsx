@@ -1,11 +1,10 @@
 import React, { useContext, useState, useEffect, useMemo } from "react";
-import { Edit2, Trash2, X, AlertTriangle, Calendar, Clock, DollarSign, Check, Package, Search, Filter, Download, Eye, ChevronLeft, ChevronRight } from "lucide-react";
+import { Edit2, Trash2, X, AlertTriangle, Calendar, Clock, DollarSign, Check, Package, Search, Filter, Download, Eye, ChevronLeft, ChevronRight, Power, PowerOff, Loader2, Copy } from "lucide-react";
 import { ProductContext } from '../../../../../Context/ProductContext';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
-import { Copy } from "lucide-react"; // Add Copy icon
 import { duplicateProducts } from "../../../../../utils/api";
 
 export default function AdminProductsPage() {
@@ -39,7 +38,13 @@ export default function AdminProductsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showErrorModal, setShowErrorModal] = useState(false);
   const [errorDetails, setErrorDetails] = useState({ type: 'general', message: '' });
+  const [showStatusModal, setShowStatusModal] = useState(false);
+const [statusModalData, setStatusModalData] = useState({ productId: null, isActive: false, productName: '' });
+const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
+const [bulkStatusAction, setBulkStatusAction] = useState(null);
+const [showViewVariantsModal, setShowViewVariantsModal] = useState(false);
   const navigate = useNavigate();
+  
 
   // Effects
   useEffect(() => {
@@ -93,6 +98,11 @@ export default function AdminProductsPage() {
   }, [searchTerm, itemsPerPage]);
 
   // Helper functions
+  const openViewVariantsModal = (product) => {
+  setSelectedProductForView(product);
+  setShowViewVariantsModal(true);
+};
+
   const doesProductExist = (product) => {
     return products.some((prod) => prod._id === product._id);
   };
@@ -128,7 +138,84 @@ export default function AdminProductsPage() {
     } else {
       setSelectedProducts(filteredData);
     }
-  };
+  };  
+
+  // Handle single product status toggle
+const handleToggleStatus = (productId, newStatus) => {
+  const product = products.find(p => p._id === productId);
+  setStatusModalData({
+    productId,
+    isActive: newStatus,
+    productName: product?.name || 'Unknown Product'
+  });
+  setShowStatusModal(true);
+};
+
+// Confirm single status change
+const confirmStatusChange = async () => {
+  setIsLoading(true);
+  try {
+    const res = await axios.post(
+      'http://localhost:3000/api/product/toggle-status',
+      {
+        productId: statusModalData.productId,
+        isActive: statusModalData.isActive
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      // Refresh products list - you might need to call a context method here
+      window.location.reload(); // Temporary solution
+    }
+  } catch (error) {
+    console.error('Error toggling product status:', error);
+    const errorMsg = error.response?.data?.message || 'Failed to update product status';
+    toast.error(errorMsg);
+  } finally {
+    setIsLoading(false);
+    setShowStatusModal(false);
+  }
+};
+
+// Handle bulk status toggle
+const handleBulkStatusToggle = (activate) => {
+  if (selectedProducts.length === 0) {
+    toast.warning('Please select products first');
+    return;
+  }
+  setBulkStatusAction(activate);
+  setShowBulkStatusModal(true);
+};
+
+// Confirm bulk status change
+const confirmBulkStatusChange = async () => {
+  setIsLoading(true);
+  try {
+    const productIds = selectedProducts.map(p => p._id);
+    const res = await axios.post(
+      'http://localhost:3000/api/product/bulk-toggle-status',
+      {
+        productIds,
+        isActive: bulkStatusAction
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      setSelectedProducts([]);
+      window.location.reload(); // Temporary solution
+    }
+  } catch (error) {
+    console.error('Error bulk toggling status:', error);
+    toast.error(error.response?.data?.message || 'Failed to update products');
+  } finally {
+    setIsLoading(false);
+    setShowBulkStatusModal(false);
+  }
+};
 
   const exportToExcel = () => {
     const exportData = products.map((product, index) => ({
@@ -344,6 +431,194 @@ const handleDuplicateSelected = async () => {
   const currentData = filteredData.slice(startIndex, endIndex);
 
   // Inner Components
+
+  // Coponent that will be shown when clicked on 'view variants' button specialy design for acivating and deactivating the variants of the products
+const ViewVariantsModal = ({ product, onClose }) => {
+  const [toggleLoading, setToggleLoading] = useState({});
+
+  const handleToggleVariantStatus = async (variantId, currentStatus) => {
+    setToggleLoading({ [`variant-${variantId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          isActive: !currentStatus,
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload(); // Consider replacing with context update
+      }
+    } catch (error) {
+      console.error('Error toggling variant:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to toggle variant status';
+      toast.error(errorMsg);
+    } finally {
+      setToggleLoading({ [`variant-${variantId}`]: false });
+    }
+  };
+
+  const handleToggleSizeStatus = async (variantId, sizeId, currentStatus, variantIsActive) => {
+    if (!variantIsActive && !currentStatus) {
+      toast.error('Cannot activate size because the variant is deactivated');
+      return;
+    }
+
+    setToggleLoading({ [`size-${variantId}-${sizeId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          sizeId: sizeId,
+          isActive: !currentStatus,
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload(); // Consider replacing with context update
+      }
+    } catch (error) {
+      console.error('Error toggling size:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to toggle size status';
+      toast.error(errorMsg);
+    } finally {
+      setToggleLoading({ [`size-${variantId}-${sizeId}`]: false });
+    }
+  };
+
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Variants - {product.name}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-4 md:p-6 overflow-y-auto flex-1">
+          <div className="space-y-6">
+            {product.hasVariants && product.variants?.length > 0 ? (
+              product.variants.map(variant => {
+                const variantId = typeof variant._id === 'object' ? variant._id.$oid : variant._id;
+                const isVariantActive = variant.isActive !== false;
+
+                return (
+                  <div key={variantId} className="border border-gray-200 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={variant.variantImage || getImageUrl(product)}
+                        alt={variant.colorName}
+                        className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
+                        <p className="text-sm text-gray-500">Variant</p>
+                      </div>
+                      <button
+                        onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
+                        disabled={toggleLoading[`variant-${variantId}`]}
+                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          isVariantActive
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                        } disabled:opacity-50`}
+                      >
+                        {toggleLoading[`variant-${variantId}`] ? (
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        ) : isVariantActive ? (
+                          <>
+                            <Power className="w-3 h-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <PowerOff className="w-3 h-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </button>
+                    </div>
+                    <div className="ml-20 space-y-2">
+                      {variant.moreDetails && variant.moreDetails.length > 0 ? (
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700">Sizes</h4>
+                          <div className="mt-2 space-y-2">
+                            {variant.moreDetails.map(details => {
+                              const sizeId = typeof details._id === 'object' ? details._id.$oid : details._id;
+                              const isSizeActive = isVariantActive && details.isActive !== false;
+
+                              return (
+                                <div
+                                  key={sizeId}
+                                  className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">
+                                      {details.size?.length}" × {details.size?.breadth}" × {details.size?.height}"
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      Stock: {details.stock || 0}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() =>
+                                      handleToggleSizeStatus(variantId, sizeId, isSizeActive, isVariantActive)
+                                    }
+                                    disabled={toggleLoading[`size-${variantId}-${sizeId}`]}
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                      isSizeActive
+                                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                    } disabled:opacity-50`}
+                                  >
+                                    {toggleLoading[`size-${variantId}-${sizeId}`] ? (
+                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                    ) : isSizeActive ? (
+                                      <>
+                                        <Power className="w-3 h-3 mr-1" />
+                                        Active
+                                      </>
+                                    ) : (
+                                      <>
+                                        <PowerOff className="w-3 h-3 mr-1" />
+                                        Inactive
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      ) : (
+                        <p className="text-sm text-gray-500">No sizes available for this variant.</p>
+                      )}
+                    </div>
+                  </div>
+                );
+              })
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-600">No variants available for this product.</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+  
   const LoadingOverlay = () => (
     <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60]">
       <div className="bg-white rounded-xl shadow-lg p-8 text-center">
@@ -812,145 +1087,344 @@ const DeleteConfirmationModal = () => {
   // };
 
   const ViewStockModal = ({ product, onClose }) => {
-    if (!product) return null;
+  const [toggleLoading, setToggleLoading] = useState({});
 
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-lg md:text-xl font-semibold text-gray-900">Stock Details - {product.name}</h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="p-4 md:p-6 overflow-y-auto flex-1">
-            <div className="space-y-6">
-              {product.variants.map(variant => (
-                <div key={variant._id} className="border border-gray-200 rounded-lg p-4">
+  const handleToggleVariantStatus = async (variantId, currentStatus) => {
+    setToggleLoading({ [`variant-${variantId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          isActive: !currentStatus
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error toggling variant:', error);
+      toast.error(error.response?.data?.message || 'Failed to toggle variant');
+    } finally {
+      setToggleLoading({ [`variant-${variantId}`]: false });
+    }
+  };
+
+  const handleToggleSizeStatus = async (variantId, sizeId, currentStatus) => {
+    setToggleLoading({ [`size-${sizeId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          sizeId: sizeId,
+          isActive: !currentStatus
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error toggling size:', error);
+      toast.error(error.response?.data?.message || 'Failed to toggle size');
+    } finally {
+      setToggleLoading({ [`size-${sizeId}`]: false });
+    }
+  };
+
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Stock Details - {product.name}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-4 md:p-6 overflow-y-auto flex-1">
+          <div className="space-y-6">
+            {product.variants.map(variant => {
+              const variantId = typeof variant._id === 'object' ? variant._id.$oid : variant._id;
+              const isVariantActive = variant.isActive !== false;
+              
+              return (
+                <div key={variantId} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
                     <img 
                       src={variant.variantImage || getImageUrl(product)} 
                       alt={variant.colorName} 
                       className="w-16 h-16 rounded-lg object-cover" 
                     />
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
                       <p className="text-sm text-gray-500">Variant</p>
                     </div>
+                    <button
+                      onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
+                      disabled={toggleLoading[`variant-${variantId}`]}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        isVariantActive 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                      } disabled:opacity-50`}
+                    >
+                      {toggleLoading[`variant-${variantId}`] ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : isVariantActive ? (
+                        <Power className="w-3 h-3 mr-1" />
+                      ) : (
+                        <PowerOff className="w-3 h-3 mr-1" />
+                      )}
+                      {isVariantActive ? 'Active' : 'Inactive'}
+                    </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {variant.moreDetails.map(details => (
-                      <div key={details._id} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="flex justify-between items-start mb-2">
-                          <div className="flex-1">
-                            <p className="text-sm font-medium text-gray-700">
-                              Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
-                            </p>
-                            <p className="text-xs text-gray-500 mt-1">Weight: {details.size.weight}kg</p>
+                    {variant.moreDetails.map(details => {
+                      const detailsId = typeof details._id === 'object' ? details._id.$oid : details._id;
+                      const isSizeActive = details.isActive !== false;
+                      
+                      return (
+                        <div key={detailsId} className="bg-gray-50 p-3 rounded-lg">
+                          <div className="flex justify-between items-start mb-2">
+                            <div className="flex-1">
+                              <p className="text-sm font-medium text-gray-700">
+                                Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
+                              </p>
+                              <p className="text-xs text-gray-500 mt-1">Weight: {details.size.weight}kg</p>
+                            </div>
+                            <div className="text-right ml-2">
+                              <p className="text-lg font-bold text-blue-600">{details.stock || 0}</p>
+                              <p className="text-xs text-gray-500">in stock</p>
+                            </div>
                           </div>
-                          <div className="text-right ml-2">
-                            <p className="text-lg font-bold text-blue-600">{details.stock || 0}</p>
-                            <p className="text-xs text-gray-500">in stock</p>
+                          <div className="flex items-center justify-between mt-2">
+                            <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
+                              (details.stock || 0) > 10 
+                                ? 'bg-green-100 text-green-800' 
+                                : (details.stock || 0) > 0 
+                                  ? 'bg-yellow-100 text-yellow-800' 
+                                  : 'bg-red-100 text-red-800'
+                            }`}>
+                              {(details.stock || 0) > 10 ? 'In Stock' : (details.stock || 0) > 0 ? 'Low Stock' : 'Out of Stock'}
+                            </div>
+                            <button
+                              onClick={() => handleToggleSizeStatus(variantId, detailsId, isSizeActive)}
+                              disabled={toggleLoading[`size-${detailsId}`]}
+                              className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                isSizeActive 
+                                  ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                  : 'bg-red-100 text-red-800 hover:bg-red-200'
+                              } disabled:opacity-50`}
+                            >
+                              {toggleLoading[`size-${detailsId}`] ? (
+                                <Loader2 className="w-3 h-3 animate-spin" />
+                              ) : isSizeActive ? (
+                                <Power className="w-3 h-3" />
+                              ) : (
+                                <PowerOff className="w-3 h-3" />
+                              )}
+                            </button>
                           </div>
                         </div>
-                        <div className="mt-2">
-                          <div className={`inline-flex px-2 py-1 rounded-full text-xs font-medium ${
-                            (details.stock || 0) > 10 
-                              ? 'bg-green-100 text-green-800' 
-                              : (details.stock || 0) > 0 
-                                ? 'bg-yellow-100 text-yellow-800' 
-                                : 'bg-red-100 text-red-800'
-                          }`}>
-                            {(details.stock || 0) > 10 ? 'In Stock' : (details.stock || 0) > 0 ? 'Low Stock' : 'Out of Stock'}
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const ViewPriceModal = ({ product, onClose }) => {
-    if (!product) return null;
+  const [toggleLoading, setToggleLoading] = useState({});
 
-    return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
-          <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
-            <h2 className="text-lg md:text-xl font-semibold text-gray-900">Price Details - {product.name}</h2>
-            <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
-              <X className="w-5 h-5" />
-            </button>
-          </div>
-          <div className="p-4 md:p-6 overflow-y-auto flex-1">
-            <div className="space-y-6">
-              {product.variants.map(variant => (
-                <div key={variant._id} className="border border-gray-200 rounded-lg p-4">
+  const handleToggleVariantStatus = async (variantId, currentStatus) => {
+    setToggleLoading({ [`variant-${variantId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          isActive: !currentStatus
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error toggling variant:', error);
+      toast.error(error.response?.data?.message || 'Failed to toggle variant');
+    } finally {
+      setToggleLoading({ [`variant-${variantId}`]: false });
+    }
+  };
+
+  const handleToggleSizeStatus = async (variantId, sizeId, currentStatus) => {
+    setToggleLoading({ [`size-${sizeId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          sizeId: sizeId,
+          isActive: !currentStatus
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload();
+      }
+    } catch (error) {
+      console.error('Error toggling size:', error);
+      toast.error(error.response?.data?.message || 'Failed to toggle size');
+    } finally {
+      setToggleLoading({ [`size-${sizeId}`]: false });
+    }
+  };
+
+  if (!product) return null;
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
+        <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 flex-shrink-0">
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Price Details - {product.name}</h2>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="p-4 md:p-6 overflow-y-auto flex-1">
+          <div className="space-y-6">
+            {product.variants.map(variant => {
+              const variantId = typeof variant._id === 'object' ? variant._id.$oid : variant._id;
+              const isVariantActive = variant.isActive !== false;
+              
+              return (
+                <div key={variantId} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-4">
                     <img 
                       src={variant.variantImage || getImageUrl(product)} 
                       alt={variant.colorName} 
                       className="w-16 h-16 rounded-lg object-cover" 
                     />
-                    <div>
+                    <div className="flex-1">
                       <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
                       <p className="text-sm text-gray-500">Variant</p>
                     </div>
+                    <button
+                      onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
+                      disabled={toggleLoading[`variant-${variantId}`]}
+                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                        isVariantActive 
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                      } disabled:opacity-50`}
+                    >
+                      {toggleLoading[`variant-${variantId}`] ? (
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                      ) : isVariantActive ? (
+                        <Power className="w-3 h-3 mr-1" />
+                      ) : (
+                        <PowerOff className="w-3 h-3 mr-1" />
+                      )}
+                      {isVariantActive ? 'Active' : 'Inactive'}
+                    </button>
                   </div>
                   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-                    {variant.moreDetails.map(details => (
-                      <div key={details._id} className="bg-gray-50 p-3 rounded-lg">
-                        <div className="mb-3">
-                          <p className="text-sm font-medium text-gray-700 mb-1">
-                            Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
-                          </p>
-                          <p className="text-xs text-gray-500">Weight: {details.size.weight}kg</p>
-                        </div>
-                        
-                        <div className="space-y-2">
-                          <div className="flex justify-between items-center">
-                            <span className="text-sm text-gray-600">Base Price:</span>
-                            <span className="text-base md:text-lg font-bold text-green-600">${details.price}</span>
+                    {variant.moreDetails.map(details => {
+                      const detailsId = typeof details._id === 'object' ? details._id.$oid : details._id;
+                      const isSizeActive = details.isActive !== false;
+                      
+                      return (
+                        <div key={detailsId} className="bg-gray-50 p-3 rounded-lg">
+                          <div className="mb-3">
+                            <p className="text-sm font-medium text-gray-700 mb-1">
+                              Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
+                            </p>
+                            <p className="text-xs text-gray-500">Weight: {details.size.weight}kg</p>
                           </div>
                           
-                          {details.discountPrice && (
+                          <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600">Discount Price:</span>
-                              <span className="text-base md:text-lg font-bold text-red-600">${details.discountPrice}</span>
+                              <span className="text-sm text-gray-600">Base Price:</span>
+                              <span className="text-base md:text-lg font-bold text-green-600">${details.price}</span>
                             </div>
-                          )}
-                          
-                          {details.bulkPricing && details.bulkPricing.length > 0 && (
-                            <div className="mt-3 pt-3 border-t border-gray-200">
-                              <p className="text-xs font-medium text-gray-700 mb-2">Bulk Pricing:</p>
-                              <div className="space-y-1">
-                                {details.bulkPricing.map((bulk, index) => (
-                                  <div key={index} className="flex justify-between text-xs">
-                                    <span className="text-gray-600">{bulk.quantity}+ items:</span>
-                                    <span className="font-medium text-blue-600">${bulk.wholesalePrice}</span>
-                                  </div>
-                                ))}
+                            
+                            {details.discountPrice && (
+                              <div className="flex justify-between items-center">
+                                <span className="text-sm text-gray-600">Discount Price:</span>
+                                <span className="text-base md:text-lg font-bold text-red-600">${details.discountPrice}</span>
                               </div>
+                            )}
+                            
+                            {details.bulkPricing && details.bulkPricing.length > 0 && (
+                              <div className="mt-3 pt-3 border-t border-gray-200">
+                                <p className="text-xs font-medium text-gray-700 mb-2">Bulk Pricing:</p>
+                                <div className="space-y-1">
+                                  {details.bulkPricing.map((bulk, index) => (
+                                    <div key={index} className="flex justify-between text-xs">
+                                      <span className="text-gray-600">{bulk.quantity}+ items:</span>
+                                      <span className="font-medium text-blue-600">${bulk.wholesalePrice}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            <div className="flex justify-end mt-2">
+                              <button
+                                onClick={() => handleToggleSizeStatus(variantId, detailsId, isSizeActive)}
+                                disabled={toggleLoading[`size-${detailsId}`]}
+                                className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                  isSizeActive 
+                                    ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+                                    : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                } disabled:opacity-50`}
+                              >
+                                {toggleLoading[`size-${detailsId}`] ? (
+                                  <Loader2 className="w-3 h-3 animate-spin" />
+                                ) : isSizeActive ? (
+                                  <Power className="w-3 h-3" />
+                                ) : (
+                                  <PowerOff className="w-3 h-3" />
+                                )}
+                              </button>
                             </div>
-                          )}
+                          </div>
                         </div>
-                      </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 </div>
-              ))}
-            </div>
+              );
+            })}
           </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   const RestockModal = ({ product = {}, onClose, selectedProducts = [], multipleToRestockInitial = {} }) => {
     const [stockTextfield, setStockTextfield] = useState("");
@@ -2094,6 +2568,20 @@ const DeleteConfirmationModal = () => {
           <Edit2 className="w-4 h-4 inline mr-1" />
           Bulk Edit
         </button>
+        <button 
+          onClick={() => handleBulkStatusToggle(true)}
+          className="bg-green-500 hover:bg-green-600 text-green-600 px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center"
+        >
+          <Power className="w-4 h-4 mr-1" />
+          Activate Selected
+        </button>
+        <button 
+          onClick={() => handleBulkStatusToggle(false)}
+          className="bg-orange-500 hover:bg-orange-600 text-red-600 px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center"
+        >
+          <PowerOff className="w-4 h-4 mr-1" />
+          Deactivate Selected
+        </button>
                     <button 
   onClick={() => setShowDeleteModal(true)} 
   className="bg-red-500 hover:bg-red-600 text-red-600 px-3 py-1 rounded-md text-sm font-medium transition-colors"
@@ -2109,117 +2597,147 @@ const DeleteConfirmationModal = () => {
           <div className="overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={selectedProducts.length === filteredData.length && filteredData.length > 0} onChange={toggleSelectAll} />
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sr No.
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Image
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Product
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Stock
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Color Variants
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Size Variants
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Price
-                  </th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Created At
-                  </th>
-                  {selectedProducts.length === 0 && (
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  )}
-                </tr>
-              </thead>
+  <tr>
+    <th scope="col" className="px-6 py-3">
+      <input
+        type="checkbox"
+        checked={selectedProducts.length === filteredData.length && filteredData.length > 0}
+        onChange={toggleSelectAll}
+        className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+      />
+    </th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Image</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Product Name</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Category</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Stock</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Color Variants</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Size Variants</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Price</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Variants</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Created Date</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+  </tr>
+</thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {currentData.map((product, index) => (
-                  <tr key={product._id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <input type="checkbox" className="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked={selectedProducts.some(p => p._id === product._id)} onChange={() => toggleCheckbox(product)} />
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {startIndex + index + 1}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-center">
-                      <div className="flex justify-center">
-                        <img src={getImageUrl(product)} alt={product.name} className="w-12 h-12 rounded-lg object-cover" />
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <div className="text-sm font-medium text-gray-900">{product.name}</div>
-                      <div className="text-sm text-gray-500">{product.category}</div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {product.hasVariants ? (
-                        <button onClick={() => openViewStockModal(product)} className="text-blue-600 hover:text-blue-800 font-medium">
-                          View Stock
-                        </button>
-                      ) : (
-                        <span className="font-medium">{product.stock}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {product.hasVariants ? product.variants.length : 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {getNumberOfSizeVariants(product)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900">
-                      {product.hasVariants ? (
-                        <button onClick={() => openViewPriceModal(product)} className="text-blue-600 hover:text-blue-800 font-medium">
-                          View Price
-                        </button>
-                      ) : (
-                        <span className="font-medium">${product.price}</span>
-                      )}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500">
-                      {formatDate(product.createdAt)}
-                    </td>
-                    {selectedProducts.length === 0 && (
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center">
-                        <div className="flex items-center justify-center space-x-2">
-                          <button onClick={() => openViewDetailsModal(product)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors" title="View Details">
-                            <Eye className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => { setRevisedRateProduct(product); setShowRevisedRateModal(true); }} className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Revise Rate">
-                            <DollarSign className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => { setRestockProduct(product); setShowRestockModal(true); }} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors" title="Restock">
-                            <Package className="w-4 h-4" />
-                          </button>
-                          <button 
-        onClick={() => handleDuplicateProduct(product)} 
-        className="p-1.5 text-indigo-600 hover:bg-indigo-50 rounded-md transition-colors" 
-        title="Duplicate"
-      >
-        <Copy className="w-4 h-4" />
-      </button>
-                          <button onClick={() => openEditModal(product)} className="p-1.5 text-gray-600 hover:bg-gray-50 rounded-md transition-colors" title="Edit">
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button onClick={() => openDeleteModal(product)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors" title="Delete">
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    )}
-                  </tr>
-                ))}
-              </tbody>
+  {currentData.map((product, index) => (
+    <tr key={product._id} className="hover:bg-gray-50">
+      <td className="px-6 py-4 whitespace-nowrap">
+        <input
+          type="checkbox"
+          checked={selectedProducts.some((p) => p._id === product._id)}
+          onChange={() => toggleCheckbox(product)}
+          className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+        />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <img
+          src={getImageUrl(product)}
+          alt={product.name}
+          className="h-12 w-12 rounded-lg object-cover"
+        />
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap">
+        <div className="text-sm font-medium text-gray-900">{product.name}</div>
+        <div className="text-sm text-gray-500">{product._id}</div>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.categoryPath || product.category}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        {product.hasVariants ? (
+          <button
+            onClick={() => openViewStockModal(product)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            View Stock
+          </button>
+        ) : (
+          <span className={product.stock > 0 ? 'text-green-600' : 'text-red-600'}>
+            {product.stock}
+          </span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {product.hasVariants ? product.variants.length : 0}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+        {getNumberOfSizeVariants(product)}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        {product.hasVariants ? (
+          <button
+            onClick={() => openViewPriceModal(product)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            View Price
+          </button>
+        ) : (
+          <span className="text-green-600">${product.price}</span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        {product.hasVariants ? (
+          <button
+            onClick={() => openViewVariantsModal(product)}
+            className="text-blue-600 hover:text-blue-800"
+          >
+            View Variants
+          </button>
+        ) : (
+          <span className="text-gray-500">-</span>
+        )}
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(product.createdAt)}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm">
+        <button
+          onClick={() => handleToggleStatus(product._id, !product.isActive)}
+          className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
+            product.isActive
+              ? 'bg-green-100 text-green-800 hover:bg-green-200'
+              : 'bg-red-100 text-red-800 hover:bg-red-200'
+          }`}
+        >
+          {product.isActive ? (
+            <>
+              <Power className="w-3 h-3 mr-1" />
+              Active
+            </>
+          ) : (
+            <>
+              <PowerOff className="w-3 h-3 mr-1" />
+              Inactive
+            </>
+          )}
+        </button>
+      </td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
+        <button
+          onClick={() => openViewDetailsModal(product)}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          <Eye className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => openEditModal(product)}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          <Edit2 className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => handleDuplicateProduct(product)}
+          className="text-blue-600 hover:text-blue-800"
+        >
+          <Copy className="h-4 w-4" />
+        </button>
+        <button
+          onClick={() => openDeleteModal(product)}
+          className="text-red-600 hover:text-red-800"
+        >
+          <Trash2 className="h-4 w-4" />
+        </button>
+      </td>
+    </tr>
+  ))}
+</tbody>
             </table>
           </div>
 
@@ -2303,6 +2821,114 @@ const DeleteConfirmationModal = () => {
       {/* {showEditModal && <EditModal product={selectedProductForEdit} onClose={() => setShowEditModal(false)} />} */}
       <DeleteConfirmationModal />
       <ErrorModal />
+      {/* Status Confirmation Modal */}
+{showStatusModal && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {statusModalData.isActive ? 'Activate Product' : 'Deactivate Product'}
+        </h3>
+      </div>
+      <div className="px-6 py-4">
+        <p className="text-gray-600">
+          Are you sure you want to {statusModalData.isActive ? 'activate' : 'deactivate'}{' '}
+          <span className="font-semibold text-gray-900">"{statusModalData.productName}"</span>?
+        </p>
+        {!statusModalData.isActive && (
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              This product will not be visible to customers.
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+        <button
+          onClick={() => setShowStatusModal(false)}
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          disabled={isLoading}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={confirmStatusChange}
+          disabled={isLoading}
+          className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors ${
+            statusModalData.isActive 
+              ? 'bg-green-600 hover:bg-green-700' 
+              : 'bg-orange-600 hover:bg-orange-700'
+          } disabled:opacity-50`}
+        >
+          {isLoading ? 'Processing...' : 'Confirm'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Bulk Status Confirmation Modal */}
+{showBulkStatusModal && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {bulkStatusAction ? 'Activate' : 'Deactivate'} Multiple Products
+        </h3>
+      </div>
+      <div className="px-6 py-4">
+        <p className="text-gray-600">
+          Are you sure you want to {bulkStatusAction ? 'activate' : 'deactivate'}{' '}
+          <span className="font-semibold text-gray-900">{selectedProducts.length} selected products</span>?
+        </p>
+        {bulkStatusAction && (
+          <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800">
+              Only products with active categories will be activated.
+            </p>
+          </div>
+        )}
+        {!bulkStatusAction && (
+          <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              These products will not be visible to customers.
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+        <button
+          onClick={() => setShowBulkStatusModal(false)}
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          disabled={isLoading}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={confirmBulkStatusChange}
+          disabled={isLoading}
+          className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors ${
+            bulkStatusAction 
+              ? 'bg-green-600 hover:bg-green-700' 
+              : 'bg-orange-600 hover:bg-orange-700'
+          } disabled:opacity-50`}
+        >
+          {isLoading ? 'Processing...' : 'Confirm'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Modal that shows variants */}
+{showViewVariantsModal && (
+  <ViewVariantsModal
+    product={selectedProductForView}
+    onClose={() => setShowViewVariantsModal(false)}
+  />
+)}
     </div>
   );
 }

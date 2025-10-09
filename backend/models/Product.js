@@ -38,6 +38,7 @@ const moreDetailsSchema = mongoose.Schema({
   quantity: { type: Number }
 }],
   bulkPricingCombinations: [bulkPricingSchema],
+  isActive: { type: Boolean, default: true },
 })
 
 // Schema for Product Variants
@@ -51,6 +52,7 @@ const productVariantSchema = mongoose.Schema({
   commonStock: { type: Number, required: false },
   commonBulkPricingCombinations: [bulkPricingSchema],
   isDefault: { type: Boolean, default: false }, // New field for default variant
+  isActive: { type: Boolean, default: true },
 })
 
 // Main Product Schema
@@ -78,6 +80,9 @@ const productSchema = mongoose.Schema(
 
     hasVariants: { type: Boolean, default: false }, // Flag to indicate if product has variants
     variants: [productVariantSchema], // Array of product variants
+     isActive: { type: Boolean, default: true },
+    deactivatedBy: { type: String, enum: ['manual', 'category', null], default: null },
+    deactivatedDueToCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
   },
   {
     timestamps: true,

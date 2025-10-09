@@ -29,7 +29,7 @@ import {
   Clock,
   Map,
   User,
-  Tag
+  Tag,
 } from 'lucide-react';
 
 const Sidebar = ({ isOpen, onClose }) => {
@@ -114,6 +114,23 @@ const Sidebar = ({ isOpen, onClose }) => {
         { id: 'add-announcement', label: 'Add Announcement', icon: Plus, href: '/admin/panel/announcement/add' },
       ]
     },
+     {
+      id: 'store',
+      label: 'Company Settings',
+      icon: Store,
+      href: '/admin/panel/company-settings',
+      // submenu: [
+      //   { id: 'store-info', label: 'Store Information', icon: Settings, href: '/admin/panel/store/info' },
+      //   { id: 'store-appearance', label: 'Appearance', icon: Edit3, href: '/admin/panel/store/appearance' },
+      //   { id: 'store-policies', label: 'Policies', icon: Shield, href: '/admin/panel/store/policies' },
+      // ]
+    },
+    {
+      id: 'abandonedCart',
+      label: 'Abandoned Cart',
+      icon: ShoppingCart,
+      href: '/admin/panel/abandoned-cart',
+    },
     {
       id: 'analytics',
       label: 'Analytics',
@@ -145,16 +162,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         { id: 'payment-methods', label: 'Payment Methods', icon: CreditCard, href: '/admin/panel/payments/methods' },
       ]
     },
-    {
-      id: 'store',
-      label: 'Store Settings',
-      icon: Store,
-      submenu: [
-        { id: 'store-info', label: 'Store Information', icon: Settings, href: '/admin/panel/store/info' },
-        { id: 'store-appearance', label: 'Appearance', icon: Edit3, href: '/admin/panel/store/appearance' },
-        { id: 'store-policies', label: 'Policies', icon: Shield, href: '/admin/panel/store/policies' },
-      ]
-    },
+   
     {
       id: 'settings',
       label: 'Settings',

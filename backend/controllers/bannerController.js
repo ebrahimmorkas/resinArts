@@ -100,8 +100,11 @@ const fetchBanners = async (req, res) => {
   try {
     const now = new Date();
     
-    // Find expired banners
-    const expiredBanners = await Banner.find({ endDate: { $lt: now } });
+    // Find expired banners, excluding default banners
+    const expiredBanners = await Banner.find({ 
+      endDate: { $lt: now }, 
+      isDefault: { $ne: true } // Skip banners where isDefault is true
+    });
     
     // Delete expired banners and their Cloudinary images in parallel
     const deletePromises = expiredBanners.map(async (banner) => {
@@ -111,7 +114,7 @@ const fetchBanners = async (req, res) => {
         const fileName = urlParts[urlParts.length - 1].split('.')[0];
         const publicId = `banners/${fileName}`;
         
-        // Delete from Cloudinary (don't wait for this to complete)
+        // Delete from Cloudinary
         cloudinary.uploader.destroy(publicId).catch(err => 
           console.error('Cloudinary delete error for expired banner:', err)
         );
@@ -126,7 +129,7 @@ const fetchBanners = async (req, res) => {
     // Wait for all deletions to complete
     await Promise.all(deletePromises);
 
-    // Fetch all remaining banners (no active filtering)
+    // Fetch all remaining banners
     const banners = await Banner.find({}).sort({ createdAt: -1 });
     res.status(200).json(banners);
   } catch (error) {

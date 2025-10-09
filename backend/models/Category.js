@@ -13,14 +13,21 @@ const categorySchema = mongoose.Schema({
     ref: 'Category',
   },
   image: {
-    type: String, // Store Cloudinary image URL for main categories
+    type: String,
     required: false,
   },
+  isActive: { 
+    type: Boolean, 
+    default: true 
+  },
+  deactivatedProducts: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product'
+  }],
 }, {
   timestamps: true,
 });
 
-// Index for faster queries on parent_category_id
 categorySchema.index({ parent_category_id: 1 });
 
 module.exports = mongoose.model('Category', categorySchema);

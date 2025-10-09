@@ -1,23 +1,6 @@
 import React, { useState, useMemo, useContext, useRef, useEffect } from 'react';
 import { 
-  Search, 
-  Edit2, 
-  Trash2, 
-  ChevronLeft, 
-  ChevronRight, 
-  Eye,
-  Filter,
-  Download,
-  X,
-  AlertTriangle,
-  Loader2,
-  FolderTree,
-  Plus,
-  Calendar,
-  Hash,
-  Save,
-  Image as ImageIcon,
-  Upload
+  Search, Edit2, Trash2, ChevronLeft, ChevronRight, Eye, Filter, Download, X, AlertTriangle, Loader2, FolderTree, Plus, Calendar, Hash, Save, Image as ImageIcon, Upload, Power, PowerOff, AlertCircle
 } from 'lucide-react';
 import { CategoryContext } from '../../../../../Context/CategoryContext';
 import axios from 'axios';
@@ -46,6 +29,7 @@ const AllCategories = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showImageUpload, setShowImageUpload] = useState(false);
   const [uploadCategoryId, setUploadCategoryId] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
   const [unsavedChanges, setUnsavedChanges] = useState({ 
     hasChanges: false, 
     categoryId: null, 
@@ -62,7 +46,6 @@ const AllCategories = () => {
   const [imageModal, setImageModal] = useState({ isOpen: false, url: '' });
   const [shouldClickFileInput, setShouldClickFileInput] = useState(false);
   const fileInputRef = useRef(null);
-  
   const [filters, setFilters] = useState({
     singleDate: '',
     startDate: '',
@@ -77,6 +60,17 @@ const AllCategories = () => {
     noSubcategories: false,
     subcategoryCount: ''
   });
+  const [showStatusModal, setShowStatusModal] = useState(false);
+const [statusModalData, setStatusModalData] = useState({ 
+  categoryId: null, 
+  isActive: false, 
+  categoryName: '',
+  hasChildren: false 
+});
+const [showReactivateConfirm, setShowReactivateConfirm] = useState(false);
+const [reactivateData, setReactivateData] = useState({ categoryId: null, categoryName: '' });
+const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
+const [bulkStatusAction, setBulkStatusAction] = useState(null);
 
   const parentCategories = useMemo(() => {
     return categories.filter(cat => !cat.parent_category_id);
@@ -825,222 +819,339 @@ const AllCategories = () => {
     XLSX.utils.book_append_sheet(wb, ws, "Categories");
     XLSX.writeFile(wb, "categories.xlsx");
   };
+// Handle single category status toggle
+const handleToggleStatus = (categoryId, newStatus, categoryName) => {
+  const category = categories.find(c => {
+    const catId = typeof c._id === 'object' ? c._id.$oid : c._id;
+    return catId === categoryId;
+  });
+  
+  const hasChildren = getSubcategoryCount(categoryId) > 0;
+  
+  setStatusModalData({
+    categoryId,
+    isActive: newStatus,
+    categoryName,
+    hasChildren
+  });
+  setShowStatusModal(true);
+};
 
+// Confirm status change
+const confirmStatusChange = async (reactivateProducts = false) => {
+  setIsLoading(true);
+  try {
+    const res = await axios.post(
+      'http://localhost:3000/api/category/toggle-status',
+      {
+        categoryId: statusModalData.categoryId,
+        isActive: statusModalData.isActive,
+        reactivateProducts
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      
+      // Update categories in context
+      const updatedCategories = await axios.get(
+        'http://localhost:3000/api/category/fetch-categories',
+        { withCredentials: true }
+      );
+      setCategories(updatedCategories.data.categories);
+      
+      setShowStatusModal(false);
+      setShowReactivateConfirm(false);
+    }
+  } catch (error) {
+    console.error('Error toggling category status:', error);
+    toast.error(error.response?.data?.message || 'Failed to update category status');
+  } finally {
+    setIsLoading(false);
+  }
+};
+
+// Handle reactivation with product check
+const handleReactivate = () => {
+  setShowStatusModal(false);
+  setReactivateData({
+    categoryId: statusModalData.categoryId,
+    categoryName: statusModalData.categoryName
+  });
+  setShowReactivateConfirm(true);
+};
+
+// Handle bulk status toggle
+const handleBulkStatusToggle = (activate) => {
+  if (selectedRows.length === 0) {
+    toast.warning('Please select categories first');
+    return;
+  }
+  setBulkStatusAction(activate);
+  setShowBulkStatusModal(true);
+};
+
+// Confirm bulk status change
+const confirmBulkStatusChange = async (reactivateProducts = false) => {
+  setIsLoading(true);
+  try {
+    const res = await axios.post(
+      'http://localhost:3000/api/category/bulk-toggle-status',
+      {
+        categoryIds: selectedRows,
+        isActive: bulkStatusAction,
+        reactivateProducts
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      
+      // Refresh categories
+      const updatedCategories = await axios.get(
+        'http://localhost:3000/api/category/fetch-categories',
+        { withCredentials: true }
+      );
+      setCategories(updatedCategories.data.categories);
+      
+      setSelectedRows([]);
+      setShowBulkStatusModal(false);
+    }
+  } catch (error) {
+    console.error('Error bulk toggling status:', error);
+    toast.error(error.response?.data?.message || 'Failed to update categories');
+  } finally {
+    setIsLoading(false);
+  }
+};
   const renderHierarchyTree = (category, level = 0, isEditMode = false, isLast = false, parentLines = []) => {
-    const categoryId = typeof category._id === 'object' ? category._id.$oid : category._id;
-    const hasChildren = category.children && category.children.length > 0;
-    const isMainParent = level === 0;
-    const isEditing = editingCategoryId === categoryId;
-    const isAddingChild = addingSubcategoryTo === categoryId;
-    const isUploading = showImageUpload && uploadCategoryId === categoryId;
+  const categoryId = typeof category._id === 'object' ? category._id.$oid : category._id;
+  const hasChildren = category.children && category.children.length > 0;
+  const isMainParent = level === 0;
+  const isEditing = editingCategoryId === categoryId;
+  const isAddingChild = addingSubcategoryTo === categoryId;
+  const isUploading = showImageUpload && uploadCategoryId === categoryId;
 
-    return (
-      <div key={categoryId} className="mb-1">
-        <div className="flex items-start">
-          {level > 0 && (
-            <div className="flex items-start pt-3" style={{ width: `${level * 32}px` }}>
-              {parentLines.map((showLine, idx) => (
-                <div key={idx} className="relative" style={{ width: '32px', height: '100%' }}>
-                  {showLine && (
-                    <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-300"></div>
-                  )}
-                </div>
-              ))}
-              <div className="relative" style={{ width: '32px' }}>
-                <div className="absolute left-4 top-0 w-px bg-gray-300" style={{ height: '24px' }}></div>
-                <div className="absolute left-4 top-6 h-px bg-gray-300" style={{ width: '12px' }}></div>
-                {!isLast && (
-                  <div className="absolute left-4 bottom-0 w-px bg-gray-300" style={{ top: '24px' }}></div>
+  return (
+    <div key={categoryId} className="mb-1">
+      <div className="flex items-start">
+        {level > 0 && (
+          <div className="flex items-start pt-3" style={{ width: `${level * 32}px` }}>
+            {parentLines.map((showLine, idx) => (
+              <div key={idx} className="relative" style={{ width: '32px', height: '100%' }}>
+                {showLine && (
+                  <div className="absolute left-4 top-0 bottom-0 w-px bg-gray-300"></div>
                 )}
               </div>
-            </div>
-          )}
-          
-          <div className="flex-1">
-            <div 
-              className={`flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 transition-colors ${isMainParent ? 'bg-blue-50' : ''} ${category.image && !isEditMode ? 'cursor-pointer' : ''}`}
-              onClick={() => !isEditMode && category.image && setImageModal({ isOpen: true, url: category.image })}
-            >
-              {showImageUpload && imagePreview && isUploading ? (
-                <img 
-                  src={imagePreview} 
-                  alt="Preview"
-                  className="w-12 h-12 object-cover rounded-md border-2 border-blue-500"
-                />
-              ) : category.image ? (
-                <img 
-                  src={category.image} 
-                  alt={category.categoryName}
-                  className="w-12 h-12 object-cover rounded-md border border-gray-200"
-                />
-              ) : (
-                <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">
-                  <FolderTree className="w-6 h-6 text-gray-400" />
-                </div>
-              )}
-
-              {isEditing ? (
-                <>
-                  <input
-                    type="text"
-                    value={editingValue}
-                    onChange={handleEditingChange}
-                    className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    autoFocus
-                  />
-                  <button
-                    onClick={() => handleSaveEdit(categoryId)}
-                    disabled={loadingStates[categoryId]}
-                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
-                    title="Save"
-                  >
-                    {loadingStates[categoryId] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  </button>
-                  <button
-                    onClick={handleCancelEdit}
-                    className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
-                    title="Cancel"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </>
-              ) : (
-                <p className="flex-1 font-medium text-gray-900">{category.categoryName}</p>
-              )}
-
-              {isEditMode && !isEditing && (
-                <div className="flex items-center gap-1">
-                  <button
-                    onClick={() => handleAddSubcategory(categoryId)}
-                    className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
-                    title="Add Subcategory"
-                  >
-                    <Plus className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleEditClick(categoryId, category.categoryName)}
-                    className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
-                    title="Edit"
-                  >
-                    <Edit2 className="w-4 h-4" />
-                  </button>
-                  <button
-                    onClick={() => handleDeleteFromEditModal(categoryId, category.categoryName)}
-                    className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
-                    title="Delete"
-                  >
-                    <Trash2 className="w-4 h-4" />
-                  </button>
-                </div>
+            ))}
+            <div className="relative" style={{ width: '32px' }}>
+              <div className="absolute left-4 top-0 w-px bg-gray-300" style={{ height: '24px' }}></div>
+              <div className="absolute left-4 top-6 h-px bg-gray-300" style={{ width: '12px' }}></div>
+              {!isLast && (
+                <div className="absolute left-4 bottom-0 w-px bg-gray-300" style={{ top: '24px' }}></div>
               )}
             </div>
-
-            {isEditMode && !isEditing && (
-              <div className="flex gap-2 mt-2 ml-0">
-                <button
-                  onClick={() => handleChangeImage(categoryId)}
-                  className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors border border-blue-200"
-                >
-                  {category.image ? 'Change Image' : 'Add Image'}
-                </button>
-                {category.image && (
-                  <button
-                    onClick={() => handleRemoveImage(categoryId)}
-                    disabled={loadingStates[`remove-image-${categoryId}`]}
-                    className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200 disabled:opacity-50"
-                  >
-                    {loadingStates[`remove-image-${categoryId}`] ? (
-                      <Loader2 className="w-4 h-4 animate-spin inline" />
-                    ) : (
-                      'Remove Image'
-                    )}
-                  </button>
-                )}
+          </div>
+        )}
+        
+        <div className="flex-1">
+          <div 
+            className={`flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 transition-colors ${isMainParent ? 'bg-blue-50' : ''} ${category.image && !isEditMode ? 'cursor-pointer' : ''}`}
+            onClick={() => !isEditMode && category.image && setImageModal({ isOpen: true, url: category.image })}
+          >
+            {showImageUpload && imagePreview && isUploading ? (
+              <img 
+                src={imagePreview} 
+                alt="Preview"
+                className="w-12 h-12 object-cover rounded-md border-2 border-blue-500"
+              />
+            ) : category.image ? (
+              <img 
+                src={category.image} 
+                alt={category.categoryName}
+                className="w-12 h-12 object-cover rounded-md border border-gray-200"
+              />
+            ) : (
+              <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">
+                <FolderTree className="w-6 h-6 text-gray-400" />
               </div>
             )}
 
-            {isUploading && (
-              <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={handleImageSelect}
-                  accept="image/*"
-                  className="hidden"
-                />
-                {imagePreview && (
-                  <div className="mt-3 flex gap-2">
-                    <button
-                      onClick={handleSaveImage}
-                      disabled={loadingStates[`image-${uploadCategoryId}`]}
-                      className="flex-1 px-4 py-2 bg-blue-600 text-green-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
-                    >
-                      {loadingStates[`image-${uploadCategoryId}`] ? (
-                        <>
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                          Saving...
-                        </>
-                      ) : (
-                        <>
-                          <Save className="w-4 h-4" />
-                          Save Image
-                        </>
-                      )}
-                    </button>
-                    <button
-                      onClick={handleCancelImageUpload}
-                      className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {isAddingChild && (
-              <div className="mt-2 flex items-center gap-2" style={{ marginLeft: level > 0 ? `${(level + 1) * 24}px` : '24px' }}>
+            {isEditing ? (
+              <>
                 <input
                   type="text"
-                  value={newSubcategoryName}
-                  onChange={(e) => setNewSubcategoryName(e.target.value)}
-                  placeholder="Enter subcategory name"
+                  value={editingValue}
+                  onChange={handleEditingChange}
                   className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                   autoFocus
                 />
                 <button
-                  onClick={() => handleSaveSubcategory(categoryId)}
-                  disabled={loadingStates[`add-${categoryId}`]}
-                  className="px-3 py-1.5 bg-blue-600 text-green-600 text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+                  onClick={() => handleSaveEdit(categoryId)}
+                  disabled={loadingStates[categoryId]}
+                  className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors disabled:opacity-50"
+                  title="Save"
                 >
-                  {loadingStates[`add-${categoryId}`] ? (
-                    <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                  ) : (
-                    <Save className="w-3.5 h-3.5" />
-                  )}
-                  Save
+                  {loadingStates[categoryId] ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
                 </button>
                 <button
-                  onClick={handleCancelAddSubcategory}
-                  className="px-3 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-50 transition-colors"
+                  onClick={handleCancelEdit}
+                  className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                  title="Cancel"
                 >
-                  Cancel
+                  <X className="w-4 h-4" />
                 </button>
-              </div>
+              </>
+            ) : (
+              <p className="flex-1 font-medium text-gray-900">{category.categoryName}</p>
             )}
 
-            {hasChildren && (
-              <div className="mt-2">
-                {category.children.map((child, idx) => 
-                  renderHierarchyTree(child, level + 1, isEditMode, idx === category.children.length - 1, [...parentLines, !isLast])
-                )}
+            {isEditMode && !isEditing && (
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => handleAddSubcategory(categoryId)}
+                  className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors"
+                  title="Add Subcategory"
+                >
+                  <Plus className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleEditClick(categoryId, category.categoryName)}
+                  className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors"
+                  title="Edit"
+                >
+                  <Edit2 className="w-4 h-4" />
+                </button>
+                <button
+                  onClick={() => handleToggleStatus(categoryId, !category.isActive, category.categoryName)}
+                  className={`p-1.5 rounded-md transition-colors ${
+                    category.isActive 
+                      ? 'text-green-600 hover:bg-green-50' 
+                      : 'text-red-600 hover:bg-red-50'
+                  }`}
+                  title={category.isActive ? 'Deactivate' : 'Activate'}
+                >
+                  {category.isActive ? <Power className="w-4 h-4" /> : <PowerOff className="w-4 h-4" />}
+                </button>
+                <button
+                  onClick={() => handleDeleteFromEditModal(categoryId, category.categoryName)}
+                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                  title="Delete"
+                >
+                  <Trash2 className="w-4 h-4" />
+                </button>
               </div>
             )}
           </div>
+
+          {isEditMode && !isEditing && (
+            <div className="flex gap-2 mt-2 ml-0">
+              <button
+                onClick={() => handleChangeImage(categoryId)}
+                className="text-sm px-3 py-1.5 text-blue-600 hover:bg-blue-50 rounded-md transition-colors border border-blue-200"
+              >
+                {category.image ? 'Change Image' : 'Add Image'}
+              </button>
+              {category.image && (
+                <button
+                  onClick={() => handleRemoveImage(categoryId)}
+                  disabled={loadingStates[`remove-image-${categoryId}`]}
+                  className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200 disabled:opacity-50"
+                >
+                  {loadingStates[`remove-image-${categoryId}`] ? (
+                    <Loader2 className="w-4 h-4 animate-spin inline" />
+                  ) : (
+                    'Remove Image'
+                  )}
+                </button>
+              )}
+            </div>
+          )}
+
+          {isUploading && (
+            <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleImageSelect}
+                accept="image/*"
+                className="hidden"
+              />
+              {imagePreview && (
+                <div className="mt-3 flex gap-2">
+                  <button
+                    onClick={handleSaveImage}
+                    disabled={loadingStates[`image-${uploadCategoryId}`]}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center gap-2"
+                  >
+                    {loadingStates[`image-${uploadCategoryId}`] ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        Saving...
+                      </>
+                    ) : (
+                      <>
+                        <Save className="w-4 h-4" />
+                        Save Image
+                      </>
+                    )}
+                  </button>
+                  <button
+                    onClick={handleCancelImageUpload}
+                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
+
+          {isAddingChild && (
+            <div className="mt-2 flex items-center gap-2" style={{ marginLeft: level > 0 ? `${(level + 1) * 24}px` : '24px' }}>
+              <input
+                type="text"
+                value={newSubcategoryName}
+                onChange={(e) => setNewSubcategoryName(e.target.value)}
+                placeholder="Enter subcategory name"
+                className="flex-1 px-3 py-1.5 border border-blue-500 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                autoFocus
+              />
+              <button
+                onClick={() => handleSaveSubcategory(categoryId)}
+                disabled={loadingStates[`add-${categoryId}`]}
+                className="px-3 py-1.5 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center gap-1"
+              >
+                {loadingStates[`add-${categoryId}`] ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Save className="w-3.5 h-3.5" />
+                )}
+                Save
+              </button>
+              <button
+                onClick={handleCancelAddSubcategory}
+                className="px-3 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-50 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
+
+          {hasChildren && (
+            <div className="mt-2">
+              {category.children.map((child, idx) => 
+                renderHierarchyTree(child, level + 1, isEditMode, idx === category.children.length - 1, [...parentLines, !isLast])
+              )}
+            </div>
+          )}
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+};
 
   if (loadingCategories) {
     return (
@@ -1102,6 +1213,20 @@ const AllCategories = () => {
               
               {selectedRows.length > 0 ? (
                 <div className="flex items-center space-x-2">
+                    <button 
+      onClick={() => handleBulkStatusToggle(true)}
+      className="inline-flex items-center px-3 py-2 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+    >
+      <Power className="w-4 h-4 mr-2" />
+      Activate ({selectedRows.length})
+    </button>
+    <button 
+      onClick={() => handleBulkStatusToggle(false)}
+      className="inline-flex items-center px-3 py-2 border border-orange-300 rounded-md text-sm font-medium text-orange-700 bg-white hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors"
+    >
+      <PowerOff className="w-4 h-4 mr-2" />
+      Deactivate ({selectedRows.length})
+    </button>
                   <button 
                     onClick={handleBulkDelete}
                     className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
@@ -1172,6 +1297,9 @@ const AllCategories = () => {
                       <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
                         Created At
                       </th>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+  Status
+</th>
                       {selectedRows.length === 0 && (
                         <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '220px' }}>
                           Actions
@@ -1230,6 +1358,32 @@ const AllCategories = () => {
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
                             {createdDate}
                           </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      handleToggleStatus(item._id, !item.isActive, item.categoryName);
+    }}
+    className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+      item.isActive 
+        ? 'bg-green-100 text-green-800 hover:bg-green-200' 
+        : 'bg-red-100 text-red-800 hover:bg-red-200'
+    }`}
+    title={item.isActive ? 'Click to deactivate' : 'Click to activate'}
+  >
+    {item.isActive ? (
+      <>
+        <Power className="w-3 h-3 mr-1" />
+        Active
+      </>
+    ) : (
+      <>
+        <PowerOff className="w-3 h-3 mr-1" />
+        Inactive
+      </>
+    )}
+  </button>
+</td>
                           {selectedRows.length === 0 && (
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '220px' }}>
                               <div className="flex items-center justify-center space-x-2">
@@ -1672,6 +1826,149 @@ const AllCategories = () => {
           </div>
         </div>
       )}
+      {/* Status Confirmation Modal */}
+{showStatusModal && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {statusModalData.isActive ? 'Activate Category' : 'Deactivate Category'}
+        </h3>
+      </div>
+      <div className="px-6 py-4">
+        <p className="text-gray-600 mb-3">
+          Are you sure you want to {statusModalData.isActive ? 'activate' : 'deactivate'}{' '}
+          <span className="font-semibold text-gray-900">"{statusModalData.categoryName}"</span>?
+        </p>
+        
+        {statusModalData.hasChildren && (
+          <div className="mb-3 p-3 bg-blue-50 border border-blue-200 rounded-md">
+            <p className="text-sm text-blue-800 flex items-start">
+              <AlertCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
+              <span>This will also {statusModalData.isActive ? 'activate' : 'deactivate'} all subcategories.</span>
+            </p>
+          </div>
+        )}
+        
+        {!statusModalData.isActive && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              All products in this category will also be deactivated.
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+        <button
+          onClick={() => setShowStatusModal(false)}
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          disabled={isLoading}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => statusModalData.isActive ? handleReactivate() : confirmStatusChange(false)}
+          disabled={isLoading}
+          className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors ${
+            statusModalData.isActive 
+              ? 'bg-green-600 hover:bg-green-700' 
+              : 'bg-orange-600 hover:bg-orange-700'
+          } disabled:opacity-50`}
+        >
+          {isLoading ? 'Processing...' : 'Confirm'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Reactivate Products Confirmation */}
+{showReactivateConfirm && (
+  <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900">
+          Reactivate Products?
+        </h3>
+      </div>
+      <div className="px-6 py-4">
+        <p className="text-gray-600 mb-3">
+          Do you want to reactivate all products that were deactivated when this category was deactivated?
+        </p>
+        <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
+          <p className="text-sm text-blue-800">
+            <AlertCircle className="w-4 h-4 inline mr-1" />
+            Only products with active main and sub categories will be reactivated.
+          </p>
+        </div>
+      </div>
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+        <button
+          onClick={() => confirmStatusChange(false)}
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          disabled={isLoading}
+        >
+          No, Only Category
+        </button>
+        <button
+          onClick={() => confirmStatusChange(true)}
+          disabled={isLoading}
+          className="px-4 py-2 bg-green-600 hover:bg-green-700 rounded-md text-sm font-medium text-white transition-colors disabled:opacity-50"
+        >
+          {isLoading ? 'Processing...' : 'Yes, Reactivate Products'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+{/* Bulk Status Modal */}
+{showBulkStatusModal && (
+  <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200">
+        <h3 className="text-lg font-semibold text-gray-900">
+          {bulkStatusAction ? 'Activate' : 'Deactivate'} Multiple Categories
+        </h3>
+      </div>
+      <div className="px-6 py-4">
+        <p className="text-gray-600 mb-3">
+          Are you sure you want to {bulkStatusAction ? 'activate' : 'deactivate'}{' '}
+          <span className="font-semibold text-gray-900">{selectedRows.length} selected categories</span>?
+        </p>
+        {!bulkStatusAction && (
+          <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+            <p className="text-sm text-yellow-800">
+              <AlertTriangle className="w-4 h-4 inline mr-1" />
+              All products in these categories will also be deactivated.
+            </p>
+          </div>
+        )}
+      </div>
+      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+        <button
+          onClick={() => setShowBulkStatusModal(false)}
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          disabled={isLoading}
+        >
+          Cancel
+        </button>
+        <button
+          onClick={() => confirmBulkStatusChange(bulkStatusAction)}
+          disabled={isLoading}
+          className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors ${
+            bulkStatusAction 
+              ? 'bg-green-600 hover:bg-green-700' 
+              : 'bg-orange-600 hover:bg-orange-700'
+          } disabled:opacity-50`}
+        >
+          {isLoading ? 'Processing...' : 'Confirm'}
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };
