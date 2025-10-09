@@ -84,10 +84,17 @@ const companySettingsSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  
-        lowStockAlertThreshold: {
-    type: Number,
-    default: 10
+  lowStockAlertThreshold: {
+   type: Number,
+   default: 10
+  },
+  receiveLowStockEmail: {
+    type: Boolean,
+    default: true
+  },
+  receiveOutOfStockEmail: {
+    type: Boolean,
+    default: true
   }
 }, {
   timestamps: true
