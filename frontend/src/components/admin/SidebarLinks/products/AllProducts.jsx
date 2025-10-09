@@ -433,7 +433,7 @@ const handleDuplicateSelected = async () => {
   // Inner Components
 
   // Coponent that will be shown when clicked on 'view variants' button specialy design for acivating and deactivating the variants of the products
-  const ViewVariantsModal = ({ product, onClose }) => {
+const ViewVariantsModal = ({ product, onClose }) => {
   const [toggleLoading, setToggleLoading] = useState({});
 
   const handleToggleVariantStatus = async (variantId, currentStatus) => {
@@ -444,20 +444,53 @@ const handleDuplicateSelected = async () => {
         {
           productId: product._id,
           variantId: variantId,
-          isActive: !currentStatus
+          isActive: !currentStatus,
         },
         { withCredentials: true }
       );
 
       if (res.status === 200) {
         toast.success(res.data.message);
-        window.location.reload();
+        window.location.reload(); // Consider replacing with context update
       }
     } catch (error) {
       console.error('Error toggling variant:', error);
-      toast.error(error.response?.data?.message || 'Failed to toggle variant');
+      const errorMsg = error.response?.data?.message || 'Failed to toggle variant status';
+      toast.error(errorMsg);
     } finally {
       setToggleLoading({ [`variant-${variantId}`]: false });
+    }
+  };
+
+  const handleToggleSizeStatus = async (variantId, sizeId, currentStatus, variantIsActive) => {
+    if (!variantIsActive && !currentStatus) {
+      toast.error('Cannot activate size because the variant is deactivated');
+      return;
+    }
+
+    setToggleLoading({ [`size-${variantId}-${sizeId}`]: true });
+    try {
+      const res = await axios.post(
+        'http://localhost:3000/api/product/toggle-variant-size-status',
+        {
+          productId: product._id,
+          variantId: variantId,
+          sizeId: sizeId,
+          isActive: !currentStatus,
+        },
+        { withCredentials: true }
+      );
+
+      if (res.status === 200) {
+        toast.success(res.data.message);
+        window.location.reload(); // Consider replacing with context update
+      }
+    } catch (error) {
+      console.error('Error toggling size:', error);
+      const errorMsg = error.response?.data?.message || 'Failed to toggle size status';
+      toast.error(errorMsg);
+    } finally {
+      setToggleLoading({ [`size-${variantId}-${sizeId}`]: false });
     }
   };
 
@@ -474,45 +507,103 @@ const handleDuplicateSelected = async () => {
         </div>
         <div className="p-4 md:p-6 overflow-y-auto flex-1">
           <div className="space-y-6">
-            {product.hasVariants && product.variants.length > 0 ? (
+            {product.hasVariants && product.variants?.length > 0 ? (
               product.variants.map(variant => {
                 const variantId = typeof variant._id === 'object' ? variant._id.$oid : variant._id;
                 const isVariantActive = variant.isActive !== false;
 
                 return (
-                  <div key={variantId} className="border border-gray-200 rounded-lg p-4 flex items-center gap-4">
-                    <img
-                      src={variant.variantImage || getImageUrl(product)}
-                      alt={variant.colorName}
-                      className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
-                    />
-                    <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
-                      <p className="text-sm text-gray-500">Variant</p>
+                  <div key={variantId} className="border border-gray-200 rounded-lg p-4 space-y-4">
+                    <div className="flex items-center gap-4">
+                      <img
+                        src={variant.variantImage || getImageUrl(product)}
+                        alt={variant.colorName}
+                        className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
+                      />
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
+                        <p className="text-sm text-gray-500">Variant</p>
+                      </div>
+                      <button
+                        onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
+                        disabled={toggleLoading[`variant-${variantId}`]}
+                        className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                          isVariantActive
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                        } disabled:opacity-50`}
+                      >
+                        {toggleLoading[`variant-${variantId}`] ? (
+                          <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        ) : isVariantActive ? (
+                          <>
+                            <Power className="w-3 h-3 mr-1" />
+                            Active
+                          </>
+                        ) : (
+                          <>
+                            <PowerOff className="w-3 h-3 mr-1" />
+                            Inactive
+                          </>
+                        )}
+                      </button>
                     </div>
-                    <button
-                      onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
-                      disabled={toggleLoading[`variant-${variantId}`]}
-                      className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
-                        isVariantActive
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
-                      } disabled:opacity-50`}
-                    >
-                      {toggleLoading[`variant-${variantId}`] ? (
-                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
-                      ) : isVariantActive ? (
-                        <>
-                          <Power className="w-3 h-3 mr-1" />
-                          Active
-                        </>
+                    <div className="ml-20 space-y-2">
+                      {variant.moreDetails && variant.moreDetails.length > 0 ? (
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700">Sizes</h4>
+                          <div className="mt-2 space-y-2">
+                            {variant.moreDetails.map(details => {
+                              const sizeId = typeof details._id === 'object' ? details._id.$oid : details._id;
+                              const isSizeActive = isVariantActive && details.isActive !== false;
+
+                              return (
+                                <div
+                                  key={sizeId}
+                                  className="flex items-center justify-between bg-gray-50 p-2 rounded-md"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-sm text-gray-600">
+                                      {details.size?.length}" × {details.size?.breadth}" × {details.size?.height}"
+                                    </span>
+                                    <span className="text-xs text-gray-500">
+                                      Stock: {details.stock || 0}
+                                    </span>
+                                  </div>
+                                  <button
+                                    onClick={() =>
+                                      handleToggleSizeStatus(variantId, sizeId, isSizeActive, isVariantActive)
+                                    }
+                                    disabled={toggleLoading[`size-${variantId}-${sizeId}`]}
+                                    className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors ${
+                                      isSizeActive
+                                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
+                                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                    } disabled:opacity-50`}
+                                  >
+                                    {toggleLoading[`size-${variantId}-${sizeId}`] ? (
+                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                    ) : isSizeActive ? (
+                                      <>
+                                        <Power className="w-3 h-3 mr-1" />
+                                        Active
+                                      </>
+                                    ) : (
+                                      <>
+                                        <PowerOff className="w-3 h-3 mr-1" />
+                                        Inactive
+                                      </>
+                                    )}
+                                  </button>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
                       ) : (
-                        <>
-                          <PowerOff className="w-3 h-3 mr-1" />
-                          Inactive
-                        </>
+                        <p className="text-sm text-gray-500">No sizes available for this variant.</p>
                       )}
-                    </button>
+                    </div>
                   </div>
                 );
               })
