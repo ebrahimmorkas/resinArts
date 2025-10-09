@@ -481,7 +481,43 @@ const handleStatusChange = async (req, res) => {
                     let paymentStatus = "Payment Pending";
                     if (status === "Confirm") {
                         paymentStatus = "Paid";
+
+                        // Deduct stock for each ordered product
+                        for (const item of order.orderedProducts) {
+                            const product = await Product.findById(item.product_id);
+                            if (!product) {
+                                return res.status(404).json({ message: `Product not found for ID ${item.product_id}` });
+                            }
+
+                            if (!item.variant_id) {
+                                // Product without variants
+                                if (product.stock < item.quantity) {
+                                    return res.status(400).json({ message: `Insufficient stock for product ${item.product_name}` });
+                                }
+                                product.stock -= item.quantity;
+                            } else {
+                                // Product with variants
+                                const variant = product.variants.id(item.variant_id);
+                                if (!variant) {
+                                    return res.status(404).json({ message: `Variant not found for product ${item.product_name}` });
+                                }
+
+                                const sizeDetail = variant.moreDetails.id(item.size_id);
+                                if (!sizeDetail) {
+                                    return res.status(404).json({ message: `Size detail not found for variant in product ${item.product_name}` });
+                                }
+
+                                if (sizeDetail.stock < item.quantity) {
+                                    return res.status(400).json({ message: `Insufficient stock for size ${item.size} in variant ${item.variant_name} of product ${item.product_name}` });
+                                }
+                                sizeDetail.stock -= item.quantity;
+                            }
+
+                            // Save the updated product
+                            await product.save();
+                        }
                     }
+
                     const updatedOrder = await Order.findByIdAndUpdate(
                         orderId,
                         {
@@ -509,7 +545,7 @@ const handleStatusChange = async (req, res) => {
                     } catch (error) {
                         console.log("Error in sending email");
                     } finally {
-                        return res.status(200).json({ message: "Rejected successfully" });
+                        return res.status(200).json({ message: `${status} updated successfully` });
                     }
                 } else {
                     return res.status(400).json({ message: "User not found" });
