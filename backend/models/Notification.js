@@ -29,6 +29,16 @@ const notificationSchema = new mongoose.Schema({
     ref: 'Order',
     required: false,
   },
+  productId: {
+    type: mongoose.Types.ObjectId,
+    ref: 'Product',
+    required: false,
+  },
+  type: {
+    type: String,
+    enum: ['order', 'lowStock', 'outOfStock'],
+    default: 'order',
+  },
 });
 
 module.exports = mongoose.model('Notification', notificationSchema);

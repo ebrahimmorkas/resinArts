@@ -9,6 +9,14 @@ const { removeAbandonedCartByUserId } = require('./abandonedCartController');
 const Notification = require('../models/Notification');
 const AbandonedCart = require('../models/AbandonedCart');
 
+// In-memory cache to track notified low stock/out-of-stock items
+const notifiedItems = new Map(); // Key: productId_variantId_sizeId, Value: { lowStockNotified, outOfStockNotified }
+
+// Helper function to generate item key
+const getItemKey = (productId, variantId, sizeId) => {
+  return `${productId}_${variantId || ''}_${sizeId || ''}`;
+};
+
 // Function to check whether the order exists or not
 const findOrder = async (orderId) => {
     try {
@@ -426,7 +434,6 @@ const fetchOrders = async (req, res) => {
 };
 
 // Function where admin will update the shipping price
-// Function where admin will update the shipping price
 const shippingPriceUpdate = async (req, res) => {
     try {
         const { shippingPriceValue, orderId, email } = req.body;
@@ -500,97 +507,195 @@ const shippingPriceUpdate = async (req, res) => {
 
 // Function to handle status
 const handleStatusChange = async (req, res) => {
-    try {
-        const { status, orderId } = req.body;
-        const statuses = ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"];
+  try {
+    const { status, orderId } = req.body;
+    const statuses = ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"];
 
-        if (statuses.includes(status)) {
-            const order = await findOrder(orderId);
-            const user = await findUser(order.user_id);
-            if (order) {
-                if (user) {
-                    let paymentStatus = "Payment Pending";
-                    if (status === "Confirm") {
-                        paymentStatus = "Paid";
-
-                        // Deduct stock for each ordered product
-                        for (const item of order.orderedProducts) {
-                            const product = await Product.findById(item.product_id);
-                            if (!product) {
-                                return res.status(404).json({ message: `Product not found for ID ${item.product_id}` });
-                            }
-
-                            if (!item.variant_id) {
-                                // Product without variants
-                                if (product.stock < item.quantity) {
-                                    return res.status(400).json({ message: `Insufficient stock for product ${item.product_name}` });
-                                }
-                                product.stock -= item.quantity;
-                            } else {
-                                // Product with variants
-                                const variant = product.variants.id(item.variant_id);
-                                if (!variant) {
-                                    return res.status(404).json({ message: `Variant not found for product ${item.product_name}` });
-                                }
-
-                                const sizeDetail = variant.moreDetails.id(item.size_id);
-                                if (!sizeDetail) {
-                                    return res.status(404).json({ message: `Size detail not found for variant in product ${item.product_name}` });
-                                }
-
-                                if (sizeDetail.stock < item.quantity) {
-                                    return res.status(400).json({ message: `Insufficient stock for size ${item.size} in variant ${item.variant_name} of product ${item.product_name}` });
-                                }
-                                sizeDetail.stock -= item.quantity;
-                            }
-
-                            // Save the updated product
-                            await product.save();
-                        }
-                    }
-
-                    const updatedOrder = await Order.findByIdAndUpdate(
-                        orderId,
-                        {
-                            status: status,
-                            payment_status: paymentStatus
-                        },
-                        {
-                            new: true,
-                            runValidators: true
-                        }
-                    );
-
-                    try {
-                        switch (status) {
-                            case "Rejected":
-                                sendEmail(user.email, status, `Unfortunately, Your order with ${orderId} has been rejected`);
-                                break;
-                            case "Confirm":
-                                sendEmail(user.email, status, `We have successfully received your payment for order ${orderId}. Your order will be delivered soon`);
-                                break;
-                            case "Dispatched":
-                                sendEmail(user.email, status, `Your order ${orderId} has been successfully dispatched`);
-                                break;
-                        }
-                    } catch (error) {
-                        console.log("Error in sending email");
-                    } finally {
-                        return res.status(200).json({ message: `${status} updated successfully` });
-                    }
-                } else {
-                    return res.status(400).json({ message: "User not found" });
-                }
-            } else {
-                return res.status(400).json({ message: "Order not found" });
-            }
-        } else {
-            return res.status(400).json({ message: "Invalid status" });
-        }
-    } catch (error) {
-        return res.status(500).json({ message: "Internal server error" });
+    if (!statuses.includes(status)) {
+      return res.status(400).json({ message: "Invalid status" });
     }
-}
+
+    const order = await findOrder(orderId);
+    if (!order) {
+      return res.status(400).json({ message: "Order not found" });
+    }
+
+    const user = await findUser(order.user_id);
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+
+    let paymentStatus = order.payment_status;
+    const companySettings = await CompanySettings.getSingleton();
+    const lowStockThreshold = companySettings.lowStockAlertThreshold || 10;
+
+    if (status === "Confirm") {
+      paymentStatus = "Paid";
+
+      // Deduct stock and check for low stock/out of stock
+      for (const item of order.orderedProducts) {
+        const product = await Product.findById(item.product_id);
+        if (!product) {
+          return res.status(404).json({ message: `Product not found for ID ${item.product_id}` });
+        }
+
+        const itemKey = getItemKey(item.product_id, item.variant_id, item.size_id);
+        let stockLevel = 0;
+        let itemName = product.name;
+
+        if (!item.variant_id) {
+          // Product without variants
+          if (product.stock < item.quantity) {
+            return res.status(400).json({ message: `Insufficient stock for product ${item.product_name}` });
+          }
+          product.stock -= item.quantity;
+          stockLevel = product.stock;
+        } else {
+          // Product with variants
+          const variant = product.variants.id(item.variant_id);
+          if (!variant) {
+            return res.status(404).json({ message: `Variant not found for product ${item.product_name}` });
+          }
+
+          const sizeDetail = variant.moreDetails.id(item.size_id);
+          if (!sizeDetail) {
+            return res.status(404).json({ message: `Size detail not found for variant in product ${item.product_name}` });
+          }
+
+          if (sizeDetail.stock < item.quantity) {
+            return res.status(400).json({ message: `Insufficient stock for size ${item.size} in variant ${item.variant_name} of product ${item.product_name}` });
+          }
+          sizeDetail.stock -= item.quantity;
+          stockLevel = sizeDetail.stock;
+          itemName += item.variant_name ? ` (${item.variant_name}` : '';
+          itemName += item.size ? `, Size ${item.size})` : ')';
+        }
+
+        // Save the updated product
+        await product.save();
+
+        // Check for low stock or out of stock
+        const notified = notifiedItems.get(itemKey) || { lowStockNotified: false, outOfStockNotified: false };
+
+        if (stockLevel === 0 && !notified.outOfStockNotified) {
+          // Out of Stock Notification
+          const notification = new Notification({
+            title: 'Out of Stock Alert',
+            message: `Out of Stock Alert: ${itemName} is out of stock (Product ID: ${item.product_id})`,
+            recipient: 'admin',
+            productId: item.product_id,
+            type: 'outOfStock',
+          });
+          await notification.save();
+
+          // Emit Socket.IO event
+          const io = req.app.get('io');
+          io.to('admin_room').emit('newOrder', {
+            id: notification._id,
+            title: notification.title,
+            message: notification.message,
+            time: notification.time,
+            unread: notification.unread,
+            productId: notification.productId,
+            type: notification.type,
+          });
+
+          // Send email if enabled
+          if (companySettings.receiveOutOfStockEmail && companySettings.adminEmail) {
+            try {
+              await sendEmail(
+                companySettings.adminEmail,
+                `Out of Stock Alert: ${itemName}`,
+                `The following item is out of stock:\n\n${itemName}\nProduct ID: ${item.product_id}\n\nPlease restock the item.\n\n--\n${companySettings.companyName || 'Mould Market'}`
+              );
+              console.log(`Out of stock email sent to: ${companySettings.adminEmail}`);
+            } catch (emailError) {
+              console.error('Error sending out of stock email:', emailError);
+            }
+          }
+
+          // Update notified status
+          notifiedItems.set(itemKey, { ...notified, outOfStockNotified: true });
+        } else if (stockLevel > 0 && stockLevel < lowStockThreshold && !notified.lowStockNotified) {
+          // Low Stock Notification
+          const notification = new Notification({
+            title: 'Low Stock Alert',
+            message: `Low Stock Alert: ${itemName} has ${stockLevel} units remaining (Product ID: ${item.product_id})`,
+            recipient: 'admin',
+            productId: item.product_id,
+            type: 'lowStock',
+          });
+          await notification.save();
+
+          // Emit Socket.IO event
+          const io = req.app.get('io');
+          io.to('admin_room').emit('newOrder', {
+            id: notification._id,
+            title: notification.title,
+            message: notification.message,
+            time: notification.time,
+            unread: notification.unread,
+            productId: notification.productId,
+            type: notification.type,
+          });
+
+          // Send email if enabled
+          if (companySettings.receiveLowStockEmail && companySettings.adminEmail) {
+            try {
+              await sendEmail(
+                companySettings.adminEmail,
+                `Low Stock Alert: ${itemName}`,
+                `The following item is low on stock:\n\n${itemName}\nRemaining Stock: ${stockLevel} units\nProduct ID: ${item.product_id}\n\nPlease consider restocking.\n\n--\n${companySettings.companyName || 'Mould Market'}`
+              );
+              console.log(`Low stock email sent to: ${companySettings.adminEmail}`);
+            } catch (emailError) {
+              console.error('Error sending low stock email:', emailError);
+            }
+          }
+
+          // Update notified status
+          notifiedItems.set(itemKey, { ...notified, lowStockNotified: true });
+        } else if (stockLevel >= lowStockThreshold) {
+          // Reset low stock notification if stock is replenished above threshold
+          notifiedItems.set(itemKey, { lowStockNotified: false, outOfStockNotified: false });
+        }
+      }
+    }
+
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        status: status,
+        payment_status: paymentStatus,
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    try {
+      switch (status) {
+        case "Rejected":
+          await sendEmail(user.email, 'Order Rejected', `Unfortunately, your order with ID ${orderId} has been rejected`);
+          break;
+        case "Confirm":
+          await sendEmail(user.email, 'Order Confirmed', `We have successfully received your payment for order ${orderId}. Your order will be delivered soon`);
+          break;
+        case "Dispatched":
+          await sendEmail(user.email, 'Order Dispatched', `Your order ${orderId} has been successfully dispatched`);
+          break;
+      }
+    } catch (error) {
+      console.log("Error in sending email:", error);
+    }
+
+    return res.status(200).json({ message: `${status} updated successfully` });
+  } catch (error) {
+    console.error('Status change error:', error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
 // Function to edit the order that is quantity and price
 const editOrder = async (req, res) => {

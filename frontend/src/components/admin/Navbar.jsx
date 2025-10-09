@@ -10,7 +10,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [viewedNotifications, setViewedNotifications] = useState(new Set());
-  const prevNotificationsOpenRef = useRef(false); // Track previous state of notificationsOpen
+  const prevNotificationsOpenRef = useRef(false);
   const { user, setUser } = useContext(AuthContext);
   const navigate = useNavigate();
 
@@ -39,6 +39,8 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
           time: new Date(notification.time).toLocaleTimeString(),
           unread: notification.unread,
           orderId: notification.orderId,
+          productId: notification.productId,
+          type: notification.type,
         },
         ...prev,
       ]);
@@ -82,6 +84,8 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
           time: new Date(notif.time).toLocaleTimeString(),
           unread: notif.unread,
           orderId: notif.orderId,
+          productId: notif.productId,
+          type: notif.type || 'order',
         }));
         setNotifications(fetchedNotifications);
       } catch (error) {
@@ -306,7 +310,13 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                     <div
                       key={notification.id}
                       className={`relative p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 ${
-                        notification.unread ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                        notification.unread
+                          ? notification.type === 'lowStock'
+                            ? 'bg-blue-50 border-l-4 border-l-black'
+                            : notification.type === 'outOfStock'
+                            ? 'bg-blue-50 border-l-4 border-l-red-500'
+                            : 'bg-blue-50 border-l-4 border-l-blue-500'
+                          : ''
                       }`}
                     >
                       <button
