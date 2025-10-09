@@ -22,9 +22,9 @@ const updateAbandonedCart = async (userId, req) => {
     
     if (cartItems.length === 0) {
       // If cart is empty, remove abandoned cart
-      await AbandonedCart.findOneAndDelete({ user_id: userId });
-      if (io) {
-        io.to('admin_room').emit('abandoned_cart_removed', { userId });
+      const deleted = await AbandonedCart.findOneAndDelete({ user_id: userId });
+      if (deleted && io) {
+        io.to('admin_room').emit('abandoned_cart_removed', { userId: userId.toString() });
       }
       return;
     }
@@ -124,7 +124,6 @@ router.post("/", async (req, res) => {
       // Update quantity if item exists
       existingItem.quantity += quantity
       savedItem = await existingItem.save()
-      res.status(200).json(savedItem)
     } else {
       const cartItemData = {
         user_id: req.user.id,
@@ -146,11 +145,13 @@ router.post("/", async (req, res) => {
 
       const newCartItem = new Cart(cartItemData)
       savedItem = await newCartItem.save()
-      res.status(201).json(savedItem)
     }
 
+    // Send response first
+    res.status(existingItem ? 200 : 201).json(savedItem)
+
     // Update abandoned cart asynchronously (non-blocking)
-    setImmediate(() => updateAbandonedCart(req.user.id, req));
+    process.nextTick(() => updateAbandonedCart(req.user.id, req));
     
   } catch (error) {
     console.error("Error adding to cart:", error)
@@ -181,7 +182,7 @@ router.put("/", async (req, res) => {
     res.status(200).json(cartItem)
 
     // Update abandoned cart asynchronously (non-blocking)
-    setImmediate(() => updateAbandonedCart(req.user.id, req));
+    process.nextTick(() => updateAbandonedCart(req.user.id, req));
     
   } catch (error) {
     console.error("Error updating cart:", error)
@@ -208,7 +209,7 @@ router.delete("/", async (req, res) => {
     res.status(200).json({ message: "Item removed from cart" })
 
     // Update abandoned cart asynchronously (non-blocking)
-    setImmediate(() => updateAbandonedCart(req.user.id, req));
+    process.nextTick(() => updateAbandonedCart(req.user.id, req));
     
   } catch (error) {
     console.error("Error removing from cart:", error)
@@ -221,14 +222,21 @@ router.delete("/clear", async (req, res) => {
   try {
     await Cart.deleteMany({ user_id: req.user.id })
     
-    // Remove from abandoned cart
-    const io = req.app.get('io');
-    await AbandonedCart.findOneAndDelete({ user_id: req.user.id });
-    if (io) {
-      io.to('admin_room').emit('abandoned_cart_removed', { userId: req.user.id });
-    }
-    
     res.status(200).json({ message: "Cart cleared successfully" })
+
+    // Remove from abandoned cart asynchronously
+    process.nextTick(async () => {
+      try {
+        const io = req.app.get('io');
+        const deleted = await AbandonedCart.findOneAndDelete({ user_id: req.user.id });
+        if (deleted && io) {
+          io.to('admin_room').emit('abandoned_cart_removed', { userId: req.user.id.toString() });
+        }
+      } catch (error) {
+        console.error('Error removing abandoned cart:', error);
+      }
+    });
+    
   } catch (error) {
     console.error("Error clearing cart:", error)
     res.status(500).json({ error: "Failed to clear cart" })

@@ -10,6 +10,7 @@ import {
   Filter
 } from 'lucide-react';
 import io from 'socket.io-client';
+import axios from 'axios';
 
 const AbandonedCart = () => {
   const [abandonedCarts, setAbandonedCarts] = useState([]);
@@ -87,23 +88,20 @@ const AbandonedCart = () => {
   }, []);
 
   const fetchAbandonedCarts = async () => {
-    try {
-      setLoading(true);
-      const response = await fetch('/api/abandoned-cart', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        setAbandonedCarts(data.abandonedCarts);
-      }
-    } catch (error) {
-      console.error('Error fetching abandoned carts:', error);
-    } finally {
-      setLoading(false);
+  try {
+    setLoading(true);
+    const response = await axios.get('http://localhost:3000/api/abandoned-cart', {
+      withCredentials: true
+    });
+    if (response.data.success) {
+      setAbandonedCarts(response.data.abandonedCarts);
     }
-  };
+  } catch (error) {
+    console.error('Error fetching abandoned carts:', error);
+  } finally {
+    setLoading(false);
+  }
+};
 
   // Filter data based on active filter and search
   const filteredData = useMemo(() => {
@@ -166,80 +164,66 @@ const AbandonedCart = () => {
 
   // Handle delete single cart
   const handleDelete = async (id) => {
-    if (!window.confirm('Are you sure you want to delete this abandoned cart?')) {
-      return;
-    }
+  if (!window.confirm('Are you sure you want to delete this abandoned cart?')) {
+    return;
+  }
 
-    try {
-      const response = await fetch(`/api/abandoned-cart/${id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        // Socket will handle the update
-        alert('Abandoned cart deleted successfully');
-      }
-    } catch (error) {
-      console.error('Error deleting cart:', error);
-      alert('Failed to delete abandoned cart');
+  try {
+    const response = await axios.delete(`http://localhost:3000/api/abandoned-cart/${id}`, {
+      withCredentials: true
+    });
+    if (response.data.success) {
+      alert('Abandoned cart deleted successfully');
     }
-  };
+  } catch (error) {
+    console.error('Error deleting cart:', error);
+    alert('Failed to delete abandoned cart');
+  }
+};
 
   // Handle delete multiple carts
   const handleDeleteSelected = async () => {
-    if (selectedRows.length === 0) return;
-    
-    if (!window.confirm(`Are you sure you want to delete ${selectedRows.length} abandoned cart(s)?`)) {
-      return;
-    }
+  if (selectedRows.length === 0) return;
+  
+  if (!window.confirm(`Are you sure you want to delete ${selectedRows.length} abandoned cart(s)?`)) {
+    return;
+  }
 
-    try {
-      const response = await fetch('/api/abandoned-cart/delete-multiple', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        },
-        body: JSON.stringify({ ids: selectedRows })
-      });
-      const data = await response.json();
-      if (data.success) {
-        // Socket will handle the update
-        setSelectedRows([]);
-        alert(`${selectedRows.length} abandoned cart(s) deleted successfully`);
-      }
-    } catch (error) {
-      console.error('Error deleting carts:', error);
-      alert('Failed to delete abandoned carts');
+  try {
+    const response = await axios.post('http://localhost:3000/api/abandoned-cart/delete-multiple', 
+      { ids: selectedRows },
+      { withCredentials: true }
+    );
+    if (response.data.success) {
+      setSelectedRows([]);
+      alert(`${selectedRows.length} abandoned cart(s) deleted successfully`);
     }
-  };
+  } catch (error) {
+    console.error('Error deleting carts:', error);
+    alert('Failed to delete abandoned carts');
+  }
+};
 
   // Handle send reminder email
   const handleSendReminder = async (id) => {
-    try {
-      setSendingEmail(id);
-      const response = await fetch(`/api/abandoned-cart/send-reminder/${id}`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
-      const data = await response.json();
-      if (data.success) {
-        alert('Reminder email sent successfully');
-      } else {
-        alert(data.message || 'Failed to send reminder email');
-      }
-    } catch (error) {
-      console.error('Error sending reminder:', error);
-      alert('Failed to send reminder email');
-    } finally {
-      setSendingEmail(null);
+  try {
+    setSendingEmail(id);
+    const response = await axios.post(`http://localhost:3000/api/abandoned-cart/send-reminder/${id}`, 
+      {},
+      { withCredentials: true }
+    );
+    if (response.data.success) {
+      alert('Reminder email sent successfully');
+    } else {
+      alert(response.data.message || 'Failed to send reminder email');
     }
-  };
+  } catch (error) {
+    console.error('Error sending reminder:', error);
+    alert('Failed to send reminder email: ' + (error.response?.data?.message || error.message));
+  } finally {
+    setSendingEmail(null);
+  }
+};
 
   // Calculate cart total
   const calculateCartTotal = (cartItems) => {

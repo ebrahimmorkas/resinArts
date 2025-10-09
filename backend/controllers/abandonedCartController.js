@@ -133,7 +133,7 @@ YOUR CART ITEMS
 ${cartItemsText}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-CART TOTAL: ₹${cartTotal.toFixed(2)}
+CART TOTAL: ₹${cartTotal.toFixed(2)} + Shipping Price
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 Complete your purchase now and get these items delivered to your doorstep!
@@ -149,23 +149,32 @@ Mould Market Team
 This is an automated reminder email.
         `.trim();
 
-        await sendEmail(abandonedCart.email, emailSubject, emailText);
+        try {
+            await sendEmail(abandonedCart.email, emailSubject, emailText);
+            
+            // Update reminder sent status
+            await AbandonedCart.findByIdAndUpdate(id, {
+                reminder_sent: true,
+                reminder_sent_date: new Date(),
+            });
 
-        // Update reminder sent status
-        await AbandonedCart.findByIdAndUpdate(id, {
-            reminder_sent: true,
-            reminder_sent_date: new Date(),
-        });
-
-        return res.status(200).json({
-            success: true,
-            message: 'Reminder email sent successfully',
-        });
+            return res.status(200).json({
+                success: true,
+                message: 'Reminder email sent successfully',
+            });
+        } catch (emailError) {
+            console.error('Email sending error details:', emailError);
+            return res.status(500).json({
+                success: false,
+                message: 'Failed to send reminder email',
+                error: emailError.message,
+            });
+        }
     } catch (error) {
-        console.error('Error sending reminder email:', error);
+        console.error('Error in sendReminderEmail:', error);
         return res.status(500).json({
             success: false,
-            message: 'Failed to send reminder email',
+            message: 'Internal server error',
         });
     }
 };
