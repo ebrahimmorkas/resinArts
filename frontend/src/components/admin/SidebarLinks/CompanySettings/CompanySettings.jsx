@@ -36,7 +36,8 @@ const CompanySettings = () => {
     refundPolicy: '',
     termsAndConditions: '',
     aboutUs: '',
-    receiveOrderEmails: true
+    receiveOrderEmails: true,
+    lowStockAlertThreshold: 10
   });
 
   const [logoFile, setLogoFile] = useState(null);
@@ -209,6 +210,7 @@ const CompanySettings = () => {
       formDataToSend.append('termsAndConditions', formData.termsAndConditions);
       formDataToSend.append('aboutUs', formData.aboutUs);
       formDataToSend.append('receiveOrderEmails', formData.receiveOrderEmails);
+      formDataToSend.append('lowStockAlertThreshold', formData.lowStockAlertThreshold);
 
       
       if (logoFile) {
@@ -552,37 +554,62 @@ const CompanySettings = () => {
       )
     },
     {
-      title: 'General Settings',
-      content: (
-        <div className="p-4">
-          <div className="space-y-4">
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-              <div className="flex-1">
-                <label htmlFor="receiveOrderEmails" className="text-sm font-medium text-gray-700 cursor-pointer">
-                  Receive emails when order is placed
-                </label>
-                <p className="text-xs text-gray-500 mt-1">
-                  Get notified via email whenever a new order is placed on your store
-                </p>
-              </div>
-              <div className="ml-4">
-                <label className="relative inline-flex items-center cursor-pointer">
-                  <input
-                    type="checkbox"
-                    id="receiveOrderEmails"
-                    name="receiveOrderEmails"
-                    checked={formData.receiveOrderEmails}
-                    onChange={handleCheckboxChange}
-                    className="sr-only peer"
-                  />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
-                </label>
-              </div>
-            </div>
+  title: 'General Settings',
+  content: (
+    <div className="p-4">
+      <div className="space-y-4">
+        {/* Email Notification Toggle */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+          <div className="flex-1">
+            <label htmlFor="receiveOrderEmails" className="text-sm font-medium text-gray-700 cursor-pointer">
+              Receive emails when order is placed
+            </label>
+            <p className="text-xs text-gray-500 mt-1">
+              Get notified via email whenever a new order is placed on your store
+            </p>
+          </div>
+          <div className="ml-4">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                id="receiveOrderEmails"
+                name="receiveOrderEmails"
+                checked={formData.receiveOrderEmails}
+                onChange={handleCheckboxChange}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
           </div>
         </div>
-      )
-    }
+
+        {/* Low Stock Alert Threshold */}
+        <div className="p-4 bg-gray-50 rounded-lg">
+          <label htmlFor="lowStockAlertThreshold" className="text-sm font-medium text-gray-700 block mb-2">
+            Show low stock alert after
+          </label>
+          <div className="flex items-center gap-2">
+            <input
+              type="number"
+              id="lowStockAlertThreshold"
+              name="lowStockAlertThreshold"
+              value={formData.lowStockAlertThreshold}
+              onChange={handleInputChange}
+              min="0"
+              max="1000"
+              className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              placeholder="Enter number of items"
+            />
+            <span className="text-sm text-gray-600">items</span>
+          </div>
+          <p className="text-xs text-gray-500 mt-2">
+            Low stock alert will be triggered when product stock falls below this number
+          </p>
+        </div>
+      </div>
+    </div>
+  )
+}
   ];
 
   if (fetchLoading) {

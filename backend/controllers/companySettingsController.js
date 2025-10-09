@@ -67,7 +67,8 @@ exports.updateCompanySettings = async (req, res) => {
       refundPolicy,
       termsAndConditions,
       aboutUs,
-      receiveOrderEmails
+      receiveOrderEmails,
+      lowStockAlertThreshold
     } = req.body;
 
     if (!adminName || !adminEmail) {
@@ -98,7 +99,8 @@ exports.updateCompanySettings = async (req, res) => {
         refundPolicy,
         termsAndConditions,
         aboutUs,
-        receiveOrderEmails
+        receiveOrderEmails,
+        lowStockAlertThreshold
       });
     } else {
       settings.adminName = adminName;
@@ -119,6 +121,7 @@ exports.updateCompanySettings = async (req, res) => {
       settings.termsAndConditions = termsAndConditions;
       settings.aboutUs = aboutUs;
 settings.receiveOrderEmails = receiveOrderEmails;
+settings.lowStockAlertThreshold = lowStockAlertThreshold;
     }
 
     if (req.file) {
