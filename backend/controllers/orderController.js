@@ -256,6 +256,11 @@ const placeOrder = async (req, res) => {
         whatsapp_number: user.whatsapp_number,
         orderedProducts: ordersToAdd,
         price: finalPrice,
+        total_price: finalPrice, // Ensure total_price is set
+        shipping_price: 0, // Initialize shipping_price
+        status: 'Pending',
+        payment_status: 'Payment Pending',
+        createdAt: new Date(),
       };
 
       if (totalFreeCashApplied > 0 && freeCashId) {
@@ -274,19 +279,23 @@ const placeOrder = async (req, res) => {
 
       const newOrder = new Order(orderData);
       await newOrder.save();
-      // Remove from abandoned cart when order is placed
-            try {
-                const io = req.app.get('io');
-                await AbandonedCart.findOneAndDelete({ user_id: req.user.id });
-                if (io) {
-                    io.to('admin_room').emit('abandoned_cart_removed', { userId: req.user.id });
-                }
-            } catch (error) {
-                console.error('Error removing abandoned cart:', error);
-            }
-      await removeAbandonedCartByUserId(req.user.id);
 
-      // Create and save notification with formatted list
+      if (!newOrder._id) {
+        throw new Error('Failed to create order with valid ID');
+      }
+
+      // Remove from abandoned cart
+      try {
+        await AbandonedCart.findOneAndDelete({ user_id: req.user.id });
+        const io = req.app.get('io');
+        if (io) {
+          io.to('admin_room').emit('abandoned_cart_removed', { userId: req.user.id });
+        }
+      } catch (error) {
+        console.error('Error removing abandoned cart:', error);
+      }
+
+      // Create and save notification
       const productList = ordersToAdd
         .map((item, index) => {
           let details = `${index + 1}. ${item.product_name} (Qty: ${item.quantity})`;
@@ -303,19 +312,26 @@ const placeOrder = async (req, res) => {
       });
       await notification.save();
 
-      // Emit Socket.IO event to admin room
+      // Emit correct order data via Socket.IO
       const io = req.app.get('io');
       console.log('Emitting newOrder event for order:', newOrder._id);
       io.to('admin_room').emit('newOrder', {
-        id: notification._id,
-        title: notification.title,
-        message: notification.message,
-        time: notification.time,
-        unread: notification.unread,
-        orderId: notification.orderId,
+        _id: newOrder._id,
+        user_id: newOrder.user_id,
+        user_name: newOrder.user_name,
+        email: newOrder.email,
+        phone_number: newOrder.phone_number,
+        whatsapp_number: newOrder.whatsapp_number,
+        orderedProducts: newOrder.orderedProducts,
+        price: newOrder.price,
+        total_price: newOrder.total_price,
+        shipping_price: newOrder.shipping_price,
+        status: newOrder.status,
+        payment_status: newOrder.payment_status,
+        createdAt: newOrder.createdAt,
       });
 
-      // Send email notification to admin if enabled
+      // Send email notification to admin
       try {
         const companySettings = await CompanySettings.findOne();
         if (companySettings && companySettings.receiveOrderEmails && companySettings.adminEmail) {
@@ -369,7 +385,7 @@ Subtotal: ₹${totalPrice.toFixed(2)}
 ${totalFreeCashApplied > 0 ? `Free Cash Applied: -₹${totalFreeCashApplied.toFixed(2)}` : ''}
 Shipping: ₹${newOrder.shipping_price.toFixed(2)}
 
-TOTAL: ₹${totalPrice.toFixed(2)} + Shipping Price
+TOTAL: ₹${finalPrice.toFixed(2)} + Shipping Price
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 

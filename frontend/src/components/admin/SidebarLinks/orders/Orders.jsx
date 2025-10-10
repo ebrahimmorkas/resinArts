@@ -5,6 +5,7 @@ import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, Us
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from "jspdf";
+import io from 'socket.io-client';
 
 import axios from "axios"
 import { ProductContext } from "../../../../../Context/ProductContext"
@@ -785,6 +786,40 @@ export default function OrdersManagement() {
     }
   }, [orders, products]);
 
+  useEffect(() => {
+  const socket = io('http://localhost:3000', {
+    withCredentials: true,
+    auth: { token: localStorage.getItem('token') },
+    reconnection: true,
+    reconnectionAttempts: 5,
+    reconnectionDelay: 1000,
+  });
+
+  socket.on('connect', () => {
+    console.log('Connected to Socket.IO server:', socket.id);
+    socket.emit('join', 'admin_room');
+  });
+
+  socket.on('newOrder', (newOrder) => {
+    console.log('New order received:', newOrder);
+    // Validate newOrder
+    if (newOrder && newOrder._id && newOrder.orderedProducts && Array.isArray(newOrder.orderedProducts)) {
+      setOrders((prevOrders) => [newOrder, ...prevOrders]);
+    } else {
+      console.error('Invalid new order received:', newOrder);
+    }
+  });
+
+  socket.on('connect_error', (error) => {
+    console.error('Socket.IO connection error:', error);
+  });
+
+  return () => {
+    socket.disconnect();
+    console.log('Disconnected from Socket.IO server');
+  };
+}, []);
+
   // Enhanced filter orders based on search term, status, and date
   const filteredOrders = useMemo(() => {
     let filtered = orders;
@@ -954,12 +989,15 @@ export default function OrdersManagement() {
 
   // Truncate order ID for display
   const truncateOrderId = (orderId) => {
-    if (orderId.length > 12) {
-      return `${orderId.substring(0, 12)}...`;
-    }
-    return orderId;
-  };
-
+  if (!orderId || typeof orderId !== 'string') {
+    console.warn('Invalid orderId:', orderId);
+    return 'Unknown ID';
+  }
+  if (orderId.length > 12) {
+    return `${orderId.substring(0, 12)}...`;
+  }
+  return orderId;
+};
   const getStatusBadge = (status) => {
     const statusStyles = {
       'Completed': 'bg-green-100 text-green-800 border-green-200',
