@@ -297,12 +297,12 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 </div>
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
-                  <span className="font-medium">${order.price}</span>
+                  <span className="font-medium">₹{order.price}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2 font-semibold">
                   <span className="text-gray-900">Total:</span>
                   <span className="text-gray-900">
-                    {order.total_price === "Pending" ? "Pending" : `$${order.total_price}`}
+                    {order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`}
                   </span>
                 </div>
               </div>
@@ -375,7 +375,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                             )}
                             <div>
                               <span className="text-gray-600 dark:text-gray-400">Unit Price:</span>
-                              <div className="font-medium">${product.price}</div>
+                              <div className="font-medium">₹{product.price}</div>
                             </div>
                           </div>
 
@@ -392,7 +392,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                             </div>
                             <div>
                               <span className="text-gray-600 dark:text-gray-400">Total:</span>
-                              <div className="font-semibold text-lg">${product.total}</div>
+                              <div className="font-semibold text-lg">₹{product.total}</div>
                             </div>
                           </div>
                         </div>
@@ -534,11 +534,11 @@ export default function OrdersManagement() {
                       <div>
                         ${product.variant_name ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Variant:</strong> ${product.variant_name}</p>` : ''}
                         ${product.size ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Size:</strong> ${product.size}</p>` : ''}
-                        <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ${product.price}</p>
+                        <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹{product.price}</p>
                       </div>
                       <div>
                         <p style="margin: 4px 0; font-size: 14px;"><strong>Quantity:</strong> ${product.quantity}</p>
-                        <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ${product.total}</strong></p>
+                        <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹{product.total}</strong></p>
                       </div>
                     </div>
                     <div style="font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 8px; border-radius: 4px;">
@@ -556,9 +556,9 @@ export default function OrdersManagement() {
           <div style="border-top: 2px solid #3b82f6; padding-top: 20px; margin-bottom: 40px;">
             <div style="text-align: right;">
               <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; display: inline-block; min-width: 300px;">
-                <p style="margin: 8px 0; font-size: 16px;"><strong>Subtotal:</strong> ${order.price}</p>
+                <p style="margin: 8px 0; font-size: 16px;"><strong>Subtotal:</strong> ₹{order.price}</p>
                 <p style="margin: 12px 0 0 0; font-size: 20px; color: #059669; border-top: 1px solid #d1d5db; padding-top: 12px;">
-                  <strong>Total: ${order.total_price === "Pending" ? "Pending" : `${order.total_price}`}</strong>
+                  <strong>Total: ${order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`}</strong>
                 </p>
               </div>
             </div>
@@ -720,13 +720,13 @@ export default function OrdersManagement() {
       'Phone': order.phone_number,
       'WhatsApp': order.whatsapp_number,
       'Email': order.email,
-      'Total Price': order.total_price === "Pending" ? "Pending" : `$${order.total_price}`,
+      'Total Price': order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`,
       'Status': order.status,
       'Ordered At': formatOrderDate(order.createdAt, index),
       'User ID': order.user_id,
       'Products': order.orderedProducts.map(p => p.product_name).join(', '),
       'Quantities': order.orderedProducts.map(p => p.quantity).join(', '),
-      'Subtotal': `$${order.price}`
+      'Subtotal': `₹${order.price}`
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);

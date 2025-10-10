@@ -828,7 +828,7 @@ const DeleteConfirmationModal = () => {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-center">
                       <p className="text-sm text-blue-600 font-medium">Price</p>
-                      <p className="text-2xl font-bold text-blue-900">${product.price}</p>
+                      <p className="text-2xl font-bold text-blue-900">₹{product.price}</p>
                     </div>
                     <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
                       <p className="text-sm text-green-600 font-medium">Stock</p>
@@ -848,7 +848,7 @@ const DeleteConfirmationModal = () => {
                         {product.bulkPricing.map((bulk, index) => (
                           <div key={index} className="bg-white dark:bg-gray-900 p-4 rounded-lg border">
                             <p className="text-sm text-gray-600 dark:text-gray-400">Quantity: {bulk.quantity}+</p>
-                            <p className="text-lg font-semibold text-green-600">${bulk.wholesalePrice}</p>
+                            <p className="text-lg font-semibold text-green-600">₹{bulk.wholesalePrice}</p>
                           </div>
                         ))}
                       </div>
@@ -924,7 +924,7 @@ const DeleteConfirmationModal = () => {
                         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                           <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
                             <p className="text-xs text-blue-600 font-medium">Common Price</p>
-                            <p className="text-lg font-bold text-blue-900">${variant.commonPrice}</p>
+                            <p className="text-lg font-bold text-blue-900">₹{variant.commonPrice}</p>
                           </div>
                           <div className="bg-green-50 border border-green-200 rounded-lg p-3 text-center">
                             <p className="text-xs text-green-600 font-medium">Common Stock</p>
@@ -953,7 +953,7 @@ const DeleteConfirmationModal = () => {
                                   </div>
                                   <div className="text-right">
                                     {variant.isPriceSame === 'no' && variant.moreDetails.length > 1 && (
-                                      <p className="text-lg font-bold text-blue-600">${detail.price}</p>
+                                      <p className="text-lg font-bold text-blue-600">₹{detail.price}</p>
                                     )}
                                     <p className="text-sm text-gray-600 dark:text-gray-400">Stock: {detail.stock || 0}</p>
                                   </div>
@@ -982,7 +982,7 @@ const DeleteConfirmationModal = () => {
                                       {detail.bulkPricingCombinations.map((bulk, idx) => (
                                         <div key={idx} className="flex justify-between text-xs">
                                           <span className="text-purple-600">{bulk.quantity}+ items:</span>
-                                          <span className="font-medium text-purple-800">${bulk.wholesalePrice}</span>
+                                          <span className="font-medium text-purple-800">₹{bulk.wholesalePrice}</span>
                                         </div>
                                       ))}
                                     </div>
@@ -1019,7 +1019,7 @@ const DeleteConfirmationModal = () => {
                             {variant.commonBulkPricingCombinations.map((bulk, index) => (
                               <div key={index} className="bg-white dark:bg-gray-900 p-3 rounded border">
                                 <p className="text-sm text-gray-600 dark:text-gray-400">Quantity: {bulk.quantity}+</p>
-                                <p className="text-lg font-semibold text-purple-600">${bulk.wholesalePrice}</p>
+                                <p className="text-lg font-semibold text-purple-600">₹{bulk.wholesalePrice}</p>
                               </div>
                             ))}
                           </div>
@@ -1368,13 +1368,13 @@ const DeleteConfirmationModal = () => {
                           <div className="space-y-2">
                             <div className="flex justify-between items-center">
                               <span className="text-sm text-gray-600 dark:text-gray-400">Base Price:</span>
-                              <span className="text-base md:text-lg font-bold text-green-600">${details.price}</span>
+                              <span className="text-base md:text-lg font-bold text-green-600">₹{details.price}</span>
                             </div>
                             
                             {details.discountPrice && (
                               <div className="flex justify-between items-center">
                                 <span className="text-sm text-gray-600 dark:text-gray-400">Discount Price:</span>
-                                <span className="text-base md:text-lg font-bold text-red-600">${details.discountPrice}</span>
+                                <span className="text-base md:text-lg font-bold text-red-600">₹{details.discountPrice}</span>
                               </div>
                             )}
                             
@@ -1385,7 +1385,7 @@ const DeleteConfirmationModal = () => {
                                   {details.bulkPricing.map((bulk, index) => (
                                     <div key={index} className="flex justify-between text-xs">
                                       <span className="text-gray-600 dark:text-gray-400">{bulk.quantity}+ items:</span>
-                                      <span className="font-medium text-blue-600">${bulk.wholesalePrice}</span>
+                                      <span className="font-medium text-blue-600">₹{bulk.wholesalePrice}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -2671,7 +2671,7 @@ const DeleteConfirmationModal = () => {
             View Price
           </button>
         ) : (
-          <span className="text-green-600">${product.price}</span>
+          <span className="text-green-600">₹{product.price}</span>
         )}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm">
