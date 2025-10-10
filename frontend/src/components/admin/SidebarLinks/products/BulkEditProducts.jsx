@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useContext } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { fetchCategories } from "../../../../../utils/api"
 import { X, Plus, AlertCircle, Upload, Image as ImageIcon, Package, Tag, DollarSign, Layers, ArrowLeft, Save, ChevronDown, ChevronUp } from "lucide-react"
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import axios from 'axios'
+import { ProductContext } from "../../../../../Context/ProductContext";
 
 // Loading Overlay Component
 const LoadingOverlay = ({ isLoading, message = "Updating Products..." }) => {
@@ -61,6 +62,7 @@ export default function BulkEditProducts() {
   const [isFetchingProducts, setIsFetchingProducts] = useState(true)
   const [allCategoriesTree, setAllCategoriesTree] = useState([])
   const [allCategoriesFlat, setAllCategoriesFlat] = useState([])
+  const { fetchProducts } = useContext(ProductContext);
 
   // Array of product objects, each containing all EditProduct state
   const [productsData, setProductsData] = useState([])
@@ -668,6 +670,7 @@ export default function BulkEditProducts() {
       )
 
       toast.success(`${productsData.length} products updated successfully!`)
+      await fetchProducts();
       setTimeout(() => navigate('/admin/panel/products'), 2000)
 
     } catch (error) {

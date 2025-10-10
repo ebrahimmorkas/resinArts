@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useContext } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { fetchCategories } from "../../../../../utils/api"
 import { X, Plus, AlertCircle, Upload, Image as ImageIcon, Package, Tag, DollarSign, Layers, Check, ArrowLeft, Save, Edit } from "lucide-react"
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import axios from 'axios'
+import { ProductContext } from "../../../../../Context/ProductContext";
 
 // Loading Overlay Component
 const LoadingOverlay = ({ isLoading, message = "Updating Product..." }) => {
@@ -82,6 +83,8 @@ export default function EditProduct() {
   const mainAdditionalImageInputRef = useRef([])
   const variantImageInputRefs = useRef([])
   const mdAdditionalImageInputRefs = useRef([])
+
+  const { fetchProducts } = useContext(ProductContext);
 
   // Fetch categories
   useEffect(() => {
@@ -523,7 +526,7 @@ commonStock: variant.commonStock?.toString() || "",
       position: "top-right",
       autoClose: 3000,
     })
-    
+    await fetchProducts();
     setTimeout(() => {
       navigate('/admin/panel/products')
     }, 2000)
