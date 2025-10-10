@@ -87,7 +87,7 @@ app.set('io', io);
 mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
-    startAbandonedCartCron();
+    startAbandonedCartCron(io);
     console.log('Connected to MongoDB');
   })
   .catch((err) => {

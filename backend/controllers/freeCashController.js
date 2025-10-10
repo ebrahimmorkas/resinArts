@@ -46,8 +46,9 @@ const addFreeCash = async (req, res) => {
 
         // Handle categories
         let categoryId = null;
+        let mainCategory = null;
         if (cashForm.selectedMainCategory && cashForm.selectedMainCategory.trim() !== '') {
-            const mainCategory = await findCategoryById(cashForm.selectedMainCategory.trim());
+            mainCategory = await findCategoryById(cashForm.selectedMainCategory.trim());
             if (!mainCategory) {
                 return res.status(400).json({ message: "Main category not found" });
             }
@@ -55,8 +56,9 @@ const addFreeCash = async (req, res) => {
         }
 
         let subCategoryId = null;
+        let subCategory = null;
         if (cashForm.selectedSubCategory && cashForm.selectedSubCategory.trim() !== '') {
-            const subCategory = await findSubCategoryById(cashForm.selectedSubCategory.trim());
+            subCategory = await findSubCategoryById(cashForm.selectedSubCategory.trim());
             if (!subCategory) {
                 return res.status(400).json({ message: "Sub category not found" });
             }
@@ -79,17 +81,36 @@ const addFreeCash = async (req, res) => {
 
         await newFreeCash.save();
 
-        if(isAllProducts) {
-            if(endDate) {
-                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove} valid till ${endDate}`);
+        // Send email based on conditions
+        if (isAllProducts) {
+            if (endDate) {
+                await sendEmail(
+                    user.email,
+                    `Hurray! Free Cash ${amount}`,
+                    `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove} valid till ${endDate.toISOString().split('T')[0]}`,
+                );
             } else {
-                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove}`);
+                await sendEmail(
+                    user.email,
+                    `Hurray! Free Cash ${amount}`,
+                    `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove}`,
+                );
             }
         } else {
-            if(endDate) {
-                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategory.categoryName} and Sub category: ${subCategory.categoryName} valid above on order of ₹ ${validAbove} valid till ${endDate}`);
+            const mainCategoryName = mainCategory ? mainCategory.categoryName : 'Unknown';
+            const subCategoryName = subCategory ? subCategory.categoryName : 'None';
+            if (endDate) {
+                await sendEmail(
+                    user.email,
+                    `Hurray! Free Cash ${amount}`,
+                    `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategoryName}${subCategory ? ` and Sub category: ${subCategoryName}` : ''} valid above on order of ₹ ${validAbove} valid till ${endDate.toISOString().split('T')[0]}`,
+                );
             } else {
-                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategory.categoryName} and Sub category: ${subCategory.categoryName} valid above on order of ₹ ${validAbove}`);
+                await sendEmail(
+                    user.email,
+                    `Hurray! Free Cash ${amount}`,
+                    `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategoryName}${subCategory ? ` and Sub category: ${subCategoryName}` : ''} valid above on order of ₹ ${validAbove}`,
+                );
             }
         }
 

@@ -679,7 +679,7 @@ const ViewVariantsModal = ({ product, onClose }) => {
                 <button onClick={() => setShowErrorModal(false)} className="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors">
                   {currentError.secondaryButton.text}
                 </button>
-                <button onClick={() => setShowErrorModal(false)} className={`w-full sm:w-auto px-4 py-2 text-sm font-medium text-white rounded-md transition-colors ${currentError.primaryButton.color}`}>
+                <button onClick={() => setShowErrorModal(false)} className={`w-full sm:w-auto px-4 py-2 text-sm font-medium text-gray-700 rounded-md transition-colors ${currentError.primaryButton.color}`}>
                   {currentError.primaryButton.text}
                 </button>
               </div>
@@ -746,7 +746,7 @@ const DeleteConfirmationModal = () => {
               <button 
                 onClick={isMultipleDelete ? handleDeleteSelected : handleDelete}
                 disabled={isLoading}
-                className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50"
+                className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-red-600 bg-red-600 hover:bg-red-700 rounded-md transition-colors disabled:opacity-50"
               >
                 {isLoading ? 'Deleting...' : `Delete ${isMultipleDelete ? 'Selected' : 'Product'}`}
               </button>
@@ -1575,7 +1575,7 @@ const DeleteConfirmationModal = () => {
               <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:bg-gray-800 transition-colors" disabled={modalLoading}>
                 Cancel
               </button>
-              <button onClick={() => handleUpdateMultipleStock(localMultipleToRestock)} disabled={modalLoading} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50">
+              <button onClick={() => handleUpdateMultipleStock(localMultipleToRestock)} disabled={modalLoading} className="px-4 py-2 bg-blue-600 text-green-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50">
                 {modalLoading ? "Updating..." : "Update Stock"}
               </button>
             </div>
@@ -1660,7 +1660,7 @@ const DeleteConfirmationModal = () => {
             <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:bg-gray-800 transition-colors" disabled={modalLoading}>
               Cancel
             </button>
-            <button onClick={handleUpdateStock} disabled={modalLoading} className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50">
+            <button onClick={handleUpdateStock} disabled={modalLoading} className="px-4 py-2 bg-blue-600 text-green-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50">
               {modalLoading ? "Updating..." : "Update Stock"}
             </button>
           </div>
@@ -1942,7 +1942,7 @@ const DeleteConfirmationModal = () => {
                                   <h5 className="text-xs font-medium text-gray-700">Bulk Pricing</h5>
                                   <button 
                                     onClick={() => addDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id, variant._id, details._id)}
-                                    className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors"
+                                    className="px-2 py-1 bg-blue-500 text-black rounded text-xs hover:bg-blue-600 transition-colors"
                                   >
                                     Add Tier
                                   </button>
@@ -1969,7 +1969,7 @@ const DeleteConfirmationModal = () => {
                                     </div>
                                     <button 
                                       onClick={() => removeDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id, index, variant._id, details._id)}
-                                      className="px-2 py-1 bg-red-500 text-white rounded text-xs hover:bg-red-600 transition-colors"
+                                      className="px-2 py-1 bg-red-500 text-black rounded text-xs hover:bg-red-600 transition-colors"
                                     >
                                       ×
                                     </button>
@@ -2069,7 +2069,7 @@ const DeleteConfirmationModal = () => {
                             <h4 className="font-medium text-sm text-gray-700">Bulk Pricing</h4>
                             <button 
                               onClick={() => addDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id)}
-                              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors"
+                              className="px-3 py-1 bg-blue-500 text-black rounded text-sm hover:bg-blue-600 transition-colors"
                             >
                               Add Tier
                             </button>
@@ -2099,7 +2099,7 @@ const DeleteConfirmationModal = () => {
                               </div>
                               <button 
                                 onClick={() => removeDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id, index)}
-                                className="px-2 py-1 bg-red-500 text-white rounded text-xs self-end hover:bg-red-600 transition-colors"
+                                className="px-2 py-1 bg-red-500 text-red-600 rounded text-xs self-end hover:bg-red-600 transition-colors"
                               >
                                 Remove
                               </button>
@@ -2116,7 +2116,7 @@ const DeleteConfirmationModal = () => {
               <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:bg-gray-800 transition-colors" disabled={modalLoading}>
                 Cancel
               </button>
-              <button onClick={() => handleUpdateMultipleRevisedRate(localMultipleForRevisedRate)} disabled={modalLoading} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50">
+              <button onClick={() => handleUpdateMultipleRevisedRate(localMultipleForRevisedRate)} disabled={modalLoading} className="px-4 py-2 bg-green-600 text-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50">
                 {modalLoading ? "Updating..." : "Update Rates"}
               </button>
             </div>
@@ -2252,7 +2252,7 @@ const DeleteConfirmationModal = () => {
                                   ]
                                 }
                               }
-                            }))} className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors">
+                            }))} className="px-3 py-1 bg-blue-500 text-black rounded text-sm hover:bg-blue-600 transition-colors">
                               Add Tier
                             </button>
                           </div>
@@ -2310,7 +2310,7 @@ const DeleteConfirmationModal = () => {
                                     discountBulkPricing: prev[variant._id][details._id].discountBulkPricing.filter((_, i) => i !== index)
                                   }
                                 }
-                              }))} className="px-2 py-1 bg-red-500 text-white rounded text-xs self-end hover:bg-red-600 transition-colors">
+                              }))} className="px-2 py-1 bg-red-500 text-black rounded text-xs self-end hover:bg-red-600 transition-colors">
                                 ×
                               </button>
                             </div>
@@ -2381,7 +2381,7 @@ const DeleteConfirmationModal = () => {
                   <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="font-medium text-sm">Bulk Pricing Tiers</h4>
-                      <button onClick={() => setSingleProductDiscountBulkPricing(prev => [...prev, { wholesalePrice: "", quantity: "" }])} className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600 transition-colors">
+                      <button onClick={() => setSingleProductDiscountBulkPricing(prev => [...prev, { wholesalePrice: "", quantity: "" }])} className="px-3 py-1 bg-blue-500 text-black rounded text-sm hover:bg-blue-600 transition-colors">
                         Add Tier
                       </button>
                     </div>
@@ -2408,7 +2408,7 @@ const DeleteConfirmationModal = () => {
                             onChange={(e) => setSingleProductDiscountBulkPricing(prev => prev.map((t, i) => i === index ? { ...t, quantity: e.target.value } : t))}
                           />
                         </div>
-                        <button onClick={() => setSingleProductDiscountBulkPricing(prev => prev.filter((_, i) => i !== index))} className="px-2 py-1 bg-red-500 text-white rounded text-xs self-end hover:bg-red-600 transition-colors">
+                        <button onClick={() => setSingleProductDiscountBulkPricing(prev => prev.filter((_, i) => i !== index))} className="px-2 py-1 bg-red-500 text-black rounded text-xs self-end hover:bg-red-600 transition-colors">
                           ×
                         </button>
                       </div>
@@ -2422,7 +2422,7 @@ const DeleteConfirmationModal = () => {
             <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:bg-gray-800 transition-colors" disabled={modalLoading}>
               Cancel
             </button>
-            <button onClick={handleUpdateRevisedRate} disabled={modalLoading} className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700 transition-colors disabled:opacity-50">
+            <button onClick={handleUpdateRevisedRate} disabled={modalLoading} className="px-4 py-2 bg-green-600 text-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50">
               {modalLoading ? "Updating..." : "Revise Rate"}
             </button>
           </div>
@@ -2712,25 +2712,31 @@ const DeleteConfirmationModal = () => {
       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
         <button
           onClick={() => openViewDetailsModal(product)}
-          className="text-blue-600 hover:text-blue-800"
+          className="text-blue-600 hover:text-blue-800" title="View Details"
         >
           <Eye className="h-4 w-4" />
         </button>
+        <button onClick={() => { setRevisedRateProduct(product); setShowRevisedRateModal(true); }} className="p-1.5 text-green-600 hover:bg-green-50 rounded-md transition-colors" title="Revise Rate">
+                            <DollarSign className="w-4 h-4" />
+                          </button>
+                          <button onClick={() => { setRestockProduct(product); setShowRestockModal(true); }} className="p-1.5 text-purple-600 hover:bg-purple-50 rounded-md transition-colors" title="Restock">
+                            <Package className="w-4 h-4" />
+                          </button>
         <button
           onClick={() => openEditModal(product)}
-          className="text-blue-600 hover:text-blue-800"
+          className="text-blue-600 hover:text-blue-800" title="Edit Product"
         >
           <Edit2 className="h-4 w-4" />
         </button>
         <button
           onClick={() => handleDuplicateProduct(product)}
-          className="text-blue-600 hover:text-blue-800"
+          className="text-blue-600 hover:text-blue-800" title="Duplicate Product"
         >
           <Copy className="h-4 w-4" />
         </button>
         <button
           onClick={() => openDeleteModal(product)}
-          className="text-red-600 hover:text-red-800"
+          className="text-red-600 hover:text-red-800" title="Delete Product"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -2774,7 +2780,7 @@ const DeleteConfirmationModal = () => {
                       pageNumber = currentPage - 3 + index;
                     }
                     return (
-                      <button key={pageNumber} onClick={() => setCurrentPage(pageNumber)} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentPage === pageNumber ? 'bg-blue-600 text-white' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:bg-gray-800'}`}>
+                      <button key={pageNumber} onClick={() => setCurrentPage(pageNumber)} className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${currentPage === pageNumber ? 'bg-blue-600 text-blue-900' : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:bg-gray-800'}`}>
                         {pageNumber}
                       </button>
                     );
@@ -2855,7 +2861,7 @@ const DeleteConfirmationModal = () => {
         <button
           onClick={confirmStatusChange}
           disabled={isLoading}
-          className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors ${
+          className={`px-4 py-2 rounded-md text-sm font-medium text-gren-600 transition-colors ${
             statusModalData.isActive 
               ? 'bg-green-600 hover:bg-green-700' 
               : 'bg-orange-600 hover:bg-orange-700'
@@ -2909,7 +2915,7 @@ const DeleteConfirmationModal = () => {
         <button
           onClick={confirmBulkStatusChange}
           disabled={isLoading}
-          className={`px-4 py-2 rounded-md text-sm font-medium text-white transition-colors ${
+          className={`px-4 py-2 rounded-md text-sm font-medium text-green-600 transition-colors ${
             bulkStatusAction 
               ? 'bg-green-600 hover:bg-green-700' 
               : 'bg-orange-600 hover:bg-orange-700'
