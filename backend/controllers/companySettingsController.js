@@ -70,7 +70,8 @@ exports.updateCompanySettings = async (req, res) => {
       receiveOrderEmails,
       lowStockAlertThreshold,
       receiveLowStockEmail,
-      receiveOutOfStockEmail
+      receiveOutOfStockEmail,
+      shippingPriceSettings
     } = req.body;
 
     if (!adminName || !adminEmail) {
@@ -128,6 +129,11 @@ exports.updateCompanySettings = async (req, res) => {
       settings.lowStockAlertThreshold = lowStockAlertThreshold;
       settings.receiveLowStockEmail = receiveLowStockEmail;
       settings.receiveOutOfStockEmail = receiveOutOfStockEmail;
+      if (shippingPriceSettings) {
+  settings.shippingPriceSettings = JSON.parse(shippingPriceSettings);
+}
+
+await settings.save();
     }
 
     if (req.file) {

@@ -95,6 +95,31 @@ const companySettingsSchema = new mongoose.Schema({
   receiveOutOfStockEmail: {
     type: Boolean,
     default: true
+  },
+  
+  // Shipping Price Settings
+  shippingPriceSettings: {
+    isManual: {
+      type: Boolean,
+      default: true
+    },
+    shippingType: {
+      type: String,
+      enum: ['country', 'state', 'city', 'zipcode'],
+      default: 'city'
+    },
+    shippingPrices: [
+      {
+        location: {
+          type: String,
+          required: true
+        },
+        price: {
+          type: Number,
+          required: true
+        }
+      }
+    ]
   }
 }, {
   timestamps: true

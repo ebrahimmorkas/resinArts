@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import JoditEditor from 'jodit-react';
-import { ChevronDown, ChevronUp, Save, Loader2, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { ChevronDown, ChevronUp, Save, Loader2, Upload, Trash2, Image as ImageIcon, Edit2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import axios from 'axios';
@@ -40,8 +41,17 @@ const CompanySettings = () => {
     receiveOrderEmails: true,
     lowStockAlertThreshold: 10,
     receiveLowStockEmail: false,
-    receiveOutOfStockEmail: false
+    receiveOutOfStockEmail: false,
+    shippingPriceSettings: {
+    isManual: true,
+    shippingType: 'city',
+    shippingPrices: []
+  }
   });
+  const [editingIndex, setEditingIndex] = useState(null);
+const [editLocation, setEditLocation] = useState('');
+const [editPrice, setEditPrice] = useState('');
+const [uploadingExcel, setUploadingExcel] = useState(false);
 
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState('');
@@ -182,6 +192,159 @@ const CompanySettings = () => {
     }));
   };
 
+  const handleShippingTypeChange = (e) => {
+  const newType = e.target.value;
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      shippingType: newType
+    }
+  }));
+};
+
+const handleShippingToggle = (e) => {
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      isManual: e.target.checked
+    }
+  }));
+};
+
+const handleAddShippingPrice = () => {
+  if (!editLocation || !editPrice) {
+    toast.error('Please enter both location and price');
+    return;
+  }
+
+  const priceNum = parseFloat(editPrice);
+  if (isNaN(priceNum)) {
+    toast.error('Price must be a valid number');
+    return;
+  }
+
+  if (editingIndex !== null) {
+    setFormData(prev => ({
+      ...prev,
+      shippingPriceSettings: {
+        ...prev.shippingPriceSettings,
+        shippingPrices: prev.shippingPriceSettings.shippingPrices.map((item, idx) =>
+          idx === editingIndex ? { location: editLocation, price: priceNum } : item
+        )
+      }
+    }));
+    toast.success('Shipping price updated successfully!');
+    setEditingIndex(null);
+  } else {
+    const duplicate = formData.shippingPriceSettings.shippingPrices.find(
+      item => item.location.toLowerCase() === editLocation.toLowerCase()
+    );
+    if (duplicate) {
+      toast.error(`${editLocation} already exists`);
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      shippingPriceSettings: {
+        ...prev.shippingPriceSettings,
+        shippingPrices: [
+          ...prev.shippingPriceSettings.shippingPrices,
+          { location: editLocation, price: priceNum }
+        ]
+      }
+    }));
+    toast.success('Shipping price added successfully!');
+  }
+
+  setEditLocation('');
+  setEditPrice('');
+};
+
+const handleEditShippingPrice = (index) => {
+  const item = formData.shippingPriceSettings.shippingPrices[index];
+  setEditLocation(item.location);
+  setEditPrice(item.price.toString());
+  setEditingIndex(index);
+};
+
+const handleDeleteShippingPrice = (index) => {
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      shippingPrices: prev.shippingPriceSettings.shippingPrices.filter((_, i) => i !== index)
+    }
+  }));
+  toast.success('Shipping price deleted successfully!');
+};
+
+const handleExcelUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const validExtensions = ['.xlsx', '.xls'];
+  const fileExtension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+  
+  if (!validExtensions.includes(fileExtension)) {
+    toast.error('Please upload an Excel file (.xlsx or .xls)');
+    return;
+  }
+
+  try {
+    setUploadingExcel(true);
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+    if (jsonData.length === 0) {
+      toast.error('Excel file is empty');
+      return;
+    }
+
+    const expectedHeader = formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + 
+                          formData.shippingPriceSettings.shippingType.slice(1);
+    const headers = Object.keys(jsonData[0]);
+    
+    if (!headers[0] || !headers[1]) {
+      toast.error('Excel must have at least 2 columns');
+      return;
+    }
+
+    const locationHeader = headers[0];
+    const priceHeader = headers[1];
+
+    const newPrices = jsonData.map(row => ({
+      location: String(row[locationHeader] || '').trim(),
+      price: parseFloat(row[priceHeader]) || 0
+    })).filter(item => item.location && !isNaN(item.price));
+
+    if (newPrices.length === 0) {
+      toast.error('No valid data found in Excel file');
+      return;
+    }
+
+    setFormData(prev => ({
+      ...prev,
+      shippingPriceSettings: {
+        ...prev.shippingPriceSettings,
+        shippingPrices: newPrices
+      }
+    }));
+
+    toast.success(`${newPrices.length} shipping prices imported successfully!`);
+  } catch (error) {
+    console.error('Excel upload error:', error);
+    toast.error('Error processing Excel file. Please check the format.');
+  } finally {
+    setUploadingExcel(false);
+    e.target.value = '';
+  }
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -216,6 +379,7 @@ const CompanySettings = () => {
   formDataToSend.append('lowStockAlertThreshold', formData.lowStockAlertThreshold);
   formDataToSend.append('receiveLowStockEmail', formData.receiveLowStockEmail);
   formDataToSend.append('receiveOutOfStockEmail', formData.receiveOutOfStockEmail);
+  formDataToSend.append('shippingPriceSettings', JSON.stringify(formData.shippingPriceSettings));
 
   if (logoFile) {
     formDataToSend.append('logo', logoFile);
@@ -668,7 +832,187 @@ const CompanySettings = () => {
           </div>
         </div>
       )
-    }
+    },
+    {
+  title: 'Shipping Price',
+  content: (
+    <div className="p-4">
+      <div className="space-y-4">
+        {/* Manual Shipping Price Toggle */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-b border-gray-200 pb-6">
+          <div className="flex-1">
+            <label htmlFor="isManualShipping" className="text-sm font-medium text-gray-700 cursor-pointer">
+              Enter Shipping price manually
+            </label>
+            <p className="text-xs text-gray-500 mt-1">
+              When enabled, shipping price will be entered manually for each order
+            </p>
+          </div>
+          <div className="ml-4">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                id="isManualShipping"
+                checked={formData.shippingPriceSettings.isManual}
+                onChange={handleShippingToggle}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+            </label>
+          </div>
+        </div>
+
+        {/* Dynamic Shipping Price Section */}
+        {!formData.shippingPriceSettings.isManual && (
+          <div className="space-y-4 pt-4">
+            {/* Shipping Type Dropdown */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700">Shipping Price according to</label>
+              <select
+                value={formData.shippingPriceSettings.shippingType}
+                onChange={handleShippingTypeChange}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="country">Country</option>
+                <option value="state">State</option>
+                <option value="city">City</option>
+                <option value="zipcode">Zip Code</option>
+              </select>
+            </div>
+
+            {/* Excel Upload Section */}
+            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+              <div className="flex items-center gap-2 mb-2">
+                <Upload className="w-4 h-4 text-blue-600" />
+                <label className="text-sm font-medium text-gray-700">
+                  Upload {formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + formData.shippingPriceSettings.shippingType.slice(1)} Excel
+                </label>
+              </div>
+              <label className="relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleExcelUpload}
+                  disabled={uploadingExcel}
+                  className="hidden"
+                />
+                {uploadingExcel ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
+                    <span className="text-sm text-gray-600">Uploading...</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-gray-600">Click to upload or drag and drop</span>
+                )}
+              </label>
+              <p className="text-xs text-gray-500 mt-2">Excel should have 2 columns: {formData.shippingPriceSettings.shippingType} and Shipping Price</p>
+            </div>
+
+            {/* Add/Edit Shipping Price */}
+            <div className="p-4 bg-gray-50 rounded-lg space-y-3">
+              <h4 className="text-sm font-medium text-gray-800">
+                {editingIndex !== null ? 'Edit' : 'Add'} Shipping Price
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  placeholder={formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + formData.shippingPriceSettings.shippingType.slice(1)}
+                  value={editLocation}
+                  onChange={(e) => setEditLocation(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <input
+                  type="number"
+                  placeholder="Shipping Price"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  min="0"
+                  step="0.01"
+                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                />
+                <button
+                  onClick={handleAddShippingPrice}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors"
+                >
+                  {editingIndex !== null ? 'Update' : 'Add'}
+                </button>
+              </div>
+              {editingIndex !== null && (
+                <button
+                  onClick={() => {
+                    setEditingIndex(null);
+                    setEditLocation('');
+                    setEditPrice('');
+                  }}
+                  className="text-xs text-red-600 hover:text-red-700 font-medium"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+
+            {/* Shipping Prices Table */}
+            {formData.shippingPriceSettings.shippingPrices.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-100 border-b border-gray-300">
+                      <th className="px-4 py-2 text-left font-semibold text-gray-700">
+                        {formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + formData.shippingPriceSettings.shippingType.slice(1)}
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Shipping Price (₹)</th>
+                      <th className="px-4 py-2 text-center font-semibold text-gray-700">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formData.shippingPriceSettings.shippingPrices.map((item, index) => (
+                      <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
+                        <td className="px-4 py-2 text-gray-800">{item.location}</td>
+                        <td className="px-4 py-2 text-gray-800">₹{item.price.toFixed(2)}</td>
+                        <td className="px-4 py-2 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEditShippingPrice(index)}
+                              className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteShippingPrice(index)}
+                              className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {formData.shippingPriceSettings.shippingPrices.length === 0 && (
+              <div className="p-4 bg-gray-50 rounded-lg text-center">
+                <p className="text-sm text-gray-500">No shipping prices added yet</p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {formData.shippingPriceSettings.isManual && (
+          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+            <p className="text-sm text-blue-800">
+              Manual shipping pricing is enabled. Shipping price will be entered for each order.
+            </p>
+          </div>
+        )}
+      </div>
+    </div>
+  )
+},
   ];
 
   if (fetchLoading) {
