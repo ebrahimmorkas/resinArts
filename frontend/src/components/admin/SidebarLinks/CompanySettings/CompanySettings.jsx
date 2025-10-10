@@ -3,6 +3,7 @@ import JoditEditor from 'jodit-react';
 import { ChevronDown, ChevronUp, Save, Loader2, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
 
 const CompanySettings = () => {
   const [loading, setLoading] = useState(false);
@@ -190,59 +191,64 @@ const CompanySettings = () => {
     }
 
     try {
-      setLoading(true);
-      
-      const formDataToSend = new FormData();
-      
-      formDataToSend.append('adminName', formData.adminName);
-      formDataToSend.append('adminWhatsappNumber', formData.adminWhatsappNumber);
-      formDataToSend.append('adminPhoneNumber', formData.adminPhoneNumber);
-      formDataToSend.append('adminAddress', formData.adminAddress);
-      formDataToSend.append('adminCity', formData.adminCity);
-      formDataToSend.append('adminState', formData.adminState);
-      formDataToSend.append('adminPincode', formData.adminPincode);
-      formDataToSend.append('adminEmail', formData.adminEmail);
-      formDataToSend.append('companyName', formData.companyName);
-      formDataToSend.append('instagramId', formData.instagramId);
-      formDataToSend.append('facebookId', formData.facebookId);
-      formDataToSend.append('privacyPolicy', formData.privacyPolicy);
-      formDataToSend.append('returnPolicy', formData.returnPolicy);
-      formDataToSend.append('shippingPolicy', formData.shippingPolicy);
-      formDataToSend.append('refundPolicy', formData.refundPolicy);
-      formDataToSend.append('termsAndConditions', formData.termsAndConditions);
-      formDataToSend.append('aboutUs', formData.aboutUs);
-      formDataToSend.append('receiveOrderEmails', formData.receiveOrderEmails);
-      formDataToSend.append('lowStockAlertThreshold', formData.lowStockAlertThreshold);
-      formDataToSend.append('receiveLowStockEmail', formData.receiveLowStockEmail);
-      formDataToSend.append('receiveOutOfStockEmail', formData.receiveOutOfStockEmail);
-      
-      if (logoFile) {
-        formDataToSend.append('logo', logoFile);
-      }
+  setLoading(true);
+  
+  const formDataToSend = new FormData();
+  
+  formDataToSend.append('adminName', formData.adminName);
+  formDataToSend.append('adminWhatsappNumber', formData.adminWhatsappNumber);
+  formDataToSend.append('adminPhoneNumber', formData.adminPhoneNumber);
+  formDataToSend.append('adminAddress', formData.adminAddress);
+  formDataToSend.append('adminCity', formData.adminCity);
+  formDataToSend.append('adminState', formData.adminState);
+  formDataToSend.append('adminPincode', formData.adminPincode);
+  formDataToSend.append('adminEmail', formData.adminEmail);
+  formDataToSend.append('companyName', formData.companyName);
+  formDataToSend.append('instagramId', formData.instagramId);
+  formDataToSend.append('facebookId', formData.facebookId);
+  formDataToSend.append('privacyPolicy', formData.privacyPolicy);
+  formDataToSend.append('returnPolicy', formData.returnPolicy);
+  formDataToSend.append('shippingPolicy', formData.shippingPolicy);
+  formDataToSend.append('refundPolicy', formData.refundPolicy);
+  formDataToSend.append('termsAndConditions', formData.termsAndConditions);
+  formDataToSend.append('aboutUs', formData.aboutUs);
+  formDataToSend.append('receiveOrderEmails', formData.receiveOrderEmails);
+  formDataToSend.append('lowStockAlertThreshold', formData.lowStockAlertThreshold);
+  formDataToSend.append('receiveLowStockEmail', formData.receiveLowStockEmail);
+  formDataToSend.append('receiveOutOfStockEmail', formData.receiveOutOfStockEmail);
 
-      const response = await fetch('http://localhost:3000/api/company-settings', {
-        method: 'PUT',
-        credentials: 'include',
-        body: formDataToSend
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success('Company settings updated successfully!');
-        setFormData(data.data);
-        if (data.data.companyLogo) {
-          setLogoPreview(data.data.companyLogo);
-        }
-        setLogoFile(null);
-      } else {
-        toast.error(data.message || 'Failed to update settings');
+  if (logoFile) {
+    formDataToSend.append('logo', logoFile);
+  }
+
+  const response = await axios.put(
+    'http://localhost:3000/api/company-settings',
+    formDataToSend,
+    {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'multipart/form-data'
       }
-    } catch (error) {
-      toast.error(error.message || 'Failed to update settings');
-    } finally {
-      setLoading(false);
     }
+  );
+  
+  if (response.data.success) {
+    toast.success(response.data.message || 'Company settings updated successfully!');
+    setFormData(response.data.data);
+    if (response.data.data.company_logo) {
+      setLogoPreview(response.data.data.company_logo);
+    }
+    setLogoFile(null);
+  } else {
+    toast.error(response.data.message || 'Failed to update settings');
+  }
+} catch (error) {
+  const errorMessage = error.response?.data?.message || error.message || 'Failed to update settings';
+  toast.error(errorMessage);
+  console.error('Update error:', error);
+} finally {
+  setLoading(false);
+}
   };
 
   const accordions = [
