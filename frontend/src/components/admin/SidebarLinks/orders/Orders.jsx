@@ -738,28 +738,30 @@ export default function OrdersManagement() {
 
   // Fetching the orders
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await axios.get("http://localhost:3000/api/order/all", {
-          withCredentials: true,
-        });
+  const fetchOrders = async () => {
+    try {
+      const res = await axios.get("http://localhost:3000/api/order/all", {
+        withCredentials: true,
+      });
 
-        if (res.status === 200) {
-          console.log(res.data.orders);
-          const ordersData = Array.isArray(res.data.orders) ? res.data.orders : [];
-          setOrders(ordersData);
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        setIsError("Failed to fetch orders");
-        setOrders([]);
-      } finally {
-        setIsLoading(false);
+      if (res.status === 200) {
+        console.log(res.data.orders);
+        const ordersData = Array.isArray(res.data.orders) ? res.data.orders : [];
+        // Sort orders by createdAt in descending order
+        const sortedOrders = ordersData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      setIsError("Failed to fetch orders");
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchOrders();
-  }, []);
+  fetchOrders();
+}, []);
 
   useEffect(() => {
     const loadProducts = () => {
@@ -804,9 +806,40 @@ export default function OrdersManagement() {
     console.log('New order received:', newOrder);
     // Validate newOrder
     if (newOrder && newOrder._id && newOrder.orderedProducts && Array.isArray(newOrder.orderedProducts)) {
-      setOrders((prevOrders) => [newOrder, ...prevOrders]);
+      setOrders((prevOrders) => {
+        const updatedOrders = [newOrder, ...prevOrders];
+        // Sort orders by createdAt in descending order
+        return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      });
     } else {
       console.error('Invalid new order received:', newOrder);
+    }
+  });
+
+  socket.on('shippingPriceUpdated', (updatedOrder) => {
+    console.log('Shipping price updated:', updatedOrder);
+    // Validate updatedOrder
+    if (updatedOrder && updatedOrder._id && updatedOrder.total_price && updatedOrder.shipping_price) {
+      setOrders((prevOrders) => {
+        const updatedOrders = prevOrders.map((order) =>
+          order._id === updatedOrder._id
+            ? { ...order, shipping_price: updatedOrder.shipping_price, total_price: updatedOrder.total_price, status: updatedOrder.status }
+            : order
+        );
+        // Maintain sort by createdAt
+        return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+      });
+      // Update selectedOrder if open in modal
+      if (selectedOrder && selectedOrder._id === updatedOrder._id) {
+        setSelectedOrder((prev) => ({
+          ...prev,
+          shipping_price: updatedOrder.shipping_price,
+          total_price: updatedOrder.total_price,
+          status: updatedOrder.status,
+        }));
+      }
+    } else {
+      console.error('Invalid shipping price update received:', updatedOrder);
     }
   });
 
@@ -818,65 +851,66 @@ export default function OrdersManagement() {
     socket.disconnect();
     console.log('Disconnected from Socket.IO server');
   };
-}, []);
+}, [selectedOrder]);
 
   // Enhanced filter orders based on search term, status, and date
   const filteredOrders = useMemo(() => {
-    let filtered = orders;
+  let filtered = orders;
 
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter((order) => {
-        const searchableFields = [
-          order._id,
-          order.user_name,
-          order.email,
-          order.phone_number,
-          order.whatsapp_number,
-          order.status,
-          ...order.orderedProducts.map((p) => p.product_name),
-          ...order.orderedProducts.map((p) => p.variant_name).filter(Boolean),
-        ];
+  // Search filter
+  if (searchTerm) {
+    filtered = filtered.filter((order) => {
+      const searchableFields = [
+        order._id,
+        order.user_name,
+        order.email,
+        order.phone_number,
+        order.whatsapp_number,
+        order.status,
+        ...order.orderedProducts.map((p) => p.product_name),
+        ...order.orderedProducts.map((p) => p.variant_name).filter(Boolean),
+      ];
 
-        return searchableFields.some(
-          (field) => field && field.toString().toLowerCase().includes(searchTerm.toLowerCase()),
-        );
-      });
-    }
+      return searchableFields.some(
+        (field) => field && field.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+      );
+    });
+  }
 
-    // Status filter
-    if (statusFilter) {
-      filtered = filtered.filter(order => order.status.toLowerCase() === statusFilter.toLowerCase());
-    }
+  // Status filter
+  if (statusFilter) {
+    filtered = filtered.filter(order => order.status.toLowerCase() === statusFilter.toLowerCase());
+  }
 
-    // Date filter
-    if (dateFilter) {
-      filtered = filtered.filter((order, index) => {
-        const orderDate = order.createdAt || generateDummyDate(index);
-        
-        switch (dateFilter) {
-          case 'today':
-            return isToday(orderDate);
-          case 'yesterday':
-            return isYesterday(orderDate);
-          case 'single':
-            if (singleDate) {
-              return isSingleDate(orderDate, singleDate);
-            }
-            return true;
-          case 'custom':
-            if (customStartDate && customEndDate) {
-              return isInDateRange(orderDate, customStartDate, customEndDate);
-            }
-            return true;
-          default:
-            return true;
-        }
-      });
-    }
+  // Date filter
+  if (dateFilter) {
+    filtered = filtered.filter((order, index) => {
+      const orderDate = order.createdAt || generateDummyDate(index);
+      
+      switch (dateFilter) {
+        case 'today':
+          return isToday(orderDate);
+        case 'yesterday':
+          return isYesterday(orderDate);
+        case 'single':
+          if (singleDate) {
+            return isSingleDate(orderDate, singleDate);
+          }
+          return true;
+        case 'custom':
+          if (customStartDate && customEndDate) {
+            return isInDateRange(orderDate, customStartDate, customEndDate);
+          }
+          return true;
+        default:
+          return true;
+      }
+    });
+  }
 
-    return filtered;
-  }, [orders, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, singleDate]);
+  // Sort filtered orders by createdAt in descending order
+  return filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}, [orders, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, singleDate]);
 
   // Reset to page 1 when search changes
   useEffect(() => {
@@ -1332,10 +1366,10 @@ export default function OrdersManagement() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span className="font-medium">
-                        {order.total_price === "Pending" ? "Pending" : `${order.total_price}`}
-                      </span>
-                    </td>
+  <span className="font-medium">
+    {order.status === "Pending" ? "Pending" : `₹${order.total_price}`}
+  </span>
+</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getStatusBadge(order.status)}
                     </td>

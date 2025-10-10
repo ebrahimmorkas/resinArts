@@ -451,75 +451,123 @@ const fetchOrders = async (req, res) => {
 
 // Function where admin will update the shipping price
 const shippingPriceUpdate = async (req, res) => {
-    try {
-        const { shippingPriceValue, orderId, email } = req.body;
-        const order = await Order.findById(orderId);
-        if (order) {
-            // Check stock for each ordered product
-            for (const item of order.orderedProducts) {
-                const product = await Product.findById(item.product_id);
-                if (!product) {
-                    return res.status(404).json({ message: `Product not found for ID ${item.product_id}` });
-                }
+  try {
+    const { shippingPriceValue, orderId, email } = req.body;
+    console.log('Received shippingPriceUpdate request:', { shippingPriceValue, orderId, email });
 
-                if (!item.variant_id) {
-                    // Product without variants
-                    if (product.stock < item.quantity) {
-                        return res.status(400).json({ message: `Insufficient stock for product ${item.product_name}. Cannot accept order.` });
-                    }
-                } else {
-                    // Product with variants
-                    const variant = product.variants.id(item.variant_id);
-                    if (!variant) {
-                        return res.status(404).json({ message: `Variant not found for product ${item.product_name}` });
-                    }
-
-                    const sizeDetail = variant.moreDetails.id(item.size_id);
-                    if (!sizeDetail) {
-                        return res.status(404).json({ message: `Size detail not found for variant in product ${item.product_name}` });
-                    }
-
-                    if (sizeDetail.stock < item.quantity) {
-                        return res.status(400).json({ message: `Insufficient stock for size ${item.size} in variant ${item.variant_name} of product ${item.product_name}. Cannot accept order.` });
-                    }
-                }
-            }
-
-            if (parseInt(shippingPriceValue) > 0) {
-                try {
-                    const totalPrice = order.price + parseInt(shippingPriceValue);
-                    const updatedOrder = await Order.findByIdAndUpdate(
-                        orderId,
-                        {
-                            shipping_price: shippingPriceValue,
-                            total_price: totalPrice,
-                            status: "Accepted",
-                        },
-                        {
-                            new: true,
-                            runValidators: true
-                        }
-                    );
-                    try {
-                        await sendEmail(email, "Accepted", `Your order has been accepted for id ${orderId}`);
-                    } catch (error) {
-                        console.log("Error in sending email");
-                    } finally {
-                        return res.status(200).json({ message: "Shipping price updated" });
-                    }
-                } catch (error) {
-                    return res.status(400).json({ message: "Problem while updating the order" });
-                }
-            } else {
-                return res.status(400).json({ message: "Input is not proper" });
-            }
-        } else {
-            return res.status(400).json({ message: "Order not found" });
-        }
-    } catch (error) {
-        return res.status(500).json({ message: `Internal server error ${error}` });
+    // Validate inputs
+    if (!orderId || shippingPriceValue === undefined || isNaN(shippingPriceValue) || parseInt(shippingPriceValue) <= 0) {
+      console.error('Validation failed:', { shippingPriceValue, orderId, email });
+      return res.status(400).json({ message: 'Order ID and valid positive shipping price are required' });
     }
-}
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      console.error('Order not found for ID:', orderId);
+      return res.status(400).json({ message: 'Order not found' });
+    }
+
+    // Check stock for each ordered product
+    for (const item of order.orderedProducts) {
+      const product = await Product.findById(item.product_id);
+      if (!product) {
+        console.error('Product not found:', item.product_id);
+        return res.status(404).json({ message: `Product not found for ID ${item.product_id}` });
+      }
+
+      if (!item.variant_id) {
+        // Product without variants
+        if (product.stock < item.quantity) {
+          console.error('Insufficient stock for product:', { product_id: item.product_id, product_name: item.product_name, stock: product.stock, quantity: item.quantity });
+          return res.status(400).json({ message: `Insufficient stock for product ${item.product_name}. Cannot accept order.` });
+        }
+      } else {
+        // Product with variants
+        const variant = product.variants.id(item.variant_id);
+        if (!variant) {
+          console.error('Variant not found:', { product_id: item.product_id, variant_id: item.variant_id });
+          return res.status(404).json({ message: `Variant not found for product ${item.product_name}` });
+        }
+
+        const sizeDetail = variant.moreDetails.id(item.size_id);
+        if (!sizeDetail) {
+          console.error('Size detail not found:', { product_id: item.product_id, variant_id: item.variant_id, size_id: item.size_id });
+          return res.status(404).json({ message: `Size detail not found for variant in product ${item.product_name}` });
+        }
+
+        if (sizeDetail.stock < item.quantity) {
+          console.error('Insufficient stock for size:', { product_name: item.product_name, variant_name: item.variant_name, size: item.size, stock: sizeDetail.stock, quantity: item.quantity });
+          return res.status(400).json({ message: `Insufficient stock for size ${item.size} in variant ${item.variant_name} of product ${item.product_name}. Cannot accept order.` });
+        }
+      }
+    }
+
+    // Update order
+    const totalPrice = parseFloat(order.price) + parseFloat(shippingPriceValue);
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        shipping_price: parseFloat(shippingPriceValue),
+        total_price: totalPrice,
+        status: 'Accepted',
+      },
+      {
+        new: true,
+        runValidators: true,
+      }
+    );
+
+    if (!updatedOrder) {
+      console.error('Failed to update order:', orderId);
+      return res.status(400).json({ message: 'Problem while updating the order' });
+    }
+
+    console.log('Order updated:', { id: updatedOrder._id, shipping_price: updatedOrder.shipping_price, total_price: updatedOrder.total_price, status: updatedOrder.status });
+
+    // Emit Socket.IO event
+    const io = req.app.get('io');
+    if (io) {
+      console.log('Emitting shippingPriceUpdated event for order:', updatedOrder._id);
+      io.to('admin_room').emit('shippingPriceUpdated', {
+        _id: updatedOrder._id,
+        shipping_price: updatedOrder.shipping_price,
+        total_price: updatedOrder.total_price,
+        status: updatedOrder.status,
+      });
+    } else {
+      console.error('Socket.IO not initialized');
+    }
+
+    // Send email notification
+    try {
+      const companySettings = await CompanySettings.findOne();
+      await sendEmail(
+        email,
+        `Order #${orderId} Accepted`,
+        `Dear ${order.user_name},\n\nYour order #${orderId} has been accepted.\nShipping Price: ₹${updatedOrder.shipping_price.toFixed(2)}\nTotal Price: ₹${updatedOrder.total_price.toFixed(2)}\n\nThank you for shopping with ${companySettings?.companyName || 'Mould Market'}!`
+      );
+      console.log('Shipping price update email sent to:', email);
+    } catch (emailError) {
+      console.error('Error sending email:', emailError.message);
+    }
+
+    return res.status(200).json({
+      message: 'Shipping price updated',
+      order: {
+        id: updatedOrder._id,
+        shipping_price: updatedOrder.shipping_price,
+        total_price: updatedOrder.total_price,
+        status: updatedOrder.status,
+      },
+    });
+  } catch (error) {
+    console.error('Shipping price update error:', error.message, error.stack);
+    return res.status(500).json({
+      message: `Failed to update shipping price: ${error.message}`,
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
 
 // Function to handle status
 const handleStatusChange = async (req, res) => {
