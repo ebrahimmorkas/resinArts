@@ -8,26 +8,26 @@ export const ProductProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
+  const fetchProducts = async () => {
+    try {
+      const response = await axios.get(
+        "http://localhost:3000/api/product/all",
+        { withCredentials: true }
+      );
+      setProducts(response.data.products || []);
+      setLoading(false);
+    } catch (err) {
+      setError(err.response?.data?.message || "Error fetching products");
+      setLoading(false);
+    }
+  };
+
   useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get(
-          "http://localhost:3000/api/product/all",
-          { withCredentials: true } // Keep for potential user-specific features
-        );
-        setProducts(response.data.products);
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || "Error fetching products");
-        setLoading(false);
-      }
-    };
-    
     fetchProducts();
-  }, []); // Remove dependency on user/authLoading
+  }, []);
 
   return (
-    <ProductContext.Provider value={{ products, loading, error }}>
+    <ProductContext.Provider value={{ products, setProducts, fetchProducts, loading, error }}>
       {children}
     </ProductContext.Provider>
   );

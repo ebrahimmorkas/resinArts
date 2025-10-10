@@ -8,7 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { duplicateProducts } from "../../../../../utils/api";
 
 export default function AdminProductsPage() {
-  const { products, loading, error } = useContext(ProductContext);
+  const { products, loading, error, setProducts, fetchProducts } = useContext(ProductContext);
 
   // State variables
   const [selectedProducts, setSelectedProducts] = useState([]);
@@ -163,11 +163,15 @@ const confirmStatusChange = async () => {
       },
       { withCredentials: true }
     );
-
     if (res.status === 200) {
       toast.success(res.data.message);
-      // Refresh products list - you might need to call a context method here
-      window.location.reload(); // Temporary solution
+      setProducts(prevProducts =>
+        prevProducts.map(p =>
+          p._id === statusModalData.productId
+            ? { ...p, isActive: statusModalData.isActive }
+            : p
+        )
+      );
     }
   } catch (error) {
     console.error('Error toggling product status:', error);
@@ -202,11 +206,14 @@ const confirmBulkStatusChange = async () => {
       },
       { withCredentials: true }
     );
-
     if (res.status === 200) {
       toast.success(res.data.message);
+      setProducts(prevProducts =>
+        prevProducts.map(p =>
+          productIds.includes(p._id) ? { ...p, isActive: bulkStatusAction } : p
+        )
+      );
       setSelectedProducts([]);
-      window.location.reload(); // Temporary solution
     }
   } catch (error) {
     console.error('Error bulk toggling status:', error);
@@ -278,10 +285,8 @@ const handleDelete = async () => {
     });
     if (res.status === 200) {
       toast.success('Product deleted successfully!');
-      // Remove the deleted product from selectedProducts if it was selected
       setSelectedProducts(prev => prev.filter(p => p._id !== selectedProductForDelete._id));
-      // You might want to add a context method to refresh products here
-      // For example: refreshProducts() or fetchProducts()
+      setProducts(prevProducts => prevProducts.filter(p => p._id !== selectedProductForDelete._id));
     }
   } catch (error) {
     console.error("Delete error:", error);
@@ -297,20 +302,16 @@ const handleDelete = async () => {
 const handleDeleteSelected = async () => {
   if (selectedProducts.length === 0) return;
   setIsLoading(true);
-  
   try {
     const deletePromises = selectedProducts.map(product => 
       axios.delete(`http://localhost:3000/api/product/delete-product/${product._id}`, {
         withCredentials: true
       })
     );
-    
     await Promise.all(deletePromises);
-    
     toast.success(`${selectedProducts.length} products deleted successfully!`);
+    setProducts(prevProducts => prevProducts.filter(p => !selectedProducts.some(sp => sp._id === p._id)));
     setSelectedProducts([]);
-    // TODO: Refresh products from context
-    
   } catch (error) {
     console.error("Delete selected error:", error);
     const errorMessage = error.response?.data?.message || 'Failed to delete selected products!';
@@ -329,7 +330,7 @@ const handleDuplicateProduct = async (product) => {
     const res = await duplicateProducts([product._id]);
     if (res.products && res.products.length > 0) {
       toast.success(`Product duplicated successfully as "${res.products[0].name}"!`);
-      // Refresh products - you might need to add a context method for this
+      setProducts(prevProducts => [...prevProducts, ...res.products]);
     }
   } catch (error) {
     console.error("Duplicate error:", error);
@@ -342,15 +343,12 @@ const handleDuplicateProduct = async (product) => {
 const handleDuplicateSelected = async () => {
   if (selectedProducts.length === 0) return;
   setIsLoading(true);
-  
   try {
     const productIds = selectedProducts.map(p => p._id);
     const res = await duplicateProducts(productIds);
-    
     toast.success(`${res.products.length} products duplicated successfully!`);
+    setProducts(prevProducts => [...prevProducts, ...res.products]);
     setSelectedProducts([]);
-    // Refresh products - you might need to add a context method for this
-    
   } catch (error) {
     console.error("Duplicate selected error:", error);
     toast.error(`Failed to duplicate products: ${error.message}`);
@@ -437,30 +435,40 @@ const ViewVariantsModal = ({ product, onClose }) => {
   const [toggleLoading, setToggleLoading] = useState({});
 
   const handleToggleVariantStatus = async (variantId, currentStatus) => {
-    setToggleLoading({ [`variant-${variantId}`]: true });
-    try {
-      const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
-        {
-          productId: product._id,
-          variantId: variantId,
-          isActive: !currentStatus,
-        },
-        { withCredentials: true }
+  setToggleLoading({ [`variant-${variantId}`]: true });
+  try {
+    const res = await axios.post(
+      'http://localhost:3000/api/product/toggle-variant-size-status',
+      {
+        productId: product._id,
+        variantId: variantId,
+        isActive: !currentStatus,
+      },
+      { withCredentials: true }
+    );
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      setProducts(prevProducts =>
+        prevProducts.map(p =>
+          p._id === product._id
+            ? {
+                ...p,
+                variants: p.variants.map(v =>
+                  v._id === variantId ? { ...v, isActive: !currentStatus } : v
+                )
+              }
+            : p
+        )
       );
-
-      if (res.status === 200) {
-        toast.success(res.data.message);
-        window.location.reload(); // Consider replacing with context update
-      }
-    } catch (error) {
-      console.error('Error toggling variant:', error);
-      const errorMsg = error.response?.data?.message || 'Failed to toggle variant status';
-      toast.error(errorMsg);
-    } finally {
-      setToggleLoading({ [`variant-${variantId}`]: false });
     }
-  };
+  } catch (error) {
+    console.error('Error toggling variant:', error);
+    const errorMsg = error.response?.data?.message || 'Failed to toggle variant status';
+    toast.error(errorMsg);
+  } finally {
+    setToggleLoading({ [`variant-${variantId}`]: false });
+  }
+};
 
   const handleToggleSizeStatus = async (variantId, sizeId, currentStatus, variantIsActive) => {
     if (!variantIsActive && !currentStatus) {
@@ -1432,41 +1440,65 @@ const DeleteConfirmationModal = () => {
     const [modalLoading, setModalLoading] = useState(false);
 
     const handleUpdateStock = async () => {
-      setModalLoading(true);
-      try {
-        let dataToSend = {};
-        if (product.hasVariants) {
-          dataToSend = {
-            productId: product._id,
-            updatedStock: "",
-            productData: stateVariableForDataForSingleProductWithVariants
-          };
-        } else {
-          dataToSend = {
-            productId: product._id,
-            updatedStock: parseInt(stockTextfield),
-            productData: {}
-          };
-        }
-        const res = await axios.post(
-          'http://localhost:3000/api/product/restock',
-          dataToSend,
-          { withCredentials: true }
+  setModalLoading(true);
+  try {
+    let dataToSend = {};
+    if (product.hasVariants) {
+      dataToSend = {
+        productId: product._id,
+        updatedStock: "",
+        productData: stateVariableForDataForSingleProductWithVariants
+      };
+    } else {
+      dataToSend = {
+        productId: product._id,
+        updatedStock: parseInt(stockTextfield),
+        productData: {}
+      };
+    }
+    const res = await axios.post(
+      'http://localhost:3000/api/product/restock',
+      dataToSend,
+      { withCredentials: true }
+    );
+    if (res.status === 200 || res.status === 201) {
+      toast.success(`Stock updated successfully for ${product.name}`);
+      if (product.hasVariants) {
+        setProducts(prevProducts =>
+          prevProducts.map(p =>
+            p._id === product._id
+              ? {
+                  ...p,
+                  variants: p.variants.map(v => ({
+                    ...v,
+                    moreDetails: v.moreDetails.map(d =>
+                      stateVariableForDataForSingleProductWithVariants[v._id]?.[d._id]?.[d.size._id]
+                        ? { ...d, stock: parseInt(stateVariableForDataForSingleProductWithVariants[v._id][d._id][d.size._id]) }
+                        : d
+                    )
+                  }))
+                }
+              : p
+          )
         );
-
-        if (res.status === 200 || res.status === 201) {
-          toast.success(`Stock updated successfully for ${product.name}`);
-          setStockTextfield("");
-          onClose();
-        } else {
-          toast.error("Failed to update stock!");
-        }
-      } catch (error) {
-        toast.error("Error updating stock: " + error.message);
-      } finally {
-        setModalLoading(false);
+      } else {
+        setProducts(prevProducts =>
+          prevProducts.map(p =>
+            p._id === product._id ? { ...p, stock: parseInt(stockTextfield) } : p
+          )
+        );
       }
-    };
+      setStockTextfield("");
+      onClose();
+    } else {
+      toast.error("Failed to update stock!");
+    }
+  } catch (error) {
+    toast.error("Error updating stock: " + error.message);
+  } finally {
+    setModalLoading(false);
+  }
+};
 
     const handleUpdateMultipleStock = async (localMultipleToRestock) => {
       setModalLoading(true);
