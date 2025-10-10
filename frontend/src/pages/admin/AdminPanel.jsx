@@ -51,7 +51,7 @@ function AdminPanel() {
           <div className="w-full min-w-full overflow-x-hidden">
             <Routes>
               <Route index element={<Orders />} /> {/* Default route for /admin/panel */}
-              <Route path="dashboard" element={<div className="bg-white rounded-lg shadow p-6 w-full">Dashboard Component</div>} />
+              <Route path="dashboard" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Dashboard Component</div>} />
 
               {/* Start Product routes */}
               <Route path="products" element={<AllProducts />} />
@@ -99,28 +99,28 @@ function AdminPanel() {
               {/* End of abandoned cart routes */}
 
               {/* Additional routes for new menu items */}
-              {/* <Route path="analytics/sales" element={<div className="bg-white rounded-lg shadow p-6 w-full">Sales Report Component</div>} />
-              <Route path="analytics/revenue" element={<div className="bg-white rounded-lg shadow p-6 w-full">Revenue Component</div>} />
-              <Route path="analytics/products" element={<div className="bg-white rounded-lg shadow p-6 w-full">Product Performance Component</div>} />
-              <Route path="analytics/customers" element={<div className="bg-white rounded-lg shadow p-6 w-full">Customer Insights Component</div>} />
+              {/* <Route path="analytics/sales" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Sales Report Component</div>} />
+              <Route path="analytics/revenue" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Revenue Component</div>} />
+              <Route path="analytics/products" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Product Performance Component</div>} />
+              <Route path="analytics/customers" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Customer Insights Component</div>} />
               
-              <Route path="shipping/zones" element={<div className="bg-white rounded-lg shadow p-6 w-full">Shipping Zones Component</div>} />
-              <Route path="shipping/rates" element={<div className="bg-white rounded-lg shadow p-6 w-full">Shipping Rates Component</div>} />
-              <Route path="shipping/tracking" element={<div className="bg-white rounded-lg shadow p-6 w-full">Tracking Component</div>} />
+              <Route path="shipping/zones" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Shipping Zones Component</div>} />
+              <Route path="shipping/rates" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Shipping Rates Component</div>} />
+              <Route path="shipping/tracking" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Tracking Component</div>} />
               
-              <Route path="payments/transactions" element={<div className="bg-white rounded-lg shadow p-6 w-full">Transactions Component</div>} />
-              <Route path="payments/payouts" element={<div className="bg-white rounded-lg shadow p-6 w-full">Payouts Component</div>} />
-              <Route path="payments/methods" element={<div className="bg-white rounded-lg shadow p-6 w-full">Payment Methods Component</div>} /> */}
+              <Route path="payments/transactions" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Transactions Component</div>} />
+              <Route path="payments/payouts" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Payouts Component</div>} />
+              <Route path="payments/methods" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Payment Methods Component</div>} /> */}
               
-              <Route path="store/info" element={<div className="bg-white rounded-lg shadow p-6 w-full">Store Information Component</div>} />
-              <Route path="store/appearance" element={<div className="bg-white rounded-lg shadow p-6 w-full">Store Appearance Component</div>} />
-              <Route path="store/policies" element={<div className="bg-white rounded-lg shadow p-6 w-full">Store Policies Component</div>} />
+              <Route path="store/info" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Store Information Component</div>} />
+              <Route path="store/appearance" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Store Appearance Component</div>} />
+              <Route path="store/policies" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Store Policies Component</div>} />
               
-              <Route path="settings/account" element={<div className="bg-white rounded-lg shadow p-6 w-full">Account Settings Component</div>} />
-              <Route path="settings/notifications" element={<div className="bg-white rounded-lg shadow p-6 w-full">Notifications Settings Component</div>} />
-              <Route path="settings/security" element={<div className="bg-white rounded-lg shadow p-6 w-full">Security Settings Component</div>} />
+              <Route path="settings/account" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Account Settings Component</div>} />
+              <Route path="settings/notifications" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Notifications Settings Component</div>} />
+              <Route path="settings/security" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Security Settings Component</div>} />
               
-              <Route path="help" element={<div className="bg-white rounded-lg shadow p-6 w-full">Help & Support Component</div>} />
+              <Route path="help" element={<div className="bg-white dark:bg-gray-900 rounded-lg shadow p-6 w-full">Help & Support Component</div>} />
               
               {/* Fallback route */}
               <Route path="*" element={<Orders />} />

@@ -157,7 +157,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
 
   return (
     <>
-      <nav className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-40 shadow-sm">
+      <nav className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 fixed top-0 left-0 right-0 z-40 shadow-sm">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             {/* Left Section - Menu & Logo */}
@@ -222,14 +222,14 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                 )}
               </button>
 
-              <div className="flex items-center space-x-3 border-l border-gray-200 pl-4">
+              <div className="flex items-center space-x-3 border-l border-gray-200 dark:border-gray-700 pl-4">
                 <div className="relative">
                   <button
                     className="flex items-center space-x-3 p-2 rounded-lg hover:bg-gray-100 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-opacity-50"
                     onClick={() => setProfileDropdownOpen(!profileDropdownOpen)}
                   >
                     <div className="w-8 h-8 rounded-full flex items-center justify-center border-2 border-gray-300">
-                      <User className="w-4 h-4 text-gray-600" />
+                      <User className="w-4 h-4 text-gray-600 dark:text-gray-400" />
                     </div>
                     <div className="hidden sm:block text-left">
                       <div className="text-sm font-medium text-gray-900">Ebrahim Kanchwala</div>
@@ -239,8 +239,8 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                   </button>
 
                   {profileDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                      <div className="px-4 py-2 border-b border-gray-200">
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-2 z-50">
+                      <div className="px-4 py-2 border-b border-gray-200 dark:border-gray-700">
                         <p className="text-sm font-medium text-gray-900">Ebrahim Kanchwala</p>
                         <p className="text-xs text-gray-500">mouldmarket.com</p>
                       </div>
@@ -259,7 +259,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                           <User className="w-4 h-4 mr-3" />
                           Account Settings
                         </a>
-                        <div className="border-t border-gray-200 my-1"></div>
+                        <div className="border-t border-gray-200 dark:border-gray-700 my-1"></div>
                         <a
                           href="#"
                           onClick={(e) => {
@@ -280,7 +280,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
           </div>
         </div>
 
-        <div className="md:hidden px-4 pb-3 border-t border-gray-200">
+        <div className="md:hidden px-4 pb-3 border-t border-gray-200 dark:border-gray-700">
           <div className="text-center">
             <h1 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">
               Admin Panel
@@ -292,8 +292,8 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
       {notificationsOpen && (
         <>
           <div className="fixed inset-0 z-40" onClick={() => setNotificationsOpen(false)} />
-          <div className="fixed top-0 right-0 h-full w-96 bg-white shadow-2xl border-l border-gray-200 z-50 transform transition-transform duration-300 ease-in-out">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
+          <div className="fixed top-0 right-0 h-full w-96 bg-white dark:bg-gray-900 shadow-2xl border-l border-gray-200 dark:border-gray-700 z-50 transform transition-transform duration-300 ease-in-out">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <h3 className="text-lg font-semibold text-gray-900">Notifications ({notifications.length})</h3>
               <button
                 onClick={() => setNotificationsOpen(false)}
@@ -309,7 +309,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                   {notifications.map((notification) => (
                     <div
                       key={notification.id}
-                      className={`relative p-4 border-b border-gray-100 hover:bg-gray-50 transition-colors duration-200 ${
+                      className={`relative p-4 border-b border-gray-100 hover:bg-gray-50 dark:bg-gray-800 transition-colors duration-200 ${
                         notification.unread
                           ? notification.type === 'lowStock'
                             ? 'bg-blue-50 border-l-4 border-l-black'
@@ -345,13 +345,13 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                             </span>
                           </div>
                         </div>
-                        <p className="text-sm text-gray-600 mb-2 whitespace-pre-wrap">{notification.message}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 whitespace-pre-wrap">{notification.message}</p>
                         <p className="text-xs text-gray-400">{notification.time}</p>
                       </div>
                     </div>
                   ))}
 
-                  <div className="p-4 border-t border-gray-200 bg-gray-50 space-y-2">
+                  <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 space-y-2">
                     {unreadCount > 0 && (
                       <button
                         onClick={markAllAsRead}

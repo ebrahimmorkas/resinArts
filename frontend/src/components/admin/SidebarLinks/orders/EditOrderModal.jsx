@@ -33,11 +33,11 @@ function EditOrderModal({ onClose, order }) {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full">
         {/* Modal Header */}
-        <div className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
+        <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
           <h2 className="text-2xl font-bold text-gray-900">Edit the order</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400">
             <X className="h-6 w-6" />
           </button>
         </div>
@@ -49,7 +49,7 @@ function EditOrderModal({ onClose, order }) {
               <p className="font-semibold">{product.product_name}</p>
 
               {product.variant_name && (
-                <div className="ml-4 text-sm text-gray-600">
+                <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
                   <p>Variant: {product.variant_name}</p>
                   <p>Size: {product.size}</p>
                 </div>

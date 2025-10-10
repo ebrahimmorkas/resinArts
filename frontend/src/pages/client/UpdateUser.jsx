@@ -309,7 +309,7 @@ const UpdateUser = () => {
     if (isLoadingData) {
         return (
             <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 flex items-center justify-center">
-                <div className="bg-white p-8 rounded-lg shadow-lg">
+                <div className="bg-white dark:bg-gray-900 p-8 rounded-lg shadow-lg">
                     <div className="flex items-center space-x-4">
                         <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin"></div>
                         <span className="text-lg text-gray-700">Loading profile...</span>
@@ -324,11 +324,11 @@ const UpdateUser = () => {
             <Toast {...toast} />
             
             <div className="max-w-4xl mx-auto">
-                <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+                <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
                     {/* Header */}
                     <div className="bg-gradient-to-r from-blue-600 to-purple-600 px-8 py-6">
                         <div className="flex items-center space-x-3">
-                            <div className="bg-white/20 p-2 rounded-lg">
+                            <div className="bg-white dark:bg-gray-900/20 p-2 rounded-lg">
                                 <User className="h-6 w-6 text-white" />
                             </div>
                             <div>
@@ -342,7 +342,7 @@ const UpdateUser = () => {
                     <div className="p-8 space-y-6">
                         {/* Personal Information */}
                         <div>
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <h2 className="text-xl font-semibold -800 dark:text-gray-100 mb-4 flex items-center">
                                 <User className="h-5 w-5 mr-2 text-blue-600" />
                                 Personal Information
                             </h2>
@@ -414,7 +414,7 @@ const UpdateUser = () => {
 
                         {/* Contact Information */}
                         <div>
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <h2 className="text-xl font-semibold -800 dark:text-gray-100 mb-4 flex items-center">
                                 <Mail className="h-5 w-5 mr-2 text-blue-600" />
                                 Contact Information
                             </h2>
@@ -486,7 +486,7 @@ const UpdateUser = () => {
 
                         {/* Address Information */}
                         <div>
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <h2 className="text-xl font-semibold -800 dark:text-gray-100 mb-4 flex items-center">
                                 <MapPin className="h-5 w-5 mr-2 text-blue-600" />
                                 Address Information
                             </h2>
@@ -581,7 +581,7 @@ const UpdateUser = () => {
 
                         {/* Password Section */}
                         <div>
-                            <h2 className="text-xl font-semibold text-gray-800 mb-4 flex items-center">
+                            <h2 className="text-xl font-semibold -800 dark:text-gray-100 mb-4 flex items-center">
                                 <Lock className="h-5 w-5 mr-2 text-blue-600" />
                                 Change Password (Optional)
                             </h2>
@@ -649,7 +649,7 @@ const UpdateUser = () => {
                         </div>
 
                         {/* Submit Button */}
-                        <div className="pt-6 border-t border-gray-200">
+                        <div className="pt-6 border-t border-gray-200 dark:border-gray-700">
                             <button
                                 type="button"
                                 onClick={handleSubmit}

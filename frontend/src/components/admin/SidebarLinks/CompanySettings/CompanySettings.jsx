@@ -250,11 +250,11 @@ const CompanySettings = () => {
       title: 'Personal Information',
       content: (
         <div className="p-4 space-y-6">
-          <div className="border-b border-gray-200 pb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Company Logo</h3>
+          <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+            <h3 className="text-lg font-semibold -800 dark:text-gray-100 mb-4">Company Logo</h3>
             <div className="flex flex-col md:flex-row gap-4 items-start">
               <div className="flex-shrink-0">
-                <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden">
+                <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-gray-800 overflow-hidden">
                   {logoPreview || formData.companyLogo ? (
                     <img
                       src={logoPreview || formData.companyLogo}
@@ -562,7 +562,7 @@ const CompanySettings = () => {
         <div className="p-4">
           <div className="space-y-4">
             {/* Email Notification Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
                 <label htmlFor="receiveOrderEmails" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Receive emails when order is placed
@@ -581,13 +581,13 @@ const CompanySettings = () => {
                     onChange={handleCheckboxChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
             </div>
 
             {/* Low Stock Alert Threshold */}
-            <div className="p-4 bg-gray-50 rounded-lg">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <label htmlFor="lowStockAlertThreshold" className="text-sm font-medium text-gray-700 block mb-2">
                 Show low stock alert after
               </label>
@@ -603,7 +603,7 @@ const CompanySettings = () => {
                   className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   placeholder="Enter number of items"
                 />
-                <span className="text-sm text-gray-600">items</span>
+                <span className="text-sm text-gray-600 dark:text-gray-400">items</span>
               </div>
               <p className="text-xs text-gray-500 mt-2">
                 Low stock alert will be triggered when product stock falls below this number
@@ -611,7 +611,7 @@ const CompanySettings = () => {
             </div>
 
             {/* Receive Low Stock Email */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
                 <label htmlFor="receiveLowStockEmail" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Receive low stock emails
@@ -630,13 +630,13 @@ const CompanySettings = () => {
                     onChange={handleCheckboxChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
             </div>
 
             {/* Receive Out Of Stock Email */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
                 <label htmlFor="receiveOutOfStockEmail" className="text-sm font-medium text-gray-700 cursor-pointer">
                   Receive out of stock emails
@@ -655,7 +655,7 @@ const CompanySettings = () => {
                     onChange={handleCheckboxChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
                 </label>
               </div>
             </div>
@@ -667,10 +667,10 @@ const CompanySettings = () => {
 
   if (fetchLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-800">
         <div className="text-center">
           <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-4 text-gray-600">Loading settings...</p>
+          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading settings...</p>
         </div>
       </div>
     );
@@ -679,7 +679,7 @@ const CompanySettings = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
           <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 sm:px-8">
             <h1 className="text-3xl font-bold text-white">Company Settings</h1>
             <p className="mt-2 text-blue-100">Manage your company information and policies</p>
@@ -690,20 +690,20 @@ const CompanySettings = () => {
               {accordions.map((accordion, index) => (
                 <div
                   key={index}
-                  className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow duration-200"
+                  className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden hover:shadow-md transition-shadow duration-200"
                 >
                   <button
                     type="button"
                     onClick={() => toggleAccordion(index)}
-                    className="w-full flex items-center justify-between px-6 py-4 bg-gray-50 hover:bg-gray-100 transition-colors duration-200"
+                    className="w-full flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 transition-colors duration-200"
                   >
-                    <span className="text-lg font-semibold text-gray-800">
+                    <span className="text-lg font-semibold -800 dark:text-gray-100">
                       {accordion.title}
                     </span>
                     {activeAccordion === index ? (
-                      <ChevronUp className="w-5 h-5 text-gray-600" />
+                      <ChevronUp className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-600" />
+                      <ChevronDown className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     )}
                   </button>
 
@@ -714,7 +714,7 @@ const CompanySettings = () => {
                         : 'max-h-0 opacity-0 overflow-hidden'
                     }`}
                   >
-                    <div className="bg-white border-t border-gray-200">
+                    <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
                       {accordion.content}
                     </div>
                   </div>
@@ -722,7 +722,7 @@ const CompanySettings = () => {
               ))}
             </div>
 
-            <div className="px-6 py-6 bg-gray-50 border-t border-gray-200 sm:px-8">
+            <div className="px-6 py-6 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sm:px-8">
               <button
                 type="submit"
                 disabled={loading}

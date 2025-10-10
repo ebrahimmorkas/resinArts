@@ -98,7 +98,7 @@ const paymentStatusConfig = {
   },
   refunded: {
     label: "Refunded",
-    color: "bg-gray-100 text-gray-800 border-gray-200",
+    color: "bg-gray-100 -800 dark:text-gray-100 border-gray-200 dark:border-gray-700",
   },
   refund_pending: {
     label: "Refund Pending",
@@ -553,12 +553,12 @@ export default function Orders() {
     if (!order) return null;
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">Order Details</h2>
-                <p className="text-gray-600">{order.id}</p>
+                <h2 className="text-2xl font-bold -800 dark:text-gray-100">Order Details</h2>
+                <p className="text-gray-600 dark:text-gray-400">{order.id}</p>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <XCircle className="w-5 h-5" />
@@ -567,54 +567,54 @@ export default function Orders() {
             <div className="grid md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Order Information</h3>
+                  <h3 className="font-semibold -800 dark:text-gray-100 mb-2">Order Information</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Order Date:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Order Date:</span>
                       <span>{formatDate(order.orderedAt)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Status:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Status:</span>
                       <StatusBadge status={order.status} />
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Items Total:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Items Total:</span>
                       <span className="font-semibold">${safeNumber(order.itemsTotal).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Shipping:</span>
                       <span className="font-semibold">${safeNumber(order.shippingPrice).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Total:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Total:</span>
                       <span className="font-semibold">${safeNumber(order.total).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Payment:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Payment:</span>
                       <PaymentStatusBadge order={order} />
                     </div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Tracking</h3>
+                  <h3 className="font-semibold -800 dark:text-gray-100 mb-2">Tracking</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Tracking Number:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Tracking Number:</span>
                       <span className="font-mono">{order.trackingNumber}</span>
                     </div>
                   </div>
                 </div>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Shipping Address</h3>
-                <p className="text-sm text-gray-600">{order.shippingAddress}</p>
+                <h3 className="font-semibold -800 dark:text-gray-100 mb-2">Shipping Address</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{order.shippingAddress}</p>
               </div>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-800 mb-4">Items Ordered</h3>
+              <h3 className="font-semibold -800 dark:text-gray-100 mb-4">Items Ordered</h3>
               <div className="space-y-3">
                 {order.items.map((item, index) => (
-                  <div key={index} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                  <div key={index} className="flex items-center space-x-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <img
                       src={item.image || "/placeholder.svg"}
                       alt={item.name}
@@ -624,15 +624,15 @@ export default function Orders() {
                       }}
                     />
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-800">{item.name}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-medium -800 dark:text-gray-100">{item.name}</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Quantity: {safeNumber(item.quantity)}
                         {item.size && ` • Size: ${item.size}`}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">${(safeNumber(item.price) * safeNumber(item.quantity)).toFixed(2)}</p>
-                      <p className="text-sm text-gray-600">${safeNumber(item.price).toFixed(2)} each</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">${safeNumber(item.price).toFixed(2)} each</p>
                     </div>
                   </div>
                 ))}
@@ -672,37 +672,37 @@ export default function Orders() {
 
   if (loadingOrders) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your orders...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading your orders...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Professional Header */}
         <div className="mb-6 flex items-center space-x-4">
           <button 
             onClick={handleBackClick} 
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm transition-colors"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </button>
           <div>
             <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
-            <p className="text-gray-600 mt-1">Track and manage your orders</p>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Track and manage your orders</p>
           </div>
         </div>
 
         {/* Professional Table Container */}
-        <div className="bg-white rounded-lg border border-gray-200">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
           {/* Table Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Orders Management</h3>
@@ -728,7 +728,7 @@ export default function Orders() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="ongoing">Ongoing Orders</option>
                     <option value="all">All Status</option>
@@ -747,7 +747,7 @@ export default function Orders() {
                   <select
                     value={paymentFilter}
                     onChange={(e) => setPaymentFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="all">All Payments</option>
                     <option value="paid">Paid</option>
@@ -758,7 +758,7 @@ export default function Orders() {
                   <select
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="all">All Dates</option>
                     <option value="today">Today</option>
@@ -770,7 +770,7 @@ export default function Orders() {
                   </select>
                   <button 
                     onClick={handleExportToExcel}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export Orders
@@ -782,7 +782,7 @@ export default function Orders() {
 
           {/* Date Filter Inputs */}
           {dateFilter !== "all" && dateFilter !== "today" && dateFilter !== "yesterday" && (
-            <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
+            <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <div className="flex items-center space-x-4 flex-wrap">
                 {dateFilter === "custom" && (
                   <div>
@@ -864,43 +864,43 @@ export default function Orders() {
           )}
 
           {/* Table Container with Horizontal Scroll and Sticky Header */}
-          <div className="overflow-hidden border-t border-gray-200">
+          <div className="overflow-hidden border-t border-gray-200 dark:border-gray-700">
             <div className="overflow-x-auto overflow-y-auto max-h-96">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0 z-10">
+                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '80px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
                       Sr No.
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '200px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '200px' }}>
                       Order ID
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                       Ordered At
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '250px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '250px' }}>
                       Products
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '100px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
                       Quantity
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Status
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Payment
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                   {currentData.map((order, index) => (
-                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={order.id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
                         {startIndex + index + 1}
                       </td>
@@ -973,7 +973,7 @@ export default function Orders() {
 
           {/* Table Footer */}
           {totalPages > 0 && (
-            <div className="px-6 py-4 border-t border-gray-200">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 {/* Items per page */}
                 <div className="flex items-center space-x-2">
@@ -998,7 +998,7 @@ export default function Orders() {
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ChevronLeft className="w-4 h-4 mr-1" />
                       Previous
@@ -1024,7 +1024,7 @@ export default function Orders() {
                             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                               currentPage === pageNumber
                                 ? 'bg-blue-600 text-white'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:bg-gray-800'
                             }`}
                           >
                             {pageNumber}
@@ -1036,7 +1036,7 @@ export default function Orders() {
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                       <ChevronRight className="w-4 h-4 ml-1" />

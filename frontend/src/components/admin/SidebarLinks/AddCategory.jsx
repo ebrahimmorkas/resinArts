@@ -12,9 +12,9 @@ const SubCategoryItem = ({ subCategory, path, level = 0, handleSubCategoryChange
   const uniqueKey = path.join('-') // Use path as a stable key
   return (
     <div className="space-y-3" key={uniqueKey}>
-      <div className="bg-gray-50 p-4 rounded-lg border border-gray-200 shadow-sm">
+      <div className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
         <div className="flex justify-between items-center mb-3">
-          <h3 className="text-base font-medium text-gray-800">
+          <h3 className="text-base font-medium -800 dark:text-gray-100">
             {level === 0 ? "Sub Category" : `Level ${level + 1} Category`} {path[path.length - 1] + 1}
           </h3>
           <button
@@ -35,7 +35,7 @@ const SubCategoryItem = ({ subCategory, path, level = 0, handleSubCategoryChange
               name={getSubCategoryNameAttribute(path)}
               value={subCategory.name}
               onChange={(e) => handleSubCategoryChange(path, "name", e.target.value)}
-              className="w-full px-3 py-2 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200 text-sm"
+              className="w-full px-3 py-2 border border-gray-200 dark:border-gray-700 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200 text-sm"
               placeholder={`Enter ${level === 0 ? "sub category" : `level ${level + 1} category`} name`}
               required
             />
@@ -55,7 +55,7 @@ const SubCategoryItem = ({ subCategory, path, level = 0, handleSubCategoryChange
       </div>
 
       {subCategory.subCategories && subCategory.subCategories.length > 0 && (
-        <div className="ml-6 space-y-3 border-l-2 border-gray-200 pl-4">
+        <div className="ml-6 space-y-3 border-l-2 border-gray-200 dark:border-gray-700 pl-4">
           {subCategory.subCategories.map((nestedSub, index) => (
             <SubCategoryItem
               key={`${uniqueKey}-${index}`}
@@ -331,7 +331,7 @@ const AddCategory = () => {
           </div>
         </div>
       )}
-      <div className="max-w-4xl mx-auto p-6 bg-gradient-to-b from-gray-50 to-white shadow-xl hover:shadow-2xl transition-shadow duration-300 rounded-xl border border-gray-200">
+      <div className="max-w-4xl mx-auto p-6 bg-gradient-to-b from-gray-50 to-white shadow-xl hover:shadow-2xl transition-shadow duration-300 rounded-xl border border-gray-200 dark:border-gray-700">
         <div className="mb-8">
           <h1 className="text-3xl font-bold text-gray-900 mb-2 tracking-tight">Add New Category</h1>
           <p className="text-gray-500 text-base">Create a new category and organize your products better</p>
@@ -344,8 +344,8 @@ const AddCategory = () => {
         )}
 
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">Category Information</h2>
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-100">
+            <h2 className="text-xl font-semibold -800 dark:text-gray-100 mb-4">Category Information</h2>
 
             <div className="space-y-4">
               <div>
@@ -355,7 +355,7 @@ const AddCategory = () => {
                   name="category.name"
                   value={categoryData.name}
                   onChange={(e) => handleCategoryChange('name', e.target.value)}
-                  className={`w-full px-3 py-2.5 border ${errors.name ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200`}
+                  className={`w-full px-3 py-2.5 border ${errors.name ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200`}
                   placeholder="Enter category name (e.g., Electronics, Clothing, Home & Garden)"
                   required
                 />
@@ -370,7 +370,7 @@ const AddCategory = () => {
                   name="category.image"
                   accept="image/*"
                   onChange={handleImageChange}
-                  className={`w-full px-3 py-2.5 border ${errors.image ? 'border-red-500' : 'border-gray-200'} rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200`}
+                  className={`w-full px-3 py-2.5 border ${errors.image ? 'border-red-500' : 'border-gray-200 dark:border-gray-700'} rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-colors duration-200`}
                 />
                 {errors.image && (
                   <p className="mt-1 text-sm text-red-600">{errors.image}</p>
@@ -382,7 +382,7 @@ const AddCategory = () => {
                 )}
               </div>
 
-              <div className="pt-4 border-t border-gray-200">
+              <div className="pt-4 border-t border-gray-200 dark:border-gray-700">
                 <button
                   type="button"
                   onClick={() => addSubCategory()}
@@ -397,9 +397,9 @@ const AddCategory = () => {
           </div>
 
           {subCategories.length > 0 && (
-            <div className="bg-white p-6 rounded-xl shadow-md border border-gray-100">
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-xl shadow-md border border-gray-100">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-xl font-semibold text-gray-800">Sub Categories</h2>
+                <h2 className="text-xl font-semibold -800 dark:text-gray-100">Sub Categories</h2>
                 <span className="text-sm text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
                   {subCategories.length} sub {subCategories.length === 1 ? "category" : "categories"}
                 </span>
@@ -424,11 +424,11 @@ const AddCategory = () => {
 
           {(categoryData.name || subCategories.length > 0 || imagePreview) && (
             <div className="bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border border-blue-100 shadow-md">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Category Structure Preview</h2>
+              <h2 className="text-xl font-semibold -800 dark:text-gray-100 mb-4">Category Structure Preview</h2>
 
-              <div className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow-sm">
                 <div className="mb-3 flex items-center gap-4">
-                  <h3 className="text-lg font-semibold text-gray-800">{categoryData.name || "Category Name"}</h3>
+                  <h3 className="text-lg font-semibold -800 dark:text-gray-100">{categoryData.name || "Category Name"}</h3>
                   {imagePreview && (
                     <img src={imagePreview} alt="Category Preview" className="h-16 w-16 object-cover rounded-lg" />
                   )}
@@ -446,11 +446,11 @@ const AddCategory = () => {
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200">
+          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={handleCancel}
-              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 transition-colors duration-200 font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 dark:bg-gray-800 transition-colors duration-200 font-medium"
               disabled={isSubmitting}
             >
               <X size={16} />

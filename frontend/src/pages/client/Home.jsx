@@ -910,7 +910,7 @@ const CategoryNavigationBar = () => {
   };
 
   return (
-  <div className="sticky top-16 z-30 bg-white border-b border-gray-200 py-4 shadow-sm">
+  <div className="sticky top-16 z-30 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 py-4 shadow-sm">
       <div className="w-full px-4 sm:px-6 lg:px-8">
         <div className="flex flex-col gap-4">
           {/* Breadcrumb Navigation */}
@@ -936,13 +936,13 @@ const CategoryNavigationBar = () => {
             <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto">
               {/* Main Category Dropdown */}
               <div className="flex-1 sm:min-w-[200px]">
-                <label className="block text-xs font-semibold text-gray-600 mb-1">
+                <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                   Main Category
                 </label>
                 <select
                   value={mainCategory._id}
                   onChange={(e) => handleMainCategoryChange(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900 text-sm"
                 >
                   {mainCategories.map((cat) => (
                     <option key={cat._id} value={cat._id}>
@@ -955,13 +955,13 @@ const CategoryNavigationBar = () => {
               {/* Sub Category Dropdown */}
               {subCategoryOptions.length > 0 && (
                 <div className="flex-1 sm:min-w-[200px]">
-                  <label className="block text-xs font-semibold text-gray-600 mb-1">
+                  <label className="block text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                     Sub Category
                   </label>
                   <select
                     value={currentCategory._id}
                     onChange={(e) => handleSubCategoryChange(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white text-sm"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900 text-sm"
                   >
                     <option value={currentCategory._id}>
                       {currentCategory.categoryName} (Current)
@@ -1053,13 +1053,13 @@ const CategoryNavigationBar = () => {
           <>
             <button
               onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-900/80 hover:bg-white dark:bg-gray-900 p-2 rounded-full transition-colors duration-200"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
             <button
               onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white/80 hover:bg-white p-2 rounded-full transition-colors duration-200"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-900/80 hover:bg-white dark:bg-gray-900 p-2 rounded-full transition-colors duration-200"
             >
               <ChevronRight className="h-6 w-6" />
             </button>
@@ -1069,7 +1069,7 @@ const CategoryNavigationBar = () => {
                   key={index}
                   onClick={() => setCurrentBanner(index)}
                   className={`w-3 h-3 rounded-full transition-colors duration-200 ${
-                    index === currentBanner ? "bg-white" : "bg-white/50"
+                    index === currentBanner ? "bg-white dark:bg-gray-900" : "bg-white dark:bg-gray-900/50"
                   }`}
                 />
               ))}
@@ -1192,7 +1192,7 @@ const CategoryNavigationBar = () => {
 
     return (
       <div 
-  className="bg-white rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group w-full cursor-pointer"
+  className="bg-white dark:bg-gray-900 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group w-full cursor-pointer"
   onClick={() => setSelectedProduct({ ...product, preSelectedVariant: null })}
 >
         <div className="relative">
@@ -1228,7 +1228,7 @@ const CategoryNavigationBar = () => {
                   {currentImages.map((_, index) => (
                     <div
                       key={index}
-                      className={`w-2 h-2 rounded-full ${index === currentImageIndex ? "bg-white" : "bg-white/50"}`}
+                      className={`w-2 h-2 rounded-full ${index === currentImageIndex ? "bg-white dark:bg-gray-900" : "bg-white dark:bg-gray-900/50"}`}
                     />
                   ))}
                 </div>
@@ -1248,7 +1248,7 @@ const CategoryNavigationBar = () => {
                 e.stopPropagation()
                 handleShare(product, selectedVariant)
               }}
-              className="p-1 rounded-full bg-white/90 text-gray-600 hover:text-blue-500 transition-colors"
+              className="p-1 rounded-full bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-blue-500 transition-colors"
               title="Share product"
             >
               <Share2 className="w-4 h-4" />
@@ -1258,7 +1258,7 @@ const CategoryNavigationBar = () => {
                 e.stopPropagation()
                 handleWhatsAppShare(product, selectedVariant)
               }}
-              className="p-1 rounded-full bg-white/90 text-gray-600 hover:text-green-500 transition-colors"
+              className="p-1 rounded-full bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-green-500 transition-colors"
               title="Share on WhatsApp"
             >
               <MessageCircle className="w-4 h-4" />
@@ -1268,7 +1268,7 @@ const CategoryNavigationBar = () => {
               className={`p-1 rounded-full transition-colors ${
                 wishlist.includes(product._id)
                   ? "bg-red-500 text-white"
-                  : "bg-white/90 text-gray-600 hover:text-red-500"
+                  : "bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-red-500"
               }`}
             >
               <Heart className={`w-4 h-4 ${wishlist.includes(product._id) ? "fill-current" : ""}`} />
@@ -1277,7 +1277,7 @@ const CategoryNavigationBar = () => {
         </div>
 
         <div className="p-4">
-          <h3 className="font-semibold text-gray-800 mb-2 line-clamp-2">{product.name}</h3>
+          <h3 className="font-semibold -800 dark:text-gray-100 mb-2 line-clamp-2">{product.name}</h3>
 
          <div className="flex items-center gap-2 mb-3">
   {(() => {
@@ -1305,14 +1305,14 @@ const CategoryNavigationBar = () => {
 </div>
 
           <div className="mb-2">
-            <span className="text-xs text-gray-600">
+            <span className="text-xs text-gray-600 dark:text-gray-400">
               Stock: {currentStock} available
             </span>
           </div>
 
           {bulkPricing.filter(tier => tier.quantity > 1).length > 0 && (
-  <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-    <p className="text-xs font-semibold text-gray-600 mb-1">Bulk Pricing:</p>
+  <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+    <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">Bulk Pricing:</p>
     <div className="space-y-1">
       {bulkPricing.filter(tier => tier.quantity > 1).map((tier, index) => (
         <div key={index} className="flex justify-between text-xs">
@@ -1327,8 +1327,8 @@ const CategoryNavigationBar = () => {
           {hasVariants && (
             <>
               {!showDetails ? (
-                <div className="mb-3 p-2 bg-gray-50 rounded-lg">
-                  <div className="text-xs text-gray-600 space-y-1">
+                <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                     <div className="flex justify-between">
                       <span>Variants:</span>
                       <span className="font-medium">{variantCount} colors</span>
@@ -1342,7 +1342,7 @@ const CategoryNavigationBar = () => {
               ) : (
                 <div className="mb-3 space-y-3">
                   <div className="flex items-center gap-1 mb-2">
-  <span className="text-xs text-gray-600">Variants:</span>
+  <span className="text-xs text-gray-600 dark:text-gray-400">Variants:</span>
   <div className="flex gap-1 flex-wrap">
     {product.variants?.filter(v => v.isActive !== false).map((variant, index) => (
                         <button
@@ -1361,7 +1361,7 @@ const CategoryNavigationBar = () => {
                   </div>
 
                   {selectedVariant && selectedSizeDetail && (
-                    <div className="text-xs text-gray-600 space-y-1">
+                    <div className="text-xs text-gray-600 dark:text-gray-400 space-y-1">
                       <div>
                         Color: <span className="font-medium capitalize">{selectedVariant.colorName}</span>
                       </div>
@@ -1373,7 +1373,7 @@ const CategoryNavigationBar = () => {
 
                   {selectedVariant && selectedVariant.moreDetails && selectedVariant.moreDetails.filter(md => md.isActive !== false).length > 1 && (
   <div>
-    <span className="text-xs text-gray-600 mb-1 block">Available Sizes:</span>
+    <span className="text-xs text-gray-600 dark:text-gray-400 mb-1 block">Available Sizes:</span>
     <div className="flex gap-1 flex-wrap">
       {selectedVariant.moreDetails.filter(md => md.isActive !== false).map((sizeDetail, index) => (
                           <button
@@ -1393,8 +1393,8 @@ const CategoryNavigationBar = () => {
                   )}
 
                   {bulkPricing.length > 0 && (
-                    <div className="p-2 bg-gray-50 rounded-lg">
-                      <p className="text-xs font-semibold text-gray-600 mb-1">
+                    <div className="p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                      <p className="text-xs font-semibold text-gray-600 dark:text-gray-400 mb-1">
                         {isBulkDiscounted
                           ? "Discounted Bulk Pricing:"
                           : "Bulk Pricing:"}
@@ -1415,12 +1415,12 @@ const CategoryNavigationBar = () => {
           )}
 
           <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2">
-              <span className="text-sm text-gray-600">Quantity:</span>
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Quantity:</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setAddQuantity(Math.max(1, addQuantity - 1))}
-                  className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                  className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
@@ -1433,7 +1433,7 @@ const CategoryNavigationBar = () => {
                 />
                 <button
                   onClick={() => setAddQuantity(addQuantity + 1)}
-                  className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                  className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -1444,7 +1444,7 @@ const CategoryNavigationBar = () => {
               <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
                 {/* <button
                   onClick={() => setShowDetails(!showDetails)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-800 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1"
+                  className="flex-1 bg-gray-100 hover:bg-gray-200 -800 dark:text-gray-100 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1"
                 >
                   <Eye className="w-4 h-4" />
                   {showDetails ? "Hide" : "Details"}
@@ -1531,13 +1531,13 @@ const CategoryNavigationBar = () => {
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
       {/* Modal Container */}
-      <div className="bg-white rounded-2xl w-full max-w-6xl my-8 relative shadow-2xl">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-6xl my-8 relative shadow-2xl">
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 z-10 bg-white hover:bg-gray-100 p-2 rounded-full shadow-lg transition-colors"
+          className="absolute top-4 right-4 z-10 bg-white dark:bg-gray-900 hover:bg-gray-100 p-2 rounded-full shadow-lg transition-colors"
         >
-          <X className="w-6 h-6 text-gray-600" />
+          <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
         </button>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 p-6 lg:p-8">
@@ -1567,7 +1567,7 @@ const CategoryNavigationBar = () => {
                     key={variant._id}
                     onClick={() => handleVariantChange(variant)}
                     className={`flex-shrink-0 w-20 h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                      selectedVariant?._id === variant._id ? 'border-blue-500' : 'border-gray-200'
+                      selectedVariant?._id === variant._id ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'
                     }`}
                   >
                     <img
@@ -1586,7 +1586,7 @@ const CategoryNavigationBar = () => {
             {/* Product Title */}
             <div>
               <h1 className="text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-              <p className="text-gray-600">{product.categoryPath}</p>
+              <p className="text-gray-600 dark:text-gray-400">{product.categoryPath}</p>
             </div>
 
             {/* Rating and Reviews - Static for now */}
@@ -1596,7 +1596,7 @@ const CategoryNavigationBar = () => {
                   <Star key={star} className="w-5 h-5 fill-yellow-400 text-yellow-400" />
                 ))}
               </div>
-              <span className="text-gray-600">(4.8) • Reviews</span>
+              <span className="text-gray-600 dark:text-gray-400">(4.8) • Reviews</span>
             </div>
 
             {/* Price */}
@@ -1651,7 +1651,7 @@ const CategoryNavigationBar = () => {
                       <div className="font-medium">
                         {formatSize(detail.size)}
                       </div>
-                      <div className="text-sm text-gray-600">
+                      <div className="text-sm text-gray-600 dark:text-gray-400">
                         ₹ {detail.discountPrice && isDiscountValid(detail.discountStartDate, detail.discountEndDate) 
                           ? detail.discountPrice 
                           : detail.price}
@@ -1690,7 +1690,7 @@ const CategoryNavigationBar = () => {
                     <Plus className="w-4 h-4" />
                   </button>
                 </div>
-                <span className="text-gray-600">
+                <span className="text-gray-600 dark:text-gray-400">
                   {selectedSize?.stock || product.stock || 0} available
                 </span>
               </div>
@@ -1737,7 +1737,7 @@ const CategoryNavigationBar = () => {
                   {product.productDetails.map((detail) => (
                     <div key={detail._id} className="flex">
                       <span className="font-medium text-gray-700 w-32">{detail.key}:</span>
-                      <span className="text-gray-600">{detail.value}</span>
+                      <span className="text-gray-600 dark:text-gray-400">{detail.value}</span>
                     </div>
                   ))}
                 </div>
@@ -1836,11 +1836,11 @@ const CategoryNavigationBar = () => {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div
           ref={modalRef}
-          className="bg-white rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col focus:outline-none"
+          className="bg-white dark:bg-gray-900 rounded-xl max-w-lg w-full max-h-[90vh] flex flex-col focus:outline-none"
           tabIndex="0"
         >
           <div className="flex justify-between items-start p-6 pb-4 flex-shrink-0">
-            <h2 className="text-xl font-bold text-gray-800">Select Variants</h2>
+            <h2 className="text-xl font-bold -800 dark:text-gray-100">Select Variants</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <X className="w-5 h-5" />
             </button>
@@ -1877,7 +1877,7 @@ const CategoryNavigationBar = () => {
                       {currentImages.map((_, index) => (
                         <div
                           key={index}
-                          className={`w-2 h-2 rounded-full ${index === currentImageIndex ? "bg-white" : "bg-white/50"}`}
+                          className={`w-2 h-2 rounded-full ${index === currentImageIndex ? "bg-white dark:bg-gray-900" : "bg-white dark:bg-gray-900/50"}`}
                         />
                       ))}
                     </div>
@@ -1911,7 +1911,7 @@ const CategoryNavigationBar = () => {
                       />
                       {isSelected && (
                         <div className="absolute inset-0 bg-blue-500/20 rounded-lg flex items-center justify-center">
-                          <div className="bg-white rounded-full p-1 shadow-md">
+                          <div className="bg-white dark:bg-gray-900 rounded-full p-1 shadow-md">
                             <Check className="w-4 h-4 text-blue-600" />
                           </div>
                         </div>
@@ -1946,8 +1946,8 @@ const CategoryNavigationBar = () => {
             )}
 
             {selectedSizeDetail && (
-              <div className="mb-4 p-3 bg-gray-50 rounded-lg">
-                <h4 className="font-semibold text-gray-800 mb-2">Selected Variant Details</h4>
+              <div className="mb-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h4 className="font-semibold -800 dark:text-gray-100 mb-2">Selected Variant Details</h4>
                 <div className="space-y-1 text-sm">
                   <div>
                     Price: <span className="font-semibold">₹ {displayPrice.toFixed(2)}</span>
@@ -1965,8 +1965,8 @@ const CategoryNavigationBar = () => {
             )}
 
             {bulkPricing.length > 0 && (
-              <div className="mb-6 p-4 bg-gray-50 rounded-lg">
-                <h4 className="font-semibold text-gray-800 mb-2">
+              <div className="mb-6 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                <h4 className="font-semibold -800 dark:text-gray-100 mb-2">
                   {isDiscountActive(product, selectedVariant, selectedSizeDetail)
                     ? "Discounted Bulk Pricing"
                     : "Bulk Pricing"}
@@ -1982,12 +1982,12 @@ const CategoryNavigationBar = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-between bg-gray-50 rounded-lg px-3 py-2 mb-4">
-              <span className="text-sm text-gray-600">Quantity:</span>
+            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 mb-4">
+              <span className="text-sm text-gray-600 dark:text-gray-400">Quantity:</span>
               <div className="flex items-center gap-2">
                 <button
                   onClick={() => setLocalQuantityToAdd(Math.max(1, localQuantityToAdd - 1))}
-                  className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                  className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
                 >
                   <Minus className="w-3 h-3" />
                 </button>
@@ -2000,7 +2000,7 @@ const CategoryNavigationBar = () => {
                 />
                 <button
                   onClick={() => setLocalQuantityToAdd(localQuantityToAdd + 1)}
-                  className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                  className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
                 >
                   <Plus className="w-3 h-3" />
                 </button>
@@ -2031,7 +2031,7 @@ const CategoryNavigationBar = () => {
 
     return (
       <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4" onClick={onClose}>
-        <div className="relative bg-white rounded-lg p-4 max-w-[85vw] max-h-[85vh] shadow-2xl">
+        <div className="relative bg-white dark:bg-gray-900 rounded-lg p-4 max-w-[85vw] max-h-[85vh] shadow-2xl">
           <button
             onClick={onClose}
             className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors z-10"
@@ -2171,14 +2171,14 @@ const ProductDetailsModal = ({ product, onClose }) => {
     >
       <div className="min-h-screen px-4 py-8 flex items-center justify-center">
         <div 
-          className="bg-white rounded-2xl w-full max-w-6xl shadow-2xl relative"
+          className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-6xl shadow-2xl relative"
           onClick={(e) => e.stopPropagation()}
         >
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 z-10 bg-white hover:bg-gray-100 p-2 rounded-full shadow-lg transition-colors"
+            className="absolute top-4 right-4 z-10 bg-white dark:bg-gray-900 hover:bg-gray-100 p-2 rounded-full shadow-lg transition-colors"
           >
-            <X className="w-6 h-6 text-gray-600" />
+            <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
           </button>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8 max-h-[85vh] overflow-y-auto">
@@ -2224,7 +2224,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                       {currentImages.map((_, index) => (
                         <div
                           key={index}
-                          className={`w-2 h-2 rounded-full ${index === currentImageIndex ? "bg-white" : "bg-white/50"}`}
+                          className={`w-2 h-2 rounded-full ${index === currentImageIndex ? "bg-white dark:bg-gray-900" : "bg-white dark:bg-gray-900/50"}`}
                         />
                       ))}
                     </div>
@@ -2241,7 +2241,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                         key={variant._id}
                         onClick={() => handleVariantChange(variant)}
                         className={`flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 transition-colors ${
-                          selectedVariant?._id === variant._id ? 'border-blue-500' : 'border-gray-200'
+                          selectedVariant?._id === variant._id ? 'border-blue-500' : 'border-gray-200 dark:border-gray-700'
                         }`}
                       >
                         <img
@@ -2263,7 +2263,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                       <button
                         key={index}
                         onClick={() => setSelectedImage(img)}
-                        className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 border-gray-200 hover:border-blue-400 transition-colors"
+                        className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-lg overflow-hidden border-2 border-gray-200 dark:border-gray-700 hover:border-blue-400 transition-colors"
                       >
                         <img
                           src={img || "/placeholder.svg"}
@@ -2281,7 +2281,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
             <div className="space-y-4 sm:space-y-5">
               <div>
                 <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
-                <div className="text-sm sm:text-base text-gray-600 space-y-1">
+                <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 space-y-1">
                   {product.mainCategory && (
                     <p>Main Category: <span className="font-medium">
                       {typeof product.mainCategory === 'object' 
@@ -2391,15 +2391,15 @@ const ProductDetailsModal = ({ product, onClose }) => {
                       <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
                     </button>
                   </div>
-                  <span className="text-sm sm:text-base text-gray-600">
+                  <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                     {currentStock} available
                   </span>
                 </div>
               </div>
 
               {bulkPricing.length > 0 && (
-                <div className="p-3 sm:p-4 bg-gray-50 rounded-lg">
-                  <h4 className="text-sm sm:text-base font-semibold text-gray-800 mb-2">Bulk Pricing</h4>
+                <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+                  <h4 className="text-sm sm:text-base font-semibold -800 dark:text-gray-100 mb-2">Bulk Pricing</h4>
                   <div className="space-y-1.5 sm:space-y-2">
                     {bulkPricing.map((tier, index) => (
                       <div key={index} className="flex justify-between text-xs sm:text-sm">
@@ -2427,7 +2427,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                     {product.productDetails.map((detail) => (
                       <div key={detail._id} className="flex text-sm sm:text-base">
                         <span className="font-medium text-gray-700 w-24 sm:w-32">{detail.key}:</span>
-                        <span className="text-gray-600 flex-1">{detail.value}</span>
+                        <span className="text-gray-600 dark:text-gray-400 flex-1">{detail.value}</span>
                       </div>
                     ))}
                   </div>
@@ -2503,7 +2503,7 @@ const CartModal = () => {
   return (
     <div className={`fixed inset-0 z-50 ${isCartOpen ? "block" : "hidden"}`}>
       <div className="absolute inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
-      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white shadow-xl">
+      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-900 shadow-xl">
         <div className="p-6 h-full overflow-y-auto">
           <div className="flex justify-between items-center mb-6">
             <h2 className="text-xl font-bold">Shopping Cart</h2>
@@ -2540,27 +2540,27 @@ const CartModal = () => {
                       Apply Free Cash (₹{freeCash.amount.toFixed(2)} available)
                     </span>
                   </label>
-                  <p className="text-xs text-gray-600 mt-1">
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                     Free cash is valid above ₹{validAboveAmount}
                   </p>
                   {!isAllProducts && (
                     <>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                         Main Category: {categoryName || "Specific category"}
                       </p>
                       {subCategoryName && (
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                           Sub Category: {subCategoryName}
                         </p>
                       )}
                     </>
                   )}
                   {isAllProducts && (
-                    <p className="text-xs text-gray-600 mt-1">
+                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                       Eligible for: All products
                     </p>
                   )}
-                  <p className="text-xs text-gray-600 mt-1">Expires on: {endDateFormatted}</p>
+                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Expires on: {endDateFormatted}</p>
                   {isFreeCashDisabled && (
                     <p className="text-xs text-red-600 mt-1">
                       {cartTotal < validAboveAmount
@@ -2729,7 +2729,7 @@ const CartModal = () => {
         </div>
       )}
 
-      <nav className="bg-white shadow-lg sticky top-0 z-40 w-full">
+      <nav className="bg-white dark:bg-gray-900 shadow-lg sticky top-0 z-40 w-full">
   <div className="w-full px-4 sm:px-6 lg:px-8">
     {/* First Row - Logo, Flag, Profile, Cart */}
     <div className="flex justify-between items-center h-16">
@@ -2767,7 +2767,7 @@ const CartModal = () => {
           {searchQuery && (
             <button
               onClick={clearSearch}
-              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5"
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors p-0.5"
               aria-label="Clear search"
             >
               <X className="h-4 w-4" />
@@ -2777,12 +2777,12 @@ const CartModal = () => {
         
         {/* Search Results Dropdown */}
         {showSearchResults && (
-          <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200">
+          <div className="absolute top-full mt-2 w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200 dark:border-gray-700">
             {isSearching ? (
               <div className="p-4 text-center text-gray-500">Searching...</div>
             ) : searchResults.length > 0 ? (
               <>
-                <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 sticky top-0">
+                <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0">
                   <p className="text-sm font-semibold text-gray-700">
                     Results for: "{searchQuery}" ({searchResults.length})
                   </p>
@@ -2795,7 +2795,7 @@ const CartModal = () => {
                     <button
                       key={`${result.productId}-${result.variantId}-${index}`}
                       onClick={() => handleSearchResultClick(result)}
-                      className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+                      className="w-full px-4 py-3 hover:bg-gray-50 dark:bg-gray-800 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
                     >
                       <img
                         src={result.image || "/placeholder.svg"}
@@ -2839,7 +2839,7 @@ const CartModal = () => {
             <ChevronDown className="h-4 w-4" />
           </button>
           {isProfileOpen && (
-            <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg py-2 z-50">
+            <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-900 rounded-lg shadow-lg py-2 z-50">
               {user ? (
                 <>
                   <Link
@@ -2922,7 +2922,7 @@ const CartModal = () => {
         {searchQuery && (
           <button
             onClick={clearSearch}
-            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors p-0.5"
+            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors p-0.5"
             aria-label="Clear search"
           >
             <X className="h-4 w-4" />
@@ -2932,12 +2932,12 @@ const CartModal = () => {
       
       {/* Mobile Search Results Dropdown */}
       {showSearchResults && (
-        <div className="absolute top-full mt-2 w-full bg-white rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200 left-0 right-0">
+        <div className="absolute top-full mt-2 w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200 dark:border-gray-700 left-0 right-0">
           {isSearching ? (
             <div className="p-4 text-center text-gray-500">Searching...</div>
           ) : searchResults.length > 0 ? (
             <>
-              <div className="px-4 py-2 bg-gray-50 border-b border-gray-200 sticky top-0">
+              <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0">
                 <p className="text-sm font-semibold text-gray-700">
                   Results for: "{searchQuery}" ({searchResults.length})
                 </p>
@@ -2950,7 +2950,7 @@ const CartModal = () => {
                   <button
                     key={`${result.productId}-${result.variantId}-${index}`}
                     onClick={() => handleSearchResultClick(result)}
-                    className="w-full px-4 py-3 hover:bg-gray-50 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+                    className="w-full px-4 py-3 hover:bg-gray-50 dark:bg-gray-800 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
                   >
                     <img
                       src={result.image || "/placeholder.svg"}
@@ -2991,7 +2991,7 @@ const CartModal = () => {
 
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-12" ref={categoriesRef} id="categories-section">
-  <h2 className="text-2xl font-bold text-gray-800 mb-6">Shop by Categories</h2>
+  <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Shop by Categories</h2>
   <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
             {mainCategories.slice(0, 10).map((category) => (
               <div
@@ -3002,7 +3002,7 @@ const CartModal = () => {
                 }`}
               >
                 <div
-                  className={`w-16 h-16 sm:w-20 sm:h-20 bg-white rounded-full shadow-lg flex items-center justify-center mb-2 mx-auto group-hover:shadow-xl transition-all duration-300 overflow-hidden relative ${
+                  className={`w-16 h-16 sm:w-20 sm:h-20 bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center mb-2 mx-auto group-hover:shadow-xl transition-all duration-300 overflow-hidden relative ${
                     selectedCategory === category.categoryName ? "ring-4 ring-blue-500 shadow-xl" : ""
                   }`}
                 >
@@ -3013,7 +3013,7 @@ const CartModal = () => {
                   />
                   {selectedCategory === category.categoryName && (
                     <div className="absolute inset-0 bg-blue-500/20 rounded-full flex items-center justify-center">
-                      <Check className="w-6 h-6 text-blue-600 bg-white rounded-full p-1" />
+                      <Check className="w-6 h-6 text-blue-600 bg-white dark:bg-gray-900 rounded-full p-1" />
                     </div>
                   )}
                 </div>
@@ -3032,7 +3032,7 @@ const CartModal = () => {
         </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-bold text-gray-800 mb-4 text-center">Filters</h2>
+          <h2 className="text-xl font-bold -800 dark:text-gray-100 mb-4 text-center">Filters</h2>
           <div className="flex flex-wrap gap-3 justify-center">
             {filterOptions.map((filter) => (
               <button
@@ -3040,8 +3040,8 @@ const CartModal = () => {
   onClick={() => handleFilterChange(filter.key)}
   className={`px-4 py-2 rounded-full text-sm font-medium transition-all duration-200 flex items-center gap-2 ${
     selectedFilters.includes(filter.key)
-      ? "bg-white text-blue-600 shadow-lg scale-105"
-      : "bg-white text-gray-700 border border-gray-300 hover:bg-gray-50 hover:border-blue-300"
+      ? "bg-white dark:bg-gray-900 text-blue-600 shadow-lg scale-105"
+      : "bg-white dark:bg-gray-900 text-gray-700 border border-gray-300 hover:bg-gray-50 dark:bg-gray-800 hover:border-blue-300"
   }`}
 >
   {selectedFilters.includes(filter.key) && <Check className="w-4 h-4" />}
@@ -3054,12 +3054,12 @@ const CartModal = () => {
             {showSearchSection && searchQuery && (
   <section className="mb-12" id="search-results-section">
     <div className="flex items-center justify-between mb-6">
-      <h2 className="text-2xl font-bold text-gray-800">
+      <h2 className="text-2xl font-bold -800 dark:text-gray-100">
         Results for: "{searchQuery}"
       </h2>
       <button
         onClick={clearSearch}
-        className="text-sm text-gray-600 hover:text-gray-800 flex items-center gap-1"
+        className="text-sm text-gray-600 dark:text-gray-400 hover:-800 dark:text-gray-100 flex items-center gap-1"
       >
         <X className="w-4 h-4" />
         Clear Search
@@ -3088,7 +3088,7 @@ const CartModal = () => {
         {selectedCategoryPath.length > 0 && (
   <section className="mb-12" id="selected-category-section">
     <div className="flex items-center justify-center mb-6">
-      <h2 className="text-2xl font-bold text-gray-800">{selectedCategory}</h2>
+      <h2 className="text-2xl font-bold -800 dark:text-gray-100">{selectedCategory}</h2>
     </div>
     {(() => {
       const currentCategoryId = selectedCategoryPath[selectedCategoryPath.length - 1]._id;
@@ -3114,8 +3114,8 @@ const CartModal = () => {
           <div className="bg-gray-100 rounded-full p-6 mb-4">
             <Package className="w-16 h-16 text-gray-400" />
           </div>
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">No Products Available</h3>
-          <p className="text-gray-600 text-center mb-6">
+          <h3 className="text-xl font-semibold -800 dark:text-gray-100 mb-2">No Products Available</h3>
+          <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
             We couldn't find any products in the "{selectedCategory}" category at the moment.
           </p>
           <button
@@ -3135,7 +3135,7 @@ const CartModal = () => {
 
         {getJustArrivedProducts().length > 0 && (
           <section className="mb-12" ref={justArrivedRef}>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Just Arrived</h2>
+            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Just Arrived</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {getJustArrivedProducts()
                 .slice(0, 10)
@@ -3148,7 +3148,7 @@ const CartModal = () => {
 
         {getRestockedProducts().length > 0 && (
           <section className="mb-12" ref={restockedRef}>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Restocked Items</h2>
+            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Restocked Items</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {getRestockedProducts().map((product) => (
                 <ProductCard key={`restocked-${product._id}`} product={product} forcedBadge={{ text: "Restocked", color: "bg-green-500" }} />
@@ -3159,7 +3159,7 @@ const CartModal = () => {
 
         {getRevisedRatesProducts().length > 0 && (
           <section className="mb-12" ref={revisedRatesRef}>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Revised Rates</h2>
+            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Revised Rates</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {getRevisedRatesProducts().map((product) => (
                 <ProductCard key={`revised-rates-${product._id}`} product={product} forcedBadge={{ text: "Revised Rate", color: "bg-orange-500" }} />
@@ -3170,7 +3170,7 @@ const CartModal = () => {
 
         {getOutOfStockProducts().length > 0 && (
           <section className="mb-12" ref={outOfStockRef}>
-            <h2 className="text-2xl font-bold text-gray-800 mb-6">Out of Stock</h2>
+            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Out of Stock</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {getOutOfStockProducts().map((product) => (
                 <ProductCard key={`out-of-stock-${product._id}`} product={product} forcedBadge={{ text: "Out of Stock", color: "bg-red-500" }} />
@@ -3180,7 +3180,7 @@ const CartModal = () => {
         )}
 
         <section>
-  <h2 className="text-2xl font-bold text-gray-800 mb-6">All Products</h2>
+  <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">All Products</h2>
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
     {sortProductsByPrice(getFilteredProducts()).map((product) => (
       <ProductCard key={product._id} product={product} />
@@ -3316,9 +3316,9 @@ const CartModal = () => {
       {/* Policy Modal */}
 {policyModal.isOpen && (
   <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div className="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
       {/* Modal Header */}
-      <div className="flex justify-between items-center p-6 border-b border-gray-200 sticky top-0 bg-white rounded-t-2xl z-10">
+      <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 rounded-t-2xl z-10">
         <h2 className="text-2xl font-bold text-gray-900">
           {getPolicyTitle(policyModal.type)}
         </h2>
@@ -3326,7 +3326,7 @@ const CartModal = () => {
           onClick={closePolicyModal}
           className="p-2 hover:bg-gray-100 rounded-full transition-colors"
         >
-          <X className="w-6 h-6 text-gray-600" />
+          <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
         </button>
       </div>
 
@@ -3339,7 +3339,7 @@ const CartModal = () => {
       </div>
 
       {/* Modal Footer */}
-      <div className="p-6 border-t border-gray-200 bg-gray-50 rounded-b-2xl sticky bottom-0">
+      <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-b-2xl sticky bottom-0">
         <button
           onClick={closePolicyModal}
           className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2"

@@ -104,7 +104,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     if (currentStock === undefined || currentStock === null) {
       return {
         bgColor: "bg-gray-100",
-        textColor: "text-gray-600",
+        textColor: "text-gray-600 dark:text-gray-400",
         status: "Unknown Stock",
         icon: AlertTriangle,
       };
@@ -130,14 +130,14 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   // Start of order details modal
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         {/* Modal Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
           <div>
             <h2 className="text-2xl font-bold text-gray-900">Order Details</h2>
-            <p className="text-sm text-gray-600">Order ID: {order._id}</p>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Order ID: {order._id}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors">
             <X className="h-6 w-6" />
           </button>
         </div>
@@ -145,7 +145,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         {/* Modal Content */}
         <div className="p-6 space-y-6">
           {/* Order Status and Actions */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center space-x-3">
                 <span
@@ -247,56 +247,56 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Customer Information */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center mb-3">
                 <User className="h-5 w-5 text-blue-600 mr-2" />
                 <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Name:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Name:</span>
                   <span className="font-medium">{order.user_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">User ID:</span>
+                  <span className="text-gray-600 dark:text-gray-400">User ID:</span>
                   <span className="font-medium text-xs">{order.user_id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Email:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Email:</span>
                   <span className="font-medium">{order.email}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Phone:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Phone:</span>
                   <span className="font-medium">{order.phone_number}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">WhatsApp:</span>
+                  <span className="text-gray-600 dark:text-gray-400">WhatsApp:</span>
                   <span className="font-medium">{order.whatsapp_number}</span>
                 </div>
               </div>
             </div>
 
             {/* Order Summary */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center mb-3">
                 <Package className="h-5 w-5 text-green-600 mr-2" />
                 <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Order ID:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Order ID:</span>
                   <span className="font-medium text-xs">{order._id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Products:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Total Products:</span>
                   <span className="font-medium">{order.orderedProducts.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Quantity:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Total Quantity:</span>
                   <span className="font-medium">{totalQuantity}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
                   <span className="font-medium">${order.price}</span>
                 </div>
                 <div className="flex justify-between border-t pt-2 font-semibold">
@@ -310,7 +310,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
           </div>
 
           {/* Products List */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <div className="flex items-center mb-4">
               <Package className="h-5 w-5 text-purple-600 mr-2" />
               <h3 className="text-lg font-semibold text-gray-900">Ordered Products</h3>
@@ -322,7 +322,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 const StockIcon = stockStatus.icon;
 
                 return (
-                  <div key={index} className={`p-4 rounded-lg border-2 ${stockStatus.bgColor} border-gray-200`}>
+                  <div key={index} className={`p-4 rounded-lg border-2 ${stockStatus.bgColor} border-gray-200 dark:border-gray-700`}>
                     <div className="flex items-start space-x-4">
                       <img
                         src={product.image_url || "/placeholder.svg?height=80&width=80"}
@@ -343,18 +343,18 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                           <div className="space-y-2">
                             <div>
-                              <span className="text-gray-600">Product ID:</span>
+                              <span className="text-gray-600 dark:text-gray-400">Product ID:</span>
                               <div className="font-medium text-xs break-all">{product.product_id}</div>
                             </div>
                             {product.variant_id && (
                               <div>
-                                <span className="text-gray-600">Variant ID:</span>
+                                <span className="text-gray-600 dark:text-gray-400">Variant ID:</span>
                                 <div className="font-medium text-xs break-all">{product.variant_id}</div>
                               </div>
                             )}
                             {product.size_id && (
                               <div>
-                                <span className="text-gray-600">Size ID:</span>
+                                <span className="text-gray-600 dark:text-gray-400">Size ID:</span>
                                 <div className="font-medium text-xs break-all">{product.size_id}</div>
                               </div>
                             )}
@@ -363,35 +363,35 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                           <div className="space-y-2">
                             {product.variant_name && (
                               <div>
-                                <span className="text-gray-600">Variant:</span>
+                                <span className="text-gray-600 dark:text-gray-400">Variant:</span>
                                 <div className="font-medium">{product.variant_name}</div>
                               </div>
                             )}
                             {product.size && (
                               <div>
-                                <span className="text-gray-600">Size:</span>
+                                <span className="text-gray-600 dark:text-gray-400">Size:</span>
                                 <div className="font-medium">{product.size}</div>
                               </div>
                             )}
                             <div>
-                              <span className="text-gray-600">Unit Price:</span>
+                              <span className="text-gray-600 dark:text-gray-400">Unit Price:</span>
                               <div className="font-medium">${product.price}</div>
                             </div>
                           </div>
 
                           <div className="space-y-2">
                             <div>
-                              <span className="text-gray-600">Ordered Quantity:</span>
+                              <span className="text-gray-600 dark:text-gray-400">Ordered Quantity:</span>
                               <div className="font-medium">{product.quantity}</div>
                             </div>
                             <div>
-                              <span className="text-gray-600">Current Stock:</span>
+                              <span className="text-gray-600 dark:text-gray-400">Current Stock:</span>
                               <div className={`font-medium ${stockStatus.textColor}`}>
                                 {stock !== undefined ? stock : "Unknown"}
                               </div>
                             </div>
                             <div>
-                              <span className="text-gray-600">Total:</span>
+                              <span className="text-gray-600 dark:text-gray-400">Total:</span>
                               <div className="font-semibold text-lg">${product.total}</div>
                             </div>
                           </div>
@@ -421,7 +421,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         </div>
 
         {/* Modal Footer */}
-        <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200 rounded-b-xl">
+        <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-800 px-6 py-4 border-t border-gray-200 dark:border-gray-700 rounded-b-xl">
           <div className="flex justify-end">
             <button
               onClick={onClose}
@@ -974,7 +974,7 @@ export default function OrdersManagement() {
     };
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyles[status] || 'bg-gray-100 -800 dark:text-gray-100'}`}>
         {status}
       </span>
     );
@@ -1020,14 +1020,14 @@ export default function OrdersManagement() {
 
   // Main content starts from here
   return (
-    <div className="min-h-screen bg-gray-50 py-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Header Section */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             Orders Management Dashboard
           </h1>
-          <p className="text-gray-600 text-lg">Manage and track all your orders efficiently</p>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">Manage and track all your orders efficiently</p>
         </div>
 
         {/* Stats Section */}
@@ -1136,9 +1136,9 @@ export default function OrdersManagement() {
         </div>
 
         {/* Orders Table */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
           {/* Table Header - Fixed */}
-          <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
+          <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
               <div>
                 <h3 className="text-xl font-semibold text-gray-900">Orders Table</h3>
@@ -1164,7 +1164,7 @@ export default function OrdersManagement() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="appearance-none bg-white dark:bg-gray-900 border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">All Status</option>
                     <option value="pending">Pending</option>
@@ -1184,7 +1184,7 @@ export default function OrdersManagement() {
                     <select
                       value={dateFilter}
                       onChange={(e) => setDateFilter(e.target.value)}
-                      className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="appearance-none bg-white dark:bg-gray-900 border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">All Dates</option>
                       <option value="today">Today</option>
@@ -1236,43 +1236,43 @@ export default function OrdersManagement() {
           {/* Table Content - Scrollable */}
           <div className="overflow-y-auto max-h-[600px]">
             <table className="w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 sticky top-0 z-10">
+              <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Sr No.
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Order ID
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     User Name
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Phone
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     WhatsApp
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Email
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Total Price
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Status
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Ordered At
                   </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                 {currentOrders.map((order, index) => (
-                  <tr key={order._id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleOrderClick(order)}>
+                  <tr key={order._id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors cursor-pointer" onClick={() => handleOrderClick(order)}>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                       {startIndex + index + 1}
                     </td>
@@ -1370,7 +1370,7 @@ export default function OrdersManagement() {
 
           {/* Table Footer */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 {/* Items per page */}
                 <div className="flex items-center space-x-2">
@@ -1394,7 +1394,7 @@ export default function OrdersManagement() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1431,7 +1431,7 @@ export default function OrdersManagement() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>

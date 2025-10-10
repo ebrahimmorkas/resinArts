@@ -156,7 +156,7 @@ const Banner = () => {
       {loading && <p>Loading...</p>}
       {error && <p className="text-red-500">{error}</p>}
       <div className="overflow-x-auto">
-        <table className="min-w-full bg-white border border-gray-300">
+        <table className="min-w-full bg-white dark:bg-gray-900 border border-gray-300">
           <thead>
             <tr className="bg-gray-100">
               <th className="py-2 px-4 border-b">Image</th>

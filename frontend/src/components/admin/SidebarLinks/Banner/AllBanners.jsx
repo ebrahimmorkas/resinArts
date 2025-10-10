@@ -229,7 +229,7 @@ const AllBanners = () => {
         {/* Professional Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
-            <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
+            <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </button>
@@ -255,7 +255,7 @@ const AllBanners = () => {
       {/* Professional Header */}
       <div className="mb-8">
         <div className="flex items-center space-x-4 mb-4">
-          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
+          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </button>
@@ -264,9 +264,9 @@ const AllBanners = () => {
       </div>
       
       {/* Professional Table Container */}
-      <div className="bg-white rounded-lg border border-gray-200">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
         {/* Table Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div>
               <h3 className="text-lg font-medium text-gray-900">All Banners</h3>
@@ -289,11 +289,11 @@ const AllBanners = () => {
               
               {/* Actions */}
               <div className="flex items-center space-x-2">
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
                   <Filter className="w-4 h-4 mr-2" />
                   Filter
                 </button>
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </button>
@@ -313,7 +313,7 @@ const AllBanners = () => {
         )}
 
         {/* Table Container with Horizontal Scroll and Sticky Header */}
-        <div className="overflow-hidden border-t border-gray-200">
+        <div className="overflow-hidden border-t border-gray-200 dark:border-gray-700">
           {banners.length === 0 && !loading ? (
             <div className="text-center py-12">
               <svg className="w-16 h-16 text-gray-400 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -325,34 +325,34 @@ const AllBanners = () => {
           ) : (
             <div className="overflow-x-auto overflow-y-auto max-h-96">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0 z-10">
+                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '80px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
                       Sr No.
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '160px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '160px' }}>
                       Image
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                       Start Date
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                       End Date
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Status
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '100px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
                       Default
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                   {currentData.map((banner, index) => (
-                    <tr key={banner._id} className="hover:bg-gray-50 transition-colors">
+                    <tr key={banner._id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
                         {startIndex + index + 1}
                       </td>
@@ -420,7 +420,7 @@ const AllBanners = () => {
 
         {/* Table Footer with Pagination */}
         {banners.length > 0 && (
-          <div className="px-6 py-4 border-t border-gray-200">
+          <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
               {/* Items per page */}
               <div className="flex items-center space-x-2">
@@ -444,7 +444,7 @@ const AllBanners = () => {
                 <button
                   onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                   disabled={currentPage === 1}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Previous
@@ -470,7 +470,7 @@ const AllBanners = () => {
                         className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                           currentPage === pageNumber
                             ? 'bg-blue-600 text-white'
-                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                            : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:bg-gray-800'
                         }`}
                       >
                         {pageNumber}
@@ -482,7 +482,7 @@ const AllBanners = () => {
                 <button
                   onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                   disabled={currentPage === totalPages}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   Next
                   <ChevronRight className="w-4 h-4 ml-1" />
@@ -496,7 +496,7 @@ const AllBanners = () => {
       {/* Default Status Update Confirmation Modal */}
       {showDefaultModal && bannerToUpdateDefault && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center mb-4">
                 <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -506,7 +506,7 @@ const AllBanners = () => {
                 </div>
                 <div className="ml-4">
                   <h3 className="text-lg font-semibold text-gray-900">Update Default Status</h3>
-                  <p className="text-sm text-gray-600">Change banner default setting</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Change banner default setting</p>
                 </div>
               </div>
               
@@ -516,7 +516,7 @@ const AllBanners = () => {
                   alt="Banner to update"
                   className="w-full h-32 object-cover rounded-md shadow-sm"
                 />
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   <span className="font-medium">Period:</span> {formatDate(bannerToUpdateDefault.startDate)} - {formatDate(bannerToUpdateDefault.endDate)}
                 </p>
               </div>
@@ -550,7 +550,7 @@ const AllBanners = () => {
       {/* Delete Confirmation Modal */}
       {showDeleteModal && bannerToDelete && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center mb-4">
                 <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -560,7 +560,7 @@ const AllBanners = () => {
                 </div>
                 <div className="ml-4">
                   <h3 className="text-lg font-semibold text-gray-900">Delete Banner</h3>
-                  <p className="text-sm text-gray-600">This action cannot be undone</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">This action cannot be undone</p>
                 </div>
               </div>
               
@@ -570,7 +570,7 @@ const AllBanners = () => {
                   alt="Banner to delete"
                   className="w-full h-32 object-cover rounded-md shadow-sm"
                 />
-                <p className="text-sm text-gray-600 mt-2">
+                <p className="text-sm text-gray-600 dark:text-gray-400 mt-2">
                   <span className="font-medium">Period:</span> {formatDate(bannerToDelete.startDate)} - {formatDate(bannerToDelete.endDate)}
                 </p>
               </div>
@@ -601,7 +601,7 @@ const AllBanners = () => {
       {/* Error Modal (for last default banner restrictions) */}
       {showErrorModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg shadow-xl max-w-md w-full mx-4">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4">
             <div className="p-6">
               <div className="flex items-center mb-4">
                 <div className="flex-shrink-0 w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
@@ -611,7 +611,7 @@ const AllBanners = () => {
                 </div>
                 <div className="ml-4">
                   <h3 className="text-lg font-semibold text-gray-900">Action Not Allowed</h3>
-                  <p className="text-sm text-gray-600">Default banner requirement</p>
+                  <p className="text-sm text-gray-600 dark:text-gray-400">Default banner requirement</p>
                 </div>
               </div>
               
@@ -624,7 +624,7 @@ const AllBanners = () => {
                 </div>
               </div>
               
-              <div className="text-sm text-gray-600 mb-6">
+              <div className="text-sm text-gray-600 dark:text-gray-400 mb-6">
                 <p className="mb-2"><strong>Why is this required?</strong></p>
                 <ul className="list-disc list-inside space-y-1 text-xs">
                   <li>Default banners ensure your website always has banners to display</li>
@@ -649,7 +649,7 @@ const AllBanners = () => {
       {/* Global Loading Overlay for Operations */}
       {(deletingId || updatingDefaultId) && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-lg shadow-xl">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-xl">
             <div className="text-center">
               <svg className="animate-spin h-10 w-10 text-blue-600 mx-auto mb-4" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
                 <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>

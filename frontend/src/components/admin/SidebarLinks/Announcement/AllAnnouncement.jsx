@@ -96,12 +96,12 @@ const Modal = ({ isOpen, onClose, title, children, size = 'md' }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className={`bg-white rounded-lg shadow-xl ${getSizeClasses()} w-full max-h-[90vh] overflow-y-auto`}>
-        <div className="flex items-center justify-between p-6 border-b border-gray-200">
+      <div className={`bg-white dark:bg-gray-900 rounded-lg shadow-xl ${getSizeClasses()} w-full max-h-[90vh] overflow-y-auto`}>
+        <div className="flex items-center justify-between p-6 border-b border-gray-200 dark:border-gray-700">
           <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
           <button
             onClick={onClose}
-            className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
@@ -145,13 +145,13 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, type = 
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -165,7 +165,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, type = 
               <div className="mt-2">
                 <p className="text-sm text-gray-500">{message}</p>
                 {preview && (
-                  <div className="mt-3 p-3 bg-gray-50 rounded-lg border">
+                  <div className="mt-3 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg border">
                     <p className="text-sm font-medium text-gray-900">"{preview}"</p>
                   </div>
                 )}
@@ -178,7 +178,7 @@ const ConfirmationModal = ({ isOpen, onClose, onConfirm, title, message, type = 
               type="button"
               onClick={onClose}
               disabled={loading}
-              className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full sm:w-auto inline-flex justify-center rounded-lg border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-base font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Cancel
             </button>
@@ -210,13 +210,13 @@ const ErrorModal = ({ isOpen, onClose, title, message }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-lg shadow-xl max-w-md w-full">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full">
         <div className="p-6">
           <div className="flex items-center justify-between mb-4">
             <h3 className="text-lg font-semibold text-gray-900">{title || "Error Occurred"}</h3>
             <button
               onClick={onClose}
-              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+              className="p-2 text-gray-400 hover:text-gray-600 dark:text-gray-400 hover:bg-gray-100 rounded-full transition-colors"
             >
               <X className="w-5 h-5" />
             </button>
@@ -392,7 +392,7 @@ const AllAnnouncements = () => {
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800 border border-gray-200">
+      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 -800 dark:text-gray-100 border border-gray-200 dark:border-gray-700">
         <StarOff className="w-3 h-3 mr-1" />
         Regular
       </span>
@@ -410,9 +410,9 @@ const AllAnnouncements = () => {
         />
       )}
 
-      <div className="bg-white rounded-lg border border-gray-200">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
         {/* Table Header */}
-        <div className="px-6 py-4 border-b border-gray-200">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div>
               <h3 className="text-lg font-medium text-gray-900">Manage Your Announcements</h3>
@@ -435,11 +435,11 @@ const AllAnnouncements = () => {
               
               {/* Actions */}
               <div className="flex items-center space-x-2">
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
                   <Filter className="w-4 h-4 mr-2" />
                   Filter
                 </button>
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </button>
@@ -459,39 +459,39 @@ const AllAnnouncements = () => {
         {loading ? (
           <div className="flex items-center justify-center py-12">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mr-3"></div>
-            <span className="text-gray-600">Loading announcements...</span>
+            <span className="text-gray-600 dark:text-gray-400">Loading announcements...</span>
           </div>
         ) : (
           <>
             {/* Table Container with Horizontal Scroll and Sticky Header */}
-            <div className="overflow-hidden border-t border-gray-200">
+            <div className="overflow-hidden border-t border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto overflow-y-auto max-h-96">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50 sticky top-0 z-10">
+                  <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                     <tr>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '80px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
                         Sr No.
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '300px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '300px' }}>
                         Announcement Text
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                         Start Date
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                         End Date
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                         Type
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '150px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '150px' }}>
                         Actions
                       </th>
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                     {currentData.map((ann, index) => (
-                      <tr key={ann._id} className="hover:bg-gray-50 transition-colors">
+                      <tr key={ann._id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
                           {startIndex + index + 1}
                         </td>
@@ -555,7 +555,7 @@ const AllAnnouncements = () => {
             </div>
 
             {/* Table Footer */}
-            <div className="px-6 py-4 border-t border-gray-200">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 {/* Items per page */}
                 <div className="flex items-center space-x-2">
@@ -579,7 +579,7 @@ const AllAnnouncements = () => {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="w-4 h-4 mr-1" />
                     Previous
@@ -605,7 +605,7 @@ const AllAnnouncements = () => {
                           className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                             currentPage === pageNumber
                               ? 'bg-blue-600 text-white'
-                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:bg-gray-800'
                           }`}
                         >
                           {pageNumber}
@@ -617,7 +617,7 @@ const AllAnnouncements = () => {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     Next
                     <ChevronRight className="w-4 h-4 ml-1" />
@@ -678,7 +678,7 @@ const AllAnnouncements = () => {
       {/* Global loading overlay */}
       {operationLoading && (
         <div className="fixed inset-0 bg-black bg-opacity-30 flex items-center justify-center z-40">
-          <div className="bg-white p-6 rounded-xl flex items-center shadow-lg">
+          <div className="bg-white dark:bg-gray-900 p-6 rounded-xl flex items-center shadow-lg">
             <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-500 mr-3"></div>
             <span className="font-medium">
               {operationLoading === 'update' && 'Updating announcement...'}
@@ -811,7 +811,7 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
               required 
               disabled={isDefault}
               className={`w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                isDefault ? 'bg-gray-50 cursor-not-allowed text-gray-500' : ''
+                isDefault ? 'bg-gray-50 dark:bg-gray-800 cursor-not-allowed text-gray-500' : ''
               }`}
             />
             {isDefault && (
@@ -833,7 +833,7 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
               required 
               disabled={isDefault}
               className={`w-full px-3 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors ${
-                isDefault ? 'bg-gray-50 cursor-not-allowed text-gray-500' : ''
+                isDefault ? 'bg-gray-50 dark:bg-gray-800 cursor-not-allowed text-gray-500' : ''
               }`}
             />
             {isDefault && (
@@ -853,7 +853,7 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
               checked={formData.isDefault} 
               onChange={handleChange}
               disabled={isDefault}
-              className={`w-4 h-4 text-blue-600 bg-white border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${
+              className={`w-4 h-4 text-blue-600 bg-white dark:bg-gray-900 border-gray-300 rounded focus:ring-blue-500 focus:ring-2 ${
                 isDefault ? 'cursor-not-allowed opacity-50' : 'cursor-pointer'
               }`}
             />
@@ -873,7 +873,7 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
       </div>
 
       {/* Form Actions */}
-      <div className="flex flex-col sm:flex-row-reverse gap-3 pt-6 border-t border-gray-200">
+      <div className="flex flex-col sm:flex-row-reverse gap-3 pt-6 border-t border-gray-200 dark:border-gray-700">
         <button 
           type="submit" 
           disabled={loading}
@@ -892,7 +892,7 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
           type="button" 
           onClick={onCancel} 
           disabled={loading}
-          className="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          className="w-full sm:w-auto inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg shadow-sm text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
           Cancel
         </button>

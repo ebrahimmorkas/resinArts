@@ -54,14 +54,14 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, searchPlace
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-left bg-white"
+        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-left bg-white dark:bg-gray-900"
       >
         {value || placeholder}
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
-          <div className="p-2 border-b border-gray-200">
+        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-900 border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
             <input
               type="text"
               value={searchTerm}
@@ -233,11 +233,11 @@ const Signup = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 flex items-center justify-center p-4">
       <div className="w-full max-w-4xl">
-        <div className="bg-white rounded-2xl shadow-xl p-8 max-h-[90vh] overflow-y-auto">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="text-center mb-8">
             <h1 className="text-3xl font-bold text-gray-900 mb-2">Mouldmarket</h1>
-            <p className="text-gray-600">Create your account and start shopping</p>
+            <p className="text-gray-600 dark:text-gray-400">Create your account and start shopping</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -505,7 +505,7 @@ const Signup = () => {
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -530,7 +530,7 @@ const Signup = () => {
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -550,8 +550,8 @@ const Signup = () => {
           </form>
 
           {/* Login Link */}
-          <div className="text-center pt-6 mt-6 border-t border-gray-200">
-            <p className="text-sm text-gray-600">
+          <div className="text-center pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               Already have an account?{" "}
               <Link to="/auth/login" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
                 Sign In

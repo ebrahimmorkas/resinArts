@@ -28,7 +28,7 @@ function CashModal({
   if (!show) return null
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full p-6 max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <h3 className="text-lg font-semibold text-gray-900">Pay Cash to User</h3>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -82,7 +82,7 @@ function CashModal({
                   <div className="space-y-3">
                     {renderCategoryDropdowns()}
                     {categoryPath && (
-                      <div className="text-sm text-gray-600 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                      <div className="text-sm text-gray-600 dark:text-gray-400 mt-4 p-3 bg-blue-50 rounded-lg border border-blue-200">
                         Category Path:{" "}
                         {selectedCategoryIds.map((id, index) => {
                           const category = allCategoriesFlat.find((cat) => cat._id === id)
@@ -115,7 +115,7 @@ function CashModal({
               </div>
             )}
             {isFreeCashValidForAllProducts && (
-              <p className="text-sm text-gray-500 p-2 bg-gray-50 rounded">
+              <p className="text-sm text-gray-500 p-2 bg-gray-50 dark:bg-gray-800 rounded">
                 Valid for all products - category selection disabled.
               </p>
             )}
@@ -139,7 +139,7 @@ function CashModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+              className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:-800 dark:text-gray-100 font-medium transition-colors"
             >
               Cancel
             </button>
@@ -554,7 +554,7 @@ export default function Users() {
             id={`category-level-0`}
             value={selectedCategoryIds[0] || ""}
             onChange={(e) => handleCategorySelect(0, e.target.value)}
-            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
+            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white dark:bg-gray-900"
           >
             <option value="">Select main category</option>
             {mainCategoryOptions.map((cat) => (
@@ -588,7 +588,7 @@ export default function Users() {
               id={`category-level-sub`}
               value={selectedCategoryIds[selectedCategoryIds.length] || ""} // This will be empty initially for the next level
               onChange={(e) => handleCategorySelect(selectedCategoryIds.length, e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 appearance-none bg-white dark:bg-gray-900"
             >
               <option value="">Select sub category</option>
               {subCategoryOptions.map((cat) => (
@@ -621,7 +621,7 @@ export default function Users() {
     if (!show) return null
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full p-6">
           <div className="flex items-center gap-4 mb-4">
             <div
               className={`p-3 rounded-full ${
@@ -632,13 +632,13 @@ export default function Users() {
             </div>
             <div>
               <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
-              <p className="text-gray-600 text-sm">{message}</p>
+              <p className="text-gray-600 dark:text-gray-400 text-sm">{message}</p>
             </div>
           </div>
           <div className="flex gap-3 justify-end">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+              className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:-800 dark:text-gray-100 font-medium transition-colors"
             >
               Cancel
             </button>
@@ -662,7 +662,7 @@ export default function Users() {
     if (!show) return null
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full p-6">
           <div className="flex items-center justify-between mb-6">
             <h3 className="text-lg font-semibold text-gray-900">Change Password</h3>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
@@ -684,7 +684,7 @@ export default function Users() {
           <div className="flex gap-3 justify-end mt-6">
             <button
               onClick={onClose}
-              className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors"
+              className="px-4 py-2 text-gray-600 dark:text-gray-400 hover:-800 dark:text-gray-100 font-medium transition-colors"
             >
               Cancel
             </button>
@@ -703,14 +703,14 @@ export default function Users() {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-white dark:bg-gray-900 shadow-sm border-b">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
             <div>
               <h1 className="text-3xl font-bold text-gray-900">Users Management</h1>
-              <p className="text-gray-600">Manage and monitor user accounts</p>
+              <p className="text-gray-600 dark:text-gray-400">Manage and monitor user accounts</p>
             </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-600">
+            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
               <UsersIcon className="w-4 h-4" />
               <span>{filteredUsers.length} users found</span>
             </div>
@@ -718,7 +718,7 @@ export default function Users() {
         </div>
       </div>
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-6 mb-8">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-1">
               <div className="relative">
@@ -735,14 +735,14 @@ export default function Users() {
             <div className="relative">
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="inline-flex items-center px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                className="inline-flex items-center px-4 py-3 border border-gray-300 rounded-lg text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
               >
                 <Filter className="w-5 h-5 mr-2" />
                 Filters
                 {activeFilter && <span className="ml-2 w-2 h-2 bg-blue-600 rounded-full"></span>}
               </button>
               {showFilters && (
-                <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border z-10">
+                <div className="absolute right-0 mt-2 w-80 bg-white dark:bg-gray-900 rounded-lg shadow-lg border z-10">
                   <div className="p-4">
                     <div className="space-y-4">
                       <div>
@@ -868,10 +868,10 @@ export default function Users() {
             </div>
           )}
         </div>
-        <div className="bg-white rounded-xl shadow-sm overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full min-w-[1200px]">
-              <thead className="bg-gray-50 border-b border-gray-200">
+              <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
                 <tr>
                   <th className="px-6 py-4 text-left">
                     <input
@@ -907,9 +907,9 @@ export default function Users() {
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                 {newUsers.map((user, index) => (
-                  <tr key={user.id} className="hover:bg-gray-50 transition-colors">
+                  <tr key={user.id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
@@ -1033,7 +1033,7 @@ export default function Users() {
           )}
         </div>
         {totalPages > 1 && (
-          <div className="bg-white rounded-xl shadow-sm p-6 mt-6">
+          <div className="bg-white dark:bg-gray-900 rounded-xl shadow-sm p-6 mt-6">
             <div className="flex items-center justify-between">
               <div className="text-sm text-gray-700">
                 Showing {startIndex + 1} to {Math.min(startIndex + usersPerPage, filteredUsers.length)} of{" "}
@@ -1043,7 +1043,7 @@ export default function Users() {
                 <button
                   onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
                   disabled={currentPage === 1}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   <ChevronLeft className="w-4 h-4 mr-1" />
                   Previous
@@ -1058,7 +1058,7 @@ export default function Users() {
                         className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                           currentPage === page
                             ? "bg-blue-600 text-white"
-                            : "text-gray-700 hover:bg-gray-50 border border-gray-300"
+                            : "text-gray-700 hover:bg-gray-50 dark:bg-gray-800 border border-gray-300"
                         }`}
                       >
                         {page}
@@ -1069,7 +1069,7 @@ export default function Users() {
                 <button
                   onClick={() => setCurrentPage(Math.min(totalPages, currentPage + 1))}
                   disabled={currentPage === totalPages}
-                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  className="inline-flex items-center px-3 py-2 border border-gray-300 shadow-sm text-sm leading-4 font-medium rounded-md text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   Next
                   <ChevronRight className="w-4 h-4 ml-1" />
