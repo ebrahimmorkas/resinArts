@@ -280,7 +280,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                         <p className="text-xs text-gray-500">mouldmarket.com</p>
                       </div>
                       <div className="py-1">
-                        <a href="/admin/panel/settings/account" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                        <a href="/admin/panel/profile/update" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
                           <UserCircle className="w-4 h-4 mr-3" />Profile Settings
                         </a>
                         <a href="/admin/panel/settings/account" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
