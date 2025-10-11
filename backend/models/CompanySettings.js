@@ -103,6 +103,14 @@ const companySettingsSchema = new mongoose.Schema({
       type: Boolean,
       default: true
     },
+    sameForAll: {
+      type: Boolean,
+      default: false
+    },
+    commonShippingPrice: {
+      type: Number,
+      default: 0
+    },
     shippingType: {
       type: String,
       enum: ['country', 'state', 'city', 'zipcode'],
@@ -119,7 +127,15 @@ const companySettingsSchema = new mongoose.Schema({
           required: true
         }
       }
-    ]
+    ],
+    freeShipping: {
+      type: Boolean,
+      default: false
+    },
+    freeShippingAboveAmount: {
+      type: Number,
+      default: 0
+    }
   }
 }, {
   timestamps: true

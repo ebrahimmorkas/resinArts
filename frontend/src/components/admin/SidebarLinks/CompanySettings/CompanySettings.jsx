@@ -44,8 +44,12 @@ const CompanySettings = () => {
     receiveOutOfStockEmail: false,
     shippingPriceSettings: {
     isManual: true,
+    sameForAll: false,
+    commonShippingPrice: 0,
     shippingType: 'city',
-    shippingPrices: []
+    shippingPrices: [],
+    freeShipping: false,
+    freeShippingAboveAmount: 0
   }
   });
   const [editingIndex, setEditingIndex] = useState(null);
@@ -208,7 +212,51 @@ const handleShippingToggle = (e) => {
     ...prev,
     shippingPriceSettings: {
       ...prev.shippingPriceSettings,
-      isManual: e.target.checked
+      isManual: e.target.checked,
+      sameForAll: false,
+      commonShippingPrice: 0
+    }
+  }));
+};
+
+const handleSameForAllToggle = (e) => {
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      sameForAll: e.target.checked
+    }
+  }));
+};
+
+const handleCommonShippingPriceChange = (e) => {
+  const price = parseFloat(e.target.value) || 0;
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      commonShippingPrice: price
+    }
+  }));
+};
+
+const handleFreeShippingToggle = (e) => {
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      freeShipping: e.target.checked
+    }
+  }));
+};
+
+const handleFreeShippingAmountChange = (e) => {
+  const amount = parseFloat(e.target.value) || 0;
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      freeShippingAboveAmount: amount
     }
   }));
 };
@@ -833,7 +881,7 @@ const handleExcelUpload = async (e) => {
         </div>
       )
     },
-    {
+  {
   title: 'Shipping Price',
   content: (
     <div className="p-4">
@@ -862,9 +910,63 @@ const handleExcelUpload = async (e) => {
           </div>
         </div>
 
+        {/* Manual Pricing Options */}
+        {formData.shippingPriceSettings.isManual && (
+          <div className="space-y-4 pt-4 border-t border-gray-200">
+            {/* Same For All Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div className="flex-1">
+                <label htmlFor="sameForAll" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  Same shipping price for all products
+                </label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Apply a single shipping price to all orders
+                </p>
+              </div>
+              <div className="ml-4">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="sameForAll"
+                    checked={formData.shippingPriceSettings.sameForAll}
+                    onChange={handleSameForAllToggle}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                </label>
+              </div>
+            </div>
+
+            {/* Common Shipping Price Input */}
+            {formData.shippingPriceSettings.sameForAll && (
+              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                <label htmlFor="commonPrice" className="text-sm font-medium text-gray-700 block mb-2">
+                  Enter Common Shipping Price
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600">₹</span>
+                  <input
+                    type="number"
+                    id="commonPrice"
+                    placeholder="Enter shipping price"
+                    value={formData.shippingPriceSettings.commonShippingPrice}
+                    onChange={handleCommonShippingPriceChange}
+                    min="0"
+                    step="0.01"
+                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 mt-2">
+                  This price will be applied to all orders
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Dynamic Shipping Price Section */}
         {!formData.shippingPriceSettings.isManual && (
-          <div className="space-y-4 pt-4">
+          <div className="space-y-4 pt-4 border-t border-gray-200">
             {/* Shipping Type Dropdown */}
             <div className="space-y-2">
               <label className="text-sm font-medium text-gray-700">Shipping Price according to</label>
@@ -1001,14 +1103,56 @@ const handleExcelUpload = async (e) => {
             )}
           </div>
         )}
-
-        {formData.shippingPriceSettings.isManual && (
-          <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-            <p className="text-sm text-blue-800">
-              Manual shipping pricing is enabled. Shipping price will be entered for each order.
-            </p>
+        {/* Free Shipping Toggle - Appears Regardless of Manual/Dynamic */}
+        <div className="pt-4 border-t border-gray-200 space-y-4">
+          <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+            <div className="flex-1">
+              <label htmlFor="freeShipping" className="text-sm font-medium text-gray-700 cursor-pointer">
+                Free Shipping
+              </label>
+              <p className="text-xs text-gray-500 mt-1">
+                Offer free shipping above a certain order amount
+              </p>
+            </div>
+            <div className="ml-4">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="freeShipping"
+                  checked={formData.shippingPriceSettings.freeShipping}
+                  onChange={handleFreeShippingToggle}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+              </label>
+            </div>
           </div>
-        )}
+
+          {/* Free Shipping Amount Input */}
+          {formData.shippingPriceSettings.freeShipping && (
+            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
+              <label htmlFor="freeShippingAmount" className="text-sm font-medium text-gray-700 block mb-2">
+                Free Shipping Above Amount
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600">₹</span>
+                <input
+                  type="number"
+                  id="freeShippingAmount"
+                  placeholder="Enter amount"
+                  value={formData.shippingPriceSettings.freeShippingAboveAmount}
+                  onChange={handleFreeShippingAmountChange}
+                  min="0"
+                  step="0.01"
+                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                />
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                Customers will get free shipping when their order total is above this amount
+              </p>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
