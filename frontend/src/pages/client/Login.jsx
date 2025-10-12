@@ -39,7 +39,8 @@ const Login = () => {
         
         // Setting the global state of the user
         setUser(res.data.user);
-
+        // Clear all old session caches on login
+  sessionStorage.clear();
         setLoading(false);
         
         // Check if there's a redirect intention or checkout intent

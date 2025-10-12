@@ -1,4 +1,4 @@
-import React, { createContext, useState, useEffect } from 'react';
+import React, { createContext, useState, useEffect, useMemo } from 'react';
 import axios from 'axios';
 
 export const BannerContext = createContext();
@@ -12,56 +12,53 @@ export const BannerProvider = ({ children }) => {
     try {
       setLoadingBanners(true);
       setBannersError(null);
+      
+      // Check sessionStorage cache first
+      const cachedData = sessionStorage.getItem('bannersCache');
+      const cacheTimestamp = sessionStorage.getItem('bannersCacheTime');
+      
+      if (cachedData && cacheTimestamp) {
+        const now = Date.now();
+        const cacheAge = now - parseInt(cacheTimestamp);
+        
+        // Use cache if less than 2 minutes old (banners change less frequently)
+        if (cacheAge < 120000) {
+          setBanners(JSON.parse(cachedData));
+          setLoadingBanners(false);
+          return;
+        }
+      }
      
       const res = await axios.get('http://localhost:3000/api/banner/fetch-banners', {
         withCredentials: true
       });
      
-      console.log('Raw banner data:', res.data);
-     
       const now = new Date();
      
-      // Simple filtering - just get banners that are in date range
       let validBanners = res.data.filter(banner => {
         const startDate = new Date(banner.startDate);
         const endDate = new Date(banner.endDate);
-        const isInDateRange = startDate <= now && endDate >= now;
-       
-        console.log(`Banner ${banner._id}:`, {
-          startDate: startDate.toDateString(),
-          endDate: endDate.toDateString(),
-          now: now.toDateString(),
-          isInDateRange
-        });
-       
-        return isInDateRange;
+        return startDate <= now && endDate >= now;
       });
      
-      console.log('Valid banners in date range:', validBanners);
-     
-      // If no banners in date range, get default banners
       if (validBanners.length === 0) {
         validBanners = res.data.filter(banner => banner.isDefault);
-        console.log('Using default banners:', validBanners);
       }
      
-      // If still no banners, use all banners
       if (validBanners.length === 0) {
         validBanners = res.data;
-        console.log('Using all banners:', validBanners);
       }
      
-      // Extract image URLs
       const bannerImages = validBanners.map(banner => banner.image);
-      console.log('Final banner images:', bannerImages);
-     
       setBanners(bannerImages);
+      
+      // Cache the data
+      sessionStorage.setItem('bannersCache', JSON.stringify(bannerImages));
+      sessionStorage.setItem('bannersCacheTime', Date.now().toString());
      
     } catch (error) {
       console.error("Error fetching banners:", error);
       setBannersError(error.message);
-     
-      // Set a default banner if there's an error
       setBanners(["/placeholder.svg"]);
     } finally {
       setLoadingBanners(false);
@@ -72,19 +69,25 @@ export const BannerProvider = ({ children }) => {
     fetchBanners();
   }, []);
 
-  // Function to refetch banners (useful after adding/deleting banners)
   const refetchBanners = () => {
-    console.log('Refetching banners from context...');
+    // Clear cache when manually refetching
+    sessionStorage.removeItem('bannersCache');
+    sessionStorage.removeItem('bannersCacheTime');
     fetchBanners();
   };
 
-  return (
-    <BannerContext.Provider value={{
+  const contextValue = useMemo(
+    () => ({
       banners,
       fetchBanners: refetchBanners,
       loadingBanners,
       bannersError
-    }}>
+    }),
+    [banners, loadingBanners, bannersError]
+  );
+
+  return (
+    <BannerContext.Provider value={contextValue}>
       {children}
     </BannerContext.Provider>
   );

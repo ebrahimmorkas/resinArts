@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect, useContext } from 'react';
+import { createContext, useState, useEffect, useContext, useMemo, useCallback } from 'react';
 import axios from 'axios';
 import { AuthContext } from './AuthContext';
 
@@ -10,13 +10,13 @@ export const FreeCashProvider = ({ children }) => {
   const [freeCash, setFreeCash] = useState(null);
   const { user } = useContext(AuthContext);
 
-  // Fetch free cash eligibility (only for logged-in users)
-  const checkFreeCashEligibility = async () => {
+  // Memoized check function
+  const checkFreeCashEligibility = useCallback(async () => {
     if (!user?.id) {
       setFreeCash(null);
       return;
     }
-    
+   
     setLoadingFreeCash(true);
     try {
       const res = await axios.get('http://localhost:3000/api/free-cash/check-eligibility', {
@@ -31,72 +31,71 @@ export const FreeCashProvider = ({ children }) => {
       setFreeCashErrors(null);
      
       if (freeCashData) {
-        localStorage.setItem(`freeCash_${user.id}`, JSON.stringify(freeCashData));
-        console.log('Free cash found:', freeCashData);
+        sessionStorage.setItem(`freeCash_${user.id}`, JSON.stringify(freeCashData));
       } else {
-        localStorage.removeItem(`freeCash_${user.id}`);
-        console.log('No valid free cash available');
+        sessionStorage.removeItem(`freeCash_${user.id}`);
       }
     } catch (err) {
       console.error('Error fetching free cash:', err);
       setFreeCashErrors(err.response?.data?.message || 'Error fetching free cash');
       setFreeCash(null);
       if (user?.id) {
-        localStorage.removeItem(`freeCash_${user.id}`);
+        sessionStorage.removeItem(`freeCash_${user.id}`);
       }
     } finally {
       setLoadingFreeCash(false);
     }
-  };
+  }, [user?.id]);
 
-  // Clear free cash cache
-  const clearFreeCashCache = () => {
+  const clearFreeCashCache = useCallback(() => {
     if (user?.id) {
-      localStorage.removeItem(`freeCash_${user.id}`);
+      sessionStorage.removeItem(`freeCash_${user.id}`);
       setFreeCash(null);
     }
-  };
+  }, [user?.id]);
 
-  // Load cached free cash on mount or when user changes
   useEffect(() => {
     if (user?.id) {
-      const cachedFreeCash = localStorage.getItem(`freeCash_${user.id}`);
+      const cachedFreeCash = sessionStorage.getItem(`freeCash_${user.id}`);
       if (cachedFreeCash) {
         try {
           const parsedFreeCash = JSON.parse(cachedFreeCash);
-          // Verify it's still valid
           const now = new Date();
           if (!parsedFreeCash.is_cash_used &&
               !parsedFreeCash.is_cash_expired &&
               new Date(parsedFreeCash.end_date) >= now) {
             setFreeCash(parsedFreeCash);
+            setLoadingFreeCash(false);
+            return; // Don't fetch if cache is valid
           } else {
-            localStorage.removeItem(`freeCash_${user.id}`);
+            sessionStorage.removeItem(`freeCash_${user.id}`);
           }
         } catch (error) {
-          localStorage.removeItem(`freeCash_${user.id}`);
+          sessionStorage.removeItem(`freeCash_${user.id}`);
         }
       }
-      // Always check for fresh data
       checkFreeCashEligibility();
     } else {
-      // Guest user - no free cash
       setFreeCash(null);
+      setLoadingFreeCash(false);
     }
-  }, [user?.id]);
+  }, [user?.id, checkFreeCashEligibility]);
+
+  const contextValue = useMemo(
+    () => ({
+      loadingFreeCash,
+      setLoadingFreeCash,
+      freeCashErrors,
+      setFreeCashErrors,
+      freeCash,
+      checkFreeCashEligibility,
+      clearFreeCashCache,
+    }),
+    [loadingFreeCash, freeCashErrors, freeCash, checkFreeCashEligibility, clearFreeCashCache]
+  );
 
   return (
-    <FreeCashContext.Provider
-      value={{
-        loadingFreeCash,
-        setLoadingFreeCash,
-        freeCashErrors,
-        setFreeCashErrors,
-        freeCash,
-        checkFreeCashEligibility,
-        clearFreeCashCache,
-      }}
-    >
+    <FreeCashContext.Provider value={contextValue}>
       {children}
     </FreeCashContext.Provider>
   );

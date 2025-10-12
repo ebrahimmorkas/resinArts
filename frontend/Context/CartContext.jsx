@@ -192,176 +192,197 @@ export const CartProvider = ({ children }) => {
     };
 
     const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
-        try {
-            setLoading(true);
-            const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
+    try {
+        const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
 
-            if (!user) {
-                // Guest user - save to localStorage
-                const newCartItems = {
-                    ...cartItems,
-                    [cartKey]: {
-                        productId,
-                        variantName: colorName || null,
-                        sizeString: sizeString || null,
-                        quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
-                        price: productData.price,
-                        discountedPrice: productData.discountedPrice || productData.price,
-                        imageUrl: productData.imageUrl,
-                        productName: productData.productName,
-                        variantId: productData.variantId,
-                        detailsId: productData.detailsId,
-                        sizeId: productData.sizeId,
-                        cashApplied: 0,
-                    },
+        if (!user) {
+            // Guest user - save to localStorage (synchronous, no loading needed)
+            const newCartItems = {
+                ...cartItems,
+                [cartKey]: {
+                    productId,
+                    variantName: colorName || null,
+                    sizeString: sizeString || null,
+                    quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
+                    price: productData.price,
+                    discountedPrice: productData.discountedPrice || productData.price,
+                    imageUrl: productData.imageUrl,
+                    productName: productData.productName,
+                    variantId: productData.variantId,
+                    detailsId: productData.detailsId,
+                    sizeId: productData.sizeId,
+                    cashApplied: 0,
+                },
+            };
+            setCartItems(newCartItems);
+            saveCartToLocalStorage(newCartItems);
+            return;
+        }
+
+        // Logged in user - optimistic update first (instant feedback)
+        const optimisticCartItems = {
+            ...cartItems,
+            [cartKey]: {
+                productId,
+                variantName: colorName || null,
+                sizeString: sizeString || null,
+                quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
+                price: productData.price,
+                discountedPrice: productData.discountedPrice || productData.price,
+                imageUrl: productData.imageUrl,
+                productName: productData.productName,
+                variantId: productData.variantId,
+                detailsId: productData.detailsId,
+                sizeId: productData.sizeId,
+                cashApplied: 0,
+            },
+        };
+        setCartItems(optimisticCartItems);
+
+        // Then update backend in background
+        let cashApplied = 0;
+        if (applyFreeCash && freeCash) {
+            const product = products.find((p) => p._id === productId);
+            if (product) {
+                const mockCartData = {
+                    ...productData,
+                    quantity: quantity,
+                    discountedPrice: productData.discountedPrice || productData.price
                 };
-                setCartItems(newCartItems);
-                saveCartToLocalStorage(newCartItems);
-                setLoading(false);
-                return;
-            }
-
-            // Logged in user - save to backend
-            let cashApplied = 0;
-            if (applyFreeCash && freeCash) {
-                const product = products.find((p) => p._id === productId);
-                if (product) {
-                    const mockCartData = {
-                        ...productData,
-                        quantity: quantity,
-                        discountedPrice: productData.discountedPrice || productData.price
-                    };
-                    
-                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
-                        const itemTotal = mockCartData.discountedPrice * quantity;
-                        cashApplied = Math.min(freeCash.amount, itemTotal);
-                    }
+                
+                if (isFreeCashEligible(product, mockCartData, freeCash)) {
+                    const itemTotal = mockCartData.discountedPrice * quantity;
+                    cashApplied = Math.min(freeCash.amount, itemTotal);
                 }
             }
+        }
 
-            const cartItemData = {
-                image_url: productData.imageUrl,
-                product_id: productId,
-                product_name: productData.productName,
-                quantity: quantity,
-                price: productData.price,
-                cash_applied: cashApplied,
-                discounted_price: productData.discountedPrice || productData.price,
+        const cartItemData = {
+            image_url: productData.imageUrl,
+            product_id: productId,
+            product_name: productData.productName,
+            quantity: quantity,
+            price: productData.price,
+            cash_applied: cashApplied,
+            discounted_price: productData.discountedPrice || productData.price,
+        };
+
+        if (productData.variantId && productData.variantId !== "") {
+            cartItemData.variant_id = productData.variantId;
+        }
+        if (productData.detailsId && productData.detailsId !== "") {
+            cartItemData.details_id = productData.detailsId;
+        }
+        if (productData.sizeId && productData.sizeId !== "") {
+            cartItemData.size_id = productData.sizeId;
+        }
+        if (colorName && colorName !== "") {
+            cartItemData.variant_name = colorName;
+        }
+        if (sizeString && sizeString !== "") {
+            cartItemData.size = sizeString;
+        }
+
+        // Background API call
+        axios.post("http://localhost:3000/api/cart", cartItemData, {
+            withCredentials: true,
+            headers: {
+                "Content-Type": "application/json",
+            },
+        }).then(response => {
+            if (response.status === 200 || response.status === 201) {
+                // Update with server response (includes correct cashApplied)
+                setCartItems((prev) => ({
+                    ...prev,
+                    [cartKey]: {
+                        ...prev[cartKey],
+                        cashApplied,
+                    },
+                }));
+            }
+        }).catch(err => {
+            // Rollback on error
+            setCartItems(cartItems);
+            setError("Failed to add item to cart");
+            console.error("Error adding to cart:", err);
+        });
+
+    } catch (err) {
+        setError("Failed to add item to cart");
+        console.error("Error adding to cart:", err);
+    }
+};
+
+    const updateQuantity = async (cartKey, change) => {
+    try {
+        const item = cartItems[cartKey];
+        if (!item) return;
+
+        const newQuantity = item.quantity + change;
+
+        if (newQuantity <= 0) {
+            await removeFromCart(cartKey);
+            return;
+        }
+
+        if (!user) {
+            // Guest user - update localStorage
+            const newCartItems = {
+                ...cartItems,
+                [cartKey]: {
+                    ...cartItems[cartKey],
+                    quantity: newQuantity,
+                },
             };
+            setCartItems(newCartItems);
+            saveCartToLocalStorage(newCartItems);
+            return;
+        }
 
-            if (productData.variantId && productData.variantId !== "") {
-                cartItemData.variant_id = productData.variantId;
-            }
-            if (productData.detailsId && productData.detailsId !== "") {
-                cartItemData.details_id = productData.detailsId;
-            }
-            if (productData.sizeId && productData.sizeId !== "") {
-                cartItemData.size_id = productData.sizeId;
-            }
-            if (colorName && colorName !== "") {
-                cartItemData.variant_name = colorName;
-            }
-            if (sizeString && sizeString !== "") {
-                cartItemData.size = sizeString;
-            }
+        // Logged in user - optimistic update
+        const optimisticCartItems = {
+            ...cartItems,
+            [cartKey]: {
+                ...cartItems[cartKey],
+                quantity: newQuantity,
+            },
+        };
+        setCartItems(optimisticCartItems);
 
-            const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
+        // Background API call
+        let cashApplied = 0;
+        if (applyFreeCash && freeCash) {
+            const product = products.find((p) => p._id === item.productId);
+            if (product) {
+                const mockCartData = {
+                    ...item,
+                    quantity: newQuantity,
+                    discountedPrice: item.discountedPrice || item.price
+                };
+                
+                if (isFreeCashEligible(product, mockCartData, freeCash)) {
+                    const itemTotal = mockCartData.discountedPrice * newQuantity;
+                    cashApplied = Math.min(freeCash.amount, itemTotal);
+                }
+            }
+        }
+
+        axios.put(
+            "http://localhost:3000/api/cart",
+            {
+                product_id: item.productId,
+                variant_name: item.variantName,
+                size: item.sizeString,
+                quantity: newQuantity,
+                cash_applied: cashApplied,
+            },
+            {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
                 },
-            });
-
-            if (response.status === 200 || response.status === 201) {
-                setCartItems((prev) => ({
-                    ...prev,
-                    [cartKey]: {
-                        productId,
-                        variantName: colorName || null,
-                        sizeString: sizeString || null,
-                        quantity: (prev[cartKey]?.quantity || 0) + quantity,
-                        price: productData.price,
-                        discountedPrice: productData.discountedPrice || productData.price,
-                        imageUrl: productData.imageUrl,
-                        productName: productData.productName,
-                        variantId: productData.variantId,
-                        detailsId: productData.detailsId,
-                        sizeId: productData.sizeId,
-                        cashApplied,
-                    },
-                }));
-            } else {
-                throw new Error("Failed to add item to cart");
-            }
-        } catch (err) {
-            setError("Failed to add item to cart");
-            console.error("Error adding to cart:", err);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const updateQuantity = async (cartKey, change) => {
-        try {
-            const item = cartItems[cartKey];
-            if (!item) return;
-
-            const newQuantity = item.quantity + change;
-
-            if (newQuantity <= 0) {
-                await removeFromCart(cartKey);
-                return;
-            }
-
-            if (!user) {
-                // Guest user - update localStorage
-                const newCartItems = {
-                    ...cartItems,
-                    [cartKey]: {
-                        ...cartItems[cartKey],
-                        quantity: newQuantity,
-                    },
-                };
-                setCartItems(newCartItems);
-                saveCartToLocalStorage(newCartItems);
-                return;
-            }
-
-            // Logged in user - update backend
-            let cashApplied = 0;
-            if (applyFreeCash && freeCash) {
-                const product = products.find((p) => p._id === item.productId);
-                if (product) {
-                    const mockCartData = {
-                        ...item,
-                        quantity: newQuantity,
-                        discountedPrice: item.discountedPrice || item.price
-                    };
-                    
-                    if (isFreeCashEligible(product, mockCartData, freeCash)) {
-                        const itemTotal = mockCartData.discountedPrice * newQuantity;
-                        cashApplied = Math.min(freeCash.amount, itemTotal);
-                    }
-                }
-            }
-
-            const response = await axios.put(
-                "http://localhost:3000/api/cart",
-                {
-                    product_id: item.productId,
-                    variant_name: item.variantName,
-                    size: item.sizeString,
-                    quantity: newQuantity,
-                    cash_applied: cashApplied,
-                },
-                {
-                    withCredentials: true,
-                    headers: {
-                        "Content-Type": "application/json",
-                    },
-                },
-            );
-
+            },
+        ).then(response => {
             if (response.status === 200) {
                 setCartItems((prev) => ({
                     ...prev,
@@ -372,51 +393,59 @@ export const CartProvider = ({ children }) => {
                     },
                 }));
             }
-        } catch (err) {
+        }).catch(err => {
+            // Rollback on error
+            setCartItems(cartItems);
             setError("Failed to update quantity");
             console.error("Error updating quantity:", err);
-        }
-    };
+        });
+    } catch (err) {
+        setError("Failed to update quantity");
+        console.error("Error updating quantity:", err);
+    }
+};
 
     const removeFromCart = async (cartKey) => {
-        try {
-            const item = cartItems[cartKey];
-            if (!item) return;
+    try {
+        const item = cartItems[cartKey];
+        if (!item) return;
 
-            if (!user) {
-                // Guest user - remove from localStorage
-                const newCartItems = { ...cartItems };
-                delete newCartItems[cartKey];
-                setCartItems(newCartItems);
-                saveCartToLocalStorage(newCartItems);
-                return;
-            }
+        if (!user) {
+            // Guest user - remove from localStorage
+            const newCartItems = { ...cartItems };
+            delete newCartItems[cartKey];
+            setCartItems(newCartItems);
+            saveCartToLocalStorage(newCartItems);
+            return;
+        }
 
-            // Logged in user - remove from backend
-            const response = await axios.delete("http://localhost:3000/api/cart", {
-                withCredentials: true,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-                data: {
-                    product_id: item.productId,
-                    variant_name: item.variantName,
-                    size: item.sizeString,
-                },
-            });
+        // Logged in user - optimistic update
+        const optimisticCartItems = { ...cartItems };
+        delete optimisticCartItems[cartKey];
+        setCartItems(optimisticCartItems);
 
-            if (response.status === 200) {
-                setCartItems((prev) => {
-                    const newCart = { ...prev };
-                    delete newCart[cartKey];
-                    return newCart;
-                });
-            }
-        } catch (err) {
+        // Background API call
+        axios.delete("http://localhost:3000/api/cart", {
+            withCredentials: true,
+            headers: {
+                "Content-Type": "application/json",
+            },
+            data: {
+                product_id: item.productId,
+                variant_name: item.variantName,
+                size: item.sizeString,
+            },
+        }).catch(err => {
+            // Rollback on error
+            setCartItems(cartItems);
             setError("Failed to remove item");
             console.error("Error removing from cart:", err);
-        }
-    };
+        });
+    } catch (err) {
+        setError("Failed to remove item");
+        console.error("Error removing from cart:", err);
+    }
+};
 
     const isFreeCashEligible = (product, item, freeCash) => {
         if (!freeCash || !user) return false;

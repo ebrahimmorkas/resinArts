@@ -916,12 +916,16 @@ const bulkUploadProducts = async (req, res) => {
 
 const fetchProducts = async (req, res) => {
   try {
-    const products = await Product.find();
+    const products = await Product.find()
+      .select('-__v')
+      .lean();
+    
     return res.status(200).json({
-      products
+      products,
+      count: products.length
     });
   } catch (err) {
-    console.log("Error in fetching the products");
+    console.log("Error in fetching the products:", err);
     return res.status(500).json({message: 'Internal server error'});
   }
 }
