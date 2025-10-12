@@ -452,68 +452,81 @@ const fetchOrders = async (req, res) => {
 // Function where admin will update the shipping price
 const shippingPriceUpdate = async (req, res) => {
   try {
-    const { shippingPriceValue, orderId, email } = req.body;
-    console.log('Received shippingPriceUpdate request:', { shippingPriceValue, orderId, email });
+    const { shippingPriceValue, orderId, email, isEdit = false } = req.body;
+    console.log('Received shippingPriceUpdate request:', { shippingPriceValue, orderId, email, isEdit });
 
     // Validate inputs
-    if (!orderId || shippingPriceValue === undefined || isNaN(shippingPriceValue) || parseInt(shippingPriceValue) <= 0) {
+    if (!orderId || shippingPriceValue === undefined || isNaN(shippingPriceValue) || parseFloat(shippingPriceValue) <= 0) {
       console.error('Validation failed:', { shippingPriceValue, orderId, email });
       return res.status(400).json({ message: 'Order ID and valid positive shipping price are required' });
     }
 
     const order = await Order.findById(orderId);
     if (!order) {
-      console.error('Order not found for ID:', orderId);
       return res.status(400).json({ message: 'Order not found' });
     }
 
-    // Check stock for each ordered product
-    for (const item of order.orderedProducts) {
-      const product = await Product.findById(item.product_id);
-      if (!product) {
-        console.error('Product not found:', item.product_id);
-        return res.status(404).json({ message: `Product not found for ID ${item.product_id}` });
-      }
+    // For editing, ensure order status is Accepted
+    if (isEdit && order.status !== 'Accepted') {
+      return res.status(400).json({ message: 'Shipping price can only be edited for Accepted orders' });
+    }
 
-      if (!item.variant_id) {
-        // Product without variants
-        if (product.stock < item.quantity) {
-          console.error('Insufficient stock for product:', { product_id: item.product_id, product_name: item.product_name, stock: product.stock, quantity: item.quantity });
-          return res.status(400).json({ message: `Insufficient stock for product ${item.product_name}. Cannot accept order.` });
-        }
-      } else {
-        // Product with variants
-        const variant = product.variants.id(item.variant_id);
-        if (!variant) {
-          console.error('Variant not found:', { product_id: item.product_id, variant_id: item.variant_id });
-          return res.status(404).json({ message: `Variant not found for product ${item.product_name}` });
+    // Check stock for each ordered product (only for new acceptance, not for editing)
+    if (!isEdit) {
+      for (const item of order.orderedProducts) {
+        const product = await Product.findById(item.product_id);
+        if (!product) {
+          console.error('Product not found:', item.product_id);
+          return res.status(404).json({ message: `Product not found for ID ${item.product_id}` });
         }
 
-        const sizeDetail = variant.moreDetails.id(item.size_id);
-        if (!sizeDetail) {
-          console.error('Size detail not found:', { product_id: item.product_id, variant_id: item.variant_id, size_id: item.size_id });
-          return res.status(404).json({ message: `Size detail not found for variant in product ${item.product_name}` });
-        }
+        if (!item.variant_id) {
+          // Product without variants
+          if (product.stock < item.quantity) {
+            console.error('Insufficient stock for product:', { product_id: item.product_id, product_name: item.product_name, stock: product.stock, quantity: item.quantity });
+            return res.status(400).json({ message: `Insufficient stock for product ${item.product_name}. Cannot accept order.` });
+          }
+        } else {
+          // Product with variants
+          const variant = product.variants.id(item.variant_id);
+          if (!variant) {
+            console.error('Variant not found:', { product_id: item.product_id, variant_id: item.variant_id });
+            return res.status(404).json({ message: `Variant not found for product ${item.product_name}` });
+          }
 
-        if (sizeDetail.stock < item.quantity) {
-          console.error('Insufficient stock for size:', { product_name: item.product_name, variant_name: item.variant_name, size: item.size, stock: sizeDetail.stock, quantity: item.quantity });
-          return res.status(400).json({ message: `Insufficient stock for size ${item.size} in variant ${item.variant_name} of product ${item.product_name}. Cannot accept order.` });
+          const sizeDetail = variant.moreDetails.id(item.size_id);
+          if (!sizeDetail) {
+            console.error('Size detail not found:', { product_id: item.product_id, variant_id: item.variant_id, size_id: item.size_id });
+            return res.status(404).json({ message: `Size detail not found for variant in product ${item.product_name}` });
+          }
+
+          if (sizeDetail.stock < item.quantity) {
+            console.error('Insufficient stock for size:', { product_name: item.product_name, variant_name: item.variant_name, size: item.size, stock: sizeDetail.stock, quantity: item.quantity });
+            return res.status(400).json({ message: `Insufficient stock for size ${item.size} in variant ${item.variant_name} of product ${item.product_name}. Cannot accept order.` });
+          }
         }
       }
     }
 
+    // Prepare update data
+    const updateData = {
+      shipping_price: parseFloat(shippingPriceValue),
+      total_price: parseFloat(order.price) + parseFloat(shippingPriceValue),
+      updatedAt: new Date()
+    };
+
+    // Only set status to Accepted when not editing
+    if (!isEdit) {
+      updateData.status = 'Accepted';
+    }
+
     // Update order
-    const totalPrice = parseFloat(order.price) + parseFloat(shippingPriceValue);
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
-      {
-        shipping_price: parseFloat(shippingPriceValue),
-        total_price: totalPrice,
-        status: 'Accepted',
-      },
-      {
-        new: true,
-        runValidators: true,
+      updateData,
+      { 
+        new: true, 
+        runValidators: true 
       }
     );
 
@@ -522,7 +535,13 @@ const shippingPriceUpdate = async (req, res) => {
       return res.status(400).json({ message: 'Problem while updating the order' });
     }
 
-    console.log('Order updated:', { id: updatedOrder._id, shipping_price: updatedOrder.shipping_price, total_price: updatedOrder.total_price, status: updatedOrder.status });
+    console.log('Order updated:', { 
+      id: updatedOrder._id, 
+      shipping_price: updatedOrder.shipping_price, 
+      total_price: updatedOrder.total_price, 
+      status: updatedOrder.status,
+      isEdit 
+    });
 
     // Emit Socket.IO event
     const io = req.app.get('io');
@@ -539,20 +558,205 @@ const shippingPriceUpdate = async (req, res) => {
     }
 
     // Send email notification
-    try {
-      const companySettings = await CompanySettings.findOne();
-      await sendEmail(
-        email,
-        `Order #${orderId} Accepted`,
-        `Dear ${order.user_name},\n\nYour order #${orderId} has been accepted.\nShipping Price: ₹${updatedOrder.shipping_price.toFixed(2)}\nTotal Price: ₹${updatedOrder.total_price.toFixed(2)}\n\nThank you for shopping with ${companySettings?.companyName || 'Mould Market'}!`
-      );
-      console.log('Shipping price update email sent to:', email);
-    } catch (emailError) {
-      console.error('Error sending email:', emailError.message);
-    }
+try {
+  const companySettings = await CompanySettings.findOne();
+  
+  let emailSubject, emailText;
+  
+  if (isEdit) {
+  // Shipping price update email
+  emailSubject = `New total price is ₹${parseFloat(updatedOrder.total_price || 0).toFixed(2)}, Shipping Cost Updated - Order #${orderId}`;
+  emailText = `Dear ${order.user_name},
+
+We have updated the shipping cost for your order #${orderId}.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+SHIPPING COST UPDATE NOTIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ${orderId}
+Previous Shipping Cost: ₹${parseFloat(order.shipping_price || 0).toFixed(2)}
+Updated Shipping Cost: ₹${parseFloat(updatedOrder.shipping_price || 0).toFixed(2)}
+New Total Amount: ₹${parseFloat(updatedOrder.total_price || 0).toFixed(2)}
+Order Status: ${updatedOrder.status}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REASON FOR UPDATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+This adjustment has been made to reflect the accurate shipping charges based on:
+• Updated shipping rates
+• Location-specific pricing
+• Package dimensions/weight
+• Service provider changes
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UPDATED ORDER SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Subtotal: ₹${parseFloat(order.price || 0).toFixed(2)}
+Previous Shipping: ₹${parseFloat(order.shipping_price || 0).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Previous Total: ₹${parseFloat(parseFloat(order.price || 0) + parseFloat(order.shipping_price || 0)).toFixed(2)}
+
+New Shipping: ₹${parseFloat(updatedOrder.shipping_price || 0).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEW TOTAL: ₹${parseFloat(updatedOrder.total_price || 0).toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT IMPACT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${parseFloat(updatedOrder.shipping_price || 0) > parseFloat(order.shipping_price || 0) ? 
+  `• Additional payment of ₹${parseFloat(updatedOrder.shipping_price - order.shipping_price).toFixed(2)} is required
+• Please contact us to complete the additional payment` : 
+  `• No additional payment required
+• Your existing payment covers the updated total`}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${parseFloat(updatedOrder.shipping_price || 0) > parseFloat(order.shipping_price || 0) ? 
+  `1️⃣ Contact us via WhatsApp or phone to complete additional payment
+2️⃣ Share payment proof for verification
+3️⃣ Once verified, your order processing continues` : 
+  `1️⃣ Your order continues processing with updated pricing
+2️⃣ No action required from your side
+3️⃣ You will receive dispatch confirmation soon`}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We apologize for any inconvenience this may cause and appreciate your understanding. Our team is committed to providing accurate pricing and excellent service.
+
+If you have any questions about this update, please don't hesitate to contact us.
+
+Thank you for your continued trust in ${companySettings?.companyName || 'Mould Market'}!
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}`;
+} else {
+  // Order acceptance email - Payment required
+  const orderDetailsText = order.orderedProducts
+    .map((item, index) => {
+      let itemDetails = `${index + 1}. ${item.product_name}`;
+      if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+      if (item.size) itemDetails += ` - Size: ${item.size}`;
+      itemDetails += `\n   Quantity: ${item.quantity}`;
+      itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
+      itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
+      if (parseFloat(item.cash_applied || 0) > 0) itemDetails += `\n   Free Cash Applied: ₹${parseFloat(item.cash_applied || 0).toFixed(2)}`;
+      return itemDetails;
+    })
+    .join('\n\n');
+
+  emailSubject = `Payment Required - Order #${orderId} Accepted`;
+  emailText = `Dear ${order.user_name},
+
+Thank you for your order with ${companySettings?.companyName || 'Mould Market'}!
+
+We are pleased to confirm that your order #${orderId} has been **ACCEPTED** by our team and is ready for processing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANT: PAYMENT REQUIRED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+To confirm your order and proceed with processing, please complete the payment of the total amount:
+
+TOTAL AMOUNT DUE: ₹${parseFloat(updatedOrder.total_price || 0).toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ${orderId}
+Order Date: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Status: ACCEPTED (Payment Pending)
+
+CUSTOMER INFORMATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name: ${order.user_name}
+Email: ${order.email}
+Phone: ${order.phone_number}
+WhatsApp: ${order.whatsapp_number}
+
+ORDER ITEMS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${orderDetailsText}
+
+PRICING SUMMARY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Subtotal: ₹${parseFloat(order.price || 0).toFixed(2)}
+Shipping Cost: ₹${parseFloat(updatedOrder.shipping_price || 0).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL AMOUNT: ₹${parseFloat(updatedOrder.total_price || 0).toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please contact us via WhatsApp or phone to receive payment details and complete your order confirmation.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US FOR PAYMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}, ${companySettings?.adminState || ''} - ${companySettings?.adminPincode || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Complete payment using the contact details above
+2️⃣ Share your payment proof via WhatsApp or email
+3️⃣ Once payment is verified, your order will be CONFIRMED
+4️⃣ You will receive a dispatch confirmation when your order ships
+5️⃣ Track your order status in your account dashboard
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We strive to process your order quickly once payment is received. Your satisfaction is our priority!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+The Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}`;
+}
+
+  await sendEmail(email, emailSubject, emailText);
+  console.log(`${isEdit ? 'Shipping price update' : 'Order acceptance'} email sent to:`, email);
+} catch (emailError) {
+  console.error('Error sending email:', emailError.message);
+  // Don't fail the request if email fails
+}
 
     return res.status(200).json({
-      message: 'Shipping price updated',
+      message: isEdit ? 'Shipping price updated successfully' : 'Order accepted and shipping price added successfully',
       order: {
         id: updatedOrder._id,
         shipping_price: updatedOrder.shipping_price,

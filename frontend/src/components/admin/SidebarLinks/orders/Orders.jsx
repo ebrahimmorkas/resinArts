@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useContext } from "react"
-import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar } from "lucide-react"
+import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar, DollarSign } from "lucide-react"
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from "jspdf";
@@ -65,6 +65,8 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   const [orderId, setOrderId] = useState("");
   const [currentOrder, setCurrentOrder] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEditShippingPrice, setIsEditShippingPrice] = useState(false)
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -233,6 +235,20 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Complete
               </button>
+{order.status === "Accepted" && order.shipping_price > 0 && (
+  <button
+    onClick={() => {
+      setOrderId(order._id);
+      setShowShippingPriceModal(true);
+      setIsEditShippingPrice(true);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-yellow-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+    disabled={isLoading}
+  >
+    <DollarSign className="h-4 w-4 mr-2" />
+    Edit Shipping (₹{order.shipping_price})
+  </button>
+)}
               <button
                 onClick={() => {
                   handleEdit(order);
@@ -300,6 +316,10 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
                   <span className="font-medium">₹{order.price}</span>
                 </div>
+                <div className="flex justify-between">
+  <span className="text-gray-600 dark:text-gray-400">Shipping:</span>
+  <span className="font-medium">₹{order.shipping_price || 'Pending'}</span>
+</div>
                 <div className="flex justify-between border-t pt-2 font-semibold">
                   <span className="text-gray-900">Total:</span>
                   <span className="text-gray-900">
@@ -433,7 +453,18 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
           </div>
         </div>
       </div>
-      {showShippingPriceModal && <ShippingPriceModal onClose={() => setShowShippingPriceModal(false)} orderId={orderId} email={order.email} />}
+      {showShippingPriceModal && (
+  <ShippingPriceModal
+    onClose={() => {
+      setShowShippingPriceModal(false);
+      setIsEditShippingPrice(false);
+    }}
+    orderId={orderId}
+    email={order.email}
+    isEditMode={isEditShippingPrice}
+    currentShippingPrice={isEditShippingPrice ? order.shipping_price : 0}
+  />
+)}
       {showStatusModal && (
         <StatusModal
           onClose={() => {
@@ -1331,6 +1362,9 @@ export default function OrdersManagement() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Total Price
                   </th>
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Edit Shipping
+                  </th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Status
                   </th>
@@ -1369,6 +1403,25 @@ export default function OrdersManagement() {
   <span className="font-medium">
     {order.status === "Pending" ? "Pending" : `₹${order.total_price}`}
   </span>
+</td>
+<td className="px-6 py-4 whitespace-nowrap text-center">
+  {order.status === "Accepted" && order.shipping_price > 0 ? (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        // Open OrderDetailsModal with shipping price edit capability
+        setSelectedOrder(order);
+        setSingleOrderedProduct(orderedProducts[order._id] || null);
+        setIsModalOpen(true);
+      }}
+      className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
+      title="Edit Shipping Price"
+    >
+      <DollarSign className="w-4 h-4" />
+    </button>
+  ) : (
+    <span className="text-gray-400 text-xs">-</span>
+  )}
 </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getStatusBadge(order.status)}

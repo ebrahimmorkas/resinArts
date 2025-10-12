@@ -1,23 +1,38 @@
-import React, { useState } from 'react'
-import { X } from "lucide-react"
+// Updated ShippingPriceModal.jsx
+import React, { useState, useEffect } from 'react'
+import { X, DollarSign } from "lucide-react"
 import axios from "axios";
 
-function ShippingPriceModal({onClose, orderId, email}) {
+function ShippingPriceModal({onClose, orderId, email, isEditMode = false, currentShippingPrice = 0}) {
     const [shippingPriceValue, setShippingPriceValue] = useState("");
     const [isLoading, setIsLoading] = useState(false);
-    const [errorMessage, setErrorMessage] = useState(""); // New state for error message
+    const [errorMessage, setErrorMessage] = useState("");
+
+    useEffect(() => {
+        if (isEditMode && currentShippingPrice > 0) {
+            setShippingPriceValue(currentShippingPrice.toString());
+        } else {
+            setShippingPriceValue("");
+        }
+    }, [isEditMode, currentShippingPrice]);
 
     const handleSubmitOfShippingPriceForm = async (e) => {
         e.preventDefault();
         
-        if(parseInt(shippingPriceValue) > 0) {
+        const priceValue = parseFloat(shippingPriceValue);
+        if (priceValue > 0) {
             setIsLoading(true);
-            setErrorMessage(""); // Clear previous errors
+            setErrorMessage("");
             try {
-                const res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {shippingPriceValue, orderId, email}, {withCredentials: true});
+                const res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {
+                    shippingPriceValue: priceValue, 
+                    orderId, 
+                    email,
+                    isEdit: isEditMode
+                }, {withCredentials: true});
                 
                 if(res.status === 200) {
-                    console.log("Updated successfully");
+                    console.log(isEditMode ? "Shipping price updated successfully" : "Shipping price added successfully");
                     onClose();
                 } else {
                     console.log("Not updated - unexpected status:", res.status);
@@ -25,7 +40,7 @@ function ShippingPriceModal({onClose, orderId, email}) {
             } catch(error) {
                 console.log("Error:", error.message);
                 if (error.response && error.response.status === 400 && error.response.data.message.includes("Insufficient stock")) {
-                    setErrorMessage(error.response.data.message); // Set error message for insufficient stock
+                    setErrorMessage(error.response.data.message);
                 } else {
                     setErrorMessage("Failed to update shipping price. Please try again.");
                 }
@@ -37,14 +52,16 @@ function ShippingPriceModal({onClose, orderId, email}) {
         }
     }
 
-    // Modal for insufficient stock error
+    const modalTitle = isEditMode ? "Edit Shipping Price" : "Add Shipping Price";
+    const buttonText = isEditMode ? "Update Shipping Price" : "Add Shipping Price";
+
     if (errorMessage && errorMessage.includes("Insufficient stock")) {
         return (
             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
                 <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full">
-                    <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
-                        <h2 className="text-2xl font-bold text-red-600">Error</h2>
-                        <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors">
+                    <div className="bg-red-50 dark:bg-red-900/20 border-b border-red-200 dark:border-red-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
+                        <h2 className="text-xl font-bold text-red-600">Error</h2>
+                        <button onClick={onClose} className="text-red-400 hover:text-red-600">
                             <X className="h-6 w-6" />
                         </button>
                     </div>
@@ -52,7 +69,7 @@ function ShippingPriceModal({onClose, orderId, email}) {
                         <p className="text-sm text-gray-700 mb-4">{errorMessage}</p>
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                            className="w-full px-4 py-2 bg-red-600 text-black text-sm font-medium rounded-lg hover:bg-red-700"
                         >
                             Close
                         </button>
@@ -65,54 +82,64 @@ function ShippingPriceModal({onClose, orderId, email}) {
     return (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
             <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full">
-                {/* Modal Header */}
                 <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
-                    <div>
-                        <h2 className="text-2xl font-bold text-gray-900">Enter Shipping Price</h2>
+                    <div className="flex items-center space-x-2">
+                        <DollarSign className="h-5 w-5 text-blue-600" />
+                        <h2 className="text-xl font-bold text-gray-900">{modalTitle}</h2>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors">
+                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <X className="h-6 w-6" />
                     </button>
                 </div>
 
-                {/* Form for entering shipping price */}
                 <div className="p-6">
                     {errorMessage && (
-                        <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-md text-sm">
+                        <div className="mb-4 p-3 bg-red-100 border border-red-300 text-red-700 rounded-md text-sm">
                             {errorMessage}
                         </div>
                     )}
-                    <div className="mb-4">
-                        <label htmlFor="shippingPrice" className="block text-sm font-medium text-gray-700 mb-2">
-                            Shipping Price
-                        </label>
-                        <input 
-                            type="number" 
-                            id="shippingPrice"
-                            value={shippingPriceValue} 
-                            onChange={(e) => setShippingPriceValue(e.target.value)}
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                            placeholder="Enter shipping price"
-                            min="1"
-                            disabled={isLoading}
-                        />
-                    </div>
-                    
-                    <div className="flex gap-3">
-                        <button 
-                            onClick={handleSubmitOfShippingPriceForm}
-                            disabled={isLoading || !shippingPriceValue}
-                            className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-                        >
-                            {isLoading ? "Adding..." : "Add Shipping Price"}
-                        </button>
-                        <button
-                            onClick={onClose}
-                            className="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
-                        >
-                            Cancel
-                        </button>
-                    </div>
+                    <form onSubmit={handleSubmitOfShippingPriceForm}>
+                        <div className="mb-6">
+                            <label htmlFor="shippingPrice" className="block text-sm font-medium text-gray-700 mb-2">
+                                Shipping Price (₹)
+                            </label>
+                            <input 
+                                type="number" 
+                                id="shippingPrice"
+                                value={shippingPriceValue} 
+                                onChange={(e) => setShippingPriceValue(e.target.value)}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
+                                placeholder="Enter shipping price"
+                                min="1"
+                                step="0.01"
+                                disabled={isLoading}
+                                required
+                            />
+                            {isEditMode && currentShippingPrice > 0 && (
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Current shipping price: ₹{currentShippingPrice}
+                                </p>
+                            )}
+                        </div>
+                        
+                        <div className="flex gap-3">
+                            <button 
+                                type="submit"
+                                disabled={isLoading || parseFloat(shippingPriceValue) <= 0}
+                                className="flex-1 px-4 py-2 bg-blue-600 text-green-600 text-sm font-medium rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+                            >
+                                {isLoading ? "Updating..." : buttonText}
+                            </button>
+                            <button
+                                type="button"
+                                onClick={onClose}
+                                disabled={isLoading}
+                                className="px-4 py-2 bg-gray-300 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-400 dark:hover:bg-gray-600 transition-colors"
+                            >
+                                Cancel
+                            </button>
+                        </div>
+                    </form>
                 </div>
             </div>
         </div>
