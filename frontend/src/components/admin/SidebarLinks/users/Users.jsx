@@ -1,12 +1,14 @@
 "use client"
 
-import { useEffect, useState, useContext, useMemo } from "react"
+import { useEffect, useState, useContext, useMemo, useRef } from "react"
 import {
-  Search, Filter, Ban, Trash2, DollarSign, Key, ChevronLeft, ChevronRight, X, AlertTriangle,
-  UsersIcon, Phone, Mail, MessageCircle, Clock, ShoppingBag, Gift, RefreshCw,
+  Search, Filter, Trash2, DollarSign, Key, ChevronLeft, ChevronRight, X, AlertTriangle,
+  UsersIcon, Phone, Mail, MessageCircle, Clock, ShoppingBag, Gift, RefreshCw, Download, Upload, FileDown, UserPlus, Send
 } from "lucide-react";
 import { UserContext } from "../../../../../Context/UserContext";
 import axios from "axios";
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 function CashModal({
   show,
@@ -198,6 +200,14 @@ export default function Users() {
     validForAllProducts: false
   })
   const [newPassword, setNewPassword] = useState("")
+  const [showEmailModal, setShowEmailModal] = useState(false)
+const [showAddUserModal, setShowAddUserModal] = useState(false)
+const [emailForm, setEmailForm] = useState({ subject: "", body: "" })
+const [userForm, setUserForm] = useState({
+  first_name: "", middle_name: "", last_name: "", email: "", phone_number: "",
+  whatsapp_number: "", state: "", city: "", address: "", zip_code: "", password: ""
+})
+const fileInputRef = useRef(null);
 
   // Fetch categories from /all (from AddProduct.jsx)
   useEffect(() => {
@@ -313,7 +323,7 @@ export default function Users() {
     const matchesSearch =
       user.first_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
       user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      user.phone.includes(searchQuery)
+      user.phone_number.includes(searchQuery)
 
     if (activeFilter === "active-status" && filterValues.lastActiveBefore) {
       const lastActiveDate = new Date(user.lastActive)
@@ -357,27 +367,27 @@ export default function Users() {
   }
 
   const handleSelectAll = () => {
-    if (selectedUsers.length === paginatedUsers.length) {
-      setSelectedUsers([])
-    } else {
-      setSelectedUsers(paginatedUsers.map((user) => user.id))
-    }
+  if (selectedUsers.length === paginatedUsers.length) {
+    setSelectedUsers([])
+  } else {
+    setSelectedUsers(paginatedUsers.map((user) => user._id))
   }
+}
 
   const handleBanUser = (user) => {
     setSelectedUser(user)
     setShowBanModal(true)
   }
 
-  const handleDeleteUser = (user) => {
-    setSelectedUser(user)
-    setShowDeleteModal(true)
-  }
+const handleDeleteUser = (user) => {
+  setSelectedUser(user)
+  setShowDeleteModal(true)
+}
 
-  const handlePayCash = (user) => {
-    setSelectedUser(user)
-    setShowCashModal(true)
-  }
+ const handlePayCash = (user) => {
+  setSelectedUser(user)
+  setShowCashModal(true)
+}
 
   const handleChangePassword = (user) => {
     setSelectedUser(user)
@@ -407,17 +417,132 @@ export default function Users() {
     setSelectedUser(null)
   }
 
-  const confirmDelete = () => {
-    if (selectedUser) {
-      setUsers((prev) => prev.filter((user) => user.id !== selectedUser.id))
-    } else {
-      setUsers((prev) => prev.filter((user) => !selectedUsers.includes(user.id)))
-      setSelectedUsers([])
+ const confirmDelete = async () => {
+  try {
+    const userIds = selectedUser ? [selectedUser._id] : selectedUsers;
+    const res = await axios.post('http://localhost:3000/api/user/delete', 
+      { userIds: userIds }, 
+      { withCredentials: true }
+    );
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      await refetchUsers();
+      setSelectedUsers([]);
+      setShowDeleteModal(false);
+      setSelectedUser(null);
     }
-    setShowDeleteModal(false)
-    setShowBulkDeleteModal(false)
-    setSelectedUser(null)
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Error deleting users");
   }
+}
+
+const handleSendEmail = (user) => {
+  setSelectedUser(user)
+  setShowEmailModal(true)
+}
+
+const handleBulkSendEmail = () => {
+  setShowEmailModal(true)
+}
+
+const confirmSendEmail = async (e) => {
+  e.preventDefault();
+  try {
+    const userIds = selectedUser ? [selectedUser._id] : selectedUsers;
+    const res = await axios.post('http://localhost:3000/api/user/send-email', 
+      { userIds: userIds, subject: emailForm.subject, body: emailForm.body },
+      { withCredentials: true }
+    );
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      setShowEmailModal(false);
+      setEmailForm({ subject: "", body: "" });
+      setSelectedUsers([]);
+      setSelectedUser(null);
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Error sending email");
+  }
+};
+
+const handleImport = () => {
+  fileInputRef.current?.click();
+};
+
+const handleFileChange = async (e) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+  const formData = new FormData();
+  formData.append('file', file);
+  try {
+    const res = await axios.post('http://localhost:3000/api/user/import', formData, {
+      withCredentials: true,
+      headers: { 'Content-Type': 'multipart/form-data' }
+    });
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      if (res.data.errors && res.data.errors.length > 0) {
+        toast.warning(`${res.data.errorCount} errors occurred`);
+        console.log("Import errors:", res.data.errors);
+      }
+      await refetchUsers();
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Error importing users");
+  }
+  e.target.value = '';
+};
+
+const handleExport = async () => {
+  try {
+    const res = await axios.get('http://localhost:3000/api/user/export', {
+      withCredentials: true,
+      responseType: 'blob'
+    });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'users_export.xlsx');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast.success("Users exported successfully");
+  } catch (error) {
+    toast.error("Error exporting users");
+  }
+};
+
+const handleSampleDownload = async () => {
+  try {
+    const res = await axios.get('http://localhost:3000/api/user/sample', { responseType: 'blob' });
+    const url = window.URL.createObjectURL(new Blob([res.data]));
+    const link = document.createElement('a');
+    link.href = url;
+    link.setAttribute('download', 'sample_customers.xlsx');
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    toast.success("Sample downloaded successfully");
+  } catch (error) {
+    toast.error("Error downloading sample");
+  }
+};
+
+const handleAddUser = async (e) => {
+  e.preventDefault();
+  try {
+    const res = await axios.post('http://localhost:3000/api/auth/register', userForm, { withCredentials: true });
+    if (res.status === 200) {
+      toast.success("User added successfully");
+      await refetchUsers();
+      setShowAddUserModal(false);
+      setUserForm({ first_name: "", middle_name: "", last_name: "", email: "", phone_number: "",
+        whatsapp_number: "", state: "", city: "", address: "", zip_code: "", password: "" });
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Error adding user");
+  }
+};
 
   const confirmPayCash = () => {
     if (selectedUser) {
@@ -481,62 +606,49 @@ export default function Users() {
   }
 
   const handleCashModalFormSubmit = async (e) => {
-    e.preventDefault();
-    if (!selectedUser?._id) {
-      alert("No user selected");
-      return;
-    }
-
-    const cleanedCashForm = {
-      amount: cashForm.amount.toString().trim(),
-      validAbove: cashForm.validAbove.toString().trim() || "0",
-      endDate: cashForm.endDate.trim() || "",
-      selectedMainCategory: isFreeCashValidForAllProducts ? "" : cashForm.selectedMainCategory.trim(),
-      selectedSubCategory: isFreeCashValidForAllProducts ? "" : cashForm.selectedSubCategory.trim(),
-      validForAllProducts: isFreeCashValidForAllProducts,
-    };
-
-    const amountNum = parseFloat(cleanedCashForm.amount);
-    if (isNaN(amountNum) || amountNum <= 0) {
-      alert("Amount must be a positive number");
-      return;
-    }
-    if (!isFreeCashValidForAllProducts && !cleanedCashForm.selectedMainCategory) {
-      setMainCategoryError("Please select a main category when not valid for all products");
-      return;
-    }
-
-    console.log("Submitting cleaned form:", cleanedCashForm);
-    try {
-      const res = await axios.post('http://localhost:3000/api/free-cash/add', 
-        { cashForm: cleanedCashForm, userID: selectedUser._id }, 
-        { withCredentials: true }
-      );
-      if (res.status === 200) {
-        console.log("Success:", res.data.message);
-        await refetchUsers();
-        setShowCashModal(false);
-        setCashForm({ 
-          amount: "", 
-          validAbove: "", 
-          endDate: "", 
-          selectedMainCategory: "", 
-          selectedSubCategory: "", 
-          validForAllProducts: false 
-        });
-        setIsFreeCashValidForAllProducts(false);
-        setSelectedCategoryIds([]);
-        setCategoryPath("");
-        setSelectedUser(null);
-        setMainCategoryError("");
-        alert(res.data.message);
-      }
-    } catch (error) {
-      console.error("Submit error:", error.response?.data || error);
-      const errMsg = error.response?.data?.message || "Problem while adding the cash";
-      alert(errMsg);
-    }
+  e.preventDefault();
+  
+  const cleanedCashForm = {
+    amount: cashForm.amount.toString().trim(),
+    validAbove: cashForm.validAbove.toString().trim() || "0",
+    endDate: cashForm.endDate.trim() || "",
+    selectedMainCategory: isFreeCashValidForAllProducts ? "" : cashForm.selectedMainCategory.trim(),
+    selectedSubCategory: isFreeCashValidForAllProducts ? "" : cashForm.selectedSubCategory.trim(),
+    validForAllProducts: isFreeCashValidForAllProducts,
   };
+
+  const amountNum = parseFloat(cleanedCashForm.amount);
+  if (isNaN(amountNum) || amountNum <= 0) {
+    toast.error("Amount must be a positive number");
+    return;
+  }
+  if (!isFreeCashValidForAllProducts && !cleanedCashForm.selectedMainCategory) {
+    setMainCategoryError("Please select a main category");
+    return;
+  }
+
+  try {
+  const userIds = selectedUser ? [selectedUser._id] : selectedUsers;
+  const res = await axios.post('http://localhost:3000/api/free-cash/bulk-add', 
+    { cashForm: cleanedCashForm, userIds: userIds },
+      { withCredentials: true }
+    );
+    if (res.status === 200) {
+      toast.success(res.data.message);
+      await refetchUsers();
+      setShowCashModal(false);
+      setCashForm({ amount: "", validAbove: "", endDate: "", selectedMainCategory: "", selectedSubCategory: "", validForAllProducts: false });
+      setIsFreeCashValidForAllProducts(false);
+      setSelectedCategoryIds([]);
+      setCategoryPath("");
+      setSelectedUsers([]);
+      setSelectedUser(null);
+      setMainCategoryError("");
+    }
+  } catch (error) {
+    toast.error(error.response?.data?.message || "Error adding free cash");
+  }
+};
 
   // From AddProduct.jsx: Render dynamic category dropdowns with exact same logic
   const renderCategoryDropdowns = () => {
@@ -701,20 +813,126 @@ export default function Users() {
     )
   }
 
+  function EmailModal({ show, onClose, onSubmit, emailForm, setEmailForm }) {
+  if (!show) return null
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-md w-full p-6">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900">Send Email</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
+            <X className="w-5 h-5" />
+          </button>
+        </div>
+        <form onSubmit={onSubmit}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Subject</label>
+              <input type="text" value={emailForm.subject} onChange={(e) => setEmailForm({ ...emailForm, subject: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Enter email subject" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">Body</label>
+              <textarea value={emailForm.body} onChange={(e) => setEmailForm({ ...emailForm, body: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 min-h-[150px]"
+                placeholder="Enter email body" required />
+            </div>
+          </div>
+          <div className="flex gap-3 justify-end mt-6">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">Send Email</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+function AddUserModal({ show, onClose, onSubmit, userForm, setUserForm }) {
+  if (!show) return null
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-xl max-w-2xl w-full p-6 max-h-[90vh] overflow-y-auto">
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-semibold text-gray-900">Add New User</h3>
+          <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors"><X className="w-5 h-5" /></button>
+        </div>
+        <form onSubmit={onSubmit}>
+          <div className="grid grid-cols-2 gap-4">
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">First Name</label>
+              <input type="text" value={userForm.first_name} onChange={(e) => setUserForm({ ...userForm, first_name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="First name" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">Middle Name</label>
+              <input type="text" value={userForm.middle_name} onChange={(e) => setUserForm({ ...userForm, middle_name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Middle name" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">Last Name</label>
+              <input type="text" value={userForm.last_name} onChange={(e) => setUserForm({ ...userForm, last_name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Last name" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">Email *</label>
+              <input type="email" value={userForm.email} onChange={(e) => setUserForm({ ...userForm, email: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Email" required /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">Phone *</label>
+              <input type="text" value={userForm.phone_number} onChange={(e) => setUserForm({ ...userForm, phone_number: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Phone number" required /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp</label>
+              <input type="text" value={userForm.whatsapp_number} onChange={(e) => setUserForm({ ...userForm, whatsapp_number: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="WhatsApp number" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">State</label>
+              <input type="text" value={userForm.state} onChange={(e) => setUserForm({ ...userForm, state: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="State" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">City</label>
+              <input type="text" value={userForm.city} onChange={(e) => setUserForm({ ...userForm, city: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="City" /></div>
+            <div><label className="block text-sm font-medium text-gray-700 mb-2">Zip Code</label>
+              <input type="text" value={userForm.zip_code} onChange={(e) => setUserForm({ ...userForm, zip_code: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Zip code" /></div>
+            <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Address</label>
+              <input type="text" value={userForm.address} onChange={(e) => setUserForm({ ...userForm, address: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Address" /></div>
+            <div className="col-span-2"><label className="block text-sm font-medium text-gray-700 mb-2">Password *</label>
+              <input type="password" value={userForm.password} onChange={(e) => setUserForm({ ...userForm, password: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Password" required /></div>
+          </div>
+          <div className="flex gap-3 justify-end mt-6">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors">Cancel</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">Add User</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  )
+}
+
+  return (
+  <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+    <ToastContainer position="top-right" autoClose={3000} />
+    <input type="file" ref={fileInputRef} onChange={handleFileChange} accept=".xlsx,.xls" style={{ display: 'none' }} />
       <div className="bg-white dark:bg-gray-900 shadow-sm border-b">
         <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
           <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Users Management</h1>
-              <p className="text-gray-600 dark:text-gray-400">Manage and monitor user accounts</p>
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
-              <UsersIcon className="w-4 h-4" />
-              <span>{filteredUsers.length} users found</span>
-            </div>
-          </div>
+  <div>
+    <h1 className="text-3xl font-bold text-gray-900">Users Management</h1>
+    <p className="text-gray-600">Manage and monitor user accounts</p>
+  </div>
+  <div className="flex items-center gap-3">
+    <button onClick={() => setShowAddUserModal(true)} className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+      <UserPlus className="w-4 h-4 mr-2" />Add User
+    </button>
+    <button onClick={handleImport} className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+      <Upload className="w-4 h-4 mr-2" />Import
+    </button>
+    <button onClick={handleExport} className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors">
+      <Download className="w-4 h-4 mr-2" />Export
+    </button>
+    <button onClick={handleSampleDownload} className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+      <FileDown className="w-4 h-4 mr-2" />Sample
+    </button>
+    <div className="flex items-center space-x-2 text-sm text-gray-600">
+      <UsersIcon className="w-4 h-4" /><span>{filteredUsers.length} users</span>
+    </div>
+  </div>
+</div>
         </div>
       </div>
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
@@ -842,26 +1060,21 @@ export default function Users() {
               <div className="flex items-center justify-between">
                 <span className="text-blue-800 font-medium">{selectedUsers.length} users selected</span>
                 <div className="flex gap-2">
-                  <button
-                    onClick={handleBulkSendCash}
-                    className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    <Gift className="w-4 h-4 mr-2" />
-                    Send Cash
-                  </button>
+                 <button onClick={handleBulkDelete} className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">
+  <Trash2 className="w-4 h-4 mr-2" />Delete Selected
+</button>
+<button onClick={handleBulkSendCash} className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+  <DollarSign className="w-4 h-4 mr-2" />Pay Cash
+</button>
+<button onClick={handleBulkSendEmail} className="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+  <Send className="w-4 h-4 mr-2" />Send Email
+</button>
                   <button
                     onClick={handleBulkRevokeCash}
                     className="inline-flex items-center px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Revoke Cash
-                  </button>
-                  <button
-                    onClick={handleBulkDelete}
-                    className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4 mr-2" />
-                    Delete
                   </button>
                 </div>
               </div>
@@ -902,19 +1115,21 @@ export default function Users() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     Orders
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
+                  {selectedUsers.length === 0 && (
+  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+    Actions
+  </th>
+)}
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
-                {newUsers.map((user, index) => (
-                  <tr key={user.id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
+                {paginatedUsers.map((user, index) => (
+  <tr key={user._id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
                     <td className="px-6 py-4">
                       <input
                         type="checkbox"
-                        checked={selectedUsers.includes(user.id)}
-                        onChange={() => handleUserSelect(user.id)}
+                        checked={selectedUsers.includes(user._id)}
+onChange={() => handleUserSelect(user._id)}
                         className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                       />
                     </td>
@@ -972,53 +1187,24 @@ export default function Users() {
                         {user.orders}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {selectedUsers.length > 0 ? (
-                        <span className="text-gray-400 text-sm">Bulk actions selected</span>
-                      ) : (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() => handleBanUser(user)}
-                            disabled={user.status === "banned"}
-                            className="inline-flex items-center px-2 py-1 border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 rounded text-xs font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          >
-                            <Ban className="w-3 h-3 mr-1" />
-                            {user.status === "banned" ? "Banned" : "Ban"}
-                          </button>
-                          <button
-                            onClick={() => handleDeleteUser(user)}
-                            className="inline-flex items-center px-2 py-1 border border-red-300 text-red-700 bg-red-50 hover:bg-red-100 rounded text-xs font-medium transition-colors"
-                          >
-                            <Trash2 className="w-3 h-3 mr-1" />
-                            Delete
-                          </button>
-                          {user.hasCash ? (
-                            <button
-                              onClick={() => handleRevokeCash(user)}
-                              className="inline-flex items-center px-2 py-1 border border-orange-300 text-orange-700 bg-orange-50 hover:bg-orange-100 rounded text-xs font-medium transition-colors"
-                            >
-                              <RefreshCw className="w-3 h-3 mr-1" />
-                              Revoke
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => handlePayCash(user)}
-                              className="inline-flex items-center px-2 py-1 border border-green-300 text-green-700 bg-green-50 hover:bg-green-100 rounded text-xs font-medium transition-colors"
-                            >
-                              <DollarSign className="w-3 h-3 mr-1" />
-                              Pay Cash
-                            </button>
-                          )}
-                          <button
-                            onClick={() => handleChangePassword(user)}
-                            className="inline-flex items-center px-2 py-1 border border-blue-300 text-blue-700 bg-blue-50 hover:bg-blue-100 rounded text-xs font-medium transition-colors"
-                          >
-                            <Key className="w-3 h-3 mr-1" />
-                            Password
-                          </button>
-                        </div>
-                      )}
-                    </td>
+                    {selectedUsers.length === 0 && (
+  <td className="px-6 py-4 whitespace-nowrap">
+    <div className="flex justify-center space-x-2">
+      <button onClick={() => handleDeleteUser(user)} className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" title="Delete">
+        <Trash2 className="w-4 h-4" />
+      </button>
+      <button onClick={() => handlePayCash(user)} className="p-2 text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Pay Cash">
+        <DollarSign className="w-4 h-4" />
+      </button>
+      <button onClick={() => handleChangePassword(user)} className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors" title="Change Password">
+        <Key className="w-4 h-4" />
+      </button>
+      <button onClick={() => handleSendEmail(user)} className="p-2 text-purple-600 hover:bg-purple-50 rounded-lg transition-colors" title="Send Email">
+        <Send className="w-4 h-4" />
+      </button>
+    </div>
+  </td>
+)}
                   </tr>
                 ))}
               </tbody>
@@ -1137,6 +1323,8 @@ export default function Users() {
         onClose={() => setShowPasswordModal(false)}
         onConfirm={confirmChangePassword}
       />
+      <EmailModal show={showEmailModal} onClose={() => setShowEmailModal(false)} onSubmit={confirmSendEmail} emailForm={emailForm} setEmailForm={setEmailForm} />
+<AddUserModal show={showAddUserModal} onClose={() => setShowAddUserModal(false)} onSubmit={handleAddUser} userForm={userForm} setUserForm={setUserForm} />
     </div>
   );
 }

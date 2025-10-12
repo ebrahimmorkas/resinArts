@@ -3,6 +3,9 @@ const Order = require('../models/Order');
 const mongoose = require('mongoose');
 const Bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+const XLSX = require('xlsx');
+const path = require('path');
+const sendEmail = require('../utils/sendEmail');
 
 const findUser = async (req, res) => {
     try {
@@ -271,6 +274,239 @@ const updateAdminProfile = async (req, res) => {
     }
 };
 
+// Delete single or multiple users
+const deleteUsers = async (req, res) => {
+    try {
+        const { userIds } = req.body; // Array of user IDs
+        
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ message: "No user IDs provided" });
+        }
+
+        // Validate all IDs
+        const invalidIds = userIds.filter(id => !mongoose.Types.ObjectId.isValid(id));
+        if (invalidIds.length > 0) {
+            return res.status(400).json({ message: "Invalid user IDs found" });
+        }
+
+        // Delete users (excluding admins for safety)
+        const result = await User.deleteMany({
+            _id: { $in: userIds },
+            role: { $ne: 'admin' } // Prevent deleting admin accounts
+        });
+
+        return res.status(200).json({
+            message: `${result.deletedCount} user(s) deleted successfully`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        console.error('Delete users error:', error);
+        return res.status(500).json({ message: "Server error while deleting users" });
+    }
+};
+
+// Send custom email to users
+const sendCustomEmail = async (req, res) => {
+    try {
+        const { userIds, subject, body } = req.body;
+        
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ message: "No user IDs provided" });
+        }
+        
+        if (!subject || !body) {
+            return res.status(400).json({ message: "Subject and body are required" });
+        }
+
+        // Find users
+        const users = await User.find({ _id: { $in: userIds } });
+        
+        if (users.length === 0) {
+            return res.status(404).json({ message: "No users found" });
+        }
+
+        // Send emails
+        const emailPromises = users.map(user => 
+            sendEmail(user.email, subject, body)
+        );
+        
+        await Promise.all(emailPromises);
+
+        return res.status(200).json({
+            message: `Email sent to ${users.length} user(s) successfully`
+        });
+    } catch (error) {
+        console.error('Send email error:', error);
+        return res.status(500).json({ message: "Server error while sending emails" });
+    }
+};
+
+// Import users from Excel
+const importUsers = async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ message: "No file uploaded" });
+        }
+
+        const workbook = XLSX.readFile(req.file.path);
+        const sheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[sheetName];
+        const data = XLSX.utils.sheet_to_json(worksheet);
+
+        if (data.length === 0) {
+            return res.status(400).json({ message: "Excel file is empty" });
+        }
+
+        const errors = [];
+        const successfulUsers = [];
+
+        for (let i = 0; i < data.length; i++) {
+            const row = data[i];
+            const rowNumber = i + 2; // Excel row number (accounting for header)
+
+            try {
+                // Validate required fields
+                if (!row.email || !row.phone || !row.password) {
+                    errors.push(`Row ${rowNumber}: Email, phone, and password are required`);
+                    continue;
+                }
+
+                // Check if user already exists
+                const existingEmail = await User.findOne({ email: row.email });
+                if (existingEmail) {
+                    errors.push(`Row ${rowNumber}: Email ${row.email} already exists`);
+                    continue;
+                }
+
+                const existingPhone = await User.findOne({ phone_number: row.phone });
+                if (existingPhone) {
+                    errors.push(`Row ${rowNumber}: Phone ${row.phone} already exists`);
+                    continue;
+                }
+
+                if (row.whatsapp) {
+                    const existingWhatsapp = await User.findOne({ whatsapp_number: row.whatsapp });
+                    if (existingWhatsapp) {
+                        errors.push(`Row ${rowNumber}: WhatsApp ${row.whatsapp} already exists`);
+                        continue;
+                    }
+                }
+
+                // Hash password
+                const saltRounds = 10;
+                const hashedPassword = await Bcrypt.hash(row.password, saltRounds);
+
+                // Create new user
+                const newUser = new User({
+                    first_name: row.first_name || '',
+                    middle_name: row.middle_name || '',
+                    last_name: row.last_name || '',
+                    email: row.email,
+                    phone_number: row.phone,
+                    whatsapp_number: row.whatsapp || '',
+                    state: row.state || '',
+                    city: row.city || '',
+                    address: row.address || '',
+                    zip_code: row.zip_code || '000000',
+                    password: hashedPassword
+                });
+
+                await newUser.save();
+                successfulUsers.push(row.email);
+            } catch (error) {
+                errors.push(`Row ${rowNumber}: ${error.message}`);
+            }
+        }
+
+        // Delete uploaded file
+        const fs = require('fs');
+        fs.unlinkSync(req.file.path);
+
+        return res.status(200).json({
+            message: `Import completed. ${successfulUsers.length} user(s) imported successfully`,
+            successCount: successfulUsers.length,
+            errorCount: errors.length,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (error) {
+        console.error('Import users error:', error);
+        return res.status(500).json({ message: "Server error while importing users" });
+    }
+};
+
+// Export users to Excel
+const exportUsers = async (req, res) => {
+    try {
+        const users = await User.find({ role: { $ne: 'admin' } }).select('-password -__v');
+
+        if (users.length === 0) {
+            return res.status(404).json({ message: "No users to export" });
+        }
+
+        // Format data for Excel
+        const excelData = users.map(user => ({
+            first_name: user.first_name || '',
+            middle_name: user.middle_name || '',
+            last_name: user.last_name || '',
+            phone: user.phone_number || '',
+            whatsapp: user.whatsapp_number || '',
+            email: user.email || '',
+            state: user.state || '',
+            city: user.city || '',
+            address: user.address || '',
+            zip_code: user.zip_code || ''
+        }));
+
+        // Create workbook and worksheet
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(excelData);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Users');
+
+        // Generate buffer
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        // Set headers and send file
+        res.setHeader('Content-Disposition', 'attachment; filename=users_export.xlsx');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        return res.send(buffer);
+    } catch (error) {
+        console.error('Export users error:', error);
+        return res.status(500).json({ message: "Server error while exporting users" });
+    }
+};
+
+// Download sample Excel
+const downloadSample = async (req, res) => {
+    try {
+        const sampleData = [
+            {
+                first_name: 'John',
+                middle_name: 'Michael',
+                last_name: 'Doe',
+                phone: '9876543210',
+                whatsapp: '9876543210',
+                email: 'john.doe@example.com',
+                state: 'Maharashtra',
+                city: 'Mumbai',
+                address: '123 Sample Street',
+                password: 'Password@123'
+            }
+        ];
+
+        const workbook = XLSX.utils.book_new();
+        const worksheet = XLSX.utils.json_to_sheet(sampleData);
+        XLSX.utils.book_append_sheet(workbook, worksheet, 'Sample');
+
+        const buffer = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+
+        res.setHeader('Content-Disposition', 'attachment; filename=sample_customers.xlsx');
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        return res.send(buffer);
+    } catch (error) {
+        console.error('Download sample error:', error);
+        return res.status(500).json({ message: "Server error while downloading sample" });
+    }
+};
 
 module.exports = {
     findUser,
@@ -278,5 +514,10 @@ module.exports = {
     findUserById,
     getUserProfile,
     updateUserProfile,
-    updateAdminProfile
+    updateAdminProfile,
+    deleteUsers,
+    sendCustomEmail,
+    importUsers,
+    exportUsers,
+    downloadSample
 }
