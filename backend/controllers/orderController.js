@@ -459,7 +459,7 @@ PRICING SUMMARY
 
 Subtotal: ₹${totalPrice.toFixed(2)}
 ${totalFreeCashApplied > 0 ? `Free Cash Applied: -₹${totalFreeCashApplied.toFixed(2)}` : ''}
-Shipping: ₹${newOrder.shipping_price.toFixed(2)}
+Shipping: ${newOrder.shipping_price === 0 && newOrder.total_price !== "Pending" ? 'Free' : `₹${newOrder.shipping_price.toFixed(2)}`}
 
 TOTAL: ₹${finalPrice.toFixed(2)} + Shipping Price
 
@@ -1178,10 +1178,15 @@ const sendAcceptEmailWhenShippingPriceAddedAutomatically = async (req, res) => {
       return res.status(400).json({ message: 'Order must be in Accepted status to send acceptance email' });
     }
 
-    if (!order.shipping_price || order.shipping_price === 0) {
-      console.error('Shipping price not set for order:', orderId);
-      return res.status(400).json({ message: 'Shipping price must be set to send acceptance email' });
-    }
+    // if (!order.shipping_price || order.shipping_price === 0) {
+    //   console.error('Shipping price not set for order:', orderId);
+    //   return res.status(400).json({ message: 'Shipping price must be set to send acceptance email' });
+    // }
+
+    if (order.shipping_price == null && order.total_price === "Pending") {
+  console.error('Shipping price not set for order:', orderId);
+  return res.status(400).json({ message: 'Shipping price must be set to send acceptance email' });
+}
 
     const companySettings = await CompanySettings.findOne();
     if (!companySettings) {

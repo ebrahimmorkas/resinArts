@@ -161,14 +161,15 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3">
-              <button
+             <button
   onClick={async () => {
     try {
       // Update local state immediately for better UX
       onStatusChange(order._id, "Accepted");
       setOrderId(order._id);
 
-      if (!order.shipping_price) {
+      // Show ShippingPriceModal only if total_price is "Pending" (pending shipping)
+      if (order.total_price === "Pending") {
         setShowShippingPriceModal(true);
       } else {
         // Call backend to persist status change
@@ -187,7 +188,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       }
     } catch (error) {
       console.error('Error accepting order:', error.response?.data || error.message);
-      // Optionally revert local state on error
+      // Revert local state on error
       setOrders((prevOrders) =>
         prevOrders.map((o) => (o._id === order._id ? { ...o, status: o.status } : o))
       );
@@ -355,7 +356,9 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 </div>
                 <div className="flex justify-between">
   <span className="text-gray-600 dark:text-gray-400">Shipping:</span>
-  <span className="font-medium">₹{order.shipping_price || 'Pending'}</span>
+  <span className="font-medium">
+    {order.total_price === "Pending" ? 'Pending' : order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price.toFixed(2)}`}
+  </span>
 </div>
                 <div className="flex justify-between border-t pt-2 font-semibold">
                   <span className="text-gray-900">Total:</span>
@@ -1446,7 +1449,9 @@ export default function OrdersManagement() {
   <span className="font-medium">₹{order.price.toFixed(2)}</span>
 </td>
 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-  <span className="font-medium">₹{order.shipping_price.toFixed(2)}</span>
+  <span className="font-medium">
+    {order.total_price === "Pending" ? 'Pending' : order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price.toFixed(2)}`}
+  </span>
 </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
   <span className="font-medium">
