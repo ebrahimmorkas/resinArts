@@ -19,18 +19,19 @@ const calculateShippingPrice = async (user, itemsTotal, companySettings) => {
 
     // Check if manual pricing is enabled
     if (companySettings.shippingPriceSettings.isManual) {
+      // When isManual is true, sameForAll is irrelevant, require manual entry
       return { shippingPrice: null, isPending: true };
     }
 
-    // Check if same for all products
-    if (companySettings.shippingPriceSettings.sameForAll) {
+    // Check if same for all products (common shipping price) - ONLY when isManual: false
+    if (!companySettings.shippingPriceSettings.isManual && companySettings.shippingPriceSettings.sameForAll) {
       return { 
         shippingPrice: companySettings.shippingPriceSettings.commonShippingPrice, 
         isPending: false 
       };
     }
 
-    // Location-based shipping
+    // Location-based shipping (when isManual: false and sameForAll: false)
     const shippingType = companySettings.shippingPriceSettings.shippingType;
     let userLocation = null;
 
@@ -55,7 +56,7 @@ const calculateShippingPrice = async (user, itemsTotal, companySettings) => {
     if (shippingEntry) {
       return { shippingPrice: shippingEntry.price, isPending: false };
     } else {
-      // Location not found in list
+      // Location not found in list - require manual entry
       return { shippingPrice: null, isPending: true };
     }
   } catch (error) {

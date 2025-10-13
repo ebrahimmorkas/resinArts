@@ -197,7 +197,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       }
     }
   }}
-  className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
   disabled={
     order.status === "Accepted" ||
     !productMappedWithOrderId ||
@@ -273,7 +273,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Complete
               </button>
-{order.status === "Accepted" && order.shipping_price > 0 && (
+{order.status === "Accepted" && (
   <button
     onClick={() => {
       setOrderId(order._id);
@@ -284,7 +284,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     disabled={isLoading}
   >
     <DollarSign className="h-4 w-4 mr-2" />
-    Edit Shipping (₹{order.shipping_price})
+    Edit Shipping ({order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price}`})
   </button>
 )}
               <button
@@ -1459,11 +1459,10 @@ export default function OrdersManagement() {
   </span>
 </td>
 <td className="px-6 py-4 whitespace-nowrap text-center">
-  {order.status === "Accepted" && order.shipping_price > 0 ? (
+  {order.status === "Accepted" ? (
     <button
       onClick={(e) => {
         e.stopPropagation();
-        // Open OrderDetailsModal with shipping price edit capability
         setSelectedOrder(order);
         setSingleOrderedProduct(orderedProducts[order._id] || null);
         setIsModalOpen(true);

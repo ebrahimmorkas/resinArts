@@ -16,40 +16,42 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
         }
     }, [isEditMode, currentShippingPrice]);
 
+    
+
     const handleSubmitOfShippingPriceForm = async (e) => {
         e.preventDefault();
         
         const priceValue = parseFloat(shippingPriceValue);
-        if (priceValue > 0) {
-            setIsLoading(true);
-            setErrorMessage("");
-            try {
-                const res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {
-                    shippingPriceValue: priceValue, 
-                    orderId, 
-                    email,
-                    isEdit: isEditMode
-                }, {withCredentials: true});
-                
-                if(res.status === 200) {
-                    console.log(isEditMode ? "Shipping price updated successfully" : "Shipping price added successfully");
-                    onClose();
-                } else {
-                    console.log("Not updated - unexpected status:", res.status);
-                }
-            } catch(error) {
-                console.log("Error:", error.message);
-                if (error.response && error.response.status === 400 && error.response.data.message.includes("Insufficient stock")) {
-                    setErrorMessage(error.response.data.message);
-                } else {
-                    setErrorMessage("Failed to update shipping price. Please try again.");
-                }
-            } finally {
-                setIsLoading(false);
-            }
+if (priceValue >= 0) {
+    setIsLoading(true);
+    setErrorMessage("");
+    try {
+        const res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {
+            shippingPriceValue: priceValue,
+            orderId,
+            email,
+            isEdit: isEditMode
+        }, { withCredentials: true });
+        
+        if (res.status === 200) {
+            console.log(isEditMode ? "Shipping price updated successfully" : "Shipping price added successfully");
+            onClose();
         } else {
-            setErrorMessage("Please enter a valid shipping price greater than 0");
+            console.log("Not updated - unexpected status:", res.status);
         }
+    } catch (error) {
+        console.log("Error:", error.message);
+        if (error.response && error.response.status === 400 && error.response.data.message.includes("Insufficient stock")) {
+            setErrorMessage(error.response.data.message);
+        } else {
+            setErrorMessage("Failed to update shipping price. Please try again.");
+        }
+    } finally {
+        setIsLoading(false);
+    }
+} else {
+    setErrorMessage("Please enter a valid shipping price (0 or greater)");
+}
     }
 
     const modalTitle = isEditMode ? "Edit Shipping Price" : "Add Shipping Price";
