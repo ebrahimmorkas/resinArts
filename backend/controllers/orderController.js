@@ -1157,10 +1157,149 @@ const isFreeCashEligible = (product, cartData, freeCash) => {
     return true;
 };
 
-const sendAcceptEmailWhenShippingPriceAddedAutomatically = async(orderData) => {
-  console.log("Request received");
-  console.log(orderData);
-}
+const sendAcceptEmailWhenShippingPriceAddedAutomatically = async (req, res) => {
+  try {
+    console.log("Request received for sending acceptance email");
+    const { email, orderId } = req.body;
+
+    if (!email || !orderId) {
+      console.error('Validation failed: Email and orderId are required');
+      return res.status(400).json({ message: 'Email and orderId are required' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      console.error('Order not found:', orderId);
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    if (order.status !== 'Accepted') {
+      console.error('Order not in Accepted status:', { orderId, status: order.status });
+      return res.status(400).json({ message: 'Order must be in Accepted status to send acceptance email' });
+    }
+
+    if (!order.shipping_price || order.shipping_price === 0) {
+      console.error('Shipping price not set for order:', orderId);
+      return res.status(400).json({ message: 'Shipping price must be set to send acceptance email' });
+    }
+
+    const companySettings = await CompanySettings.findOne();
+    if (!companySettings) {
+      console.error('Company settings not found');
+      return res.status(500).json({ message: 'Company settings not found' });
+    }
+
+    // Generate order items text
+    const orderDetailsText = order.orderedProducts
+      .map((item, index) => {
+        let itemDetails = `${index + 1}. ${item.product_name}`;
+        if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+        if (item.size) itemDetails += ` - Size: ${item.size}`;
+        itemDetails += `\n   Quantity: ${item.quantity}`;
+        itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
+        itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
+        if (parseFloat(item.cash_applied || 0) > 0) itemDetails += `\n   Free Cash Applied: ₹${parseFloat(item.cash_applied || 0).toFixed(2)}`;
+        return itemDetails;
+      })
+      .join('\n\n');
+
+    // Email template
+    const emailSubject = `Payment Required - Order #${orderId} Accepted`;
+    const emailText = `Dear ${order.user_name},
+
+Thank you for your order with ${companySettings?.companyName || 'Mould Market'}!
+
+We are pleased to confirm that your order #${orderId} has been **ACCEPTED** by our team and is ready for processing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANT: PAYMENT REQUIRED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+To confirm your order and proceed with processing, please complete the payment of the total amount:
+
+TOTAL AMOUNT DUE: ₹${parseFloat(order.total_price || 0).toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ${orderId}
+Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Status: ACCEPTED (Payment Pending)
+
+CUSTOMER INFORMATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name: ${order.user_name}
+Email: ${order.email}
+Phone: ${order.phone_number}
+WhatsApp: ${order.whatsapp_number}
+
+ORDER ITEMS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${orderDetailsText}
+
+PRICING SUMMARY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Subtotal: ₹${parseFloat(order.price || 0).toFixed(2)}
+Shipping Cost: ₹${parseFloat(order.shipping_price || 0).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL AMOUNT: ₹${parseFloat(order.total_price || 0).toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Please contact us via WhatsApp or phone to receive payment details and complete your order confirmation.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US FOR PAYMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}, ${companySettings?.adminState || ''} - ${companySettings?.adminPincode || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Complete payment using the contact details above
+2️⃣ Share your payment proof via WhatsApp or email
+3️⃣ Once payment is verified, your order will be CONFIRMED
+4️⃣ You will receive a dispatch confirmation when your order ships
+5️⃣ Track your order status in your account dashboard
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We strive to process your order quickly once payment is received. Your satisfaction is our priority!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+The Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}`;
+
+    await sendEmail(email, emailSubject, emailText);
+    console.log('Acceptance email sent successfully to:', email);
+
+    return res.status(200).json({
+      message: 'Acceptance email sent successfully',
+      orderId: orderId,
+    });
+  } catch (error) {
+    console.error('Error sending acceptance email:', error.message, error.stack);
+    return res.status(500).json({
+      message: 'Failed to send acceptance email',
+      error: process.env.NODE_ENV === 'development' ? error.message : undefined,
+    });
+  }
+};
 
 module.exports = {
     placeOrder,

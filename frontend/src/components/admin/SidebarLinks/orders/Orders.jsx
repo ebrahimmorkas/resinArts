@@ -162,27 +162,61 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={async () => {
-                  onStatusChange(order._id, "Accepted");
-                  setOrderId(order._id);
-                  if(!order.shipping_price) {
-                    setShowShippingPriceModal(true);
-                  } 
-                  
-                }}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={
-                  order.status === "Accepted" ||
-                  !productMappedWithOrderId ||
-                  order.orderedProducts.some((product, index) => {
-                    const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
-                    return stock === undefined || stock < product.quantity;
-                  })
-                }
-              >
-                <Check className="h-4 w-4 mr-2" />
-                Accept
-              </button>
+  onClick={async () => {
+    try {
+      // Update local state immediately for better UX
+      onStatusChange(order._id, "Accepted");
+      setOrderId(order._id);
+
+      if (!order.shipping_price) {
+        setShowShippingPriceModal(true);
+      } else {
+        // Call backend to persist status change
+        await handleStatusChangeBackend("Accepted", order._id);
+
+        // Call endpoint to send acceptance email
+        const res = await axios.post(
+          'http://localhost:3000/api/order/sendAcceptEmailWhenShippingPriceAddedAutomatically',
+          {
+            email: order.email,
+            orderId: order._id,
+          },
+          { withCredentials: true }
+        );
+        console.log('Email sent successfully:', res.data);
+      }
+    } catch (error) {
+      console.error('Error accepting order:', error.response?.data || error.message);
+      // Optionally revert local state on error
+      setOrders((prevOrders) =>
+        prevOrders.map((o) => (o._id === order._id ? { ...o, status: o.status } : o))
+      );
+      if (selectedOrder && selectedOrder._id === order._id) {
+        setSelectedOrder((prev) => ({ ...prev, status: prev.status }));
+      }
+    }
+  }}
+  className="inline-flex items-center px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={
+    order.status === "Accepted" ||
+    !productMappedWithOrderId ||
+    order.orderedProducts.some((product, index) => {
+      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+      return stock === undefined || stock < product.quantity;
+    })
+  }
+  title={
+    order.orderedProducts.some((product, index) => {
+      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+      return stock === undefined || stock < product.quantity;
+    })
+      ? "Cannot accept order: Insufficient stock for one or more products"
+      : "Accept order"
+  }
+>
+  <Check className="h-4 w-4 mr-2" />
+  Accept
+</button>
               <button
                 onClick={() => {
                   onStatusChange(order._id, "Rejected");
