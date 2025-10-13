@@ -1282,7 +1282,7 @@ const CategoryNavigationBar = () => {
                     e.stopPropagation()
                     handleImageNavigation("prev")
                   }}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -1291,7 +1291,7 @@ const CategoryNavigationBar = () => {
                     e.stopPropagation()
                     handleImageNavigation("next")
                   }}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1376,11 +1376,11 @@ const CategoryNavigationBar = () => {
   })()}
 </div>
 
-          <div className="mb-2">
+          {/* <div className="mb-2">
             <span className="text-xs text-gray-600 dark:text-gray-400">
               Stock: {currentStock} available
             </span>
-          </div>
+          </div> */}
 
           {bulkPricing.filter(tier => tier.quantity > 1).length > 0 && (
   <div className="mb-3 p-2 bg-gray-50 dark:bg-gray-800 rounded-lg">
@@ -1496,58 +1496,106 @@ const CategoryNavigationBar = () => {
           )}
 
           <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-              <span className="text-sm text-gray-600 dark:text-gray-400">Quantity:</span>
-              <div className="flex items-center gap-2">
-                <button
-                  onClick={() => setAddQuantity(Math.max(1, addQuantity - 1))}
-                  className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
-                >
-                  <Minus className="w-3 h-3" />
-                </button>
-                <input
-                  type="number"
-                  min="1"
-                  value={addQuantity}
-                  onChange={(e) => setAddQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
-                  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
-                />
-                <button
-                  onClick={() => setAddQuantity(addQuantity + 1)}
-                  className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
-                >
-                  <Plus className="w-3 h-3" />
-                </button>
-              </div>
-            </div>
-
-            {hasVariants && (
-              <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                {/* <button
-                  onClick={() => setShowDetails(!showDetails)}
-                  className="flex-1 bg-gray-100 hover:bg-gray-200 -800 dark:text-gray-100 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1"
-                >
-                  <Eye className="w-4 h-4" />
-                  {showDetails ? "Hide" : "Details"}
-                </button> */}
-                <button
-                  onClick={() => setSelectedVariantProduct(product)}
-                  className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-800 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1"
-                >
-                  <Palette className="w-4 h-4" />
-                  Variants
-                </button>
-              </div>
-            )}
-
+  {/* Check if item is in cart */}
+  {(() => {
+    const cartKey = isSimpleProduct 
+      ? `${product._id}-default-default`
+      : selectedVariant && selectedSizeDetail
+        ? `${product._id}-${selectedVariant.colorName}-${formatSize(selectedSizeDetail.size)}`
+        : null;
+    
+    const itemInCart = cartKey ? cartItems[cartKey] : null;
+    
+    return itemInCart ? (
+      // Item is in cart - show quantity controls and remove button
+      <>
+        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">In Cart:</span>
+          <div className="flex items-center gap-2">
             <button
-              onClick={handleAddToCartWithQuantity}
-              disabled={hasVariants && (!selectedVariant || !selectedSizeDetail) || currentStock === 0}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-500 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200"
+              onClick={(e) => {
+                e.stopPropagation();
+                handleUpdateQuantity(cartKey, -1);
+              }}
+              className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
             >
-              Add {addQuantity} to Cart
+              <Minus className="w-3 h-3" />
+            </button>
+            <span className="w-12 text-center font-semibold">{itemInCart.quantity}</span>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleUpdateQuantity(cartKey, 1);
+              }}
+              className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+            >
+              <Plus className="w-3 h-3" />
             </button>
           </div>
+        </div>
+
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleRemoveFromCart(cartKey);
+          }}
+          className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+        >
+          <Trash2 className="w-4 h-4" />
+          Remove from Cart
+        </button>
+      </>
+    ) : (
+      // Item not in cart - show add to cart controls
+      <>
+        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+          <span className="text-sm text-gray-600 dark:text-gray-400">Quantity:</span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setAddQuantity(Math.max(1, addQuantity - 1))}
+              className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+            >
+              <Minus className="w-3 h-3" />
+            </button>
+            <input
+              type="number"
+              min="1"
+              value={addQuantity}
+              onChange={(e) => setAddQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
+              className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
+            />
+            <button
+              onClick={() => setAddQuantity(addQuantity + 1)}
+              className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+            >
+              <Plus className="w-3 h-3" />
+            </button>
+          </div>
+        </div>
+
+        {hasVariants && (
+          <div className="flex gap-2">
+            <button
+              onClick={() => setSelectedVariantProduct(product)}
+              className="flex-1 bg-purple-100 hover:bg-purple-200 text-purple-800 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-1"
+            >
+              <Palette className="w-4 h-4" />
+              Variants
+            </button>
+          </div>
+        )}
+
+        <button
+          onClick={handleAddToCartWithQuantity}
+          disabled={hasVariants && (!selectedVariant || !selectedSizeDetail) || currentStock === 0}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200"
+        >
+          Add {addQuantity} to Cart
+        </button>
+      </>
+    );
+  })()}
+</div>
         </div>
       </div>
     )
@@ -1789,7 +1837,7 @@ const CategoryNavigationBar = () => {
                 }
                 onClose();
               }}
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-green-600 py-3 px-6 rounded-lg font-semibold flex items-center justify-center gap-2 transition-colors"
             >
               <ShoppingCart className="w-5 h-5" />
               Add to Cart • ₹ {((currentPrice || getDisplayPrice(product, selectedVariant, selectedSize)) * quantity).toFixed(2)}
@@ -1945,13 +1993,13 @@ const CategoryNavigationBar = () => {
                       onClick={() =>
                         setCurrentImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length)
                       }
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev + 1) % currentImages.length)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1 rounded-full"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -2036,9 +2084,9 @@ const CategoryNavigationBar = () => {
                   <div>
                     Price: <span className="font-semibold">₹ {displayPrice.toFixed(2)}</span>
                   </div>
-                  <div>
+                  {/* <div>
                     Stock: <span className="font-semibold">${selectedSizeDetail.stock} available</span>
-                  </div>
+                  </div> */}
                   {selectedSizeDetail.optionalDetails?.map((detail, index) => (
                     <div key={index}>
                       {detail.key}: <span className="font-semibold">{detail.value}</span>
@@ -2066,7 +2114,85 @@ const CategoryNavigationBar = () => {
               </div>
             )}
 
-            <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 mb-4">
+            {(() => {
+  const cartKey = selectedVariant && selectedSizeDetail
+    ? `${product._id}-${selectedVariant.colorName}-${formatSize(selectedSizeDetail.size)}`
+    : null;
+  
+  const itemInCart = cartKey ? cartItems[cartKey] : null;
+  
+  return itemInCart ? (
+    <>
+      <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 mb-4">
+        <span className="text-sm text-gray-600 dark:text-gray-400">In Cart:</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => handleUpdateQuantity(cartKey, -1)}
+            className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+          >
+            <Minus className="w-3 h-3" />
+          </button>
+          <span className="w-12 text-center font-semibold">{itemInCart.quantity}</span>
+          <button
+            onClick={() => handleUpdateQuantity(cartKey, 1)}
+            className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+          >
+            <Plus className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      <button
+        onClick={() => handleRemoveFromCart(cartKey)}
+        className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-3 px-6 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+      >
+        <Trash2 className="w-4 h-4" />
+        Remove from Cart
+      </button>
+    </>
+  ) : (
+    <>
+      <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 mb-4">
+        <span className="text-sm text-gray-600 dark:text-gray-400">Quantity:</span>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setLocalQuantityToAdd(Math.max(1, localQuantityToAdd - 1))}
+            className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+          >
+            <Minus className="w-3 h-3" />
+          </button>
+          <input
+            type="number"
+            min="1"
+            value={localQuantityToAdd}
+            onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
+            className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
+          />
+          <button
+            onClick={() => setLocalQuantityToAdd(localQuantityToAdd + 1)}
+            className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+          >
+            <Plus className="w-3 h-3" />
+          </button>
+        </div>
+      </div>
+
+      {!selectedVariant || !selectedSizeDetail ? (
+        <div className="w-full bg-gray-100 text-gray-500 py-3 px-6 rounded-lg font-medium text-center">
+          Please select both color and size
+        </div>
+      ) : (
+        <button
+          onClick={handleAddToCartFromModal}
+          disabled={selectedSizeDetail.stock === 0}
+          className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-600 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+        >
+          Add {localQuantityToAdd} to Cart - {selectedVariant.colorName}, {formatSize(selectedSizeDetail.size)}
+        </button>
+      )}
+    </>
+  );
+})()}<div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2 mb-4">
               <span className="text-sm text-gray-600 dark:text-gray-400">Quantity:</span>
               <div className="flex items-center gap-2">
                 <button
@@ -2099,7 +2225,7 @@ const CategoryNavigationBar = () => {
               <button
                 onClick={handleAddToCartFromModal}
                 disabled={selectedSizeDetail.stock === 0}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-3 px-6 rounded-lg font-medium transition-colors duration-200"
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-600 py-3 px-6 rounded-lg font-medium transition-colors duration-200"
               >
                 Add {localQuantityToAdd} to Cart - {selectedVariant.colorName}, {formatSize(selectedSizeDetail.size)}
               </button>
@@ -2118,7 +2244,7 @@ const CategoryNavigationBar = () => {
         <div className="relative bg-white dark:bg-gray-900 rounded-lg p-4 max-w-[85vw] max-h-[85vh] shadow-2xl">
           <button
             onClick={onClose}
-            className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-white rounded-full p-2 shadow-lg transition-colors z-10"
+            className="absolute -top-3 -right-3 bg-red-500 hover:bg-red-600 text-black rounded-full p-2 shadow-lg transition-colors z-10"
           >
             <X className="w-5 h-5" />
           </button>
@@ -2295,13 +2421,13 @@ const ProductDetailsModal = ({ product, onClose }) => {
                   <>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length)}
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-colors"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev + 1) % currentImages.length)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-colors"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors"
                     >
                       <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
@@ -2444,68 +2570,96 @@ const ProductDetailsModal = ({ product, onClose }) => {
                         <div className="text-sm font-medium">
                           {formatSize(detail.size)}
                         </div>
-                        <div className="text-xs text-gray-500">
+                        {/* <div className="text-xs text-gray-500">
                           Stock: {detail.stock}
-                        </div>
+                        </div> */}
                       </button>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div>
-                <h3 className="text-base sm:text-lg font-semibold mb-3">Quantity</h3>
-                <div className="flex items-center gap-4">
-                  <div className="flex items-center border border-gray-300 rounded-lg">
-                    <button
-                      onClick={() => quantity > 1 && setQuantity(quantity - 1)}
-                      className="p-2 hover:bg-gray-100 rounded-l-lg transition-colors"
-                      disabled={quantity <= 1}
-                    >
-                      <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-                    </button>
-                    <input
-                      type="text"
-                      value={quantity}
-                      onChange={(e) => handleQuantityChange(e.target.value)}
-                      className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center border-0 focus:outline-none"
-                    />
-                    <button
-                      onClick={() => currentStock > 0 && quantity < currentStock && setQuantity(quantity + 1)}
-                      className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors"
-                      disabled={quantity >= currentStock}
-                    >
-                      <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                    </button>
-                  </div>
-                  <span className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
-                    {currentStock} available
-                  </span>
-                </div>
-              </div>
+              {(() => {
+  const cartKey = product.hasVariants && selectedVariant && selectedSize
+    ? `${product._id}-${selectedVariant.colorName}-${formatSize(selectedSize.size)}`
+    : `${product._id}-default-default`;
+  
+  const itemInCart = cartItems[cartKey];
+  
+  return itemInCart ? (
+    <>
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold mb-3">Quantity in Cart</h3>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center border border-gray-300 rounded-lg">
+            <button
+              onClick={() => handleUpdateQuantity(cartKey, -1)}
+              className="p-2 hover:bg-gray-100 rounded-l-lg transition-colors"
+            >
+              <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+            <span className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center font-semibold">
+              {itemInCart.quantity}
+            </span>
+            <button
+              onClick={() => handleUpdateQuantity(cartKey, 1)}
+              className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors"
+            >
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
 
-              {bulkPricing.length > 0 && (
-                <div className="p-3 sm:p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <h4 className="text-sm sm:text-base font-semibold -800 dark:text-gray-100 mb-2">Bulk Pricing</h4>
-                  <div className="space-y-1.5 sm:space-y-2">
-                    {bulkPricing.map((tier, index) => (
-                      <div key={index} className="flex justify-between text-xs sm:text-sm">
-                        <span>{tier.quantity}+ pcs</span>
-                        <span className="font-semibold">₹  {tier.wholesalePrice.toFixed(2)} each</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+      <button 
+        onClick={() => handleRemoveFromCart(cartKey)}
+        className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+      >
+        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+        Remove from Cart
+      </button>
+    </>
+  ) : (
+    <>
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold mb-3">Quantity</h3>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center border border-gray-300 rounded-lg">
+            <button
+              onClick={() => quantity > 1 && setQuantity(quantity - 1)}
+              className="p-2 hover:bg-gray-100 rounded-l-lg transition-colors"
+              disabled={quantity <= 1}
+            >
+              <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+            <input
+              type="text"
+              value={quantity}
+              onChange={(e) => handleQuantityChange(e.target.value)}
+              className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center border-0 focus:outline-none"
+            />
+            <button
+              onClick={() => currentStock > 0 && quantity < currentStock && setQuantity(quantity + 1)}
+              className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors"
+              disabled={quantity >= currentStock}
+            >
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+          </div>
+        </div>
+      </div>
 
-              <button 
-                onClick={handleAddToCartFromModal}
-                disabled={currentStock === 0 || (product.hasVariants && (!selectedVariant || !selectedSize))}
-                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
-              >
-                <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                {currentStock === 0 ? "Out of Stock" : `Add ${quantity} to Cart • ₹  ${totalPrice.toFixed(2)}`}
-              </button>
+      <button 
+        onClick={handleAddToCartFromModal}
+        disabled={currentStock === 0 || (product.hasVariants && (!selectedVariant || !selectedSize))}
+        className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+      >
+        <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+        {currentStock === 0 ? "Out of Stock" : `Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}
+      </button>
+    </>
+  );
+})()}
 
               {product.productDetails && product.productDetails.length > 0 && (
                 <div className="border-t pt-4">
@@ -2740,7 +2894,7 @@ const CartModal = () => {
                   <span className="font-bold text-xl">₹{localCartTotal.toFixed(2)}</span>
                 </div>
                 <button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-white py-3 rounded-lg font-medium transition-colors duration-200"
+                  className="w-full bg-blue-600 hover:bg-blue-700 text-blue-600 py-3 rounded-lg font-medium transition-colors duration-200"
                   disabled={cartLoading}
                   onClick={handleCartCheckout}
                 >
@@ -3215,7 +3369,7 @@ if (justArrivedProductsList.length > 0) {
               setSelectedCategory(null);
               setSelectedCategoryPath([]);
             }}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+            className="px-6 py-3 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
           >
             Browse All Products
           </button>
@@ -3434,7 +3588,7 @@ if (justArrivedProductsList.length > 0) {
       <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-b-2xl sticky bottom-0">
         <button
           onClick={closePolicyModal}
-          className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-black rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2"
         >
           <X className="w-5 h-5" />
           Close
