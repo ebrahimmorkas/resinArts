@@ -162,10 +162,13 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3">
               <button
-                onClick={() => {
+                onClick={async () => {
                   onStatusChange(order._id, "Accepted");
                   setOrderId(order._id);
-                  setShowShippingPriceModal(true);
+                  if(!order.shipping_price) {
+                    setShowShippingPriceModal(true);
+                  } 
+                  
                 }}
                 className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                 disabled={
@@ -819,70 +822,70 @@ export default function OrdersManagement() {
     }
   }, [orders, products]);
 
-  useEffect(() => {
-  const socket = io('http://localhost:3000', {
-    withCredentials: true,
-    auth: { token: localStorage.getItem('token') },
-    reconnection: true,
-    reconnectionAttempts: 5,
-    reconnectionDelay: 1000,
-  });
+ useEffect(() => {
+    const socket = io('http://localhost:3000', {
+      withCredentials: true,
+      auth: { token: localStorage.getItem('token') },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
 
-  socket.on('connect', () => {
-    console.log('Connected to Socket.IO server:', socket.id);
-    socket.emit('join', 'admin_room');
-  });
+    socket.on('connect', () => {
+      console.log('Connected to Socket.IO server:', socket.id);
+      socket.emit('join', 'admin_room');
+    });
 
-  socket.on('newOrder', (newOrder) => {
-    console.log('New order received:', newOrder);
-    // Validate newOrder
-    if (newOrder && newOrder._id && newOrder.orderedProducts && Array.isArray(newOrder.orderedProducts)) {
-      setOrders((prevOrders) => {
-        const updatedOrders = [newOrder, ...prevOrders];
-        // Sort orders by createdAt in descending order
-        return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      });
-    } else {
-      console.error('Invalid new order received:', newOrder);
-    }
-  });
-
-  socket.on('shippingPriceUpdated', (updatedOrder) => {
-    console.log('Shipping price updated:', updatedOrder);
-    // Validate updatedOrder
-    if (updatedOrder && updatedOrder._id && updatedOrder.total_price && updatedOrder.shipping_price) {
-      setOrders((prevOrders) => {
-        const updatedOrders = prevOrders.map((order) =>
-          order._id === updatedOrder._id
-            ? { ...order, shipping_price: updatedOrder.shipping_price, total_price: updatedOrder.total_price, status: updatedOrder.status }
-            : order
-        );
-        // Maintain sort by createdAt
-        return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-      });
-      // Update selectedOrder if open in modal
-      if (selectedOrder && selectedOrder._id === updatedOrder._id) {
-        setSelectedOrder((prev) => ({
-          ...prev,
-          shipping_price: updatedOrder.shipping_price,
-          total_price: updatedOrder.total_price,
-          status: updatedOrder.status,
-        }));
+    socket.on('newOrder', (newOrder) => {
+      console.log('New order received:', newOrder);
+      if (newOrder && newOrder._id && newOrder.orderedProducts && Array.isArray(newOrder.orderedProducts)) {
+        setOrders((prevOrders) => {
+          // Prevent duplicate orders
+          if (prevOrders.some((order) => order._id === newOrder._id)) {
+            console.log('Duplicate order ignored:', newOrder._id);
+            return prevOrders;
+          }
+          const updatedOrders = [newOrder, ...prevOrders];
+          return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        });
+      } else {
+        console.error('Invalid new order received:', newOrder);
       }
-    } else {
-      console.error('Invalid shipping price update received:', updatedOrder);
-    }
-  });
+    });
 
-  socket.on('connect_error', (error) => {
-    console.error('Socket.IO connection error:', error);
-  });
+    socket.on('shippingPriceUpdated', (updatedOrder) => {
+      console.log('Shipping price updated:', updatedOrder);
+      if (updatedOrder && updatedOrder._id && updatedOrder.total_price && updatedOrder.shipping_price) {
+        setOrders((prevOrders) => {
+          const updatedOrders = prevOrders.map((order) =>
+            order._id === updatedOrder._id
+              ? { ...order, shipping_price: updatedOrder.shipping_price, total_price: updatedOrder.total_price, status: updatedOrder.status }
+              : order
+          );
+          return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        });
+        if (selectedOrder && selectedOrder._id === updatedOrder._id) {
+          setSelectedOrder((prev) => ({
+            ...prev,
+            shipping_price: updatedOrder.shipping_price,
+            total_price: updatedOrder.total_price,
+            status: updatedOrder.status,
+          }));
+        }
+      } else {
+        console.error('Invalid shipping price update received:', updatedOrder);
+      }
+    });
 
-  return () => {
-    socket.disconnect();
-    console.log('Disconnected from Socket.IO server');
-  };
-}, [selectedOrder]);
+    socket.on('connect_error', (error) => {
+      console.error('Socket.IO connection error:', error);
+    });
+
+    return () => {
+      socket.disconnect();
+      console.log('Disconnected from Socket.IO server');
+    };
+  }, [selectedOrder]);
 
   // Enhanced filter orders based on search term, status, and date
   const filteredOrders = useMemo(() => {
@@ -1359,6 +1362,12 @@ export default function OrdersManagement() {
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Email
                   </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+  Items Total
+</th>
+<th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+  Shipping Price
+</th>
                   <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Total Price
                   </th>
@@ -1399,6 +1408,12 @@ export default function OrdersManagement() {
                         {order.email}
                       </div>
                     </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+  <span className="font-medium">₹{order.price.toFixed(2)}</span>
+</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+  <span className="font-medium">₹{order.shipping_price.toFixed(2)}</span>
+</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
   <span className="font-medium">
     {order.status === "Pending" ? "Pending" : `₹${order.total_price}`}

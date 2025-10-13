@@ -9,6 +9,61 @@ const { removeAbandonedCartByUserId } = require('./abandonedCartController');
 const Notification = require('../models/Notification');
 const AbandonedCart = require('../models/AbandonedCart');
 
+const calculateShippingPrice = async (user, itemsTotal, companySettings) => {
+  try {
+    // Check if free shipping is enabled and threshold is met
+    if (companySettings.shippingPriceSettings.freeShipping && 
+        itemsTotal >= companySettings.shippingPriceSettings.freeShippingAboveAmount) {
+      return { shippingPrice: 0, isPending: false };
+    }
+
+    // Check if manual pricing is enabled
+    if (companySettings.shippingPriceSettings.isManual) {
+      return { shippingPrice: null, isPending: true };
+    }
+
+    // Check if same for all products
+    if (companySettings.shippingPriceSettings.sameForAll) {
+      return { 
+        shippingPrice: companySettings.shippingPriceSettings.commonShippingPrice, 
+        isPending: false 
+      };
+    }
+
+    // Location-based shipping
+    const shippingType = companySettings.shippingPriceSettings.shippingType;
+    let userLocation = null;
+
+    if (shippingType === 'state') {
+      userLocation = user.state;
+    } else if (shippingType === 'city') {
+      userLocation = user.city;
+    } else if (shippingType === 'zipcode') {
+      userLocation = user.zip_code;
+    }
+
+    // Validate user location is not empty
+    if (!userLocation || userLocation.trim() === '') {
+      return { shippingPrice: null, isPending: true };
+    }
+
+    // Find matching shipping price in the list
+    const shippingEntry = companySettings.shippingPriceSettings.shippingPrices.find(
+      entry => entry.location.toLowerCase().trim() === userLocation.toLowerCase().trim()
+    );
+
+    if (shippingEntry) {
+      return { shippingPrice: shippingEntry.price, isPending: false };
+    } else {
+      // Location not found in list
+      return { shippingPrice: null, isPending: true };
+    }
+  } catch (error) {
+    console.error('Error calculating shipping price:', error);
+    return { shippingPrice: null, isPending: true };
+  }
+};
+
 // In-memory cache to track notified low stock/out-of-stock items
 const notifiedItems = new Map(); // Key: productId_variantId_sizeId, Value: { lowStockNotified, outOfStockNotified }
 
@@ -245,10 +300,14 @@ const placeOrder = async (req, res) => {
     }
 
     if (ordersToAdd.length > 0) {
-      const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.total, 0);
+       const totalPrice = ordersToAdd.reduce((sum, item) => sum + item.total, 0);
       const finalPrice = Math.max(0, totalPrice - totalFreeCashApplied);
 
-      const orderData = {
+      // Calculate shipping price
+      const companySettings = await CompanySettings.getSingleton();
+      const { shippingPrice, isPending } = await calculateShippingPrice(user, finalPrice, companySettings);
+
+       const orderData = {
         user_id: req.user.id,
         user_name: `${user.first_name} ${user.middle_name || ''} ${user.last_name}`.trim(),
         email: user.email,
@@ -256,8 +315,8 @@ const placeOrder = async (req, res) => {
         whatsapp_number: user.whatsapp_number,
         orderedProducts: ordersToAdd,
         price: finalPrice,
-        total_price: finalPrice, // Ensure total_price is set
-        shipping_price: 0, // Initialize shipping_price
+        shipping_price: shippingPrice || 0,
+        total_price: isPending ? "Pending" : (finalPrice + (shippingPrice || 0)),
         status: 'Pending',
         payment_status: 'Payment Pending',
         createdAt: new Date(),
@@ -295,7 +354,7 @@ const placeOrder = async (req, res) => {
         console.error('Error removing abandoned cart:', error);
       }
 
-      // Create and save notification
+     // Create and save notification
       const productList = ordersToAdd
         .map((item, index) => {
           let details = `${index + 1}. ${item.product_name} (Qty: ${item.quantity})`;
@@ -309,11 +368,26 @@ const placeOrder = async (req, res) => {
         message: `Order #${newOrder._id} placed by ${orderData.user_name}:\n${productList}`,
         orderId: newOrder._id,
         recipient: 'admin',
+        time: new Date(),
+        unread: true,
+        type: 'order',
       });
       await notification.save();
 
-      // Emit correct order data via Socket.IO
+      // Emit notification event for Navbar.jsx
       const io = req.app.get('io');
+      console.log('Emitting newOrderNotification event for order:', newOrder._id);
+      io.to('admin_room').emit('newOrderNotification', {
+        id: notification._id,
+        title: notification.title,
+        message: notification.message,
+        time: notification.time.toISOString(),
+        unread: notification.unread,
+        orderId: notification.orderId,
+        type: notification.type,
+      });
+
+      // Emit order event for Orders.jsx
       console.log('Emitting newOrder event for order:', newOrder._id);
       io.to('admin_room').emit('newOrder', {
         _id: newOrder._id,
@@ -323,12 +397,14 @@ const placeOrder = async (req, res) => {
         phone_number: newOrder.phone_number,
         whatsapp_number: newOrder.whatsapp_number,
         orderedProducts: newOrder.orderedProducts,
-        price: newOrder.price,
-        total_price: newOrder.total_price,
-        shipping_price: newOrder.shipping_price,
         status: newOrder.status,
+        price: newOrder.price,
+        shipping_price: newOrder.shipping_price,
+        total_price: newOrder.total_price,
         payment_status: newOrder.payment_status,
-        createdAt: newOrder.createdAt,
+        cash_applied: newOrder.cash_applied,
+        createdAt: newOrder.createdAt.toISOString(),
+        updatedAt: newOrder.updatedAt.toISOString(),
       });
 
       // Send email notification to admin
@@ -456,18 +532,32 @@ const shippingPriceUpdate = async (req, res) => {
     console.log('Received shippingPriceUpdate request:', { shippingPriceValue, orderId, email, isEdit });
 
     // Validate inputs
-    if (!orderId || shippingPriceValue === undefined || isNaN(shippingPriceValue) || parseFloat(shippingPriceValue) <= 0) {
+    if (!orderId || shippingPriceValue === undefined || isNaN(shippingPriceValue) || parseFloat(shippingPriceValue) < 0) {
       console.error('Validation failed:', { shippingPriceValue, orderId, email });
-      return res.status(400).json({ message: 'Order ID and valid positive shipping price are required' });
+      return res.status(400).json({ message: 'Order ID and valid shipping price (>= 0) are required' });
+    }
+
+    // Validate email is provided
+    if (!email || email.trim() === '') {
+      console.error('Validation failed: Email is required');
+      return res.status(400).json({ message: 'Email is required' });
     }
 
     const order = await Order.findById(orderId);
     if (!order) {
+      console.error('Order not found for ID:', orderId);
       return res.status(400).json({ message: 'Order not found' });
+    }
+
+    // Validate email matches order email for security
+    if (order.email !== email.trim()) {
+      console.error('Email mismatch for order:', { orderId, providedEmail: email, orderEmail: order.email });
+      return res.status(403).json({ message: 'Unauthorized: Email does not match order' });
     }
 
     // For editing, ensure order status is Accepted
     if (isEdit && order.status !== 'Accepted') {
+      console.error('Cannot edit shipping price for non-Accepted order:', { orderId, currentStatus: order.status });
       return res.status(400).json({ message: 'Shipping price can only be edited for Accepted orders' });
     }
 
@@ -557,16 +647,16 @@ const shippingPriceUpdate = async (req, res) => {
       console.error('Socket.IO not initialized');
     }
 
-    // Send email notification
-try {
-  const companySettings = await CompanySettings.findOne();
-  
-  let emailSubject, emailText;
-  
-  if (isEdit) {
-  // Shipping price update email
-  emailSubject = `New total price is ₹${parseFloat(updatedOrder.total_price || 0).toFixed(2)}, Shipping Cost Updated - Order #${orderId}`;
-  emailText = `Dear ${order.user_name},
+    // Send email notification (your existing email logic remains unchanged)
+    try {
+      const companySettings = await CompanySettings.findOne();
+      
+      let emailSubject, emailText;
+      
+      if (isEdit) {
+        // Shipping price update email
+        emailSubject = `New total price is ₹${parseFloat(updatedOrder.total_price || 0).toFixed(2)}, Shipping Cost Updated - Order #${orderId}`;
+        emailText = `Dear ${order.user_name},
 
 We have updated the shipping cost for your order #${orderId}.
 
@@ -650,23 +740,23 @@ The Customer Service Team
 ${companySettings?.companyName || 'Mould Market'}
 ${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
 ${companySettings?.adminEmail || ''}`;
-} else {
-  // Order acceptance email - Payment required
-  const orderDetailsText = order.orderedProducts
-    .map((item, index) => {
-      let itemDetails = `${index + 1}. ${item.product_name}`;
-      if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
-      if (item.size) itemDetails += ` - Size: ${item.size}`;
-      itemDetails += `\n   Quantity: ${item.quantity}`;
-      itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
-      itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
-      if (parseFloat(item.cash_applied || 0) > 0) itemDetails += `\n   Free Cash Applied: ₹${parseFloat(item.cash_applied || 0).toFixed(2)}`;
-      return itemDetails;
-    })
-    .join('\n\n');
+      } else {
+        // Order acceptance email - Payment required (your existing email template)
+        const orderDetailsText = order.orderedProducts
+          .map((item, index) => {
+            let itemDetails = `${index + 1}. ${item.product_name}`;
+            if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+            if (item.size) itemDetails += ` - Size: ${item.size}`;
+            itemDetails += `\n   Quantity: ${item.quantity}`;
+            itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
+            itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
+            if (parseFloat(item.cash_applied || 0) > 0) itemDetails += `\n   Free Cash Applied: ₹${parseFloat(item.cash_applied || 0).toFixed(2)}`;
+            return itemDetails;
+          })
+          .join('\n\n');
 
-  emailSubject = `Payment Required - Order #${orderId} Accepted`;
-  emailText = `Dear ${order.user_name},
+        emailSubject = `Payment Required - Order #${orderId} Accepted`;
+        emailText = `Dear ${order.user_name},
 
 Thank you for your order with ${companySettings?.companyName || 'Mould Market'}!
 
@@ -746,14 +836,14 @@ ${companySettings?.companyName || 'Mould Market'}
 ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
 ${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
 ${companySettings?.adminEmail || ''}`;
-}
+      }
 
-  await sendEmail(email, emailSubject, emailText);
-  console.log(`${isEdit ? 'Shipping price update' : 'Order acceptance'} email sent to:`, email);
-} catch (emailError) {
-  console.error('Error sending email:', emailError.message);
-  // Don't fail the request if email fails
-}
+      await sendEmail(email, emailSubject, emailText);
+      console.log(`${isEdit ? 'Shipping price update' : 'Order acceptance'} email sent to:`, email);
+    } catch (emailError) {
+      console.error('Error sending email:', emailError.message);
+      // Don't fail the request if email fails
+    }
 
     return res.status(200).json({
       message: isEdit ? 'Shipping price updated successfully' : 'Order accepted and shipping price added successfully',
@@ -1067,6 +1157,11 @@ const isFreeCashEligible = (product, cartData, freeCash) => {
     return true;
 };
 
+const sendAcceptEmailWhenShippingPriceAddedAutomatically = async(orderData) => {
+  console.log("Request received");
+  console.log(orderData);
+}
+
 module.exports = {
     placeOrder,
     fetchOrders,
@@ -1074,4 +1169,5 @@ module.exports = {
     handleStatusChange,
     editOrder,
     isFreeCashEligible,
+    sendAcceptEmailWhenShippingPriceAddedAutomatically
 };

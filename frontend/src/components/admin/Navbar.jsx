@@ -30,21 +30,24 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
       console.log('Socket.IO connected successfully');
     });
 
-    socket.on('newOrder', (notification) => {
-      console.log('Received newOrder event:', notification);
-      setNotifications((prev) => [
-        {
-          id: notification.id,
-          title: notification.title,
-          message: notification.message,
-          time: new Date(notification.time).toLocaleTimeString(),
-          unread: notification.unread,
-          orderId: notification.orderId,
-          productId: notification.productId,
-          type: notification.type,
-        },
-        ...prev,
-      ]);
+    socket.on('newOrderNotification', (notification) => {
+      console.log('Received newOrderNotification event:', notification);
+      if (notification && notification.id && notification.time) {
+        setNotifications((prev) => [
+          {
+            id: notification.id,
+            title: notification.title,
+            message: notification.message,
+            time: new Date(notification.time).toLocaleTimeString(),
+            unread: notification.unread,
+            orderId: notification.orderId,
+            type: notification.type,
+          },
+          ...prev,
+        ]);
+      } else {
+        console.error('Invalid notification received:', notification);
+      }
     });
 
     socket.on('abandonedCartNotification', (notification) => {
