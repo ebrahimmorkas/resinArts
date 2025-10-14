@@ -17,6 +17,10 @@ import { DiscountContext } from "../../../Context/DiscountContext";
 import { BannerContext } from "../../../Context/BannerContext";
 import { AnnouncementContext } from "../../../Context/AnnouncementContext"
 import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
+import { ToastContainer, toast } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
+import ConfirmationModal from "../../components/client/Home/ConfirmationModal";
+
 
 export default function Home() {
   const {
@@ -45,38 +49,50 @@ export default function Home() {
 
 const handleCartCheckout = async () => {
   try {
-    // Check if user is logged in
     if (!user?.id) {
-      // User is not logged in - redirect to login
-      // Save current cart state so it can be restored after login
       localStorage.setItem('redirectAfterLogin', '/');
       localStorage.setItem('checkoutIntent', 'true');
       navigate('/auth/login');
       return;
     }
 
-    // User is logged in - proceed with checkout
-    const res = await axios.post('http://localhost:3000/api/order/place-order', cartItems, {
-      withCredentials: true,
-    });
-    
-    // console.log("Checkout response:", res.data);
+    // Send cart data directly without transformation
+    const res = await axios.post(
+      'http://localhost:3000/api/order/place-order', 
+      cartItems, 
+      {
+        withCredentials: true,
+        timeout: 10000, // 10 second timeout
+      }
+    );
     
     if (res.status === 201) {
-      await clearCart();
-      clearFreeCashCache();
-      await checkFreeCashEligibility();
+      // Clear cart and update states in parallel
+      await Promise.all([
+        clearCart(),
+        clearFreeCashCache(),
+        checkFreeCashEligibility(),
+      ]);
+      
       setIsCartOpen(false);
       
-      // Show success message
-      alert('Order placed successfully!');
-      
-      // Optionally redirect to orders page
-      navigate(`/orders/${user.id}`);
+      const { toast } = await import('react-toastify');
+      toast.success('Order placed successfully!', {
+        position: "top-right",
+        autoClose: 3000,
+        hideProgressBar: false,
+        closeOnClick: true,
+        pauseOnHover: true,
+        draggable: true,
+      });
     }
   } catch (error) {
     console.error("Checkout error:", error);
-    alert('Failed to place order. Please try again.');
+    const { toast } = await import('react-toastify');
+    toast.error(error.response?.data?.message || 'Failed to place order. Please try again.', {
+      position: "top-right",
+      autoClose: 3000,
+    });
   }
 };
 
@@ -102,6 +118,8 @@ const handleCartCheckout = async () => {
   const [policyModal, setPolicyModal] = useState({ isOpen: false, type: '', content: '' })
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [recentSearches, setRecentSearches] = useState([])
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [showClearCartModal, setShowClearCartModal] = useState(false);
   
   // Scroll to top functionality
 useEffect(() => {
@@ -731,35 +749,49 @@ const handleLogout = async () => {
   }
 
   const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1) => {
-    const product = products.find((p) => p._id === productId)
-    if (!product) return
+  const scrollY = window.scrollY;
+  
+  const product = products.find((p) => p._id === productId);
+  if (!product) return;
 
-    const variant = product.variants?.find((v) => v.colorName === colorName)
-    const sizeDetail = variant?.moreDetails?.find((md) => formatSize(md.size) === sizeString)
+  const variant = product.variants?.find((v) => v.colorName === colorName);
+  const sizeDetail = variant?.moreDetails?.find((md) => formatSize(md.size) === sizeString);
 
-    const originalPrice = getOriginalPrice(product, variant, sizeDetail);
-    const displayPrice = getDisplayPrice(product, variant, sizeDetail);
+  const originalPrice = getOriginalPrice(product, variant, sizeDetail);
+  const displayPrice = getDisplayPrice(product, variant, sizeDetail);
 
-    const productData = {
-      imageUrl: variant?.variantImage || product.image || "/placeholder.svg",
-      productName: product.name,
-      variantId: variant?._id || "",
-      detailsId: sizeDetail?._id || "",
-      sizeId: sizeDetail?.size?._id || "",
-      price: originalPrice,
-      discountedPrice: displayPrice < originalPrice ? displayPrice : null,
-    }
+  const productData = {
+    imageUrl: variant?.variantImage || product.image || "/placeholder.svg",
+    productName: product.name,
+    variantId: variant?._id || "",
+    detailsId: sizeDetail?._id || "",
+    sizeId: sizeDetail?.size?._id || "",
+    price: originalPrice,
+    discountedPrice: displayPrice < originalPrice ? displayPrice : null,
+  };
 
-    await addToCart(productId, colorName, sizeString, quantity, productData)
-  }
+  await addToCart(productId, colorName, sizeString, quantity, productData);
+  
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollY);
+  });
+};
 
   const handleUpdateQuantity = async (cartKey, change) => {
-    await updateQuantity(cartKey, change)
-  }
+  const scrollY = window.scrollY;
+  await updateQuantity(cartKey, change);
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollY);
+  });
+};
 
   const handleRemoveFromCart = async (cartKey) => {
-    await removeFromCart(cartKey)
-  }
+  const scrollY = window.scrollY;
+  await removeFromCart(cartKey);
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollY);
+  });
+};
 
 const handleCategoryClick = (category) => {
   if (selectedCategory === category.categoryName) {
@@ -2686,12 +2718,13 @@ const ProductDetailsModal = ({ product, onClose }) => {
 const CartModal = () => {
   const { products } = useContext(ProductContext);
   const { categories } = useContext(CategoryContext);
+  const [isProcessing, setIsProcessing] = useState(false);
+  
   const totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => sum + (item.cashApplied || 0), 0);
   const cartTotal = getCartTotal();
   const validAboveAmount = freeCash?.valid_above_amount || 50;
   const isAllProducts = freeCash?.is_cash_applied_on__all_products || false;
   
-  // Fetch category and subcategory names using their IDs
   const category = freeCash?.category ? categories.find(cat => cat._id.toString() === freeCash.category.toString()) : null;
   const subCategory = freeCash?.sub_category ? categories.find(cat => cat._id.toString() === freeCash.sub_category.toString()) : null;
   const categoryName = category?.categoryName || null;
@@ -2705,13 +2738,11 @@ const CartModal = () => {
       }).format(new Date(freeCash.end_date))
     : "No expiry";
 
-  // Check if cart has at least one eligible product for category restrictions
   const hasEligibleProduct = Object.values(cartItems).some((item) => {
     if (isAllProducts) return true;
     const product = products.find((p) => p._id === item.productId);
     if (!product) return false;
 
-    // Compare category IDs
     const isMainCategoryMatch = category && product.mainCategory && 
       product.mainCategory.toString() === freeCash.category.toString();
     const isSubCategoryMatch = !subCategory || (product.subCategory && 
@@ -2722,7 +2753,6 @@ const CartModal = () => {
 
   const isFreeCashDisabled = cartTotal < validAboveAmount || (!isAllProducts && !hasEligibleProduct);
 
-  // Compute local cart total with bulk pricing
   let localCartTotal = 0;
   const cartEntries = Object.entries(cartItems);
   cartEntries.forEach(([cartKey, item]) => {
@@ -2741,78 +2771,127 @@ const CartModal = () => {
     localCartTotal += subtotal - (item.cashApplied || 0);
   });
 
+  const handleClearCart = async () => {
+  setShowClearCartModal(true);
+};
+
+const confirmClearCart = async () => {
+  await clearCart();
+  const { toast } = await import('react-toastify');
+  toast.success('Cart cleared successfully!', {
+    position: "top-right",
+    autoClose: 2000,
+  });
+};
+
   return (
     <div className={`fixed inset-0 z-50 ${isCartOpen ? "block" : "hidden"}`}>
       <div className="absolute inset-0 bg-black/50" onClick={() => setIsCartOpen(false)} />
-      <div className="absolute right-0 top-0 h-full w-full max-w-md bg-white dark:bg-gray-900 shadow-xl">
-        <div className="p-6 h-full overflow-y-auto">
-          <div className="flex justify-between items-center mb-6">
-            <h2 className="text-xl font-bold">Shopping Cart</h2>
-            <button onClick={() => setIsCartOpen(false)} className="p-2 hover:bg-gray-100 rounded-full">
-              <X className="h-5 w-5" />
+      <div className="absolute right-0 top-0 h-full w-full sm:max-w-md md:max-w-lg bg-white dark:bg-gray-900 shadow-2xl overflow-hidden flex flex-col">
+        {/* Header - Fixed */}
+        <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
+          <div className="flex justify-between items-center">
+            <div>
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Shopping Cart</h2>
+              <p className="text-sm text-gray-500 mt-1">
+                {getTotalItemsCount()} items • {getUniqueCartItemsCount()} products
+              </p>
+            </div>
+            <button 
+              onClick={() => setIsCartOpen(false)} 
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="h-5 w-5 sm:h-6 sm:w-6" />
             </button>
           </div>
+        </div>
+
+        {/* Scrollable Content */}
+        <div className="flex-1 overflow-y-auto p-4 sm:p-6">
           {cartLoading && (
-            <div className="text-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-500 mt-2">Loading cart...</p>
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="text-gray-500 mt-4">Loading cart...</p>
             </div>
           )}
+          
           {cartError && (
             <div className="text-center py-8">
               <p className="text-red-500">{cartError}</p>
             </div>
           )}
+          
           {Object.keys(cartItems).length === 0 && !cartLoading ? (
-            <p className="text-gray-500 text-center py-8">Your cart is empty</p>
+            <div className="text-center py-16">
+              <ShoppingCart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+              <p className="text-gray-500 text-lg">Your cart is empty</p>
+              <button
+                onClick={() => setIsCartOpen(false)}
+                className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+              >
+                Continue Shopping
+              </button>
+            </div>
           ) : (
             <div className="space-y-4">
+              {/* Free Cash Section */}
               {freeCash && (
-                <div className="mb-4 p-3 bg-blue-50 rounded-lg">
-                  <label className="flex items-center space-x-2">
+                <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+                  <label className="flex items-start space-x-3">
                     <input
                       type="checkbox"
                       checked={applyFreeCash}
-                      onChange={(e) => setApplyFreeCash(e.target.checked)}
-                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                      onChange={async (e) => {
+  if (isFreeCashDisabled && e.target.checked) {
+    const { toast } = await import('react-toastify');
+    toast.error(
+      cartTotal < validAboveAmount
+        ? `Minimum cart value ₹${validAboveAmount} required to apply free cash`
+        : 'No eligible products in cart for free cash',
+      {
+        position: "top-right",
+        autoClose: 3000,
+      }
+    );
+    return;
+  }
+  setApplyFreeCash(e.target.checked);
+}}
+                      className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                       disabled={isFreeCashDisabled}
                     />
-                    <span className="text-sm text-gray-700">
-                      Apply Free Cash (₹{freeCash.amount.toFixed(2)} available)
-                    </span>
-                  </label>
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                    Free cash is valid above ₹{validAboveAmount}
-                  </p>
-                  {!isAllProducts && (
-                    <>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                        Main Category: {categoryName || "Specific category"}
+                    <div className="flex-1">
+                      <span className="text-sm font-semibold text-gray-900">
+                        Apply Free Cash (₹{freeCash.amount.toFixed(2)} available)
+                      </span>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Valid above ₹{validAboveAmount}
                       </p>
-                      {subCategoryName && (
-                        <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                          Sub Category: {subCategoryName}
+                      {!isAllProducts && (
+                        <p className="text-xs text-gray-600 mt-1">
+                          {categoryName && `Category: ${categoryName}`}
+                          {subCategoryName && ` • ${subCategoryName}`}
                         </p>
                       )}
-                    </>
-                  )}
-                  {isAllProducts && (
-                    <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
-                      Eligible for: All products
-                    </p>
-                  )}
-                  <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">Expires on: {endDateFormatted}</p>
-                  {isFreeCashDisabled && (
-                    <p className="text-xs text-red-600 mt-1">
-                      {cartTotal < validAboveAmount
-                        ? `Cart total must be at least ₹${validAboveAmount} to apply free cash`
-                        : !hasEligibleProduct
-                        ? `No products in cart match the eligible ${categoryName ? `category "${categoryName}"` : "category"}${subCategoryName ? ` and subcategory "${subCategoryName}"` : ""}`
-                        : ""}
-                    </p>
-                  )}
+                      {isAllProducts && (
+                        <p className="text-xs text-gray-600 mt-1">Eligible for all products</p>
+                      )}
+                      <p className="text-xs text-gray-500 mt-1">Expires: {endDateFormatted}</p>
+                      {isFreeCashDisabled && (
+                        <p className="text-xs text-red-600 mt-2 font-medium">
+                          {cartTotal < validAboveAmount
+                            ? `Minimum cart value ₹${validAboveAmount} required`
+                            : !hasEligibleProduct
+                            ? `No eligible products in cart`
+                            : ""}
+                        </p>
+                      )}
+                    </div>
+                  </label>
                 </div>
               )}
+
+              {/* Cart Items */}
               {cartEntries.map(([cartKey, item]) => {
                 const product = products.find((p) => p._id === item.productId);
                 if (!product) return null;
@@ -2824,87 +2903,135 @@ const CartModal = () => {
                 const effectiveUnit = getEffectiveUnitPrice(item.quantity, bulkPricing, basePrice);
 
                 return (
-                  <div key={cartKey} className="flex items-center space-x-4 p-4 border rounded-lg">
-                    <img
-  src={getOptimizedImageUrl(item.imageUrl, { width: 100 }) || "/placeholder.svg"}
-  alt={item.productName}
-  className="w-15 h-15 rounded-lg object-cover"
-  loading="lazy"
-/>
-                    <div className="flex-1">
-                      <h3 className="font-medium text-sm">{item.productName}</h3>
-                      <p className="text-xs text-gray-500">
-                        {item.colorName && item.sizeString
-                          ? `${item.colorName}, ${item.sizeString}`
-                          : "Default variant"}
-                      </p>
-                      <div className="flex items-center gap-2">
-                        <span className={`font-bold ${effectiveUnit < basePrice ? "text-green-600" : "text-blue-600"}`}>
-                          ₹{effectiveUnit.toFixed(2)}
-                        </span>
-                        {effectiveUnit < basePrice && (
-                          <span className="text-sm text-gray-500 line-through">₹{basePrice.toFixed(2)}</span>
+                  <div key={cartKey} className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+                    <div className="flex gap-3 sm:gap-4">
+                      <img
+                        src={getOptimizedImageUrl(item.imageUrl, { width: 100 }) || "/placeholder.svg"}
+                        alt={item.productName}
+                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover flex-shrink-0"
+                        loading="lazy"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                          {item.productName}
+                        </h3>
+                        {(item.colorName || item.sizeString) && (
+                          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                            {item.colorName && item.sizeString
+                              ? `${item.colorName} • ${item.sizeString}`
+                              : item.colorName || item.sizeString}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2 mt-2">
+                          <span className={`text-base sm:text-lg font-bold ${effectiveUnit < basePrice ? "text-green-600" : "text-blue-600"}`}>
+                            ₹{effectiveUnit.toFixed(2)}
+                          </span>
+                          {effectiveUnit < basePrice && (
+                            <span className="text-xs sm:text-sm text-gray-500 line-through">
+                              ₹{basePrice.toFixed(2)}
+                            </span>
+                          )}
+                        </div>
+                        {item.cashApplied > 0 && (
+                          <p className="text-xs text-green-600 mt-1 font-medium">
+                            Free Cash: -₹{item.cashApplied.toFixed(2)}
+                          </p>
                         )}
                       </div>
-                      {item.cashApplied > 0 && (
-                        <p className="text-xs text-green-600">
-                          Free Cash Applied: ₹{item.cashApplied.toFixed(2)}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-center space-y-2">
-                      <div className="flex items-center space-x-2">
+                      <div className="flex flex-col items-end justify-between">
                         <button
-                          onClick={() => handleUpdateQuantity(cartKey, -1)}
-                          className="p-1 hover:bg-gray-100 rounded"
+                          onClick={() => handleRemoveFromCart(cartKey)}
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
                           disabled={cartLoading}
                         >
-                          <Minus className="h-4 w-4" />
+                          <Trash2 className="h-4 w-4" />
                         </button>
-                        <span className="font-medium">{item.quantity}</span>
-                        <button
-                          onClick={() => handleUpdateQuantity(cartKey, 1)}
-                          className="p-1 hover:bg-gray-100 rounded"
-                          disabled={cartLoading}
-                        >
-                          <Plus className="h-4 w-4" />
-                        </button>
+                        <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg p-1">
+                          <button
+                            onClick={() => handleUpdateQuantity(cartKey, -1)}
+                            className="p-1 hover:bg-white rounded transition-colors"
+                            disabled={cartLoading}
+                          >
+                            <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </button>
+                          <span className="font-semibold text-sm sm:text-base min-w-[24px] text-center">
+                            {item.quantity}
+                          </span>
+                          <button
+                            onClick={() => handleUpdateQuantity(cartKey, 1)}
+                            className="p-1 hover:bg-white rounded transition-colors"
+                            disabled={cartLoading}
+                          >
+                            <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </button>
+                        </div>
                       </div>
-                      <button
-                        onClick={() => handleRemoveFromCart(cartKey)}
-                        className="p-1 text-red-500 hover:bg-red-500 rounded transition-colors"
-                        title="Remove from cart"
-                        disabled={cartLoading}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                     </div>
                   </div>
                 );
               })}
-              <div className="border-t pt-4">
-                {totalFreeCashApplied > 0 && (
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-green-600">Total Free Cash Applied:</span>
-                    <span className="text-sm font-semibold text-green-600">₹{totalFreeCashApplied.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center mb-4">
-                  <span className="font-bold">Total:</span>
-                  <span className="font-bold text-xl">₹{localCartTotal.toFixed(2)}</span>
-                </div>
-                <button
-                  className="w-full bg-blue-600 hover:bg-blue-700 text-blue-600 py-3 rounded-lg font-medium transition-colors duration-200"
-                  disabled={cartLoading}
-                  onClick={handleCartCheckout}
-                >
-                  {cartLoading ? "Processing..." : "Checkout"}
-                </button>
-              </div>
             </div>
           )}
         </div>
+
+        {/* Footer - Fixed */}
+        {Object.keys(cartItems).length > 0 && !cartLoading && (
+          <div className="flex-shrink-0 border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 p-4 sm:p-6">
+            {totalFreeCashApplied > 0 && (
+              <div className="flex justify-between items-center mb-3 text-green-600">
+                <span className="text-sm font-medium">Free Cash Applied:</span>
+                <span className="text-sm font-bold">-₹{totalFreeCashApplied.toFixed(2)}</span>
+              </div>
+            )}
+            <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
+              <span className="text-lg font-bold text-gray-900">Total:</span>
+              <span className="text-2xl font-bold text-blue-600">₹{localCartTotal.toFixed(2)}</span>
+            </div>
+            <div className="space-y-2">
+              <button
+                className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-blue-600py-3 sm:py-4 rounded-xl font-semibold transition-colors duration-200 flex items-center justify-center gap-2 shadow-lg"
+                disabled={cartLoading || isProcessing}
+                onClick={async () => {
+                  setIsProcessing(true);
+                  await handleCartCheckout();
+                  setIsProcessing(false);
+                }}
+              >
+                {isProcessing ? (
+                  <>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <ShoppingCart className="w-5 h-5" />
+                    Checkout
+                  </>
+                )}
+              </button>
+              <button
+                onClick={handleClearCart}
+                disabled={cartLoading}
+                className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-red-600 py-2.5 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+              >
+                <Trash2 className="w-4 h-4" />
+                Clear Cart
+              </button>
+            </div>
+          </div>
+        )}
       </div>
+      {/* Add this before the last closing </div> of CartModal */}
+<ConfirmationModal
+  isOpen={showClearCartModal}
+  onClose={() => setShowClearCartModal(false)}
+  onConfirm={confirmClearCart}
+  title="Clear Cart?"
+  message="Are you sure you want to remove all items from your cart? This action cannot be undone."
+  confirmText="Clear Cart"
+  cancelText="Cancel"
+  type="danger"
+/>
     </div>
   );
 };
@@ -3608,6 +3735,7 @@ if (justArrivedProductsList.length > 0) {
     <ArrowUp className="w-6 h-6" />
   </button>
 )}
+<ToastContainer />
     </div>
   )
 }
