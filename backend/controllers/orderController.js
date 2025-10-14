@@ -17,18 +17,18 @@ const calculateShippingPrice = async (user, itemsTotal, companySettings) => {
       return { shippingPrice: 0, isPending: false };
     }
 
-    // Check if manual pricing is enabled
-    if (companySettings.shippingPriceSettings.isManual) {
-      // When isManual is true, sameForAll is irrelevant, require manual entry
-      return { shippingPrice: null, isPending: true };
-    }
-
-    // Check if same for all products (common shipping price) - ONLY when isManual: false
-    if (!companySettings.shippingPriceSettings.isManual && companySettings.shippingPriceSettings.sameForAll) {
+    // Check if same for all products (common shipping price) - this should be checked BEFORE isManual
+    if (companySettings.shippingPriceSettings.sameForAll && companySettings.shippingPriceSettings.commonShippingPrice !== undefined) {
       return { 
         shippingPrice: companySettings.shippingPriceSettings.commonShippingPrice, 
         isPending: false 
       };
+    }
+
+    // Check if manual pricing is enabled
+    if (companySettings.shippingPriceSettings.isManual) {
+      // When isManual is true and sameForAll is false, require manual entry
+      return { shippingPrice: null, isPending: true };
     }
 
     // Location-based shipping (when isManual: false and sameForAll: false)
