@@ -760,14 +760,21 @@ const handleLogout = async () => {
   const originalPrice = getOriginalPrice(product, variant, sizeDetail);
   const displayPrice = getDisplayPrice(product, variant, sizeDetail);
 
-  const productData = {
+  // Get bulk pricing and check for 1+ tier
+  const bulkPricing = getBulkPricing(product, variant, sizeDetail);
+  const bulkPrice1Plus = bulkPricing.find(tier => tier.quantity === 1);
+  
+  // Use 1+ bulk price if available, otherwise use display price
+  const effectivePrice = bulkPrice1Plus ? bulkPrice1Plus.wholesalePrice : displayPrice;
+
+const productData = {
     imageUrl: variant?.variantImage || product.image || "/placeholder.svg",
     productName: product.name,
     variantId: variant?._id || "",
     detailsId: sizeDetail?._id || "",
     sizeId: sizeDetail?.size?._id || "",
     price: originalPrice,
-    discountedPrice: displayPrice < originalPrice ? displayPrice : null,
+    discountedPrice: effectivePrice, // Use effective price which includes 1+ bulk pricing
   };
 
   await addToCart(productId, colorName, sizeString, quantity, productData);
@@ -2838,28 +2845,15 @@ const confirmClearCart = async () => {
               {freeCash && (
                 <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
                   <label className="flex items-start space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={applyFreeCash}
-                      onChange={async (e) => {
-  if (isFreeCashDisabled && e.target.checked) {
-    const { toast } = await import('react-toastify');
-    toast.error(
-      cartTotal < validAboveAmount
-        ? `Minimum cart value ₹${validAboveAmount} required to apply free cash`
-        : 'No eligible products in cart for free cash',
-      {
-        position: "top-right",
-        autoClose: 3000,
-      }
-    );
-    return;
-  }
-  setApplyFreeCash(e.target.checked);
-}}
-                      className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                      disabled={isFreeCashDisabled}
-                    />
+                   <input
+  type="checkbox"
+  checked={applyFreeCash}
+  onChange={(e) => {
+    setApplyFreeCash(e.target.checked);
+  }}
+  className="mt-1 rounded border-gray-300 text-blue-600 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={isFreeCashDisabled}
+/>
                     <div className="flex-1">
                       <span className="text-sm font-semibold text-gray-900">
                         Apply Free Cash (₹{freeCash.amount.toFixed(2)} available)
