@@ -6,6 +6,7 @@ import * as XLSX from 'xlsx';
 import { toast } from 'react-toastify';
 import { useNavigate } from 'react-router-dom';
 import { duplicateProducts } from "../../../../../utils/api";
+import { fetchCategories } from "../../../../../utils/api";
 
 export default function AdminProductsPage() {
   const { products, loading, error, setProducts, fetchProducts } = useContext(ProductContext);
@@ -43,6 +44,9 @@ const [statusModalData, setStatusModalData] = useState({ productId: null, isActi
 const [showBulkStatusModal, setShowBulkStatusModal] = useState(false);
 const [bulkStatusAction, setBulkStatusAction] = useState(null);
 const [showViewVariantsModal, setShowViewVariantsModal] = useState(false);
+const [allCategoriesTree, setAllCategoriesTree] = useState([]);
+const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
+const [categoryFilterPath, setCategoryFilterPath] = useState("");
   const navigate = useNavigate();
   
 
@@ -96,6 +100,84 @@ const [showViewVariantsModal, setShowViewVariantsModal] = useState(false);
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);
+
+  // Fetch categories on component mount
+useEffect(() => {
+  const getCategories = async () => {
+    try {
+      const categories = await fetchCategories();
+      setAllCategoriesTree(categories);
+    } catch (error) {
+      console.error("Failed to fetch categories:", error);
+      toast.error("Failed to fetch categories");
+    }
+  };
+  getCategories();
+}, []);
+
+// Update category path based on selections
+useEffect(() => {
+  if (selectedCategoryIds.length === 0) {
+    setCategoryFilterPath("");
+    return;
+  }
+  
+  const buildPath = (categoryId, tree) => {
+    for (const cat of tree) {
+      if (cat._id === categoryId) {
+        return cat.categoryName;
+      }
+      if (cat.subcategories && cat.subcategories.length > 0) {
+        const subPath = buildPath(categoryId, cat.subcategories);
+        if (subPath) {
+          return `${cat.categoryName} > ${subPath}`;
+        }
+      }
+    }
+    return null;
+  };
+  
+  const lastSelectedId = selectedCategoryIds[selectedCategoryIds.length - 1];
+  const path = buildPath(lastSelectedId, allCategoriesTree);
+  setCategoryFilterPath(path || "");
+}, [selectedCategoryIds, allCategoriesTree]);
+
+// Helper function to find category in tree
+const findCategoryInTree = (categoryId, categories) => {
+  for (const cat of categories) {
+    if (cat._id === categoryId) {
+      return cat;
+    }
+    if (cat.subcategories && cat.subcategories.length > 0) {
+      const found = findCategoryInTree(categoryId, cat.subcategories);
+      if (found) return found;
+    }
+  }
+  return null;
+};
+
+// Handle category selection
+const handleCategorySelect = (level, categoryId) => {
+  if (!categoryId) {
+    // If clearing, remove this level and all subsequent levels
+    setSelectedCategoryIds(selectedCategoryIds.slice(0, level));
+  } else {
+    // Update selection at this level
+    const newSelectedIds = [...selectedCategoryIds.slice(0, level), categoryId];
+    setSelectedCategoryIds(newSelectedIds);
+  }
+};
+
+// Handle category path click to navigate back
+const handleCategoryPathClick = (index) => {
+  setSelectedCategoryIds(selectedCategoryIds.slice(0, index + 1));
+};
+
+// Clear all category filters
+const clearCategoryFilter = () => {
+  setSelectedCategoryIds([]);
+  setCategoryFilterPath("");
+};
 
   // Helper functions
   const openViewVariantsModal = (product) => {
@@ -364,6 +446,21 @@ const handleDuplicateSelected = async () => {
       (item.category && item.category.toLowerCase().includes(searchTerm.toLowerCase()))
     );
 
+     if (selectedCategoryIds.length > 0) {
+    const lastSelectedId = selectedCategoryIds[selectedCategoryIds.length - 1];
+    filtered = filtered.filter(item => {
+      // Check if product's subCategory matches the selected category or any of its descendants
+      if (item.subCategory === lastSelectedId) {
+        return true;
+      }
+      // Check if the product's category path includes the selected category
+      if (item.categoryPath && categoryFilterPath) {
+        return item.categoryPath.includes(categoryFilterPath);
+      }
+      return false;
+    });
+  }
+
     if (dateFilter === 'today') {
       const today = new Date().toDateString();
       filtered = filtered.filter(item => new Date(item.createdAt).toDateString() === today);
@@ -421,7 +518,7 @@ const handleDuplicateSelected = async () => {
     }
 
     return filtered;
-  }, [products, searchTerm, dateFilter, customDate, customDateRange, priceSort, stockSort]);
+  }, [products, searchTerm, selectedCategoryIds, categoryFilterPath, dateFilter, customDate, customDateRange, priceSort, stockSort]);
 
   const totalPages = Math.ceil(filteredData.length / itemsPerPage);
   const startIndex = (currentPage - 1) * itemsPerPage;
@@ -2517,7 +2614,93 @@ const DeleteConfirmationModal = () => {
             </div>
 
             {showFilters && (
-              <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+  <div className="mt-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border">
+    {/* ADD THIS CATEGORY FILTER SECTION AT THE TOP */}
+    <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="text-sm font-semibold text-gray-700">Category Filter</h4>
+        {selectedCategoryIds.length > 0 && (
+          <button
+            onClick={clearCategoryFilter}
+            className="text-xs text-red-600 hover:text-red-800 font-medium"
+          >
+            Clear Filter
+          </button>
+        )}
+      </div>
+      
+      {/* Category Dropdowns */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
+        {/* Main Category Dropdown */}
+        <div className="space-y-2">
+          <label className="block text-sm font-medium text-gray-700">Main Category</label>
+          <select
+            value={selectedCategoryIds[0] || ""}
+            onChange={(e) => handleCategorySelect(0, e.target.value)}
+            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900 appearance-none cursor-pointer"
+          >
+            <option value="">All Categories</option>
+            {allCategoriesTree
+              .filter(cat => !cat.parent_category_id && !cat.parentCategoryId)
+              .map(cat => (
+                <option key={cat._id} value={cat._id}>
+                  {cat.categoryName}
+                </option>
+              ))}
+          </select>
+        </div>
+
+        {/* Sub Category Dropdown - Only show if main category is selected and has subcategories */}
+        {selectedCategoryIds.length > 0 && (() => {
+          const lastSelectedId = selectedCategoryIds[selectedCategoryIds.length - 1];
+          const lastCategory = findCategoryInTree(lastSelectedId, allCategoriesTree);
+          const hasSubcategories = lastCategory?.subcategories && lastCategory.subcategories.length > 0;
+          
+          if (hasSubcategories) {
+            return (
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-gray-700">Sub Category</label>
+                <select
+                  value={selectedCategoryIds[selectedCategoryIds.length] || ""}
+                  onChange={(e) => handleCategorySelect(selectedCategoryIds.length, e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 bg-white dark:bg-gray-900 appearance-none cursor-pointer"
+                >
+                  <option value="">Select sub category</option>
+                  {lastCategory.subcategories.map(subCat => (
+                    <option key={subCat._id} value={subCat._id}>
+                      {subCat.categoryName}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            );
+          }
+          return null;
+        })()}
+      </div>
+
+      {/* Category Path Display */}
+      {categoryFilterPath && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-xs text-blue-600 font-medium mb-2">Selected Category Path:</p>
+          <div className="flex flex-wrap items-center gap-2">
+            {categoryFilterPath.split(' > ').map((catName, index) => (
+              <div key={index} className="flex items-center">
+                <button
+                  onClick={() => handleCategoryPathClick(index)}
+                  className="text-sm text-blue-800 hover:text-blue-900 hover:underline font-medium"
+                >
+                  {catName}
+                </button>
+                {index < categoryFilterPath.split(' > ').length - 1 && (
+                  <span className="mx-2 text-blue-400">›</span>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Date Filter</label>
