@@ -216,6 +216,7 @@ const fileInputRef = useRef(null);
       const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
       if (res.status === 200) {
         const flatCats = res.data.categories;
+        const activeFlatCats = flatCats.filter(cat => cat.isActive === true);
         const buildTree = (flatCats) => {
           const tree = [];
           const map = {};
@@ -231,8 +232,8 @@ const fileInputRef = useRef(null);
           });
           return tree;
         };
-        setAllCategoriesTree(buildTree(flatCats));
-        setAllCategoriesFlat(flattenCategories(flatCats));
+        setAllCategoriesTree(buildTree(activeFlatCats));
+        setAllCategoriesFlat(flattenCategories(activeFlatCats));
         setLoadingCategories(false);
         setCategoriesFetchingError("");
       }
