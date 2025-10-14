@@ -39,7 +39,7 @@ function Discount() {
                 return;
             }
             setNoCategories(false);
-            const main_categories = categories.filter(mainCategory => mainCategory.parent_category_id === null);
+            const main_categories = categories.filter(mainCategory => mainCategory.parent_category_id === null && mainCategory.isActive);
             setMainCategories(main_categories);
         };
         console.log('Categories from context:', categories);
@@ -51,8 +51,8 @@ function Discount() {
     };
 
     const getSubCategories = (parentId) => {
-        return categories.filter(category => category.parent_category_id === parentId);
-    };
+    return categories.filter(category => category.parent_category_id === parentId && category.isActive);
+};
 
     const validateForm = () => {
         const newErrors = {};
