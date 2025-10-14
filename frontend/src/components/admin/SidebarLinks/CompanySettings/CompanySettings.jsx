@@ -196,15 +196,32 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
     }));
   };
 
-  const handleShippingTypeChange = (e) => {
+const handleShippingTypeChange = (e) => {
   const newType = e.target.value;
+  
+  // Map shippingType to the corresponding price field
+  const priceFieldMap = {
+    city: 'cityPrices',
+    state: 'statePrices',
+    zipcode: 'zipCodePrices',
+    country: 'shippingPrices' // fallback
+  };
+  
+  const priceField = priceFieldMap[newType];
+  const pricesForType = formData.shippingPriceSettings[priceField] || [];
+  
   setFormData(prev => ({
     ...prev,
     shippingPriceSettings: {
       ...prev.shippingPriceSettings,
-      shippingType: newType
+      shippingType: newType,
+      shippingPrices: pricesForType
     }
   }));
+  
+  setEditLocation('');
+  setEditPrice('');
+  setEditingIndex(null);
 };
 
 const handleShippingToggle = (e) => {
@@ -273,12 +290,24 @@ const handleAddShippingPrice = () => {
     return;
   }
 
+  const currentType = formData.shippingPriceSettings.shippingType;
+  const priceFieldMap = {
+    city: 'cityPrices',
+    state: 'statePrices',
+    zipcode: 'zipCodePrices',
+    country: 'shippingPrices'
+  };
+  const priceField = priceFieldMap[currentType];
+
   if (editingIndex !== null) {
     setFormData(prev => ({
       ...prev,
       shippingPriceSettings: {
         ...prev.shippingPriceSettings,
         shippingPrices: prev.shippingPriceSettings.shippingPrices.map((item, idx) =>
+          idx === editingIndex ? { location: editLocation, price: priceNum } : item
+        ),
+        [priceField]: prev.shippingPriceSettings[priceField].map((item, idx) =>
           idx === editingIndex ? { location: editLocation, price: priceNum } : item
         )
       }
@@ -294,14 +323,14 @@ const handleAddShippingPrice = () => {
       return;
     }
 
+    const newPrice = { location: editLocation, price: priceNum };
+    
     setFormData(prev => ({
       ...prev,
       shippingPriceSettings: {
         ...prev.shippingPriceSettings,
-        shippingPrices: [
-          ...prev.shippingPriceSettings.shippingPrices,
-          { location: editLocation, price: priceNum }
-        ]
+        shippingPrices: [...prev.shippingPriceSettings.shippingPrices, newPrice],
+        [priceField]: [...prev.shippingPriceSettings[priceField], newPrice]
       }
     }));
     toast.success('Shipping price added successfully!');
@@ -319,11 +348,21 @@ const handleEditShippingPrice = (index) => {
 };
 
 const handleDeleteShippingPrice = (index) => {
+  const currentType = formData.shippingPriceSettings.shippingType;
+  const priceFieldMap = {
+    city: 'cityPrices',
+    state: 'statePrices',
+    zipcode: 'zipCodePrices',
+    country: 'shippingPrices'
+  };
+  const priceField = priceFieldMap[currentType];
+
   setFormData(prev => ({
     ...prev,
     shippingPriceSettings: {
       ...prev.shippingPriceSettings,
-      shippingPrices: prev.shippingPriceSettings.shippingPrices.filter((_, i) => i !== index)
+      shippingPrices: prev.shippingPriceSettings.shippingPrices.filter((_, i) => i !== index),
+      [priceField]: prev.shippingPriceSettings[priceField].filter((_, i) => i !== index)
     }
   }));
   toast.success('Shipping price deleted successfully!');
@@ -353,8 +392,6 @@ const handleExcelUpload = async (e) => {
       return;
     }
 
-    const expectedHeader = formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + 
-                          formData.shippingPriceSettings.shippingType.slice(1);
     const headers = Object.keys(jsonData[0]);
     
     if (!headers[0] || !headers[1]) {
@@ -375,11 +412,21 @@ const handleExcelUpload = async (e) => {
       return;
     }
 
+    const currentType = formData.shippingPriceSettings.shippingType;
+    const priceFieldMap = {
+      city: 'cityPrices',
+      state: 'statePrices',
+      zipcode: 'zipCodePrices',
+      country: 'shippingPrices'
+    };
+    const priceField = priceFieldMap[currentType];
+
     setFormData(prev => ({
       ...prev,
       shippingPriceSettings: {
         ...prev.shippingPriceSettings,
-        shippingPrices: newPrices
+        shippingPrices: newPrices,
+        [priceField]: newPrices
       }
     }));
 

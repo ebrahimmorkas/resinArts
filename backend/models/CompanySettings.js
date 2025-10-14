@@ -98,45 +98,81 @@ const companySettingsSchema = new mongoose.Schema({
   },
   
   // Shipping Price Settings
-  shippingPriceSettings: {
-    isManual: {
-      type: Boolean,
-      default: true
-    },
-    sameForAll: {
-      type: Boolean,
-      default: false
-    },
-    commonShippingPrice: {
-      type: Number,
-      default: 0
-    },
-    shippingType: {
-      type: String,
-      enum: ['country', 'state', 'city', 'zipcode'],
-      default: 'city'
-    },
-    shippingPrices: [
-      {
-        location: {
-          type: String,
-          required: true
-        },
-        price: {
-          type: Number,
-          required: true
-        }
+shippingPriceSettings: {
+  isManual: {
+    type: Boolean,
+    default: true
+  },
+  sameForAll: {
+    type: Boolean,
+    default: false
+  },
+  commonShippingPrice: {
+    type: Number,
+    default: 0
+  },
+  shippingType: {
+    type: String,
+    enum: ['country', 'state', 'city', 'zipcode'],
+    default: 'city'
+  },
+  shippingPrices: [
+    {
+      location: {
+        type: String,
+        required: true
+      },
+      price: {
+        type: Number,
+        required: true
       }
-    ],
-    freeShipping: {
-      type: Boolean,
-      default: false
-    },
-    freeShippingAboveAmount: {
-      type: Number,
-      default: 0
     }
+  ],
+  cityPrices: [
+    {
+      location: {
+        type: String,
+        required: true
+      },
+      price: {
+        type: Number,
+        required: true
+      }
+    }
+  ],
+  statePrices: [
+    {
+      location: {
+        type: String,
+        required: true
+      },
+      price: {
+        type: Number,
+        required: true
+      }
+    }
+  ],
+  zipCodePrices: [
+    {
+      location: {
+        type: String,
+        required: true
+      },
+      price: {
+        type: Number,
+        required: true
+      }
+    }
+  ],
+  freeShipping: {
+    type: Boolean,
+    default: false
+  },
+  freeShippingAboveAmount: {
+    type: Number,
+    default: 0
   }
+}
 }, {
   timestamps: true
 });

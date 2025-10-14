@@ -88,7 +88,10 @@ exports.updateCompanySettings = async (req, res) => {
   commonShippingPrice: 0,
   shippingType: 'city',
   shippingPrices: [],
-    freeShipping: false,
+  cityPrices: [],
+  statePrices: [],
+  zipCodePrices: [],
+  freeShipping: false,
   freeShippingAboveAmount: 0
 };
    if (!settings) {
@@ -147,6 +150,9 @@ exports.updateCompanySettings = async (req, res) => {
     commonShippingPrice: parsedShipping.commonShippingPrice || 0,
     shippingType: parsedShipping.shippingType || 'city',
     shippingPrices: Array.isArray(parsedShipping.shippingPrices) ? parsedShipping.shippingPrices : [],
+    cityPrices: Array.isArray(parsedShipping.cityPrices) ? parsedShipping.cityPrices : [],
+    statePrices: Array.isArray(parsedShipping.statePrices) ? parsedShipping.statePrices : [],
+    zipCodePrices: Array.isArray(parsedShipping.zipCodePrices) ? parsedShipping.zipCodePrices : [],
     freeShipping: parsedShipping.freeShipping !== undefined ? parsedShipping.freeShipping : false,
     freeShippingAboveAmount: parsedShipping.freeShippingAboveAmount || 0
   };
