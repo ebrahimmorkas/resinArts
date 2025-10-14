@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../../../hooks/useAuth';
 import { Eye, EyeOff, Mail, Lock, AlertCircle, Loader } from 'lucide-react';
+import { CompanySettingsContext } from '../../../Context/CompanySettingsContext';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -13,6 +14,7 @@ const Login = () => {
   const [checkoutMessage, setCheckoutMessage] = useState('');
   const navigate = useNavigate();
   const {setUser} = useAuth();
+  const { companySettings, loadingSettings } = useContext(CompanySettingsContext);
 
   useEffect(() => {
     const checkoutIntent = localStorage.getItem('checkoutIntent');
@@ -83,7 +85,9 @@ const Login = () => {
             <div className="flex justify-center mb-4">
               <Lock className="w-8 h-8 text-blue-600" />
             </div>
-            <h1 className="text-3xl font-bold text-blue-600">Mouldmarket</h1>
+            <h1 className="text-3xl font-bold text-blue-600">
+    {loadingSettings ? 'Loading...' : companySettings?.companyName || 'Online Shop'}
+  </h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Sign in to your account</p>
           </div>
 
@@ -157,7 +161,7 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-blue-600 font-medium rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>

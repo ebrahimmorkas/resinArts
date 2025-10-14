@@ -1,13 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import axios from 'axios';
 import { Link } from 'react-router-dom';
 import { Mail, AlertCircle, CheckCircle, ArrowLeft, Loader, Lock } from 'lucide-react';
+import { CompanySettingsContext } from '../../../Context/CompanySettingsContext';
 
 const ForgotPassword = () => {
   const [email, setEmail] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState('');
   const [successMessage, setSuccessMessage] = useState('');
+  const { companySettings, loadingSettings } = useContext(CompanySettingsContext);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -41,7 +43,9 @@ const ForgotPassword = () => {
             <div className="flex justify-center mb-4">
               <Lock className="w-8 h-8 text-blue-600" />
             </div>
-            <h1 className="text-3xl font-bold text-blue-600">Mouldmarket</h1>
+            <h1 className="text-3xl font-bold text-blue-600">
+    {loadingSettings ? 'Loading...' : companySettings?.companyName || 'Online Shop'}
+  </h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Reset your password</p>
           </div>
 
@@ -90,7 +94,7 @@ const ForgotPassword = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-blue-600 font-medium rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>

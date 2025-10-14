@@ -1,8 +1,10 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext } from 'react';
 import { Eye, EyeOff, Mail, Phone, User, Lock, AlertCircle, Loader } from "lucide-react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../../../hooks/useAuth";
+import { CompanySettingsContext } from '../../../Context/CompanySettingsContext';
+
 
 const indianStatesAndCities = {
   "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool", "Rajahmundry", "Tirupati", "Kadapa", "Anantapur", "Eluru"],
@@ -100,6 +102,7 @@ const Signup = () => {
   const [manualLocationEntered, setManualLocationEntered] = useState(false);
   const navigate = useNavigate();
   const { setUser } = useAuth();
+  const { companySettings, loadingSettings } = useContext(CompanySettingsContext);
 
   const [formData, setFormData] = useState({
     first_name: "",
@@ -230,7 +233,9 @@ const Signup = () => {
           {/* Header */}
           <div className="text-center mb-8">
             <Lock className="w-8 h-8 text-blue-600 mx-auto mb-4" />
-            <h1 className="text-3xl font-bold text-blue-600 mb-2">Mouldmarket</h1>
+            <h1 className="text-3xl font-bold text-blue-600">
+    {loadingSettings ? 'Loading...' : companySettings?.companyName || 'Online Shop'}
+  </h1>
             <p className="text-gray-600 dark:text-gray-400 text-sm">Create your account and start shopping</p>
           </div>
 
@@ -429,7 +434,7 @@ const Signup = () => {
                 />
               </div>
 
-              <div className="flex items-center gap-4 mb-4">
+              {/* <div className="flex items-center gap-4 mb-4">
                 <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
                 <span className="text-gray-500 dark:text-gray-400 font-medium text-sm">OR</span>
                 <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
@@ -446,7 +451,7 @@ const Signup = () => {
                 }`}
               >
                 {isLocationFetching ? "Fetching Location..." : "Fetch Current Location"}
-              </button>
+              </button> */}
               {manualLocationEntered && (
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
                   Location fields filled manually. Clear them to use auto-fetch.
@@ -513,7 +518,7 @@ const Signup = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-blue-600 font-medium rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
               {isLoading ? (
                 <>
