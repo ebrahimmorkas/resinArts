@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import axios from 'axios';
 import { Link, useNavigate } from 'react-router-dom';
 import useAuth from '../../../hooks/useAuth';
-import { Eye, EyeOff, Mail, Lock, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Mail, Lock, AlertCircle, Loader } from 'lucide-react';
 
 const Login = () => {
   const [email, setEmail] = useState('');
@@ -14,7 +14,6 @@ const Login = () => {
   const navigate = useNavigate();
   const {setUser} = useAuth();
 
-  // Check if user was redirected from checkout
   useEffect(() => {
     const checkoutIntent = localStorage.getItem('checkoutIntent');
     if (checkoutIntent === 'true') {
@@ -37,37 +36,27 @@ const Login = () => {
           {withCredentials: true}
         )
         
-        // Setting the global state of the user
         setUser(res.data.user);
-        // Clear all old session caches on login
-  sessionStorage.clear();
+        sessionStorage.clear();
         setLoading(false);
         
-        // Check if there's a redirect intention or checkout intent
         const redirectAfterLogin = localStorage.getItem('redirectAfterLogin');
         const checkoutIntent = localStorage.getItem('checkoutIntent');
         
-        // Clear the stored intents
         localStorage.removeItem('redirectAfterLogin');
         localStorage.removeItem('checkoutIntent');
         
-        // Determine where to redirect
         if(res.data.user.role === 'admin') {
           navigate('/admin/panel');
         } else {
-          // User role
           if (checkoutIntent === 'true') {
-            // User was trying to checkout - redirect to home and open cart
             navigate('/');
-            // Trigger cart opening after navigation
             setTimeout(() => {
               window.dispatchEvent(new CustomEvent('openCartAfterLogin'));
             }, 500);
           } else if (redirectAfterLogin) {
-            // Redirect to the stored location
             navigate(redirectAfterLogin);
           } else {
-            // Default redirect to home
             navigate('/');
           }
         }
@@ -85,94 +74,81 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 p-4">
+    <div className="min-h-screen w-full flex items-center justify-center bg-white dark:bg-gray-950 p-4">
       <div className="w-full max-w-md">
         {/* Card Container */}
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 space-y-6">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-8 space-y-6">
           {/* Header */}
           <div className="text-center space-y-2">
-            <h1 className="text-3xl font-bold text-gray-900">Mouldmarket</h1>
-            <p className="text-gray-600 dark:text-gray-400">Welcome back! Please login to your account</p>
+            <div className="flex justify-center mb-4">
+              <Lock className="w-8 h-8 text-blue-600" />
+            </div>
+            <h1 className="text-3xl font-bold text-blue-600">Mouldmarket</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Sign in to your account</p>
           </div>
 
           {/* Checkout Message */}
           {checkoutMessage && (
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 flex items-start space-x-3">
-              <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-              <p className="text-sm text-blue-800">{checkoutMessage}</p>
+            <div className="bg-blue-50 dark:bg-blue-900/30 border border-blue-200 dark:border-blue-800 rounded-lg p-4 flex items-start space-x-3">
+              <AlertCircle className="w-5 h-5 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-blue-800 dark:text-blue-300">{checkoutMessage}</p>
             </div>
           )}
 
           {/* Form */}
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4">
             {/* Error Messages */}
             {errorMessages && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-800">{errorMessages}</p>
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800 dark:text-red-300">{errorMessages}</p>
               </div>
             )}
 
             {/* Email Field */}
             <div className="space-y-2">
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Email Address
               </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                <input
-                  type="email"
-                  id="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                  placeholder="your@email.com"
-                />
-              </div>
+              <input
+                type="email"
+                id="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400"
+                placeholder="name@example.com"
+              />
             </div>
 
             {/* Password Field */}
             <div className="space-y-2">
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300">
                 Password
               </label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                 <input
                   type={showPassword ? 'text' : 'password'}
                   id="password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
-                  className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400 pr-10"
                   placeholder="••••••••"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
                 >
                   {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                 </button>
               </div>
             </div>
 
-            {/* Remember & Forgot */}
-            <div className="flex items-center justify-between">
-              <div className="flex items-center">
-                <input
-                  type="checkbox"
-                  id="showPassword"
-                  checked={showPassword}
-                  onChange={(e) => setShowPassword(e.target.checked)}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                />
-                <label htmlFor="showPassword" className="ml-2 text-sm text-gray-700">
-                  Show Password
-                </label>
-              </div>
-              <Link to="/auth/forgot-password" className="text-sm font-medium text-indigo-600 hover:text-indigo-500 transition-colors">
+            {/* Forgot Password */}
+            <div className="flex justify-end">
+              <Link to="/auth/forgot-password" className="text-sm text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 transition-colors">
                 Forgot Password?
               </Link>
             </div>
@@ -181,17 +157,24 @@ const Login = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg focus:ring-4 focus:ring-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/30"
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isLoading ? 'Signing in...' : 'Sign In'}
+              {isLoading ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Signing in...
+                </>
+              ) : (
+                'Sign In'
+              )}
             </button>
           </form>
 
           {/* Sign Up Link */}
-          <div className="text-center pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-center pt-4 border-t border-gray-200 dark:border-gray-800">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Don't have an account?{' '}
-              <Link to="/auth/signup" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+              <Link to="/auth/signup" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors">
                 Create Account
               </Link>
             </p>

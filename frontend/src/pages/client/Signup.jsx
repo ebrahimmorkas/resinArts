@@ -1,10 +1,9 @@
 import { useState, useEffect } from "react";
-import { Eye, EyeOff, MapPin, Mail, Phone, User, Lock, AlertCircle } from "lucide-react";
+import { Eye, EyeOff, Mail, Phone, User, Lock, AlertCircle, Loader } from "lucide-react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 import useAuth from "../../../hooks/useAuth";
 
-// Indian States and Cities data
 const indianStatesAndCities = {
   "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Nellore", "Kurnool", "Rajahmundry", "Tirupati", "Kadapa", "Anantapur", "Eluru"],
   "Arunachal Pradesh": ["Itanagar", "Naharlagun", "Pasighat", "Tezpur", "Bomdila", "Ziro", "Along", "Tezu", "Changlang", "Khonsa"],
@@ -54,20 +53,20 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, searchPlace
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-left bg-white dark:bg-gray-900"
+        className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all text-left"
       >
         {value || placeholder}
       </button>
 
       {isOpen && (
-        <div className="absolute z-10 w-full mt-1 bg-white dark:bg-gray-900 border border-gray-300 rounded-lg shadow-lg max-h-60 overflow-hidden">
-          <div className="p-2 border-b border-gray-200 dark:border-gray-700">
+        <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg shadow-lg max-h-60 overflow-hidden">
+          <div className="p-2 border-b border-gray-300 dark:border-gray-700">
             <input
               type="text"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder={searchPlaceholder}
-              className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none"
+              className="w-full px-3 py-2 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none"
             />
           </div>
           <div className="max-h-48 overflow-y-auto">
@@ -77,13 +76,13 @@ const SearchableDropdown = ({ options, value, onChange, placeholder, searchPlace
                   key={option}
                   type="button"
                   onClick={() => handleSelect(option)}
-                  className="w-full px-4 py-2 text-left hover:bg-indigo-50 focus:bg-indigo-50 focus:outline-none transition-colors"
+                  className="w-full px-4 py-2 text-left hover:bg-blue-50 dark:hover:bg-gray-700 focus:bg-blue-50 dark:focus:bg-gray-700 focus:outline-none transition-colors text-gray-900 dark:text-white"
                 >
                   {option}
                 </button>
               ))
             ) : (
-              <div className="px-4 py-2 text-gray-500">No results found</div>
+              <div className="px-4 py-2 text-gray-500 dark:text-gray-400">No results found</div>
             )}
           </div>
         </div>
@@ -119,7 +118,6 @@ const Signup = () => {
 
   const [sameAsPhone, setSameAsPhone] = useState(false);
 
-  // Check if manual location fields have been entered
   useEffect(() => {
     const hasManualLocation = formData.state || formData.city || formData.zip_code || formData.address;
     setManualLocationEntered(hasManualLocation);
@@ -186,7 +184,6 @@ const Signup = () => {
     setIsLoading(true);
     setErrorMessages("");
 
-    // Validate passwords match
     if (formData.password !== formData.confirm_password) {
       setErrorMessages("Passwords do not match");
       setIsLoading(false);
@@ -194,10 +191,8 @@ const Signup = () => {
     }
 
     try {
-      // Register the user
       const registerRes = await axios.post("http://localhost:3000/api/auth/register", formData);
       
-      // Auto-login after successful registration
       const loginRes = await axios.post(
         "http://localhost:3000/api/auth/login",
         {
@@ -207,12 +202,10 @@ const Signup = () => {
         { withCredentials: true }
       );
 
-      // Set user in context
       setUser(loginRes.data.user);
       
       setIsLoading(false);
       
-      // Redirect based on role
       if (loginRes.data.user.role === 'admin') {
         navigate('/admin/panel');
       } else {
@@ -231,172 +224,152 @@ const Signup = () => {
   const availableCities = formData.state ? indianStatesAndCities[formData.state] || [] : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-indigo-100 via-purple-50 to-pink-100 flex items-center justify-center p-4">
-      <div className="w-full max-w-4xl">
-        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-8 max-h-[90vh] overflow-y-auto">
+    <div className="min-h-screen w-full bg-white dark:bg-gray-950 flex items-center justify-center p-4">
+      <div className="w-full max-w-2xl">
+        <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-8 max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="text-center mb-8">
-            <h1 className="text-3xl font-bold text-gray-900 mb-2">Mouldmarket</h1>
-            <p className="text-gray-600 dark:text-gray-400">Create your account and start shopping</p>
+            <Lock className="w-8 h-8 text-blue-600 mx-auto mb-4" />
+            <h1 className="text-3xl font-bold text-blue-600 mb-2">Mouldmarket</h1>
+            <p className="text-gray-600 dark:text-gray-400 text-sm">Create your account and start shopping</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {/* Error Messages */}
             {errorMessages && (
-              <div className="bg-red-50 border border-red-200 rounded-lg p-4 flex items-start space-x-3">
-                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
-                <p className="text-sm text-red-800">{errorMessages}</p>
+              <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 dark:border-red-800 rounded-lg p-4 flex items-start space-x-3">
+                <AlertCircle className="w-5 h-5 text-red-600 dark:text-red-400 flex-shrink-0 mt-0.5" />
+                <p className="text-sm text-red-800 dark:text-red-300">{errorMessages}</p>
               </div>
             )}
 
             {/* Name Fields */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Personal Information</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Personal Information</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                 <div>
-                  <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="first_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     First Name *
                   </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      id="first_name"
-                      name="first_name"
-                      placeholder="First Name"
-                      value={formData.first_name}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    id="first_name"
+                    name="first_name"
+                    placeholder="John"
+                    value={formData.first_name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400"
+                  />
                 </div>
                 <div>
-                  <label htmlFor="middle_name" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="middle_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Middle Name
                   </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      id="middle_name"
-                      name="middle_name"
-                      placeholder="Middle Name"
-                      value={formData.middle_name}
-                      onChange={handleInputChange}
-                      className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    id="middle_name"
+                    name="middle_name"
+                    placeholder="Robert"
+                    value={formData.middle_name}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400"
+                  />
                 </div>
                 <div>
-                  <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="last_name" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Last Name *
                   </label>
-                  <div className="relative">
-                    <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                    <input
-                      type="text"
-                      id="last_name"
-                      name="last_name"
-                      placeholder="Last Name"
-                      value={formData.last_name}
-                      onChange={handleInputChange}
-                      required
-                      className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                    />
-                  </div>
+                  <input
+                    type="text"
+                    id="last_name"
+                    name="last_name"
+                    placeholder="Smith"
+                    value={formData.last_name}
+                    onChange={handleInputChange}
+                    required
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400"
+                  />
                 </div>
               </div>
             </div>
 
             {/* Contact Information */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Contact Information</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Contact Information</h3>
               
-              {/* Email */}
               <div className="mb-4">
-                <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="email" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Email Address *
                 </label>
-                <div className="relative">
-                  <Mail className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    placeholder="your@email.com"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    required
-                    className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                  />
-                </div>
+                <input
+                  type="email"
+                  id="email"
+                  name="email"
+                  placeholder="john@example.com"
+                  value={formData.email}
+                  onChange={handleInputChange}
+                  required
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400"
+                />
               </div>
 
-              {/* Phone Numbers */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="phone_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Phone Number *
                   </label>
                   <div className="flex">
-                    <div className="flex items-center px-3 py-3 bg-gray-100 border border-gray-300 rounded-l-lg text-gray-700 font-medium">
-                      🇮🇳 +91
+                    <div className="flex items-center px-3 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-l-lg text-gray-700 dark:text-gray-300 font-medium text-sm">
+                      +91
                     </div>
-                    <div className="relative flex-1">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <input
-                        type="tel"
-                        id="phone_number"
-                        name="phone_number"
-                        placeholder="Phone Number"
-                        value={formData.phone_number}
-                        onChange={handleInputChange}
-                        required
-                        className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-r-lg border-l-0 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
-                      />
-                    </div>
+                    <input
+                      type="tel"
+                      id="phone_number"
+                      name="phone_number"
+                      placeholder="9876543210"
+                      value={formData.phone_number}
+                      onChange={handleInputChange}
+                      required
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 border-l-0 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400"
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <label htmlFor="whatsapp_number" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="whatsapp_number" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     WhatsApp Number *
                   </label>
                   <div className="flex">
-                    <div className="flex items-center px-3 py-3 bg-gray-100 border border-gray-300 rounded-l-lg text-gray-700 font-medium">
-                      🇮🇳 +91
+                    <div className="flex items-center px-3 py-2.5 bg-gray-100 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-l-lg text-gray-700 dark:text-gray-300 font-medium text-sm">
+                      +91
                     </div>
-                    <div className="relative flex-1">
-                      <Phone className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-                      <input
-                        type="tel"
-                        id="whatsapp_number"
-                        name="whatsapp_number"
-                        placeholder="WhatsApp Number"
-                        value={formData.whatsapp_number}
-                        onChange={handleInputChange}
-                        disabled={sameAsPhone}
-                        required
-                        className={`w-full pl-11 pr-4 py-3 border border-gray-300 rounded-r-lg border-l-0 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all ${
-                          sameAsPhone ? "bg-gray-100 cursor-not-allowed" : ""
-                        }`}
-                      />
-                    </div>
+                    <input
+                      type="tel"
+                      id="whatsapp_number"
+                      name="whatsapp_number"
+                      placeholder="9876543210"
+                      value={formData.whatsapp_number}
+                      onChange={handleInputChange}
+                      disabled={sameAsPhone}
+                      required
+                      className={`w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 border-l-0 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-r-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400 ${
+                        sameAsPhone ? "opacity-50 cursor-not-allowed" : ""
+                      }`}
+                    />
                   </div>
                 </div>
               </div>
 
-              {/* Checkbox */}
-              <div className="flex items-center mt-3">
+              <div className="flex items-center mt-4">
                 <input
                   type="checkbox"
                   id="sameAsPhone"
                   checked={sameAsPhone}
                   onChange={handleSameAsPhoneChange}
-                  className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                  className="h-4 w-4 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded text-blue-600 focus:ring-blue-500"
                 />
-                <label htmlFor="sameAsPhone" className="ml-2 text-sm text-gray-700">
+                <label htmlFor="sameAsPhone" className="ml-3 text-sm text-gray-700 dark:text-gray-300">
                   Phone number is same as WhatsApp number
                 </label>
               </div>
@@ -404,10 +377,10 @@ const Signup = () => {
 
             {/* Location Details */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Location Details</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Location Details</h3>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">State</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">State *</label>
                   <SearchableDropdown
                     options={Object.keys(indianStatesAndCities)}
                     value={formData.state}
@@ -417,7 +390,7 @@ const Signup = () => {
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">City</label>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">City *</label>
                   <SearchableDropdown
                     options={availableCities}
                     value={formData.city}
@@ -427,22 +400,22 @@ const Signup = () => {
                   />
                 </div>
                 <div>
-                  <label htmlFor="zip_code" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="zip_code" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     ZIP Code
                   </label>
                   <input
                     type="text"
                     id="zip_code"
                     name="zip_code"
-                    placeholder="ZIP Code"
+                    placeholder="400001"
                     value={formData.zip_code}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                    className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400"
                   />
                 </div>
               </div>
               <div className="mb-4">
-                <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+                <label htmlFor="address" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   Full Address
                 </label>
                 <textarea
@@ -452,31 +425,30 @@ const Signup = () => {
                   value={formData.address}
                   onChange={handleInputChange}
                   rows={3}
-                  className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all resize-none"
+                  className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400 resize-none"
                 />
               </div>
 
               <div className="flex items-center gap-4 mb-4">
-                <div className="flex-1 h-px bg-gray-300"></div>
-                <span className="text-gray-500 font-medium text-sm">OR</span>
-                <div className="flex-1 h-px bg-gray-300"></div>
+                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
+                <span className="text-gray-500 dark:text-gray-400 font-medium text-sm">OR</span>
+                <div className="flex-1 h-px bg-gray-300 dark:bg-gray-700"></div>
               </div>
 
               <button
                 type="button"
                 onClick={handleFetchLocation}
                 disabled={manualLocationEntered || isLocationFetching}
-                className={`w-full px-6 py-3 font-semibold rounded-lg transition-all flex items-center justify-center gap-2 ${
+                className={`w-full px-6 py-2.5 font-medium rounded-lg transition-all flex items-center justify-center gap-2 ${
                   manualLocationEntered || isLocationFetching
-                    ? "bg-gray-300 text-gray-500 cursor-not-allowed"
-                    : "bg-green-600 hover:bg-green-700 text-white focus:ring-4 focus:ring-green-200 shadow-lg shadow-green-500/30"
+                    ? "bg-gray-200 dark:bg-gray-700 text-gray-500 dark:text-gray-400 cursor-not-allowed"
+                    : "bg-blue-600 hover:bg-blue-700 text-white focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900"
                 }`}
               >
-                <MapPin className="w-5 h-5" />
                 {isLocationFetching ? "Fetching Location..." : "Fetch Current Location"}
               </button>
               {manualLocationEntered && (
-                <p className="text-sm text-gray-500 mt-2 text-center">
+                <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 text-center">
                   Location fields filled manually. Clear them to use auto-fetch.
                 </p>
               )}
@@ -484,14 +456,13 @@ const Signup = () => {
 
             {/* Password Fields */}
             <div>
-              <h3 className="text-sm font-semibold text-gray-700 mb-3">Security</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3">Security</h3>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Password *
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
                       type={showPassword ? "text" : "password"}
                       id="password"
@@ -500,23 +471,22 @@ const Signup = () => {
                       value={formData.password}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400 pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
                     >
                       {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
                   </div>
                 </div>
                 <div>
-                  <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 mb-1">
+                  <label htmlFor="confirm_password" className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                     Confirm Password *
                   </label>
                   <div className="relative">
-                    <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
                     <input
                       type={showConfirmPassword ? "text" : "password"}
                       id="confirm_password"
@@ -525,12 +495,12 @@ const Signup = () => {
                       value={formData.confirm_password}
                       onChange={handleInputChange}
                       required
-                      className="w-full pl-11 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all"
+                      className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all placeholder-gray-500 dark:placeholder-gray-400 pr-10"
                     />
                     <button
                       type="button"
                       onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
+                      className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300 transition-colors"
                     >
                       {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                     </button>
@@ -543,17 +513,24 @@ const Signup = () => {
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white font-semibold rounded-lg focus:ring-4 focus:ring-indigo-200 transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-lg shadow-indigo-500/30"
+              className="w-full py-2.5 px-4 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg focus:ring-4 focus:ring-blue-200 dark:focus:ring-blue-900 transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             >
-              {isLoading ? "Creating Account..." : "Create Account"}
+              {isLoading ? (
+                <>
+                  <Loader className="w-4 h-4 animate-spin" />
+                  Creating Account...
+                </>
+              ) : (
+                'Create Account'
+              )}
             </button>
           </form>
 
           {/* Login Link */}
-          <div className="text-center pt-6 mt-6 border-t border-gray-200 dark:border-gray-700">
+          <div className="text-center pt-6 mt-6 border-t border-gray-200 dark:border-gray-800">
             <p className="text-sm text-gray-600 dark:text-gray-400">
               Already have an account?{" "}
-              <Link to="/auth/login" className="font-semibold text-indigo-600 hover:text-indigo-500 transition-colors">
+              <Link to="/auth/login" className="text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 font-medium transition-colors">
                 Sign In
               </Link>
             </p>
