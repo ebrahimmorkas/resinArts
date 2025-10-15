@@ -67,6 +67,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   const [showEditModal, setShowEditModal] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [isEditShippingPrice, setIsEditShippingPrice] = useState(false)
+  const [pendingAcceptOrderId, setPendingAcceptOrderId] = useState(null);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -164,14 +165,16 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
              <button
   onClick={async () => {
     try {
-      // Update local state immediately for better UX
-      onStatusChange(order._id, "Accepted");
       setOrderId(order._id);
 
       // Show ShippingPriceModal only if total_price is "Pending" (pending shipping)
       if (order.total_price === "Pending") {
+        setPendingAcceptOrderId(order._id);
         setShowShippingPriceModal(true);
       } else {
+        // Update local state immediately for better UX
+        onStatusChange(order._id, "Accepted");
+        
         // Call backend to persist status change
         await handleStatusChangeBackend("Accepted", order._id);
 
@@ -189,31 +192,9 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     } catch (error) {
       console.error('Error accepting order:', error.response?.data || error.message);
       // Revert local state on error
-      setOrders((prevOrders) =>
-        prevOrders.map((o) => (o._id === order._id ? { ...o, status: o.status } : o))
-      );
-      if (selectedOrder && selectedOrder._id === order._id) {
-        setSelectedOrder((prev) => ({ ...prev, status: prev.status }));
-      }
+      onStatusChange(order._id, "Pending");
     }
   }}
-  className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-  disabled={
-    order.status === "Accepted" ||
-    !productMappedWithOrderId ||
-    order.orderedProducts.some((product, index) => {
-      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
-      return stock === undefined || stock < product.quantity;
-    })
-  }
-  title={
-    order.orderedProducts.some((product, index) => {
-      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
-      return stock === undefined || stock < product.quantity;
-    })
-      ? "Cannot accept order: Insufficient stock for one or more products"
-      : "Accept order"
-  }
 >
   <Check className="h-4 w-4 mr-2" />
   Accept
@@ -495,9 +476,14 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       </div>
       {showShippingPriceModal && (
   <ShippingPriceModal
-    onClose={() => {
+    onClose={(success) => {
       setShowShippingPriceModal(false);
       setIsEditShippingPrice(false);
+      // If was accepting order and user cancelled, revert status via parent callback
+      if (pendingAcceptOrderId && !isEditShippingPrice && !success) {
+        onStatusChange(pendingAcceptOrderId, "Pending");
+      }
+      setPendingAcceptOrderId(null);
     }}
     orderId={orderId}
     email={order.email}
