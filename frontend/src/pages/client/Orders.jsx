@@ -421,113 +421,141 @@ export default function Orders() {
   };
 
     const downloadInvoice = async (order, e) => {
-       e.stopPropagation();
-       try {
-         const doc = new jsPDF();
-        doc.setFontSize(18);
-doc.setFont(undefined, "bold");
-doc.text("INVOICE", 120, 20);
-doc.setFontSize(24);
-doc.setFont(undefined, "bold");
-doc.text(loadingSettings ? "Loading..." : companySettings?.companyName || "OULA MARKET", 20, 30);
-doc.setFontSize(10);
-doc.setFont(undefined, "normal");
-doc.text(`Email: ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, 40);
-doc.text(`Phone: ${companySettings?.adminPhoneNumber || "+1 (555) 123-4567"}`, 20, 46);
-doc.text(`WhatsApp: ${companySettings?.adminWhatsappNumber || "+1 (555) 987-6543"}`, 20, 52);
-const addressLines = doc.splitTextToSize(
-  `Address: ${companySettings?.adminAddress || "123 Business Ave"}, ${companySettings?.adminCity || "Commerce City"}, ${companySettings?.adminState || "CC"} ${companySettings?.adminPincode || "12345"}`,
-  170
-);
-let addressY = 58;
-addressLines.forEach((line) => {
-  doc.text(line, 20, addressY);
-  addressY += 6;
-});
-doc.setFontSize(9);
-doc.setFont(undefined, "normal");
-doc.text(`Invoice #: ${order.id}`, 120, 30);
-doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, 36);
-doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42);
-         doc.setFontSize(12);
-         doc.setFont(undefined, "bold");
-         doc.text("BILL TO:", 20, 75);
-         doc.setFontSize(10);
-         doc.setFont(undefined, "normal");
-         const addressLinesBill = doc.splitTextToSize(order.shippingAddress, 170);
-         let addressYBill = 85;
-         addressLinesBill.forEach((line) => {
-           doc.text(line, 20, addressYBill);
-           addressYBill += 5;
-         });
-         const itemsStartY = addressYBill + 10;
-         doc.setFontSize(12);
-         doc.setFont(undefined, "bold");
-         doc.text("ITEMS:", 20, itemsStartY);
-         const tableStartY = itemsStartY + 10;
-         doc.setFontSize(9);
-         doc.setFont(undefined, "bold");
-         doc.text("Image", 20, tableStartY);
-         doc.text("Item", 40, tableStartY);
-         doc.text("Qty", 120, tableStartY);
-         doc.text("Price", 140, tableStartY);
-         doc.text("Total", 170, tableStartY);
-         doc.line(20, tableStartY + 3, 190, tableStartY + 3);
-         let yPosition = tableStartY + 10;
-         doc.setFont(undefined, "normal");
-         for (const item of order.items) {
-           const itemTotal = safeNumber(item.price) * safeNumber(item.quantity);
-           if (item.image && item.image !== "/placeholder.svg") {
-             try {
-               const img = new Image();
-               img.crossOrigin = "anonymous";
-               img.onload = function () {
-                 doc.addImage(this, "JPEG", 20, yPosition - 5, 15, 10);
-               };
-               img.src = item.image;
-             } catch (error) {
-               console.log("Could not add image to PDF");
-             }
-           } else {
-             doc.setFillColor(240, 240, 240);
-             doc.rect(20, yPosition - 5, 15, 10, "F");
-             doc.setFontSize(6);
-             doc.text("IMG", 25, yPosition);
-             doc.setFontSize(9);
-           }
-           const itemName = item.name.length > 35 ? item.name.substring(0, 35) + "..." : item.name;
-           doc.text(itemName, 40, yPosition);
-           doc.text(safeNumber(item.quantity).toString(), 120, yPosition);
-           doc.text(`$${safeNumber(item.price).toFixed(2)}`, 140, yPosition);
-           doc.text(`$${itemTotal.toFixed(2)}`, 170, yPosition);
-           yPosition += 15;
-         }
-         yPosition += 5;
-         doc.line(20, yPosition, 190, yPosition);
-         yPosition += 10;
-         doc.setFont(undefined, "normal");
-         doc.text(`Items Subtotal:`, 120, yPosition);
-         doc.text(`$${safeNumber(order.itemsTotal).toFixed(2)}`, 170, yPosition);
-         yPosition += 8;
-         doc.text(`Shipping:`, 120, yPosition);
-         doc.text(`$${safeNumber(order.shippingPrice).toFixed(2)}`, 170, yPosition);
-         yPosition += 8;
-         doc.setFont(undefined, "bold");
-         doc.setFontSize(12);
-         doc.text(`TOTAL:`, 120, yPosition);
-         doc.text(`$${safeNumber(order.total).toFixed(2)}`, 170, yPosition);
-         yPosition += 20;
-         doc.setFontSize(8);
-         doc.setFont(undefined, "normal");
-         doc.text("Thank you for your business!", 20, yPosition);
-         doc.text(`For support, contact us at ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, yPosition + 5);
-         const filename = `invoice-${order.id.substring(0, 10)}.pdf`;
-         doc.save(filename);
-       } catch (error) {
-         console.error("Error generating invoice:", error);
-         alert('Error generating invoice. Please try again.');
-       }
-     };
+  e.stopPropagation();
+  try {
+    const doc = new jsPDF();
+    doc.setFontSize(18);
+    doc.setFont(undefined, "bold");
+    doc.text("INVOICE", 120, 20);
+    doc.setFontSize(24);
+    doc.setFont(undefined, "bold");
+    doc.text(loadingSettings ? "Loading..." : companySettings?.companyName || "OULA MARKET", 20, 30);
+    doc.setFontSize(10);
+    doc.setFont(undefined, "normal");
+    doc.text(`Email: ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, 40);
+    doc.text(`Phone: ${companySettings?.adminPhoneNumber || "+1 (555) 123-4567"}`, 20, 46);
+    doc.text(`WhatsApp: ${companySettings?.adminWhatsappNumber || "+1 (555) 987-6543"}`, 20, 52);
+    const addressLines = doc.splitTextToSize(
+      `Address: ${companySettings?.adminAddress || "123 Business Ave"}, ${companySettings?.adminCity || "Commerce City"}, ${companySettings?.adminState || "CC"} ${companySettings?.adminPincode || "12345"}`,
+      170
+    );
+    let addressY = 58;
+    addressLines.forEach((line) => {
+      doc.text(line, 20, addressY);
+      addressY += 6;
+    });
+    doc.setFontSize(9);
+    doc.setFont(undefined, "normal");
+    doc.text(`Invoice #: ${order.id}`, 120, 30);
+    doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, 36);
+    doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42);
+    doc.setFontSize(12);
+    doc.setFont(undefined, "bold");
+    doc.text("BILL TO:", 20, 75);
+    doc.setFontSize(10);
+    doc.setFont(undefined, "normal");
+    const addressLinesBill = doc.splitTextToSize(order.shippingAddress, 170);
+    let addressYBill = 85;
+    addressLinesBill.forEach((line) => {
+      doc.text(line, 20, addressYBill);
+      addressYBill += 5;
+    });
+    const itemsStartY = addressYBill + 10;
+    doc.setFontSize(12);
+    doc.setFont(undefined, "bold");
+    doc.text("ITEMS:", 20, itemsStartY);
+    const tableStartY = itemsStartY + 10;
+    doc.setFontSize(9);
+    doc.setFont(undefined, "bold");
+    doc.text("Image", 20, tableStartY);
+    doc.text("Item", 40, tableStartY);
+    doc.text("Qty", 120, tableStartY);
+    doc.text("Price", 140, tableStartY);
+    doc.text("Total", 170, tableStartY);
+    doc.line(20, tableStartY + 3, 190, tableStartY + 3);
+    let yPosition = tableStartY + 10;
+    doc.setFont(undefined, "normal");
+    
+    // Load all images first
+    const imagePromises = order.items.map(item => {
+      return new Promise((resolve) => {
+        if (item.image && item.image !== "/placeholder.svg") {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = function () {
+            resolve({ success: true, img: this });
+          };
+          img.onerror = function () {
+            resolve({ success: false });
+          };
+          img.src = item.image;
+        } else {
+          resolve({ success: false });
+        }
+      });
+    });
+
+    const loadedImages = await Promise.all(imagePromises);
+
+    // Now add items with loaded images
+    for (let i = 0; i < order.items.length; i++) {
+      const item = order.items[i];
+      const imageData = loadedImages[i];
+      const itemTotal = safeNumber(item.price) * safeNumber(item.quantity);
+      
+      if (imageData.success) {
+        try {
+          doc.addImage(imageData.img, "JPEG", 20, yPosition - 5, 15, 10);
+        } catch (error) {
+          console.log("Could not add image to PDF");
+          doc.setFillColor(240, 240, 240);
+          doc.rect(20, yPosition - 5, 15, 10, "F");
+          doc.setFontSize(6);
+          doc.text("IMG", 25, yPosition);
+          doc.setFontSize(9);
+        }
+      } else {
+        doc.setFillColor(240, 240, 240);
+        doc.rect(20, yPosition - 5, 15, 10, "F");
+        doc.setFontSize(6);
+        doc.text("IMG", 25, yPosition);
+        doc.setFontSize(9);
+      }
+      
+      const itemName = item.name.length > 35 ? item.name.substring(0, 35) + "..." : item.name;
+      doc.text(itemName, 40, yPosition);
+      doc.text(safeNumber(item.quantity).toString(), 120, yPosition);
+      doc.text(`$${safeNumber(item.price).toFixed(2)}`, 140, yPosition);
+      doc.text(`$${itemTotal.toFixed(2)}`, 170, yPosition);
+      yPosition += 15;
+    }
+    
+    yPosition += 5;
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 10;
+    doc.setFont(undefined, "normal");
+    doc.text(`Items Subtotal:`, 120, yPosition);
+    doc.text(`$${safeNumber(order.itemsTotal).toFixed(2)}`, 170, yPosition);
+    yPosition += 8;
+    doc.text(`Shipping:`, 120, yPosition);
+    doc.text(`$${safeNumber(order.shippingPrice).toFixed(2)}`, 170, yPosition);
+    yPosition += 8;
+    doc.setFont(undefined, "bold");
+    doc.setFontSize(12);
+    doc.text(`TOTAL:`, 120, yPosition);
+    doc.text(`$${safeNumber(order.total).toFixed(2)}`, 170, yPosition);
+    yPosition += 20;
+    doc.setFontSize(8);
+    doc.setFont(undefined, "normal");
+    doc.text("Thank you for your business!", 20, yPosition);
+    doc.text(`For support, contact us at ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, yPosition + 5);
+    const filename = `invoice-${order.id.substring(0, 10)}.pdf`;
+    doc.save(filename);
+  } catch (error) {
+    console.error("Error generating invoice:", error);
+    alert('Error generating invoice. Please try again.');
+  }
+};
 
   const getPaymentStatus = (order) => {
     if (order.status === "returned") {
