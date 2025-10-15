@@ -897,7 +897,7 @@ function AddUserModal({ show, onClose, onSubmit, userForm, setUserForm }) {
           </div>
           <div className="flex gap-3 justify-end mt-6">
             <button type="button" onClick={onClose} className="px-4 py-2 text-gray-600 hover:text-gray-800 font-medium transition-colors">Cancel</button>
-            <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">Add User</button>
+            <button type="submit" className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-blue-600 rounded-lg font-medium transition-colors">Add User</button>
           </div>
         </form>
       </div>
@@ -917,16 +917,16 @@ function AddUserModal({ show, onClose, onSubmit, userForm, setUserForm }) {
     <p className="text-gray-600">Manage and monitor user accounts</p>
   </div>
   <div className="flex items-center gap-3">
-    <button onClick={() => setShowAddUserModal(true)} className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+    <button onClick={() => setShowAddUserModal(true)} className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-blue-600 rounded-lg font-medium transition-colors">
       <UserPlus className="w-4 h-4 mr-2" />Add User
     </button>
-    <button onClick={handleImport} className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+    <button onClick={handleImport} className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-green-600 rounded-lg font-medium transition-colors">
       <Upload className="w-4 h-4 mr-2" />Import
     </button>
-    <button onClick={handleExport} className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors">
+    <button onClick={handleExport} className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-green-600 rounded-lg font-medium transition-colors">
       <Download className="w-4 h-4 mr-2" />Export
     </button>
-    <button onClick={handleSampleDownload} className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
+    <button onClick={handleSampleDownload} className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-blue-600 rounded-lg font-medium transition-colors">
       <FileDown className="w-4 h-4 mr-2" />Sample
     </button>
     <div className="flex items-center space-x-2 text-sm text-gray-600">
