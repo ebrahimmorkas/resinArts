@@ -108,7 +108,25 @@ const [uploadingExcel, setUploadingExcel] = useState(false);
         insertImageAsBase64URI: true
       },
       removeButtons: ['video', 'file'],
-      disablePlugins: 'mobile'
+      disablePlugins: 'mobile',
+      style: {
+  color: '#000000',
+  backgroundColor: '#ffffff',
+  '.jodit-wysiwyg': {
+    color: '#000000',
+    backgroundColor: '#ffffff'
+  }
+},
+iframeStyle: `
+  .jodit-wysiwyg {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+  }
+  .dark .jodit-wysiwyg {
+    color: #ffffff !important;
+    background-color: #1f2937 !important;
+  }
+`
     }),
     []
   );
@@ -516,10 +534,10 @@ const handleExcelUpload = async (e) => {
       content: (
         <div className="p-4 space-y-6">
           <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
-            <h3 className="text-lg font-semibold -800 dark:text-gray-100 mb-4">Company Logo</h3>
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Company Logo</h3>
             <div className="flex flex-col md:flex-row gap-4 items-start">
               <div className="flex-shrink-0">
-                <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-gray-800 overflow-hidden">
+                <div className="w-32 h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-gray-800 overflow-hidden">
                   {logoPreview || formData.companyLogo ? (
                     <img
                       src={logoPreview || formData.companyLogo}
@@ -527,7 +545,7 @@ const handleExcelUpload = async (e) => {
                       className="w-full h-full object-contain"
                     />
                   ) : (
-                    <ImageIcon className="w-12 h-12 text-gray-400" />
+                    <ImageIcon className="w-12 h-12 text-gray-400 dark:text-gray-300" />
                   )}
                 </div>
               </div>
@@ -542,7 +560,7 @@ const handleExcelUpload = async (e) => {
                       className="hidden"
                       disabled={uploadingLogo}
                     />
-                    <div className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-center border border-blue-200 flex items-center justify-center gap-2">
+                    <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-white rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors text-center border border-blue-200 dark:border-blue-700 flex items-center justify-center gap-2">
                       <Upload className="w-4 h-4" />
                       <span className="text-sm font-medium">Choose Logo</span>
                     </div>
@@ -567,7 +585,7 @@ const handleExcelUpload = async (e) => {
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-white">
                   PNG or JPG. Max size: 5MB. Image will be saved when you click "Save Settings"
                 </p>
                 {logoFile && (
@@ -581,7 +599,7 @@ const handleExcelUpload = async (e) => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Company Name
               </label>
               <input
@@ -589,13 +607,13 @@ const handleExcelUpload = async (e) => {
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter company name"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Admin Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -603,13 +621,13 @@ const handleExcelUpload = async (e) => {
                 name="adminName"
                 value={formData.adminName}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter admin name"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Admin Email <span className="text-red-500">*</span>
               </label>
               <input
@@ -617,13 +635,13 @@ const handleExcelUpload = async (e) => {
                 name="adminEmail"
                 value={formData.adminEmail}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter admin email"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 WhatsApp Number
               </label>
               <input
@@ -631,13 +649,13 @@ const handleExcelUpload = async (e) => {
                 name="adminWhatsappNumber"
                 value={formData.adminWhatsappNumber}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter WhatsApp number"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Phone Number
               </label>
               <input
@@ -645,13 +663,13 @@ const handleExcelUpload = async (e) => {
                 name="adminPhoneNumber"
                 value={formData.adminPhoneNumber}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter phone number"
               />
             </div>
 
             <div className="flex flex-col md:col-span-2">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Address
               </label>
               <input
@@ -659,13 +677,13 @@ const handleExcelUpload = async (e) => {
                 name="adminAddress"
                 value={formData.adminAddress}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter address"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 City
               </label>
               <input
@@ -673,13 +691,13 @@ const handleExcelUpload = async (e) => {
                 name="adminCity"
                 value={formData.adminCity}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter city"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 State
               </label>
               <input
@@ -687,13 +705,13 @@ const handleExcelUpload = async (e) => {
                 name="adminState"
                 value={formData.adminState}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter state"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Pincode
               </label>
               <input
@@ -701,13 +719,13 @@ const handleExcelUpload = async (e) => {
                 name="adminPincode"
                 value={formData.adminPincode}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter pincode"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Instagram ID
               </label>
               <input
@@ -715,13 +733,13 @@ const handleExcelUpload = async (e) => {
                 name="instagramId"
                 value={formData.instagramId}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter Instagram ID"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Facebook ID
               </label>
               <input
@@ -729,7 +747,7 @@ const handleExcelUpload = async (e) => {
                 name="facebookId"
                 value={formData.facebookId}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter Facebook ID"
               />
             </div>
@@ -829,10 +847,10 @@ const handleExcelUpload = async (e) => {
             {/* Email Notification Toggle */}
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
-                <label htmlFor="receiveOrderEmails" className="text-sm font-medium text-gray-700 cursor-pointer">
+                <label htmlFor="receiveOrderEmails" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
                   Receive emails when order is placed
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-white mt-1">
                   Get notified via email whenever a new order is placed on your store
                 </p>
               </div>
@@ -846,14 +864,14 @@ const handleExcelUpload = async (e) => {
                     onChange={handleCheckboxChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                 </label>
               </div>
             </div>
 
             {/* Low Stock Alert Threshold */}
             <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              <label htmlFor="lowStockAlertThreshold" className="text-sm font-medium text-gray-700 block mb-2">
+              <label htmlFor="lowStockAlertThreshold" className="text-sm font-medium text-gray-700 dark:text-white block mb-2">
                 Show low stock alert after
               </label>
               <div className="flex items-center gap-2">
@@ -865,12 +883,12 @@ const handleExcelUpload = async (e) => {
                   onChange={handleInputChange}
                   min="0"
                   max="1000"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                   placeholder="Enter number of items"
                 />
-                <span className="text-sm text-gray-600 dark:text-gray-400">items</span>
+                <span className="text-sm text-gray-600 dark:text-white">items</span>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 dark:text-white mt-2">
                 Low stock alert will be triggered when product stock falls below this number
               </p>
             </div>
@@ -878,10 +896,10 @@ const handleExcelUpload = async (e) => {
             {/* Receive Low Stock Email */}
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
-                <label htmlFor="receiveLowStockEmail" className="text-sm font-medium text-gray-700 cursor-pointer">
+                <label htmlFor="receiveLowStockEmail" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
                   Receive low stock emails
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-white mt-1">
                   Get notified when product stock falls below the threshold
                 </p>
               </div>
@@ -895,7 +913,7 @@ const handleExcelUpload = async (e) => {
                     onChange={handleCheckboxChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                 </label>
               </div>
             </div>
@@ -903,10 +921,10 @@ const handleExcelUpload = async (e) => {
             {/* Receive Out Of Stock Email */}
             <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
-                <label htmlFor="receiveOutOfStockEmail" className="text-sm font-medium text-gray-700 cursor-pointer">
+                <label htmlFor="receiveOutOfStockEmail" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
                   Receive out of stock emails
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-white mt-1">
                   Get notified when product stock becomes zero
                 </p>
               </div>
@@ -920,7 +938,7 @@ const handleExcelUpload = async (e) => {
                     onChange={handleCheckboxChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white dark:bg-gray-900 after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                 </label>
               </div>
             </div>
@@ -934,12 +952,12 @@ const handleExcelUpload = async (e) => {
     <div className="p-4">
       <div className="space-y-4">
         {/* Manual Shipping Price Toggle */}
-        <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border-b border-gray-200 pb-6">
+        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-b border-gray-200 dark:border-gray-700 pb-6">
           <div className="flex-1">
-            <label htmlFor="isManualShipping" className="text-sm font-medium text-gray-700 cursor-pointer">
+            <label htmlFor="isManualShipping" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
               Enter Shipping price manually
             </label>
-            <p className="text-xs text-gray-500 mt-1">
+            <p className="text-xs text-gray-500 dark:text-white mt-1">
               When enabled, shipping price will be entered manually for each order
             </p>
           </div>
@@ -952,21 +970,21 @@ const handleExcelUpload = async (e) => {
                 onChange={handleShippingToggle}
                 className="sr-only peer"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
             </label>
           </div>
         </div>
 
         {/* Manual Pricing Options */}
         {formData.shippingPriceSettings.isManual && (
-          <div className="space-y-4 pt-4 border-t border-gray-200">
+          <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             {/* Same For All Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
-                <label htmlFor="sameForAll" className="text-sm font-medium text-gray-700 cursor-pointer">
+                <label htmlFor="sameForAll" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
                   Same shipping price for all products
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-white mt-1">
                   Apply a single shipping price to all orders
                 </p>
               </div>
@@ -979,19 +997,19 @@ const handleExcelUpload = async (e) => {
                     onChange={handleSameForAllToggle}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                 </label>
               </div>
             </div>
 
             {/* Common Shipping Price Input */}
             {formData.shippingPriceSettings.sameForAll && (
-              <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-                <label htmlFor="commonPrice" className="text-sm font-medium text-gray-700 block mb-2">
+              <div className="p-4 bg-blue-50 dark:bg-blue-900 rounded-lg border border-blue-200 dark:border-blue-700">
+                <label htmlFor="commonPrice" className="text-sm font-medium text-gray-700 dark:text-white block mb-2">
                   Enter Common Shipping Price
                 </label>
                 <div className="flex items-center gap-2">
-                  <span className="text-sm text-gray-600">₹</span>
+                  <span className="text-sm text-gray-600 dark:text-white">₹</span>
                   <input
                     type="number"
                     id="commonPrice"
@@ -1000,10 +1018,10 @@ const handleExcelUpload = async (e) => {
                     onChange={handleCommonShippingPriceChange}
                     min="0"
                     step="0.01"
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                   />
                 </div>
-                <p className="text-xs text-gray-500 mt-2">
+                <p className="text-xs text-gray-500 dark:text-white mt-2">
                   This price will be applied to all orders
                 </p>
               </div>
@@ -1013,14 +1031,14 @@ const handleExcelUpload = async (e) => {
 
         {/* Dynamic Shipping Price Section */}
         {!formData.shippingPriceSettings.isManual && (
-          <div className="space-y-4 pt-4 border-t border-gray-200">
+          <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
             {/* Shipping Type Dropdown */}
             <div className="space-y-2">
-              <label className="text-sm font-medium text-gray-700">Shipping Price according to</label>
+              <label className="text-sm font-medium text-gray-700 dark:text-white">Shipping Price according to</label>
               <select
                 value={formData.shippingPriceSettings.shippingType}
                 onChange={handleShippingTypeChange}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-gray-700 dark:text-white bg-white dark:bg-gray-900"
               >
                 <option value="country">Country</option>
                 <option value="state">State</option>
@@ -1030,14 +1048,14 @@ const handleExcelUpload = async (e) => {
             </div>
 
             {/* Excel Upload Section */}
-            <div className="p-3 bg-blue-50 rounded-lg border border-blue-200">
+            <div className="p-3 bg-blue-50 dark:bg-blue-900 rounded-lg border border-blue-200 dark:border-blue-700">
               <div className="flex items-center gap-2 mb-2">
-                <Upload className="w-4 h-4 text-blue-600" />
-                <label className="text-sm font-medium text-gray-700">
+                <Upload className="w-4 h-4 text-blue-600 dark:text-white" />
+                <label className="text-sm font-medium text-gray-700 dark:text-white">
                   Upload {formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + formData.shippingPriceSettings.shippingType.slice(1)} Excel
                 </label>
               </div>
-              <label className="relative flex items-center gap-2 px-3 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 cursor-pointer transition-colors">
+              <label className="relative flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
                 <input
                   type="file"
                   accept=".xlsx,.xls"
@@ -1047,19 +1065,19 @@ const handleExcelUpload = async (e) => {
                 />
                 {uploadingExcel ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600"></div>
-                    <span className="text-sm text-gray-600">Uploading...</span>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                    <span className="text-sm text-gray-600 dark:text-white">Uploading...</span>
                   </>
                 ) : (
-                  <span className="text-sm text-gray-600">Click to upload or drag and drop</span>
+                  <span className="text-sm text-gray-600 dark:text-white">Click to upload or drag and drop</span>
                 )}
               </label>
-              <p className="text-xs text-gray-500 mt-2">Excel should have 2 columns: {formData.shippingPriceSettings.shippingType} and Shipping Price</p>
+              <p className="text-xs text-gray-500 dark:text-white mt-2">Excel should have 2 columns: {formData.shippingPriceSettings.shippingType} and Shipping Price</p>
             </div>
 
             {/* Add/Edit Shipping Price */}
-            <div className="p-4 bg-gray-50 rounded-lg space-y-3">
-              <h4 className="text-sm font-medium text-gray-800">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+              <h4 className="text-sm font-medium text-gray-800 dark:text-white">
                 {editingIndex !== null ? 'Edit' : 'Add'} Shipping Price
               </h4>
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -1068,7 +1086,7 @@ const handleExcelUpload = async (e) => {
                   placeholder={formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + formData.shippingPriceSettings.shippingType.slice(1)}
                   value={editLocation}
                   onChange={(e) => setEditLocation(e.target.value)}
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-sm"
                 />
                 <input
                   type="number"
@@ -1077,11 +1095,11 @@ const handleExcelUpload = async (e) => {
                   onChange={(e) => setEditPrice(e.target.value)}
                   min="0"
                   step="0.01"
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-sm"
                 />
                 <button
                   onClick={handleAddShippingPrice}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium transition-colors"
+                  className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-green-600 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm font-medium transition-colors"
                 >
                   {editingIndex !== null ? 'Update' : 'Add'}
                 </button>
@@ -1093,7 +1111,7 @@ const handleExcelUpload = async (e) => {
                     setEditLocation('');
                     setEditPrice('');
                   }}
-                  className="text-xs text-red-600 hover:text-red-700 font-medium"
+                  className="text-xs text-red-600 dark:text-white font-medium"
                 >
                   Cancel Edit
                 </button>
@@ -1105,31 +1123,31 @@ const handleExcelUpload = async (e) => {
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-100 border-b border-gray-300">
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">
+                    <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600">
+                      <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-white">
                         {formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + formData.shippingPriceSettings.shippingType.slice(1)}
                       </th>
-                      <th className="px-4 py-2 text-left font-semibold text-gray-700">Shipping Price (₹)</th>
-                      <th className="px-4 py-2 text-center font-semibold text-gray-700">Actions</th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-white">Shipping Price (₹)</th>
+                      <th className="px-4 py-2 text-center font-semibold text-gray-700 dark:text-white">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {formData.shippingPriceSettings.shippingPrices.map((item, index) => (
-                      <tr key={index} className="border-b border-gray-200 hover:bg-gray-50">
-                        <td className="px-4 py-2 text-gray-800">{item.location}</td>
-                        <td className="px-4 py-2 text-gray-800">₹{item.price.toFixed(2)}</td>
+                      <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-4 py-2 text-gray-800 dark:text-white">{item.location}</td>
+                        <td className="px-4 py-2 text-gray-800 dark:text-white">₹{item.price.toFixed(2)}</td>
                         <td className="px-4 py-2 text-center">
                           <div className="flex items-center justify-center gap-2">
                             <button
                               onClick={() => handleEditShippingPrice(index)}
-                              className="p-1 text-blue-600 hover:bg-blue-100 rounded transition-colors"
+                              className="p-1 text-blue-600 dark:text-white hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
                               title="Edit"
                             >
                               <Edit2 className="w-4 h-4" />
                             </button>
                             <button
                               onClick={() => handleDeleteShippingPrice(index)}
-                              className="p-1 text-red-600 hover:bg-red-100 rounded transition-colors"
+                              className="p-1 text-red-600 dark:text-white hover:bg-red-100 dark:hover:bg-red-800 rounded transition-colors"
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -1144,20 +1162,20 @@ const handleExcelUpload = async (e) => {
             )}
 
             {formData.shippingPriceSettings.shippingPrices.length === 0 && (
-              <div className="p-4 bg-gray-50 rounded-lg text-center">
-                <p className="text-sm text-gray-500">No shipping prices added yet</p>
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                <p className="text-sm text-gray-500 dark:text-white">No shipping prices added yet</p>
               </div>
             )}
           </div>
         )}
         {/* Free Shipping Toggle - Appears Regardless of Manual/Dynamic */}
-        <div className="pt-4 border-t border-gray-200 space-y-4">
-          <div className="flex items-center justify-between p-4 bg-green-50 rounded-lg border border-green-200">
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+          <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900 rounded-lg border border-green-200 dark:border-green-700">
             <div className="flex-1">
-              <label htmlFor="freeShipping" className="text-sm font-medium text-gray-700 cursor-pointer">
+              <label htmlFor="freeShipping" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
                 Free Shipping
               </label>
-              <p className="text-xs text-gray-500 mt-1">
+              <p className="text-xs text-gray-500 dark:text-white mt-1">
                 Offer free shipping above a certain order amount
               </p>
             </div>
@@ -1170,19 +1188,19 @@ const handleExcelUpload = async (e) => {
                   onChange={handleFreeShippingToggle}
                   className="sr-only peer"
                 />
-                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600"></div>
+                <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
               </label>
             </div>
           </div>
 
           {/* Free Shipping Amount Input */}
           {formData.shippingPriceSettings.freeShipping && (
-            <div className="p-4 bg-green-50 rounded-lg border border-green-200">
-              <label htmlFor="freeShippingAmount" className="text-sm font-medium text-gray-700 block mb-2">
+            <div className="p-4 bg-green-50 dark:bg-green-900 rounded-lg border border-green-200 dark:border-green-700">
+              <label htmlFor="freeShippingAmount" className="text-sm font-medium text-gray-700 dark:text-white block mb-2">
                 Free Shipping Above Amount
               </label>
               <div className="flex items-center gap-2">
-                <span className="text-sm text-gray-600">₹</span>
+                <span className="text-sm text-gray-600 dark:text-white">₹</span>
                 <input
                   type="number"
                   id="freeShippingAmount"
@@ -1191,10 +1209,10 @@ const handleExcelUpload = async (e) => {
                   onChange={handleFreeShippingAmountChange}
                   min="0"
                   step="0.01"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent"
                 />
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 dark:text-white mt-2">
                 Customers will get free shipping when their order total is above this amount
               </p>
             </div>
@@ -1210,20 +1228,20 @@ const handleExcelUpload = async (e) => {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-800">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-4 text-gray-600 dark:text-gray-400">Loading settings...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 dark:text-blue-400 mx-auto" />
+          <p className="mt-4 text-gray-600 dark:text-white">Loading settings...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
         <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 sm:px-8">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900 px-6 py-8 sm:px-8">
             <h1 className="text-3xl font-bold text-white">Company Settings</h1>
-            <p className="mt-2 text-blue-100">Manage your company information and policies</p>
+            <p className="mt-2 text-blue-100 dark:text-blue-200">Manage your company information and policies</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -1236,9 +1254,9 @@ const handleExcelUpload = async (e) => {
                   <button
                     type="button"
                     onClick={() => toggleAccordion(index)}
-                    className="w-full flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 transition-colors duration-200"
+                    className="w-full flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
                   >
-                    <span className="text-lg font-semibold -800 dark:text-gray-100">
+                    <span className="text-lg font-semibold text-gray-800 dark:text-white">
                       {accordion.title}
                     </span>
                     {activeAccordion === index ? (
@@ -1267,7 +1285,7 @@ const handleExcelUpload = async (e) => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900 text-white font-semibold rounded-lg hover:from-blue-700 dark:hover:from-blue-900 hover:to-blue-800 dark:hover:to-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 {loading ? (
                   <>
