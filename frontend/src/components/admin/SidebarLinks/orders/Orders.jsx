@@ -162,7 +162,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3">
-             <button
+            <button
   onClick={async () => {
     try {
       setOrderId(order._id);
@@ -195,6 +195,25 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       onStatusChange(order._id, "Pending");
     }
   }}
+  className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={
+    order.status === "Accepted" ||
+    !productMappedWithOrderId ||
+    order.orderedProducts.some((product, index) => {
+      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+      return stock === undefined || stock < product.quantity;
+    })
+  }
+  title={
+    order.orderedProducts.some((product, index) => {
+      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+      return stock === undefined || stock < product.quantity;
+    })
+      ? "Cannot accept order: Insufficient stock for one or more products"
+      : order.status === "Accepted"
+      ? "Order already accepted"
+      : "Accept order"
+  }
 >
   <Check className="h-4 w-4 mr-2" />
   Accept
@@ -467,7 +486,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
           <div className="flex justify-end">
             <button
               onClick={onClose}
-              className="px-6 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+              className="px-6 py-2 bg-gray-600 text-black text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
             >
               Close
             </button>
@@ -1582,7 +1601,7 @@ export default function OrdersManagement() {
                           onClick={() => setCurrentPage(pageNumber)}
                           className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                             currentPage === pageNumber
-                              ? 'bg-blue-600 text-white shadow-sm'
+                              ? 'bg-blue-600 text-blue-600 shadow-sm'
                               : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
                           }`}
                         >

@@ -11,7 +11,7 @@ function StatusModal({onClose, status}) {
                     <div>
                         <h2 className="text-2xl font-bold text-gray-900">Status changed to {status}</h2>
                     </div>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors">
+                    <button onClick={onClose} className="text-black hover:text-gray-600 dark:text-gray-400 transition-colors">
                         <X className="h-6 w-6" />
                     </button>
                 </div>
@@ -20,7 +20,7 @@ function StatusModal({onClose, status}) {
                     <div className="mb-4">
                         <button
                             onClick={onClose}
-                            className="px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                            className="px-4 py-2 bg-gray-600 text-black text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
                         >
                             Cancel
                         </button>
