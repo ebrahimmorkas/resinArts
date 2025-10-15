@@ -23,6 +23,35 @@ import ConfirmationModal from "../../components/client/Home/ConfirmationModal";
 
 
 export default function Home() {
+  // STEP 1: Get auth context FIRST (before any other hooks)
+  const { user, loading: authLoading } = useContext(AuthContext);
+  const navigate = useNavigate();
+
+  // STEP 2: Redirect admin to admin panel
+  useEffect(() => {
+    if (!authLoading && user?.role === 'admin') {
+      navigate('/admin/panel', { replace: true });
+    }
+  }, [user, authLoading, navigate]);
+
+  // STEP 3: Show loading while checking auth
+  if (authLoading) {
+    return (
+      <div className="fixed inset-0 bg-gray-100 flex items-center justify-center z-50">
+        <div className="bg-white dark:bg-gray-900/80 backdrop-blur-sm rounded-lg p-8 flex flex-col items-center gap-3">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // STEP 4: If admin, don't render anything (will redirect)
+  if (user?.role === 'admin') {
+    return null;
+  }
+
+  // STEP 5: Now it's safe to use user-specific contexts
   const {
     cartItems,
     isCartOpen,
@@ -42,7 +71,7 @@ export default function Home() {
 
   const { freeCash, loadingFreeCash, freeCashErrors, clearFreeCashCache, checkFreeCashEligibility } = useContext(FreeCashContext);
 
-  const navigate = useNavigate();
+  // const navigate = useNavigate();
 
 // Add this updated handleCartCheckout function to your Home.jsx
 // Replace the existing handleCartCheckout function with this:
@@ -156,7 +185,7 @@ const scrollToTop = () => {
   const restockedRef = useRef(null)
   const revisedRatesRef = useRef(null)
   const outOfStockRef = useRef(null)
-  const { user, setUser } = useContext(AuthContext)
+  const { setUser } = useContext(AuthContext)
 
 const handleSearch = useCallback((query) => {
   setSearchQuery(query)
