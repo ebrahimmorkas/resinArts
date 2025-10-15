@@ -97,10 +97,10 @@ const paymentStatusConfig = {
     label: "Payment Pending",
     color: "bg-yellow-100 text-yellow-800 border-yellow-200",
   },
-  refunded: {
-    label: "Refunded",
-    color: "bg-gray-100 -800 dark:text-gray-100 border-gray-200 dark:border-gray-700",
-  },
+ refunded: {
+  label: "Refunded",
+  color: "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-600",
+},
   refund_pending: {
     label: "Refund Pending",
     color: "bg-orange-100 text-orange-800 border-orange-200",
@@ -561,7 +561,7 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
   const OrderDetailsModal = ({ order, onClose }) => {
     if (!order) return null;
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+      <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex justify-between items-start mb-6">
@@ -684,26 +684,26 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
       <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading your orders...</p>
+          <p className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">Loading your orders...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Professional Header */}
         <div className="mb-6 flex items-center space-x-4">
           <button 
             onClick={handleBackClick} 
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm transition-colors"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">My Orders</h1>
             <p className="text-gray-600 dark:text-gray-400 mt-1">Track and manage your orders</p>
           </div>
         </div>
@@ -728,7 +728,7 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
                     placeholder="Search orders, products..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
+                    className="pl-10 pr-4 py-2 bopl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
                   />
                 </div>
                 
@@ -737,7 +737,7 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="ongoing">Ongoing Orders</option>
                     <option value="all">All Status</option>
@@ -756,7 +756,7 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
                   <select
                     value={paymentFilter}
                     onChange={(e) => setPaymentFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="all">All Payments</option>
                     <option value="paid">Paid</option>
@@ -767,7 +767,7 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
                   <select
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="all">All Dates</option>
                     <option value="today">Today</option>
@@ -779,7 +779,7 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
                   </select>
                   <button 
                     onClick={handleExportToExcel}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export Orders
@@ -878,57 +878,57 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
                       Sr No.
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '200px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '200px' }}>
                       Order ID
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                       Ordered At
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '250px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '250px' }}>
                       Products
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
                       Quantity
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Status
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Payment
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                   {currentData.map((order, index) => (
-                    <tr key={order.id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
+                    <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '80px' }}>
                         {startIndex + index + 1}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '200px' }}>
                         <span className="font-medium text-blue-600">{order.id}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '140px' }}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '140px' }}>
                         {formatDate(order.orderedAt)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-center text-gray-900" style={{ minWidth: '250px' }}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '250px' }}>
                         <div className="truncate" title={order.items.map(item => item.name).join(', ')}>
                           {order.items.length > 0 ? order.items[0].name : 'No items'}
                           {order.items.length > 1 && ` +${order.items.length - 1} more`}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '100px' }}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '100px' }}>
                         {order.items.reduce((total, item) => total + safeNumber(item.quantity), 0)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '120px' }}>
                         <span className="font-medium">${safeNumber(order.total).toFixed(2)}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
@@ -971,8 +971,8 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
           {currentData.length === 0 && (
             <div className="text-center py-12">
               <ShoppingBag className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No orders found</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No orders found</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {searchQuery || statusFilter !== "ongoing" || paymentFilter !== "all" || dateFilter !== "all"
                   ? "Try adjusting your search or filter criteria."
                   : "You haven't placed any orders yet."}
@@ -986,7 +986,7 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 {/* Items per page */}
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Show</span>
+                  <span className="text-sm text-black dark:text-gray-300">Show</span>
                   <select
                     value={ordersPerPage}
                     onChange={(e) => setOrdersPerPage(Number(e.target.value))}
@@ -998,7 +998,7 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
                     <option value={50}>50</option>
                     <option value={100}>100</option>
                   </select>
-                  <span className="text-sm text-gray-700">entries per page</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">entries per page</span>
                 </div>
 
                 {/* Pagination */}
@@ -1032,7 +1032,7 @@ doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42
                             onClick={() => setCurrentPage(pageNumber)}
                             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                               currentPage === pageNumber
-                                ? 'bg-blue-600 text-white'
+                                ? 'bg-blue-600 text-blue-500'
                                 : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:bg-gray-800'
                             }`}
                           >
