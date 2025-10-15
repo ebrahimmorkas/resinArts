@@ -605,7 +605,7 @@ const ViewVariantsModal = ({ product, onClose }) => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Variants - {product.name}</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Variants - {product.name}</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -626,28 +626,28 @@ const ViewVariantsModal = ({ product, onClose }) => {
                         className="w-16 h-16 rounded-lg object-cover flex-shrink-0"
                       />
                       <div className="flex-1">
-                        <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
-                        <p className="text-sm text-gray-500">Variant</p>
+                        <h3 className="font-medium text-gray-900 dark:text-white">{variant.colorName}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Variant</p>
                       </div>
                       <button
                         onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
                         disabled={toggleLoading[`variant-${variantId}`]}
                         className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                           isVariantActive
-                            ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                            : 'bg-red-100 text-red-800 hover:bg-red-200'
+                            ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:text-white'
+                            : 'bg-red-100 text-red-800 hover:bg-red-200 dark:text-white'
                         } disabled:opacity-50`}
                       >
                         {toggleLoading[`variant-${variantId}`] ? (
                           <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                         ) : isVariantActive ? (
                           <>
-                            <Power className="w-3 h-3 mr-1" />
+                            <Power className="w-3 h-3 mr-1 dark:text-white"/>
                             Active
                           </>
                         ) : (
                           <>
-                            <PowerOff className="w-3 h-3 mr-1" />
+                            <PowerOff className="w-3 h-3 mr-1 dark:text-white" />
                             Inactive
                           </>
                         )}
@@ -656,7 +656,7 @@ const ViewVariantsModal = ({ product, onClose }) => {
                     <div className="ml-20 space-y-2">
                       {variant.moreDetails && variant.moreDetails.length > 0 ? (
                         <div>
-                          <h4 className="text-sm font-medium text-gray-700">Sizes</h4>
+                          <h4 className="text-sm font-medium text-gray-700 dark:text-gray-400">Sizes</h4>
                           <div className="mt-2 space-y-2">
                             {variant.moreDetails.map(details => {
                               const sizeId = typeof details._id === 'object' ? details._id.$oid : details._id;
@@ -668,10 +668,10 @@ const ViewVariantsModal = ({ product, onClose }) => {
                                   className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 p-2 rounded-md"
                                 >
                                   <div className="flex items-center gap-2">
-                                    <span className="text-sm text-gray-600 dark:text-gray-400">
+                                    <span className="text-sm text-gray-600 dark:text-gray-400 dark:text-white">
                                       {details.size?.length}" × {details.size?.breadth}" × {details.size?.height}"
                                     </span>
-                                    <span className="text-xs text-gray-500">
+                                    <span className="text-xs text-gray-500 dark:text-white">
                                       Stock: {details.stock || 0}
                                     </span>
                                   </div>
@@ -682,20 +682,20 @@ const ViewVariantsModal = ({ product, onClose }) => {
                                     disabled={toggleLoading[`size-${variantId}-${sizeId}`]}
                                     className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium transition-colors ${
                                       isSizeActive
-                                        ? 'bg-green-100 text-green-800 hover:bg-green-200'
-                                        : 'bg-red-100 text-red-800 hover:bg-red-200'
+                                        ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:text-white'
+                                        : 'bg-red-100 text-red-800 hover:bg-red-200 dark:text-white'
                                     } disabled:opacity-50`}
                                   >
                                     {toggleLoading[`size-${variantId}-${sizeId}`] ? (
-                                      <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                                      <Loader2 className="w-3 h-3 mr-1 animate-spin dark:text-white" />
                                     ) : isSizeActive ? (
                                       <>
-                                        <Power className="w-3 h-3 mr-1" />
+                                        <Power className="w-3 h-3 mr-1 dark:text-white" />
                                         Active
                                       </>
                                     ) : (
                                       <>
-                                        <PowerOff className="w-3 h-3 mr-1" />
+                                        <PowerOff className="w-3 h-3 mr-1 dark:text-white" />
                                         Inactive
                                       </>
                                     )}
@@ -706,7 +706,7 @@ const ViewVariantsModal = ({ product, onClose }) => {
                           </div>
                         </div>
                       ) : (
-                        <p className="text-sm text-gray-500">No sizes available for this variant.</p>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">No sizes available for this variant.</p>
                       )}
                     </div>
                   </div>
@@ -714,7 +714,7 @@ const ViewVariantsModal = ({ product, onClose }) => {
               })
             ) : (
               <div className="text-center py-8">
-                <p className="text-gray-600 dark:text-gray-400">No variants available for this product.</p>
+                <p className="text-gray-600 dark:text-gray-400 dark:text-gray-400">No variants available for this product.</p>
               </div>
             )}
           </div>
@@ -1251,7 +1251,7 @@ const DeleteConfirmationModal = () => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-900 rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Stock Details - {product.name}</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Stock Details - {product.name}</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5" />
           </button>
@@ -1271,29 +1271,29 @@ const DeleteConfirmationModal = () => {
                       className="w-16 h-16 rounded-lg object-cover" 
                     />
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
-                      <p className="text-sm text-gray-500">Variant</p>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{variant.colorName}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Variant</p>
                     </div>
                     <button
                       onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
                       disabled={toggleLoading[`variant-${variantId}`]}
                       className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                         isVariantActive 
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:text-white' 
+                          : 'bg-red-100 text-red-800 hover:bg-red-200 dark:text-white'
                       } disabled:opacity-50`}
                     >
                       {toggleLoading[`variant-${variantId}`] ? (
-                        <Loader2 className="w-3 h-3 mr-1 animate-spin" />
+                        <Loader2 className="w-3 h-3 mr-1 animate-spin dark:text-white" />
                       ) : isVariantActive ? (
-                        <Power className="w-3 h-3 mr-1" />
+                        <Power className="w-3 h-3 mr-1 dark:text-white" />
                       ) : (
-                        <PowerOff className="w-3 h-3 mr-1" />
+                        <PowerOff className="w-3 h-3 mr-1 dark:text-white" />
                       )}
                       {isVariantActive ? 'Active' : 'Inactive'}
                     </button>
                   </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 dark:text-white">
                     {variant.moreDetails.map(details => {
                       const detailsId = typeof details._id === 'object' ? details._id.$oid : details._id;
                       const isSizeActive = details.isActive !== false;
@@ -1302,14 +1302,13 @@ const DeleteConfirmationModal = () => {
                         <div key={detailsId} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                           <div className="flex justify-between items-start mb-2">
                             <div className="flex-1">
-                              <p className="text-sm font-medium text-gray-700">
+                              <p className="text-sm font-medium text-gray-700 dark:text-white">
                                 Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
                               </p>
-                              <p className="text-xs text-gray-500 mt-1">Weight: {details.size.weight}kg</p>
                             </div>
                             <div className="text-right ml-2">
                               <p className="text-lg font-bold text-blue-600">{details.stock || 0}</p>
-                              <p className="text-xs text-gray-500">in stock</p>
+                              <p className="text-xs text-gray-500 dark:text-gray-400">in stock</p>
                             </div>
                           </div>
                           <div className="flex items-center justify-between mt-2">
@@ -1317,8 +1316,8 @@ const DeleteConfirmationModal = () => {
                               (details.stock || 0) > 10 
                                 ? 'bg-green-100 text-green-800' 
                                 : (details.stock || 0) > 0 
-                                  ? 'bg-yellow-100 text-yellow-800' 
-                                  : 'bg-red-100 text-red-800'
+                                  ? 'bg-yellow-100 text-yellow-800 dark:text-white' 
+                                  : 'bg-red-100 text-red-800 dark:text-white'
                             }`}>
                               {(details.stock || 0) > 10 ? 'In Stock' : (details.stock || 0) > 0 ? 'Low Stock' : 'Out of Stock'}
                             </div>
@@ -1332,11 +1331,11 @@ const DeleteConfirmationModal = () => {
                               } disabled:opacity-50`}
                             >
                               {toggleLoading[`size-${detailsId}`] ? (
-                                <Loader2 className="w-3 h-3 animate-spin" />
+                                <Loader2 className="w-3 h-3 animate-spin dark:text-white" />
                               ) : isSizeActive ? (
-                                <Power className="w-3 h-3" />
+                                <Power className="w-3 h-3 dark:text-white" />
                               ) : (
-                                <PowerOff className="w-3 h-3" />
+                                <PowerOff className="w-3 h-3 dark:text-white" />
                               )}
                             </button>
                           </div>
@@ -1414,13 +1413,13 @@ const DeleteConfirmationModal = () => {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
       <div className="bg-white dark:bg-gray-900 rounded-xl max-w-6xl w-full max-h-[90vh] flex flex-col">
         <div className="flex justify-between items-center p-4 md:p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-          <h2 className="text-lg md:text-xl font-semibold text-gray-900">Price Details - {product.name}</h2>
+          <h2 className="text-lg md:text-xl font-semibold text-gray-900 dark:text-white">Price Details - {product.name}</h2>
           <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
             <X className="w-5 h-5" />
           </button>
         </div>
         <div className="p-4 md:p-6 overflow-y-auto flex-1">
-          <div className="space-y-6">
+          <div className="space-y-6 dark:text-white">
             {product.variants.map(variant => {
               const variantId = typeof variant._id === 'object' ? variant._id.$oid : variant._id;
               const isVariantActive = variant.isActive !== false;
@@ -1434,24 +1433,24 @@ const DeleteConfirmationModal = () => {
                       className="w-16 h-16 rounded-lg object-cover" 
                     />
                     <div className="flex-1">
-                      <h3 className="font-medium text-gray-900">{variant.colorName}</h3>
-                      <p className="text-sm text-gray-500">Variant</p>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{variant.colorName}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Variant</p>
                     </div>
                     <button
                       onClick={() => handleToggleVariantStatus(variantId, isVariantActive)}
                       disabled={toggleLoading[`variant-${variantId}`]}
                       className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
                         isVariantActive 
-                          ? 'bg-green-100 text-green-800 hover:bg-green-200' 
-                          : 'bg-red-100 text-red-800 hover:bg-red-200'
+                          ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:text-white' 
+                          : 'bg-red-100 text-red-800 hover:bg-red-200 dark:text-white'
                       } disabled:opacity-50`}
                     >
                       {toggleLoading[`variant-${variantId}`] ? (
                         <Loader2 className="w-3 h-3 mr-1 animate-spin" />
                       ) : isVariantActive ? (
-                        <Power className="w-3 h-3 mr-1" />
+                        <Power className="w-3 h-3 mr-1 dark:text-white" />
                       ) : (
-                        <PowerOff className="w-3 h-3 mr-1" />
+                        <PowerOff className="w-3 h-3 mr-1 dark:text-white" />
                       )}
                       {isVariantActive ? 'Active' : 'Inactive'}
                     </button>
@@ -1464,33 +1463,32 @@ const DeleteConfirmationModal = () => {
                       return (
                         <div key={detailsId} className="bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">
                           <div className="mb-3">
-                            <p className="text-sm font-medium text-gray-700 mb-1">
+                            <p className="text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">
                               Size: {details.size.length}" × {details.size.breadth}" × {details.size.height}"
                             </p>
-                            <p className="text-xs text-gray-500">Weight: {details.size.weight}kg</p>
                           </div>
                           
                           <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                              <span className="text-sm text-gray-600 dark:text-gray-400">Base Price:</span>
-                              <span className="text-base md:text-lg font-bold text-green-600">₹{details.price}</span>
+                              <span className="text-sm text-gray-600 dark:text-gray-400 dark:text-gary-400">Base Price:</span>
+                              <span className="text-base md:text-lg font-bold text-green-600 dark:text-white">₹{details.price}</span>
                             </div>
                             
                             {details.discountPrice && (
                               <div className="flex justify-between items-center">
-                                <span className="text-sm text-gray-600 dark:text-gray-400">Discount Price:</span>
-                                <span className="text-base md:text-lg font-bold text-red-600">₹{details.discountPrice}</span>
+                                <span className="text-sm text-gray-600 dark:text-gray-400 dark:text-gray-400">Discount Price:</span>
+                                <span className="text-base md:text-lg font-bold text-red-600 dark:text-white">₹{details.discountPrice}</span>
                               </div>
                             )}
                             
                             {details.bulkPricing && details.bulkPricing.length > 0 && (
                               <div className="mt-3 pt-3 border-t border-gray-200 dark:border-gray-700">
-                                <p className="text-xs font-medium text-gray-700 mb-2">Bulk Pricing:</p>
+                                <p className="text-xs font-medium text-gray-700 mb-2 dark:text-gray-400">Bulk Pricing:</p>
                                 <div className="space-y-1">
                                   {details.bulkPricing.map((bulk, index) => (
                                     <div key={index} className="flex justify-between text-xs">
-                                      <span className="text-gray-600 dark:text-gray-400">{bulk.quantity}+ items:</span>
-                                      <span className="font-medium text-blue-600">₹{bulk.wholesalePrice}</span>
+                                      <span className="text-gray-600 dark:text-gray-400 dark:text-white">{bulk.quantity}+ items:</span>
+                                      <span className="font-medium text-blue-600 dark:text-white">₹{bulk.wholesalePrice}</span>
                                     </div>
                                   ))}
                                 </div>
@@ -1510,9 +1508,9 @@ const DeleteConfirmationModal = () => {
                                 {toggleLoading[`size-${detailsId}`] ? (
                                   <Loader2 className="w-3 h-3 animate-spin" />
                                 ) : isSizeActive ? (
-                                  <Power className="w-3 h-3" />
+                                  <Power className="w-3 h-3 dark:text-white" />
                                 ) : (
-                                  <PowerOff className="w-3 h-3" />
+                                  <PowerOff className="w-3 h-3 dark:text-white" />
                                 )}
                               </button>
                             </div>
@@ -2584,8 +2582,8 @@ const DeleteConfirmationModal = () => {
           <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Products Management</h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Products Management</h3>
+                <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">
                   Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} results
                 </p>
               </div>
@@ -2601,11 +2599,11 @@ const DeleteConfirmationModal = () => {
                   />
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button onClick={() => setShowFilters(!showFilters)} className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <button onClick={() => setShowFilters(!showFilters)} className="dark:text-gray-400 inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <Filter className="w-4 h-4 mr-2" />
                     Filter
                   </button>
-                  <button onClick={exportToExcel} className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                  <button onClick={exportToExcel} className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:text-gray-400 dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
                     <Download className="w-4 h-4 mr-2" />
                     Export Products
                   </button>
@@ -2618,11 +2616,11 @@ const DeleteConfirmationModal = () => {
     {/* ADD THIS CATEGORY FILTER SECTION AT THE TOP */}
     <div className="mb-6 pb-6 border-b border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between mb-4">
-        <h4 className="text-sm font-semibold text-gray-700">Category Filter</h4>
+        <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-400">Category Filter</h4>
         {selectedCategoryIds.length > 0 && (
           <button
             onClick={clearCategoryFilter}
-            className="text-xs text-red-600 hover:text-red-800 font-medium"
+            className="text-xs text-red-600 hover:text-red-800 font-medium dark:text-white"
           >
             Clear Filter
           </button>
@@ -2633,7 +2631,7 @@ const DeleteConfirmationModal = () => {
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-3">
         {/* Main Category Dropdown */}
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700">Main Category</label>
+          <label className="block text-sm font-medium text-gray-700 dark:text-gray-400">Main Category</label>
           <select
             value={selectedCategoryIds[0] || ""}
             onChange={(e) => handleCategorySelect(0, e.target.value)}
@@ -2659,7 +2657,7 @@ const DeleteConfirmationModal = () => {
           if (hasSubcategories) {
             return (
               <div className="space-y-2">
-                <label className="block text-sm font-medium text-gray-700">Sub Category</label>
+                <label className="block text-sm font-medium text-gray-700 dark:text-400">Sub Category</label>
                 <select
                   value={selectedCategoryIds[selectedCategoryIds.length] || ""}
                   onChange={(e) => handleCategorySelect(selectedCategoryIds.length, e.target.value)}
@@ -2703,8 +2701,8 @@ const DeleteConfirmationModal = () => {
     </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Date Filter</label>
-                    <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">Date Filter</label>
+                    <select value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-300 dark:text-white dark:bg-gray-900">
                       <option value="">All Dates</option>
                       <option value="today">Today</option>
                       <option value="yesterday">Yesterday</option>
@@ -2734,8 +2732,8 @@ const DeleteConfirmationModal = () => {
                   )}
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Sort by Price</label>
-                    <select value={priceSort} onChange={(e) => setPriceSort(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">Sort by Price</label>
+                    <select value={priceSort} onChange={(e) => setPriceSort(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-300 dark:text-white dark:bg-gray-900">
                       <option value="">No Sort</option>
                       <option value="low-high">Low to High</option>
                       <option value="high-low">High to Low</option>
@@ -2743,8 +2741,8 @@ const DeleteConfirmationModal = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Sort by Stock</label>
-                    <select value={stockSort} onChange={(e) => setStockSort(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                    <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">Sort by Stock</label>
+                    <select value={stockSort} onChange={(e) => setStockSort(e.target.value)} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-300 dark:text-white dark:bg-gray-900">
                       <option value="">No Sort</option>
                       <option value="low-high">Low to High</option>
                       <option value="high-low">High to Low</option>
@@ -2792,14 +2790,14 @@ const DeleteConfirmationModal = () => {
         </button>
         <button 
           onClick={() => handleBulkStatusToggle(false)}
-          className="bg-orange-500 hover:bg-orange-600 text-red-600 px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center"
+          className="bg-orange-500 hover:bg-orange-600 text-red-600 px-3 py-1 rounded-md text-sm font-medium transition-colors inline-flex items-center dark:text-white"
         >
           <PowerOff className="w-4 h-4 mr-1" />
           Deactivate Selected
         </button>
                     <button 
   onClick={() => setShowDeleteModal(true)} 
-  className="bg-red-500 hover:bg-red-600 text-red-600 px-3 py-1 rounded-md text-sm font-medium transition-colors"
+  className="bg-red-500 hover:bg-red-600 text-red-600 px-3 py-1 rounded-md text-sm font-medium transition-colors dark:text-white"
 >
   Delete Selected
 </button>
@@ -2836,7 +2834,7 @@ const DeleteConfirmationModal = () => {
 </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
   {currentData.map((product, index) => (
-    <tr key={product._id} className="hover:bg-gray-50 dark:bg-gray-800">
+    <tr key={product._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800">
       <td className="px-6 py-4 whitespace-nowrap">
         <input
           type="checkbox"
@@ -2853,40 +2851,40 @@ const DeleteConfirmationModal = () => {
         />
       </td>
       <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm font-medium text-gray-900">{product.name}</div>
-        <div className="text-sm text-gray-500">{product._id}</div>
+        <div className="text-sm font-medium text-gray-900 dark:text-gray-400">{product.name}</div>
+        <div className="text-sm text-gray-500 dark:text-blue-500">{product._id}</div>
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.categoryPath || product.category}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">{product.categoryPath || product.category}</td>
       <td className="px-6 py-4 whitespace-nowrap text-sm">
         {product.hasVariants ? (
           <button
             onClick={() => openViewStockModal(product)}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-blue-600 hover:text-blue-800 dark:text-white"
           >
             View Stock
           </button>
         ) : (
-          <span className={product.stock > 0 ? 'text-green-600' : 'text-red-600'}>
+          <span className={product.stock > 0 ? 'text-green-600 dark:text-white' : 'text-red-600 dark:text-white'}>
             {product.stock}
           </span>
         )}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
         {product.hasVariants ? product.variants.length : 0}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
         {getNumberOfSizeVariants(product)}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm">
         {product.hasVariants ? (
           <button
             onClick={() => openViewPriceModal(product)}
-            className="text-blue-600 hover:text-blue-800"
+            className="text-blue-600 hover:text-blue-800 dark:text-white"
           >
             View Price
           </button>
         ) : (
-          <span className="text-green-600">₹{product.price}</span>
+          <span className="text-green-600 dark:text-white">₹{product.price}</span>
         )}
       </td>
       <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -2901,14 +2899,14 @@ const DeleteConfirmationModal = () => {
           <span className="text-gray-500">-</span>
         )}
       </td>
-      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{formatDate(product.createdAt)}</td>
+      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">{formatDate(product.createdAt)}</td>
       <td className="px-6 py-4 whitespace-nowrap text-sm">
         <button
           onClick={() => handleToggleStatus(product._id, !product.isActive)}
           className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium ${
             product.isActive
-              ? 'bg-green-100 text-green-800 hover:bg-green-200'
-              : 'bg-red-100 text-red-800 hover:bg-red-200'
+              ? 'bg-green-100 text-green-800 hover:bg-green-200 dark:text-white'
+              : 'bg-red-100 text-red-800 hover:bg-red-200 dark:text-white'
           }`}
         >
           {product.isActive ? (
@@ -2951,7 +2949,7 @@ const DeleteConfirmationModal = () => {
         </button>
         <button
           onClick={() => openDeleteModal(product)}
-          className="text-red-600 hover:text-red-800" title="Delete Product"
+          className="text-red-600 hover:text-red-800 dark:text-white" title="Delete Product"
         >
           <Trash2 className="h-4 w-4" />
         </button>
@@ -2965,15 +2963,15 @@ const DeleteConfirmationModal = () => {
           <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-700">Show</span>
-                <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                <span className="text-sm text-gray-700 bg-gray-400">Show</span>
+                <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:border-gray-300 dark:text-white dark:bg-gray-900">
                   <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={25}>25</option>
                   <option value={50}>50</option>
                   <option value={100}>100</option>
                 </select>
-                <span className="text-sm text-gray-700">entries per page</span>
+                <span className="text-sm text-gray-700 dark:bg-gray-400">entries per page</span>
               </div>
 
               <div className="flex items-center space-x-2">
