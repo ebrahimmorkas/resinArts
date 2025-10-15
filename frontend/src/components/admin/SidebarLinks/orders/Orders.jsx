@@ -138,7 +138,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         {/* Modal Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Order Details</h2>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Order Details</h2>
             <p className="text-sm text-gray-600 dark:text-gray-400">Order ID: {order._id}</p>
           </div>
           <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors">
@@ -305,7 +305,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center mb-3">
                 <User className="h-5 w-5 text-blue-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Customer Information</h3>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
@@ -335,7 +335,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
             <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center mb-3">
                 <Package className="h-5 w-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Order Summary</h3>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
@@ -361,8 +361,8 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   </span>
 </div>
                 <div className="flex justify-between border-t pt-2 font-semibold">
-                  <span className="text-gray-900">Total:</span>
-                  <span className="text-gray-900">
+                  <span className="text-gray-900 dark:text-white">Total:</span>
+                  <span className="text-gray-900 dark:text-white">
                     {order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`}
                   </span>
                 </div>
@@ -374,7 +374,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
           <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <div className="flex items-center mb-4">
               <Package className="h-5 w-5 text-purple-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Ordered Products</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ordered Products</h3>
             </div>
             <div className="space-y-4">
               {order.orderedProducts.map((product, index) => {
@@ -392,7 +392,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-semibold text-gray-900 text-lg">{product.product_name}</h4>
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-lg">{product.product_name}</h4>
                           <div
                             className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${stockStatus.bgColor} ${stockStatus.textColor}`}
                           >
@@ -404,19 +404,19 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                           <div className="space-y-2">
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">Product ID:</span>
-                              <div className="font-medium text-xs break-all">{product.product_id}</div>
+                              <span className="text-gray-600 dark:text-black">Product ID:</span>
+                              <div className="font-medium text-xs break-all dark:text-blue-500">{product.product_id}</div>
                             </div>
                             {product.variant_id && (
                               <div>
-                                <span className="text-gray-600 dark:text-gray-400">Variant ID:</span>
-                                <div className="font-medium text-xs break-all">{product.variant_id}</div>
+                                <span className="text-gray-600 dark:text-black">Variant ID:</span>
+                                <div className="font-medium text-xs break-all dark:text-blue-500">{product.variant_id}</div>
                               </div>
                             )}
                             {product.size_id && (
                               <div>
-                                <span className="text-gray-600 dark:text-gray-400">Size ID:</span>
-                                <div className="font-medium text-xs break-all">{product.size_id}</div>
+                                <span className="text-gray-600 dark:text-black">Size ID:</span>
+                                <div className="font-medium text-xs break-all dark:text-blue-500">{product.size_id}</div>
                               </div>
                             )}
                           </div>
@@ -424,36 +424,36 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                           <div className="space-y-2">
                             {product.variant_name && (
                               <div>
-                                <span className="text-gray-600 dark:text-gray-400">Variant:</span>
-                                <div className="font-medium">{product.variant_name}</div>
+                                <span className="text-gray-600 dark:text-black">Variant:</span>
+                                <div className="font-medium dark:text-black font-bold">{product.variant_name}</div>
                               </div>
                             )}
                             {product.size && (
                               <div>
-                                <span className="text-gray-600 dark:text-gray-400">Size:</span>
-                                <div className="font-medium">{product.size}</div>
+                                <span className="text-gray-600 dark:text-black">Size:</span>
+                                <div className="font-medium dark:text-blue-500 font-bold">{product.size}</div>
                               </div>
                             )}
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">Unit Price:</span>
-                              <div className="font-medium">₹{product.price}</div>
+                              <span className="text-gray-600 dark:text-black">Unit Price:</span>
+                              <div className="font- dark:text-blue-500 font-bold">₹{product.price}</div>
                             </div>
                           </div>
 
                           <div className="space-y-2">
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">Ordered Quantity:</span>
-                              <div className="font-medium">{product.quantity}</div>
+                              <span className="text-gray-600 dark:text-black">Ordered Quantity:</span>
+                              <div className="font-medium dark:text-blue-500 font-bold">{product.quantity}</div>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">Current Stock:</span>
-                              <div className={`font-medium ${stockStatus.textColor}`}>
+                              <span className="text-gray-600 dark:text-black">Current Stock:</span>
+                              <div className={`font-medium ${stockStatus.textColor} dark:text-blue-500 font-bold`}>
                                 {stock !== undefined ? stock : "Unknown"}
                               </div>
                             </div>
                             <div>
-                              <span className="text-gray-600 dark:text-gray-400">Total:</span>
-                              <div className="font-semibold text-lg">₹{product.total}</div>
+                              <span className="text-gray-600 dark:text-black">Total:</span>
+                              <div className="font-semibold text-lg dark:text-green-500 font-extrabold">₹{product.total}</div>
                             </div>
                           </div>
                         </div>
@@ -486,7 +486,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
           <div className="flex justify-end">
             <button
               onClick={onClose}
-              className="px-6 py-2 bg-gray-600 text-black text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+              className="px-6 py-2 bg-gray-600 text-black dark:text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
             >
               Close
             </button>
@@ -1289,8 +1289,8 @@ export default function OrdersManagement() {
           <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">Orders Table</h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Orders Table</h3>
+                <p className="text-sm text-gray-500 dark:text-white mt-1">
                   Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} results
                 </p>
               </div>
@@ -1386,79 +1386,79 @@ export default function OrdersManagement() {
             <table className="w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Sr No.
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Order ID
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     User Name
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Phone
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     WhatsApp
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Email
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
   Items Total
 </th>
-<th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+<th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
   Shipping Price
 </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Total Price
                   </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">
                     Edit Shipping
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Status
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Ordered At
                   </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Actions
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                 {currentOrders.map((order, index) => (
-                  <tr key={order._id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors cursor-pointer" onClick={() => handleOrderClick(order)}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 transition-colors cursor-pointer" onClick={() => handleOrderClick(order)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {startIndex + index + 1}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className="font-medium text-blue-600" title={order._id}>{truncateOrderId(order._id)}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {order.user_name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                       {order.phone_number}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                       {order.whatsapp_number}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
                       <div className="max-w-xs truncate" title={order.email}>
                         {order.email}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
   <span className="font-medium">₹{order.price.toFixed(2)}</span>
 </td>
-<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
   <span className="font-medium">
     {order.total_price === "Pending" ? 'Pending' : order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price.toFixed(2)}`}
   </span>
 </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
   <span className="font-medium">
     {order.status === "Pending" ? "Pending" : `₹${order.total_price}`}
   </span>
@@ -1484,7 +1484,7 @@ export default function OrdersManagement() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getStatusBadge(order.status)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                       {formatOrderDate(order.createdAt, startIndex + index)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -1544,7 +1544,7 @@ export default function OrdersManagement() {
           {currentOrders.length === 0 && (
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500 text-lg font-medium">No orders found</p>
+              <p className="text-gray-500 dark:text-white text-lg font-medium">No orders found</p>
               {(searchTerm || statusFilter || dateFilter) && (
                 <p className="text-gray-400 text-sm mt-2">Try adjusting your search criteria or filters</p>
               )}
@@ -1577,7 +1577,7 @@ export default function OrdersManagement() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1602,7 +1602,7 @@ export default function OrdersManagement() {
                           className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                             currentPage === pageNumber
                               ? 'bg-blue-600 text-blue-600 shadow-sm'
-                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                              : 'text-gray-500 dark:text-white hover:text-gray-700 hover:bg-gray-100'
                           }`}
                         >
                           {pageNumber}
@@ -1614,7 +1614,7 @@ export default function OrdersManagement() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>

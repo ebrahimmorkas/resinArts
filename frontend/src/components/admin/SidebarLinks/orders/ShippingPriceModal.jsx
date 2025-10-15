@@ -88,7 +88,7 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
                 <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
                     <div className="flex items-center space-x-2">
                         <DollarSign className="h-5 w-5 text-blue-600" />
-                        <h2 className="text-xl font-bold text-gray-900">{modalTitle}</h2>
+                        <h2 className="text-xl font-bold text-gray-900 dark:text-white">{modalTitle}</h2>
                     </div>
                     <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                         <X className="h-6 w-6" />
