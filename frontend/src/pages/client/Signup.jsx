@@ -227,8 +227,8 @@ const Signup = () => {
   const availableCities = formData.state ? indianStatesAndCities[formData.state] || [] : [];
 
   return (
-    <div className="min-h-screen w-full bg-white dark:bg-gray-950 flex items-center justify-center p-4">
-      <div className="w-full max-w-2xl">
+    <div className="min-h-screen w-screen bg-white dark:bg-gray-950 flex items-center justify-center">
+  <div className="w-[90%] max-w-2xl mx-auto">
         <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-8 max-h-[90vh] overflow-y-auto">
           {/* Header */}
           <div className="text-center mb-8">
