@@ -3,6 +3,7 @@ const AbandonedCart = require('../models/AbandonedCart');
 const User = require('../models/User');
 const sendEmail = require('../utils/sendEmail');
 const Cart = require('../models/Cart');
+const Notification = require('../models/Notification');
 
 // Get all abandoned carts (Admin only)
 const getAllAbandonedCarts = async (req, res) => {
@@ -41,6 +42,12 @@ const deleteAbandonedCart = async (req, res) => {
         // Delete user's cart items as well
         await Cart.deleteMany({ user_id: deletedCart.user_id });
 
+        // Delete associated notification
+        await Notification.deleteMany({ 
+            abandonedCartId: id,
+            type: 'abandonedCart'
+        });
+
         // Emit socket event
         if (io) {
             io.to('admin_room').emit('abandoned_cart_deleted', { cartId: id });
@@ -48,7 +55,7 @@ const deleteAbandonedCart = async (req, res) => {
 
         return res.status(200).json({
             success: true,
-            message: 'Abandoned cart and user cart deleted successfully',
+            message: 'Abandoned cart, user cart, and notification deleted successfully',
         });
     } catch (error) {
         console.error('Error deleting abandoned cart:', error);
@@ -72,24 +79,26 @@ const deleteMultipleAbandonedCarts = async (req, res) => {
             });
         }
 
-        // Get all carts first to get user IDs
         const cartsToDelete = await AbandonedCart.find({ _id: { $in: ids } });
         const userIds = cartsToDelete.map(cart => cart.user_id);
 
-        // Delete abandoned carts
         const result = await AbandonedCart.deleteMany({ _id: { $in: ids } });
 
-        // Delete all cart items for these users
         await Cart.deleteMany({ user_id: { $in: userIds } });
 
-        // Emit socket event
+        // Delete associated notifications
+        await Notification.deleteMany({ 
+            abandonedCartId: { $in: ids },
+            type: 'abandonedCart'
+        });
+
         if (io) {
             io.to('admin_room').emit('abandoned_carts_deleted', { cartIds: ids });
         }
 
         return res.status(200).json({
             success: true,
-            message: `${result.deletedCount} abandoned cart(s) and user carts deleted successfully`,
+            message: `${result.deletedCount} abandoned cart(s), user carts, and notifications deleted successfully`,
             deletedCount: result.deletedCount,
         });
     } catch (error) {

@@ -9,12 +9,19 @@ import Orders from './pages/client/Orders';
 import OrdersPanel from './components/admin/SidebarLinks/orders/OrdersPanel';
 import ProtectedRoute from './protectedRoutes';
 import UpdateUser from './pages/client/UpdateUser';
+import ForgotPassword from './pages/client/ForgotPassword';
+import ResetPassword from './pages/client/ResetPassword';
 
 function App() {
   return (
       <Routes>
+        {/* Routes for login and signup */}
         <Route path='/auth/signup' element={<Signup />} />
         <Route path='/auth/login' element={<Login />} />
+
+        {/* Routes for forgot and reset password */}
+        <Route path="/auth/forgot-password" element={<ForgotPassword />} />
+        <Route path="/auth/reset-password/:token" element={<ResetPassword />} />
         
         {/* Admin routes - protected */}
         <Route path='/admin/panel/*' element={

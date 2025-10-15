@@ -12,12 +12,12 @@ const LoadingOverlay = ({ isLoading, message = "Adding Product..." }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl p-8 text-center max-w-sm mx-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-8 text-center max-w-sm mx-4">
         <div className="flex justify-center mb-4">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-blue-500 border-t-transparent"></div>
         </div>
         <h4 className="font-semibold text-gray-900 mb-2">{message}</h4>
-        <p className="text-gray-600 text-sm">Please wait while we process your request...</p>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">Please wait while we process your request...</p>
       </div>
     </div>
   )
@@ -484,18 +484,18 @@ export default function AddProduct() {
   }
 
   // Professional styling classes
-  const cardClass = "bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+  const cardClass = "bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
   const sectionClass = "p-8"
   const headerClass = "border-b border-gray-100 px-8 py-6 bg-gradient-to-r from-gray-50 to-white"
   const titleClass = "text-2xl font-bold text-gray-900 flex items-center gap-3"
-  const subtitleClass = "text-gray-600 mt-1"
-  const inputClass = "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white text-gray-900 placeholder-gray-400"
+  const subtitleClass = "text-gray-600 dark:text-gray-400 mt-1"
+  const inputClass = "w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 placeholder-gray-400"
   const labelClass = "block text-sm font-semibold text-gray-700 mb-2"
   const buttonClass = "inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2"
   const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl focus:ring-blue-500`
-  const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 focus:ring-gray-500`
+  const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 dark:border-gray-700 focus:ring-gray-500`
   const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white focus:ring-red-500`
-  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white`
+  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900`
 
   // Dynamic Category Dropdowns
   const handleCategorySelect = (level, categoryId) => {
@@ -574,7 +574,7 @@ export default function AddProduct() {
           <h1 className="text-5xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent mb-4">
             Add New Product
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
             Create and manage your product catalog with our comprehensive product management system
           </p>
         </div>
@@ -620,7 +620,7 @@ export default function AddProduct() {
                 )}
 
                 {/* Product Details */}
-                <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                   <div className="flex justify-between items-center">
                     <h3 className="text-xl font-semibold text-gray-900">Product Specifications</h3>
                     <button
@@ -724,7 +724,7 @@ export default function AddProduct() {
                         <ImageIcon className="inline w-4 h-4 mr-2" />
                         Product Main Image
                       </label>
-                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
+                      <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 text-center hover:border-blue-400 transition-colors">
                         <input
                           id="mainImage"
                           type="file"
@@ -740,14 +740,14 @@ export default function AddProduct() {
                                 alt="Main Product Preview"
                                 className="h-40 w-40 object-cover rounded-xl mx-auto shadow-lg"
                               />
-                              <p className="text-sm text-gray-600">Click to change image</p>
+                              <p className="text-sm text-gray-600 dark:text-gray-400">Click to change image</p>
                             </div>
                           ) : (
                             <div className="space-y-4">
                               <Upload className="h-16 w-16 text-gray-400 mx-auto" />
                               <div>
                                 <p className="text-lg font-medium text-gray-900">Upload Product Image</p>
-                                <p className="text-sm text-gray-600">PNG, JPG up to 10MB</p>
+                                <p className="text-sm text-gray-600 dark:text-gray-400">PNG, JPG up to 10MB</p>
                               </div>
                             </div>
                           )}
@@ -756,7 +756,7 @@ export default function AddProduct() {
                     </div>
 
                     {/* Additional Images */}
-                    <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                       <div className="flex justify-between items-center">
                         <h3 className="text-xl font-semibold text-gray-900">Additional Images</h3>
                         <button
@@ -778,7 +778,7 @@ export default function AddProduct() {
                       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                         {additionalImages.map((image, index) => (
                           <div key={index} className="relative">
-                            <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 transition-colors">
+                            <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center hover:border-blue-400 transition-colors">
                               <input
                                 id={`additional-image-${index}`}
                                 type="file"
@@ -799,7 +799,7 @@ export default function AddProduct() {
                                 ) : (
                                   <div className="space-y-2">
                                     <ImageIcon className="h-8 w-8 text-gray-400 mx-auto" />
-                                    <p className="text-sm text-gray-600">Image {index + 1}</p>
+                                    <p className="text-sm text-gray-600 dark:text-gray-400">Image {index + 1}</p>
                                   </div>
                                 )}
                               </label>
@@ -817,7 +817,7 @@ export default function AddProduct() {
                     </div>
 
                     {/* Bulk Pricing */}
-                    <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                       <div className="flex justify-between items-center">
                         <h3 className="text-xl font-semibold text-gray-900">Bulk Pricing Options</h3>
                         <button
@@ -830,7 +830,7 @@ export default function AddProduct() {
                         </button>
                       </div>
                       {bulkPricing.map((bp, index) => (
-                        <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                        <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                           <div className="space-y-2">
                             <label className={labelClass}>Wholesale Price ($)</label>
                             <input
@@ -893,7 +893,7 @@ export default function AddProduct() {
                   {variants.map((variant, variantIndex) => (
                     <div
                       key={variantIndex}
-                      className="bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-200 p-8 space-y-8"
+                      className="bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-200 dark:border-gray-700 p-8 space-y-8"
                     >
                       <div className="flex justify-between items-center">
                         <h3 className="text-2xl font-bold text-gray-900">
@@ -927,7 +927,7 @@ export default function AddProduct() {
                         </div>
                         <div className="space-y-4">
                           <label className={labelClass}>Variant Image</label>
-                          <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
+                          <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
                             <input
                               id={`variant-image-${variantIndex}`}
                               type="file"
@@ -951,7 +951,7 @@ export default function AddProduct() {
                               ) : (
                                 <div className="space-y-2">
                                   <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                                  <p className="text-sm text-gray-600">Upload variant image</p>
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">Upload variant image</p>
                                 </div>
                               )}
                             </label>
@@ -974,7 +974,7 @@ export default function AddProduct() {
                       </div>
 
                       {/* Variant Optional Details */}
-                      <div className="bg-white rounded-xl p-6 border border-gray-100 space-y-6">
+                      <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-100 space-y-6">
                         <div className="flex justify-between items-center">
                           <h4 className="text-lg font-semibold text-gray-900">Variant Specifications</h4>
                           <button
@@ -1053,10 +1053,10 @@ export default function AddProduct() {
                         {variant.moreDetails.map((md, mdIndex) => (
                           <div
                             key={mdIndex}
-                            className="bg-white rounded-xl border border-gray-200 p-6 space-y-6"
+                            className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6"
                           >
                             <div className="flex justify-between items-center">
-                              <h4 className="text-lg font-semibold text-gray-800">Size Configuration {mdIndex + 1}</h4>
+                              <h4 className="text-lg font-semibold -800 dark:text-gray-100">Size Configuration {mdIndex + 1}</h4>
                               <button
                                 type="button"
                                 className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
@@ -1067,8 +1067,8 @@ export default function AddProduct() {
                             </div>
 
                             {/* Dimensions */}
-                            <div className="bg-gray-50 rounded-xl p-4 space-y-4">
-                              <h5 className="font-semibold text-gray-800">Dimensions</h5>
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-4">
+                              <h5 className="font-semibold -800 dark:text-gray-100">Dimensions</h5>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="space-y-2">
                                   <label className={labelClass}>Length</label>
@@ -1116,9 +1116,9 @@ export default function AddProduct() {
                             </div>
 
                             {/* Additional Images for this Size Section */}
-                            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                               <div className="flex justify-between items-center">
-                                <h5 className="text-md font-semibold text-gray-800">
+                                <h5 className="text-md font-semibold -800 dark:text-gray-100">
                                   Additional Images for this Size (Optional)
                                 </h5>
                                 <button
@@ -1200,7 +1200,7 @@ export default function AddProduct() {
                                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                   {md.additionalImages.map((image, index) => (
                                     <div key={index} className="relative">
-                                      <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-blue-400 transition-colors">
+                                      <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center hover:border-blue-400 transition-colors">
                                         <input
                                           id={`md-additional-image-${variantIndex}-${mdIndex}-${index}`}
                                           type="file"
@@ -1229,7 +1229,7 @@ export default function AddProduct() {
                                           ) : (
                                             <div className="space-y-2">
                                               <ImageIcon className="h-8 w-8 text-gray-400 mx-auto" />
-                                              <p className="text-sm text-gray-600">Image {index + 1}</p>
+                                              <p className="text-sm text-gray-600 dark:text-gray-400">Image {index + 1}</p>
                                             </div>
                                           )}
                                         </label>
@@ -1253,9 +1253,9 @@ export default function AddProduct() {
                             </div>
 
                             {/* Optional Details for this size */}
-                            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                               <div className="flex justify-between items-center">
-                                <h5 className="text-md font-semibold text-gray-800">
+                                <h5 className="text-md font-semibold -800 dark:text-gray-100">
                                   Optional Details for this Size (Optional)
                                 </h5>
                                 <button
@@ -1407,9 +1407,9 @@ export default function AddProduct() {
                             )}
                             {variant.moreDetails.length > 1 &&
                               variant.isPriceSame === "no" && (
-                                <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                                   <div className="flex justify-between items-center">
-                                    <h5 className="text-md font-semibold text-gray-800">
+                                    <h5 className="text-md font-semibold -800 dark:text-gray-100">
                                       Bulk Pricing Combinations ({variant.colorName} - {md.size?.length || "?"}x
                                       {md.size?.breadth || "?"}x{md.size?.height || "?"})
                                     </h5>
@@ -1428,7 +1428,7 @@ export default function AddProduct() {
                                     </button>
                                   </div>
                                   {md.bulkPricingCombinations.map((bpc, index) => (
-                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                                       <div className="space-y-2">
                                         <label className={labelClass}>Wholesale Price ($)</label>
                                         <input
@@ -1540,7 +1540,7 @@ export default function AddProduct() {
 
                       {/* Common Bulk Pricing */}
                       {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
-                        <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                           <div className="flex justify-between items-center">
                             <h4 className="text-xl font-semibold text-gray-900">Common Bulk Pricing Combinations</h4>
                             <button
@@ -1558,7 +1558,7 @@ export default function AddProduct() {
                             </button>
                           </div>
                           {variant.commonBulkPricingCombinations.map((bpc, index) => (
-                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                            <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                               <div className="space-y-2">
                                 <label className={labelClass}>Wholesale Price ($)</label>
                                 <input

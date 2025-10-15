@@ -39,7 +39,7 @@ const ErrorModal = ({ isOpen, onClose, title, message, details }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform transition-all duration-300">
+      <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform transition-all duration-300">
         <div className="p-6 border-b border-gray-100">
           <div className="flex items-center space-x-3">
             <div className="p-2 bg-red-100 rounded-full">
@@ -52,9 +52,9 @@ const ErrorModal = ({ isOpen, onClose, title, message, details }) => {
         </div>
         
         <div className="p-6">
-          <p className="text-gray-600 mb-4">{message}</p>
+          <p className="text-gray-600 dark:text-gray-400 mb-4">{message}</p>
           {details && (
-            <div className="bg-gray-50 rounded-lg p-4 max-h-40 overflow-y-auto">
+            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 max-h-40 overflow-y-auto">
               <pre className="text-xs text-gray-700 whitespace-pre-wrap">{details}</pre>
             </div>
           )}
@@ -79,7 +79,7 @@ const ProgressBar = ({ progress }) => {
   
   return (
     <div className="w-full">
-      <div className="flex justify-between text-sm text-gray-600 mb-2">
+      <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400 mb-2">
         <span>Processing...</span>
         <span>{percentage}%</span>
       </div>
@@ -88,7 +88,7 @@ const ProgressBar = ({ progress }) => {
           className="bg-gradient-to-r from-blue-500 to-purple-600 h-3 rounded-full transition-all duration-500 ease-out relative overflow-hidden"
           style={{ width: `${percentage}%` }}
         >
-          <div className="absolute inset-0 bg-white opacity-20 animate-pulse"></div>
+          <div className="absolute inset-0 bg-white dark:bg-gray-900 opacity-20 animate-pulse"></div>
         </div>
       </div>
       {progress && (
@@ -107,16 +107,16 @@ const FileUploadCard = ({ file, onRemove, icon: Icon, label, acceptedFormats }) 
   if (!file) return null;
 
   return (
-    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200">
+    <div className="bg-gradient-to-r from-gray-50 to-gray-100 rounded-xl p-4 border border-gray-200 dark:border-gray-700">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-3">
-          <div className="p-2 bg-white rounded-lg shadow-sm">
+          <div className="p-2 bg-white dark:bg-gray-900 rounded-lg shadow-sm">
             <Icon className="w-5 h-5 text-blue-500" />
           </div>
           <div>
             <p className="text-xs text-gray-500 font-medium">{label}</p>
             <p className="font-semibold text-gray-900">{file.name}</p>
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-gray-600 dark:text-gray-400">
               {(file.size / 1024 / 1024).toFixed(2)} MB
             </p>
           </div>
@@ -163,10 +163,10 @@ const ProductUploadSection = ({
   const bothFilesSelected = excelFile && zipFile;
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
       <div className="bg-gradient-to-r from-blue-500 to-blue-600 p-6 text-white">
         <div className="flex items-center space-x-3">
-          <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+          <div className="p-3 bg-white dark:bg-gray-900 bg-opacity-20 rounded-xl backdrop-blur-sm">
             <Package className="w-6 h-6" />
           </div>
           <div>
@@ -184,7 +184,7 @@ const ProductUploadSection = ({
             className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300 ${
               excelFile 
                 ? 'border-green-300 bg-green-50' 
-                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50 dark:bg-gray-800'
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -227,7 +227,7 @@ const ProductUploadSection = ({
             className={`border-2 border-dashed rounded-xl p-6 text-center transition-all duration-300 ${
               zipFile 
                 ? 'border-green-300 bg-green-50' 
-                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50'
+                : 'border-gray-300 hover:border-blue-400 hover:bg-gray-50 dark:bg-gray-800'
             }`}
             onDragOver={handleDragOver}
             onDragLeave={handleDragLeave}
@@ -321,16 +321,16 @@ const ProductUploadSection = ({
               <div className="flex-1">
                 <h4 className="font-bold text-green-800 text-lg">Upload Successful!</h4>
                 <div className="mt-3 space-y-2">
-                  <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center bg-white dark:bg-gray-900 bg-opacity-50 rounded-lg p-3">
                     <span className="text-green-700 font-medium">Total Products:</span>
                     <span className="text-green-800 font-bold">{response.results?.totalProcessed || 'N/A'}</span>
                   </div>
-                  <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center bg-white dark:bg-gray-900 bg-opacity-50 rounded-lg p-3">
                     <span className="text-green-700 font-medium">Successful:</span>
                     <span className="text-green-800 font-bold">{response.results?.successCount || 'N/A'}</span>
                   </div>
                   {response.results?.failCount > 0 && (
-                    <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
+                    <div className="flex justify-between items-center bg-white dark:bg-gray-900 bg-opacity-50 rounded-lg p-3">
                       <span className="text-orange-700 font-medium">Failed:</span>
                       <span className="text-orange-800 font-bold">{response.results.failCount}</span>
                     </div>
@@ -380,10 +380,10 @@ const UploadSection = ({
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
+    <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 overflow-hidden transform transition-all duration-300 hover:shadow-2xl hover:scale-[1.02]">
       <div className={`bg-gradient-to-r ${gradientFrom} ${gradientTo} p-6 text-white`}>
         <div className="flex items-center space-x-3">
-          <div className="p-3 bg-white bg-opacity-20 rounded-xl backdrop-blur-sm">
+          <div className="p-3 bg-white dark:bg-gray-900 bg-opacity-20 rounded-xl backdrop-blur-sm">
             <Icon className="w-6 h-6" />
           </div>
           <div>
@@ -400,7 +400,7 @@ const UploadSection = ({
               ? 'border-purple-400 bg-purple-50' 
               : file 
               ? 'border-green-300 bg-green-50' 
-              : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50'
+              : 'border-gray-300 hover:border-purple-400 hover:bg-gray-50 dark:bg-gray-800'
           }`}
           onDragOver={handleDragOver}
           onDragLeave={handleDragLeave}
@@ -486,16 +486,16 @@ const UploadSection = ({
               <div className="flex-1">
                 <h4 className="font-bold text-green-800 text-lg">Upload Successful!</h4>
                 <div className="mt-3 space-y-2">
-                  <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center bg-white dark:bg-gray-900 bg-opacity-50 rounded-lg p-3">
                     <span className="text-green-700 font-medium">Total Records:</span>
                     <span className="text-green-800 font-bold">{response.totalRecords || 'N/A'}</span>
                   </div>
-                  <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
+                  <div className="flex justify-between items-center bg-white dark:bg-gray-900 bg-opacity-50 rounded-lg p-3">
                     <span className="text-green-700 font-medium">Successfully Processed:</span>
                     <span className="text-green-800 font-bold">{response.successfulInserts || response.success || 'N/A'}</span>
                   </div>
                   {response.failures > 0 && (
-                    <div className="flex justify-between items-center bg-white bg-opacity-50 rounded-lg p-3">
+                    <div className="flex justify-between items-center bg-white dark:bg-gray-900 bg-opacity-50 rounded-lg p-3">
                       <span className="text-orange-700 font-medium">Failed Records:</span>
                       <span className="text-orange-800 font-bold">{response.failures}</span>
                     </div>
@@ -647,7 +647,7 @@ const BulkUpload = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200 backdrop-blur-sm bg-opacity-90">
+      <div className="bg-white dark:bg-gray-900 shadow-sm border-b border-gray-200 dark:border-gray-700 backdrop-blur-sm bg-opacity-90">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
             <div className="p-4 bg-gradient-to-r from-blue-500 to-purple-600 rounded-2xl shadow-lg">
@@ -657,7 +657,7 @@ const BulkUpload = () => {
               <h1 className="text-4xl font-bold bg-gradient-to-r from-gray-900 to-gray-600 bg-clip-text text-transparent">
                 Bulk Upload Manager
               </h1>
-              <p className="text-gray-600 mt-2 text-lg">
+              <p className="text-gray-600 dark:text-gray-400 mt-2 text-lg">
                 Streamline your data import process with our advanced upload system
               </p>
             </div>
@@ -700,13 +700,13 @@ const BulkUpload = () => {
         </div>
 
         {/* Help Section */}
-        <div className="mt-16 bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+        <div className="mt-16 bg-white dark:bg-gray-900 rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
           <div className="bg-gradient-to-r from-gray-50 to-blue-50 p-8 text-center border-b border-gray-100">
             <div className="mx-auto w-20 h-20 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center mb-6">
               <FileSpreadsheet className="w-10 h-10 text-white" />
             </div>
             <h3 className="text-2xl font-bold text-gray-900 mb-3">File Format Guidelines</h3>
-            <p className="text-gray-600 text-lg max-w-2xl mx-auto">
+            <p className="text-gray-600 dark:text-gray-400 text-lg max-w-2xl mx-auto">
               Ensure your files follow the correct format for successful uploads and optimal processing
             </p>
           </div>

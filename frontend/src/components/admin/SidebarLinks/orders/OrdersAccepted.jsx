@@ -167,13 +167,13 @@ const OrdersAccepted = ({ onNavigate }) => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-emerald-50 via-green-50 to-teal-50">
       {/* Header */}
-      <div className="bg-white/80 backdrop-blur-sm border-b border-emerald-200 sticky top-0 z-40">
+      <div className="bg-white dark:bg-gray-900/80 backdrop-blur-sm border-b border-emerald-200 sticky top-0 z-40">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between py-6 gap-4">
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => onNavigate("main")}
-                className="inline-flex items-center px-3 py-2 border border-emerald-300 rounded-lg text-sm font-medium text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                className="inline-flex items-center px-3 py-2 border border-emerald-300 rounded-lg text-sm font-medium text-emerald-700 bg-white dark:bg-gray-900 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
               >
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
@@ -188,7 +188,7 @@ const OrdersAccepted = ({ onNavigate }) => {
               </div>
             </div>
             <div className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-3">
-              <button className="inline-flex items-center px-4 py-2 border border-emerald-300 rounded-lg shadow-sm text-sm font-medium text-emerald-700 bg-white hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200">
+              <button className="inline-flex items-center px-4 py-2 border border-emerald-300 rounded-lg shadow-sm text-sm font-medium text-emerald-700 bg-white dark:bg-gray-900 hover:bg-emerald-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200">
                 <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path
                     strokeLinecap="round"
@@ -218,7 +218,7 @@ const OrdersAccepted = ({ onNavigate }) => {
       <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
         {/* Statistics Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-xl transition-all duration-300">
+          <div className="bg-white dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-12 h-12 bg-gradient-to-r from-emerald-500 to-green-500 rounded-xl flex items-center justify-center">
@@ -240,7 +240,7 @@ const OrdersAccepted = ({ onNavigate }) => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-xl transition-all duration-300">
+          <div className="bg-white dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-emerald-500 rounded-xl flex items-center justify-center">
@@ -263,7 +263,7 @@ const OrdersAccepted = ({ onNavigate }) => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-xl transition-all duration-300">
+          <div className="bg-white dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-12 h-12 bg-gradient-to-r from-teal-500 to-cyan-500 rounded-xl flex items-center justify-center">
@@ -285,7 +285,7 @@ const OrdersAccepted = ({ onNavigate }) => {
             </div>
           </div>
 
-          <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-xl transition-all duration-300">
+          <div className="bg-white dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-xl transition-all duration-300">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-indigo-500 rounded-xl flex items-center justify-center">
@@ -309,7 +309,7 @@ const OrdersAccepted = ({ onNavigate }) => {
         </div>
 
         {/* Search and Filters */}
-        <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 mb-8">
+        <div className="bg-white dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 mb-8">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0 lg:space-x-4">
             <div className="flex-1 min-w-0">
               <div className="relative rounded-xl shadow-sm">
@@ -327,7 +327,7 @@ const OrdersAccepted = ({ onNavigate }) => {
                   placeholder="Search accepted orders, customers, tracking numbers..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="focus:ring-emerald-500 focus:border-emerald-500 block w-full pl-10 pr-3 py-3 border border-emerald-300 rounded-xl leading-5 bg-white/50 placeholder-emerald-400 text-gray-900 sm:text-sm backdrop-blur-sm"
+                  className="focus:ring-emerald-500 focus:border-emerald-500 block w-full pl-10 pr-3 py-3 border border-emerald-300 rounded-xl leading-5 bg-white dark:bg-gray-900/50 placeholder-emerald-400 text-gray-900 sm:text-sm backdrop-blur-sm"
                 />
               </div>
             </div>
@@ -335,7 +335,7 @@ const OrdersAccepted = ({ onNavigate }) => {
               <select
                 value={dateFilter}
                 onChange={(e) => setDateFilter(e.target.value)}
-                className="block w-full pl-3 pr-10 py-3 text-base border border-emerald-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-xl bg-white/50 backdrop-blur-sm"
+                className="block w-full pl-3 pr-10 py-3 text-base border border-emerald-300 focus:outline-none focus:ring-emerald-500 focus:border-emerald-500 sm:text-sm rounded-xl bg-white dark:bg-gray-900/50 backdrop-blur-sm"
               >
                 <option value="all">All Time</option>
                 <option value="today">Today</option>
@@ -352,7 +352,7 @@ const OrdersAccepted = ({ onNavigate }) => {
             <div
               key={order.id}
               onClick={() => handleOrderClick(order)}
-              className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group"
+              className="bg-white dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-6 hover:shadow-2xl hover:scale-105 transition-all duration-300 cursor-pointer group"
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
@@ -413,7 +413,7 @@ const OrdersAccepted = ({ onNavigate }) => {
 
         {filteredOrders.length === 0 && (
           <div className="text-center py-16">
-            <div className="bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-12 max-w-md mx-auto">
+            <div className="bg-white dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 p-12 max-w-md mx-auto">
               <svg
                 className="mx-auto h-16 w-16 text-emerald-400 mb-4"
                 fill="none"
@@ -435,19 +435,19 @@ const OrdersAccepted = ({ onNavigate }) => {
 
         {/* Pagination */}
         {totalPages > 1 && (
-          <div className="flex items-center justify-between bg-white/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 px-6 py-4">
+          <div className="flex items-center justify-between bg-white dark:bg-gray-900/70 backdrop-blur-sm rounded-2xl shadow-lg border border-emerald-200 px-6 py-4">
             <div className="flex-1 flex justify-between sm:hidden">
               <button
                 onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                 disabled={currentPage === 1}
-                className="relative inline-flex items-center px-4 py-2 border border-emerald-300 text-sm font-medium rounded-lg text-emerald-700 bg-white hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="relative inline-flex items-center px-4 py-2 border border-emerald-300 text-sm font-medium rounded-lg text-emerald-700 bg-white dark:bg-gray-900 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 Previous
               </button>
               <button
                 onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                 disabled={currentPage === totalPages}
-                className="ml-3 relative inline-flex items-center px-4 py-2 border border-emerald-300 text-sm font-medium rounded-lg text-emerald-700 bg-white hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="ml-3 relative inline-flex items-center px-4 py-2 border border-emerald-300 text-sm font-medium rounded-lg text-emerald-700 bg-white dark:bg-gray-900 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
               >
                 Next
               </button>
@@ -465,7 +465,7 @@ const OrdersAccepted = ({ onNavigate }) => {
                   <button
                     onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="relative inline-flex items-center px-3 py-2 rounded-l-xl border border-emerald-300 bg-white text-sm font-medium text-emerald-500 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    className="relative inline-flex items-center px-3 py-2 rounded-l-xl border border-emerald-300 bg-white dark:bg-gray-900 text-sm font-medium text-emerald-500 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                       <path
@@ -475,13 +475,13 @@ const OrdersAccepted = ({ onNavigate }) => {
                       />
                     </svg>
                   </button>
-                  <span className="relative inline-flex items-center px-4 py-2 border border-emerald-300 bg-white text-sm font-medium text-emerald-700">
+                  <span className="relative inline-flex items-center px-4 py-2 border border-emerald-300 bg-white dark:bg-gray-900 text-sm font-medium text-emerald-700">
                     Page {currentPage} of {totalPages}
                   </span>
                   <button
                     onClick={() => setCurrentPage((prev) => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="relative inline-flex items-center px-3 py-2 rounded-r-xl border border-emerald-300 bg-white text-sm font-medium text-emerald-500 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                    className="relative inline-flex items-center px-3 py-2 rounded-r-xl border border-emerald-300 bg-white dark:bg-gray-900 text-sm font-medium text-emerald-500 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                   >
                     <svg className="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
                       <path
@@ -501,13 +501,13 @@ const OrdersAccepted = ({ onNavigate }) => {
       {/* Order Details Modal */}
       {showOrderModal && selectedOrder && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm overflow-y-auto h-full w-full z-50">
-          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-2xl rounded-2xl bg-white">
+          <div className="relative top-20 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-2xl rounded-2xl bg-white dark:bg-gray-900">
             <div className="mt-3">
               <div className="flex items-center justify-between mb-6">
                 <h3 className="text-xl font-semibold text-gray-900">Order Details</h3>
                 <button
                   onClick={() => setShowOrderModal(false)}
-                  className="text-gray-400 hover:text-gray-600 p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
+                  className="text-gray-400 hover:text-gray-600 dark:text-gray-400 p-2 hover:bg-gray-100 rounded-lg transition-all duration-200"
                 >
                   <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -519,35 +519,35 @@ const OrdersAccepted = ({ onNavigate }) => {
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Order Number</label>
-                      <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded-lg">{selectedOrder.orderNumber}</p>
+                      <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">{selectedOrder.orderNumber}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Customer Name</label>
-                      <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded-lg">{selectedOrder.customer.name}</p>
+                      <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">{selectedOrder.customer.name}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
-                      <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded-lg">{selectedOrder.customer.email}</p>
+                      <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">{selectedOrder.customer.email}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
-                      <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded-lg">{selectedOrder.customer.phone}</p>
+                      <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">{selectedOrder.customer.phone}</p>
                     </div>
                   </div>
                   <div className="space-y-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Product Name</label>
-                      <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded-lg">{selectedOrder.productName}</p>
+                      <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">{selectedOrder.productName}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Total Amount</label>
-                      <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded-lg font-semibold">
+                      <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg font-semibold">
                         ${selectedOrder.total.toLocaleString()}
                       </p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Payment Method</label>
-                      <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded-lg">{selectedOrder.paymentMethod}</p>
+                      <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">{selectedOrder.paymentMethod}</p>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">Tracking Number</label>
@@ -559,18 +559,18 @@ const OrdersAccepted = ({ onNavigate }) => {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Shipping Address</label>
-                  <p className="text-sm text-gray-900 bg-gray-50 p-3 rounded-lg">{selectedOrder.shippingAddress}</p>
+                  <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-3 rounded-lg">{selectedOrder.shippingAddress}</p>
                 </div>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Accepted Date</label>
-                    <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded-lg">
+                    <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
                       {formatDate(selectedOrder.acceptedDate)}
                     </p>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Expected Delivery</label>
-                    <p className="text-sm text-gray-900 bg-gray-50 p-2 rounded-lg">
+                    <p className="text-sm text-gray-900 bg-gray-50 dark:bg-gray-800 p-2 rounded-lg">
                       {formatDate(selectedOrder.deliveryDate)}
                     </p>
                   </div>
@@ -579,7 +579,7 @@ const OrdersAccepted = ({ onNavigate }) => {
               <div className="mt-8 flex justify-end space-x-3">
                 <button
                   onClick={() => setShowOrderModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
+                  className="px-4 py-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition-all duration-200"
                 >
                   Close
                 </button>

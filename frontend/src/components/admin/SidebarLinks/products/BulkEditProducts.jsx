@@ -1,12 +1,13 @@
 "use client"
 
-import { useState, useEffect, useCallback, useRef } from "react"
+import { useState, useEffect, useCallback, useRef, useContext } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { fetchCategories } from "../../../../../utils/api"
 import { X, Plus, AlertCircle, Upload, Image as ImageIcon, Package, Tag, DollarSign, Layers, ArrowLeft, Save, ChevronDown, ChevronUp } from "lucide-react"
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import axios from 'axios'
+import { ProductContext } from "../../../../../Context/ProductContext";
 
 // Loading Overlay Component
 const LoadingOverlay = ({ isLoading, message = "Updating Products..." }) => {
@@ -14,12 +15,12 @@ const LoadingOverlay = ({ isLoading, message = "Updating Products..." }) => {
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-2xl p-8 text-center max-w-sm mx-4">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl p-8 text-center max-w-sm mx-4">
         <div className="flex justify-center mb-4">
           <div className="animate-spin rounded-full h-12 w-12 border-4 border-purple-500 border-t-transparent"></div>
         </div>
         <h4 className="font-semibold text-gray-900 mb-2">{message}</h4>
-        <p className="text-gray-600 text-sm">Please wait while we process your request...</p>
+        <p className="text-gray-600 dark:text-gray-400 text-sm">Please wait while we process your request...</p>
       </div>
     </div>
   )
@@ -61,6 +62,7 @@ export default function BulkEditProducts() {
   const [isFetchingProducts, setIsFetchingProducts] = useState(true)
   const [allCategoriesTree, setAllCategoriesTree] = useState([])
   const [allCategoriesFlat, setAllCategoriesFlat] = useState([])
+  const { fetchProducts } = useContext(ProductContext);
 
   // Array of product objects, each containing all EditProduct state
   const [productsData, setProductsData] = useState([])
@@ -497,7 +499,7 @@ export default function BulkEditProducts() {
         <select
           value={product.selectedCategoryIds[0] || ""}
           onChange={(e) => handleCategorySelectForProduct(product._id, 0, e.target.value)}
-          className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-white text-gray-900 placeholder-gray-400 cursor-pointer appearance-none"
+          className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 placeholder-gray-400 cursor-pointer appearance-none"
         >
           <option value="">Select main category</option>
           {mainCategoryOptions.map((cat) => (
@@ -523,7 +525,7 @@ export default function BulkEditProducts() {
           <select
             value={product.selectedCategoryIds[product.selectedCategoryIds.length] || ""}
             onChange={(e) => handleCategorySelectForProduct(product._id, product.selectedCategoryIds.length, e.target.value)}
-            className="w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-white text-gray-900 placeholder-gray-400 cursor-pointer appearance-none"
+            className="w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 placeholder-gray-400 cursor-pointer appearance-none"
           >
             <option value="">Select sub category</option>
             {subCategoryOptions.map((cat) => (
@@ -668,6 +670,7 @@ export default function BulkEditProducts() {
       )
 
       toast.success(`${productsData.length} products updated successfully!`)
+      await fetchProducts();
       setTimeout(() => navigate('/admin/panel/products'), 2000)
 
     } catch (error) {
@@ -679,25 +682,25 @@ export default function BulkEditProducts() {
   }
 
   // Styling classes
-  const cardClass = "bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
+  const cardClass = "bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 overflow-hidden"
   const sectionClass = "p-8"
   const headerClass = "border-b border-gray-100 px-8 py-6 bg-gradient-to-r from-gray-50 to-white"
   const titleClass = "text-2xl font-bold text-gray-900 flex items-center gap-3"
-  const subtitleClass = "text-gray-600 mt-1"
-  const inputClass = "w-full px-4 py-3 border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-white text-gray-900 placeholder-gray-400"
+  const subtitleClass = "text-gray-600 dark:text-gray-400 mt-1"
+  const inputClass = "w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 placeholder-gray-400"
   const labelClass = "block text-sm font-semibold text-gray-700 mb-2"
   const buttonClass = "inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2"
   const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl focus:ring-purple-500`
-  const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 focus:ring-gray-500`
+  const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 dark:border-gray-700 focus:ring-gray-500`
   const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white focus:ring-red-500`
-  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white`
+  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900`
 
   if (isFetchingProducts) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-gray-50 via-white to-gray-50 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-16 w-16 border-4 border-purple-500 border-t-transparent mx-auto mb-4"></div>
-          <p className="text-xl text-gray-600">Loading products for bulk edit...</p>
+          <p className="text-xl text-gray-600 dark:text-gray-400">Loading products for bulk edit...</p>
         </div>
       </div>
     )
@@ -713,7 +716,7 @@ export default function BulkEditProducts() {
         <div className="mb-12">
           <button
             onClick={() => navigate('/admin/panel/products')}
-            className="flex items-center gap-2 text-gray-600 hover:text-purple-600 transition-colors mb-6 group"
+            className="flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-purple-600 transition-colors mb-6 group"
           >
             <ArrowLeft className="w-5 h-5 group-hover:-translate-x-1 transition-transform" />
             <span className="font-medium">Back to Products</span>
@@ -723,7 +726,7 @@ export default function BulkEditProducts() {
             <h1 className="text-5xl font-bold bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent mb-4">
               Bulk Edit Products
             </h1>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+            <p className="text-xl text-gray-600 dark:text-gray-400 max-w-2xl mx-auto">
               Edit multiple products simultaneously. Expand each product to modify its details.
             </p>
             <div className="mt-4 inline-flex items-center gap-2 px-4 py-2 bg-purple-100 text-purple-800 rounded-full">
@@ -742,7 +745,7 @@ export default function BulkEditProducts() {
               <button
                 type="button"
                 onClick={() => toggleAccordion(product._id)}
-                className="w-full px-6 md:px-8 py-6 flex items-center justify-between hover:bg-gray-50 transition-colors"
+                className="w-full px-6 md:px-8 py-6 flex items-center justify-between hover:bg-gray-50 dark:bg-gray-800 transition-colors"
               >
                 <div className="flex items-center gap-4 md:gap-6 flex-1">
                   {/* Product Image */}
@@ -750,7 +753,7 @@ export default function BulkEditProducts() {
                     <img
                       src={product.mainImagePreview || (product.hasVariants && product.variants.length > 0 && product.variants.find(v => v.isDefault)?.variantImage?.preview) || '/placeholder.svg'}
                       alt={product.productName}
-                      className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border-2 border-gray-200"
+                      className="w-16 h-16 md:w-20 md:h-20 rounded-xl object-cover border-2 border-gray-200 dark:border-gray-700"
                     />
                     <div className="absolute -top-2 -left-2 w-7 h-7 md:w-8 md:h-8 bg-purple-600 text-white rounded-full flex items-center justify-center text-xs md:text-sm font-bold">
                       {productIndex + 1}
@@ -762,7 +765,7 @@ export default function BulkEditProducts() {
                     <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
                       {product.productName || 'Unnamed Product'}
                     </h3>
-                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-2 text-xs md:text-sm text-gray-600">
+                    <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-2 text-xs md:text-sm text-gray-600 dark:text-gray-400">
                       <span className="flex items-center gap-1 truncate">
                         <span className="font-medium">Category:</span>
                         {product.categoryPath || 'Not set'}
@@ -790,7 +793,7 @@ export default function BulkEditProducts() {
 
               {/* Accordion Content */}
               {expandedProducts[product._id] && (
-                <div className="border-t border-gray-200 p-4 md:p-8">
+                <div className="border-t border-gray-200 dark:border-gray-700 p-4 md:p-8">
                   <div className="space-y-8">
                     {/* Basic Information Section */}
                     <div>
@@ -837,7 +840,7 @@ export default function BulkEditProducts() {
                         )}
 
                         {/* Product Details */}
-                        <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                           <div className="flex justify-between items-center">
                             <h4 className="text-lg font-semibold text-gray-900">Product Specifications</h4>
                             <button
@@ -939,7 +942,7 @@ export default function BulkEditProducts() {
                                 <ImageIcon className="inline w-4 h-4 mr-2" />
                                 Product Main Image
                               </label>
-                              <div className="border-2 border-dashed border-gray-200 rounded-xl p-8 text-center hover:border-purple-400 transition-colors">
+                              <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-8 text-center hover:border-purple-400 transition-colors">
                                 <input
                                   id={`mainImage-${product._id}`}
                                   type="file"
@@ -964,14 +967,14 @@ export default function BulkEditProducts() {
                                         alt="Main Product Preview"
                                         className="h-40 w-40 object-cover rounded-xl mx-auto shadow-lg"
                                       />
-                                      <p className="text-sm text-gray-600">Click to change image</p>
+                                      <p className="text-sm text-gray-600 dark:text-gray-400">Click to change image</p>
                                     </div>
                                   ) : (
                                     <div className="space-y-4">
                                       <Upload className="h-16 w-16 text-gray-400 mx-auto" />
                                       <div>
                                         <p className="text-lg font-medium text-gray-900">Upload Product Image</p>
-                                        <p className="text-sm text-gray-600">PNG, JPG up to 10MB</p>
+                                        <p className="text-sm text-gray-600 dark:text-gray-400">PNG, JPG up to 10MB</p>
                                       </div>
                                     </div>
                                   )}
@@ -980,7 +983,7 @@ export default function BulkEditProducts() {
                             </div>
 
                             {/* Additional Images */}
-                            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                               <div className="flex justify-between items-center">
                                 <h4 className="text-lg font-semibold text-gray-900">Additional Images</h4>
                                 <button
@@ -1001,7 +1004,7 @@ export default function BulkEditProducts() {
                               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                 {product.additionalImages.map((image, index) => (
                                   <div key={index} className="relative">
-                                    <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-purple-400 transition-colors">
+                                    <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center hover:border-purple-400 transition-colors">
                                       <input
                                         id={`additional-image-${product._id}-${index}`}
                                         type="file"
@@ -1021,7 +1024,7 @@ export default function BulkEditProducts() {
                                         ) : (
                                           <div className="space-y-2">
                                             <ImageIcon className="h-8 w-8 text-gray-400 mx-auto" />
-                                            <p className="text-sm text-gray-600">Image {index + 1}</p>
+                                            <p className="text-sm text-gray-600 dark:text-gray-400">Image {index + 1}</p>
                                           </div>
                                         )}
                                       </label>
@@ -1039,7 +1042,7 @@ export default function BulkEditProducts() {
                             </div>
 
                             {/* Bulk Pricing */}
-                            <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                            <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                               <div className="flex justify-between items-center">
                                 <h4 className="text-lg font-semibold text-gray-900">Bulk Pricing Options</h4>
                                 <button
@@ -1052,7 +1055,7 @@ export default function BulkEditProducts() {
                                 </button>
                               </div>
                               {product.bulkPricing.map((bp, index) => (
-                                <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                                <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                                   <div className="space-y-2">
                                     <label className={labelClass}>Wholesale Price ($)</label>
                                     <input
@@ -1123,7 +1126,7 @@ export default function BulkEditProducts() {
                           {product.variants.map((variant, variantIndex) => (
                             <div
                               key={variantIndex}
-                              className="bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-200 p-8 space-y-8"
+                              className="bg-gradient-to-r from-gray-50 to-white rounded-2xl border border-gray-200 dark:border-gray-700 p-8 space-y-8"
                             >
                               <div className="flex justify-between items-center">
                                 <h4 className="text-2xl font-bold text-gray-900">
@@ -1157,7 +1160,7 @@ export default function BulkEditProducts() {
                                 </div>
                                 <div className="space-y-4">
                                   <label className={labelClass}>Variant Image</label>
-                                  <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-purple-400 transition-colors">
+                                  <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:border-purple-400 transition-colors">
                                     <input
                                       id={`variant-image-${product._id}-${variantIndex}`}
                                       type="file"
@@ -1183,7 +1186,7 @@ export default function BulkEditProducts() {
                                       ) : (
                                         <div className="space-y-2">
                                           <Upload className="h-8 w-8 text-gray-400 mx-auto" />
-                                          <p className="text-sm text-gray-600">Upload variant image</p>
+                                          <p className="text-sm text-gray-600 dark:text-gray-400">Upload variant image</p>
                                         </div>
                                       )}
                                     </label>
@@ -1206,7 +1209,7 @@ export default function BulkEditProducts() {
                               </div>
 
                               {/* Variant Optional Details */}
-                              <div className="bg-white rounded-xl p-6 border border-gray-100 space-y-6">
+                              <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-100 space-y-6">
                                 <div className="flex justify-between items-center">
                                   <h5 className="text-lg font-semibold text-gray-900">Variant Specifications</h5>
                                   <button
@@ -1283,9 +1286,9 @@ export default function BulkEditProducts() {
                                   </button>
                                 </div>
                                 {variant.moreDetails.map((md, mdIndex) => (
-                                  <div key={mdIndex} className="bg-white rounded-xl border border-gray-200 p-6 space-y-6">
+                                  <div key={mdIndex} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
                                     <div className="flex justify-between items-center">
-                                      <h5 className="text-lg font-semibold text-gray-800">Size Configuration {mdIndex + 1}</h5>
+                                      <h5 className="text-lg font-semibold -800 dark:text-gray-100">Size Configuration {mdIndex + 1}</h5>
                                       <button 
                                         type="button" 
                                         className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
@@ -1295,8 +1298,8 @@ export default function BulkEditProducts() {
                                       </button>
                                     </div>
 
-                                    <div className="bg-gray-50 rounded-xl p-4 space-y-4">
-                                      <h6 className="font-semibold text-gray-800">Dimensions</h6>
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-4">
+                                      <h6 className="font-semibold -800 dark:text-gray-100">Dimensions</h6>
                                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div className="space-y-2">
                                           <label className={labelClass}>Length</label>
@@ -1344,9 +1347,9 @@ export default function BulkEditProducts() {
                                     </div>
 
                                     {/* Additional Images for this Size */}
-                                    <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                                       <div className="flex justify-between items-center">
-                                        <h6 className="text-md font-semibold text-gray-800">Additional Images for this Size</h6>
+                                        <h6 className="text-md font-semibold -800 dark:text-gray-100">Additional Images for this Size</h6>
                                         <button 
                                           type="button" 
                                           className={secondaryButtonClass} 
@@ -1398,7 +1401,7 @@ export default function BulkEditProducts() {
                                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                           {md.additionalImages.map((image, imgIndex) => (
                                             <div key={imgIndex} className="relative">
-                                              <div className="border-2 border-dashed border-gray-200 rounded-xl p-4 text-center hover:border-purple-400 transition-colors">
+                                              <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-4 text-center hover:border-purple-400 transition-colors">
                                                 <input 
                                                   id={`md-image-${product._id}-${variantIndex}-${mdIndex}-${imgIndex}`} 
                                                   type="file" 
@@ -1433,7 +1436,7 @@ export default function BulkEditProducts() {
                                                   ) : (
                                                     <div className="space-y-2">
                                                       <ImageIcon className="h-8 w-8 text-gray-400 mx-auto" />
-                                                      <p className="text-sm text-gray-600">Image {imgIndex + 1}</p>
+                                                      <p className="text-sm text-gray-600 dark:text-gray-400">Image {imgIndex + 1}</p>
                                                     </div>
                                                   )}
                                                 </label>
@@ -1461,9 +1464,9 @@ export default function BulkEditProducts() {
                                     </div>
 
                                     {/* Optional Details for this Size */}
-                                    <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                                       <div className="flex justify-between items-center">
-                                        <h6 className="text-md font-semibold text-gray-800">Optional Details for this Size</h6>
+                                        <h6 className="text-md font-semibold -800 dark:text-gray-100">Optional Details for this Size</h6>
                                         <button 
                                           type="button" 
                                           className={secondaryButtonClass} 
@@ -1595,9 +1598,9 @@ export default function BulkEditProducts() {
 
                                     {/* Bulk Pricing for this size if applicable */}
                                     {variant.moreDetails.length > 1 && variant.isPriceSame === "no" && (
-                                      <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                                      <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                                         <div className="flex justify-between items-center">
-                                          <h6 className="text-md font-semibold text-gray-800">
+                                          <h6 className="text-md font-semibold -800 dark:text-gray-100">
                                             Bulk Pricing ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})
                                           </h6>
                                           <button 
@@ -1614,7 +1617,7 @@ export default function BulkEditProducts() {
                                           </button>
                                         </div>
                                         {md.bulkPricingCombinations.map((bpc, bpcIndex) => (
-                                          <div key={bpcIndex} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                                          <div key={bpcIndex} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                                             <div className="space-y-2">
                                               <label className={labelClass}>Wholesale Price ($)</label>
                                               <input 
@@ -1724,7 +1727,7 @@ export default function BulkEditProducts() {
 
                               {/* Common Bulk Pricing */}
                               {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
-                                <div className="bg-gray-50 rounded-xl p-6 space-y-6">
+                                <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                                   <div className="flex justify-between items-center">
                                     <h5 className="text-xl font-semibold text-gray-900">Common Bulk Pricing Combinations</h5>
                                     <button 
@@ -1741,7 +1744,7 @@ export default function BulkEditProducts() {
                                     </button>
                                   </div>
                                   {variant.commonBulkPricingCombinations.map((bpc, index) => (
-                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-4 rounded-xl">
+                                    <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                                       <div className="space-y-2">
                                         <label className={labelClass}>Wholesale Price ($)</label>
                                         <input 
@@ -1815,10 +1818,10 @@ export default function BulkEditProducts() {
           ))}
 
           {/* Submit Button - Sticky at bottom */}
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden sticky bottom-0 z-10">
-            <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-purple-50 to-pink-50 border-t border-gray-200">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 overflow-hidden sticky bottom-0 z-10">
+            <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-purple-50 to-pink-50 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-sm text-gray-600 text-center sm:text-left">
+                <div className="text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
                   <p className="font-medium">Ready to update {productsData.length} products?</p>
                   <p className="text-xs mt-1">All changes will be saved simultaneously</p>
                 </div>
@@ -1826,7 +1829,7 @@ export default function BulkEditProducts() {
                   <button
                     type="button"
                     onClick={() => navigate('/admin/panel/products')}
-                    className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors"
                   >
                     Cancel
                   </button>

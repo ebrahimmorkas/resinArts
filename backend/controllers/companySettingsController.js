@@ -70,7 +70,8 @@ exports.updateCompanySettings = async (req, res) => {
       receiveOrderEmails,
       lowStockAlertThreshold,
       receiveLowStockEmail,
-      receiveOutOfStockEmail
+      receiveOutOfStockEmail,
+      shippingPriceSettings
     } = req.body;
 
     if (!adminName || !adminEmail) {
@@ -81,32 +82,45 @@ exports.updateCompanySettings = async (req, res) => {
     }
 
     let settings = await CompanySettings.findOne();
-    
-    if (!settings) {
-      settings = new CompanySettings({
-        adminName,
-        adminWhatsappNumber,
-        adminPhoneNumber,
-        adminAddress,
-        adminCity,
-        adminState,
-        adminPincode,
-        adminEmail,
-        companyName,
-        instagramId,
-        facebookId,
-        privacyPolicy,
-        returnPolicy,
-        shippingPolicy,
-        refundPolicy,
-        termsAndConditions,
-        aboutUs,
-        receiveOrderEmails,
-        lowStockAlertThreshold,
-        receiveLowStockEmail,
-        receiveOutOfStockEmail
-      });
-    } else {
+    const parsedShippingSettings = shippingPriceSettings ? JSON.parse(shippingPriceSettings) : {
+  isManual: true,
+  sameForAll: false,
+  commonShippingPrice: 0,
+  shippingType: 'city',
+  shippingPrices: [],
+  cityPrices: [],
+  statePrices: [],
+  zipCodePrices: [],
+  freeShipping: false,
+  freeShippingAboveAmount: 0
+};
+   if (!settings) {
+  settings = new CompanySettings({
+    adminName,
+    adminWhatsappNumber,
+    adminPhoneNumber,
+    adminAddress,
+    adminCity,
+    adminState,
+    adminPincode,
+    adminEmail,
+    companyName,
+    instagramId,
+    facebookId,
+    privacyPolicy,
+    returnPolicy,
+    shippingPolicy,
+    refundPolicy,
+    termsAndConditions,
+    aboutUs,
+    receiveOrderEmails,
+    lowStockAlertThreshold: lowStockAlertThreshold ? parseInt(lowStockAlertThreshold) : 10,
+    receiveLowStockEmail,
+    receiveOutOfStockEmail,
+    shippingPriceSettings: parsedShippingSettings
+  });
+  await settings.save();
+} else {
       settings.adminName = adminName;
       settings.adminWhatsappNumber = adminWhatsappNumber;
       settings.adminPhoneNumber = adminPhoneNumber;
@@ -128,6 +142,23 @@ exports.updateCompanySettings = async (req, res) => {
       settings.lowStockAlertThreshold = lowStockAlertThreshold;
       settings.receiveLowStockEmail = receiveLowStockEmail;
       settings.receiveOutOfStockEmail = receiveOutOfStockEmail;
+     if (shippingPriceSettings) {
+  const parsedShipping = JSON.parse(shippingPriceSettings);
+  settings.shippingPriceSettings = {
+    isManual: parsedShipping.isManual !== undefined ? parsedShipping.isManual : true,
+    sameForAll: parsedShipping.sameForAll !== undefined ? parsedShipping.sameForAll : false,
+    commonShippingPrice: parsedShipping.commonShippingPrice || 0,
+    shippingType: parsedShipping.shippingType || 'city',
+    shippingPrices: Array.isArray(parsedShipping.shippingPrices) ? parsedShipping.shippingPrices : [],
+    cityPrices: Array.isArray(parsedShipping.cityPrices) ? parsedShipping.cityPrices : [],
+    statePrices: Array.isArray(parsedShipping.statePrices) ? parsedShipping.statePrices : [],
+    zipCodePrices: Array.isArray(parsedShipping.zipCodePrices) ? parsedShipping.zipCodePrices : [],
+    freeShipping: parsedShipping.freeShipping !== undefined ? parsedShipping.freeShipping : false,
+    freeShippingAboveAmount: parsedShipping.freeShippingAboveAmount || 0
+  };
+}
+
+await settings.save();
     }
 
     if (req.file) {
@@ -152,7 +183,7 @@ exports.updateCompanySettings = async (req, res) => {
 
     await settings.save();
 
-    res.status(200).json({
+     res.status(200).json({
       success: true,
       message: 'Company settings updated successfully',
       data: settings
@@ -165,7 +196,6 @@ exports.updateCompanySettings = async (req, res) => {
     });
   }
 };
-
 // Get public policies (for displaying on website - no authentication required)
 exports.getPublicPolicies = async (req, res) => {
   try {

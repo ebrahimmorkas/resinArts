@@ -1,4 +1,4 @@
-import { useContext } from 'react';
+import { useContext, useMemo } from 'react';
 import { AuthContext } from '../Context/AuthContext';
 import { ProductProvider } from '../Context/ProductContext';
 import { CartProvider } from '../Context/CartContext';
@@ -11,44 +11,60 @@ import { FreeCashProvider } from '../Context/FreeCashContext';
 import { CompanySettingsProvider } from '../Context/CompanySettingsContext';
 
 const ConditionalProvider = ({children}) => {
-    const { user } = useContext(AuthContext);
+    const { user, loading } = useContext(AuthContext);
 
-    if(user?.role === "admin") {
-        return(
-                <ProductProvider>
-                    <FreeCashProvider>
-                        <UserProvider>
-                            <CategoryProvider>
-                                <BannerProvider>
-                                    {children}
-                                </BannerProvider>
-                            </CategoryProvider>
-                        </UserProvider>
-                    </FreeCashProvider>
-                </ProductProvider>
+    // Show loading state while checking auth
+    if (loading) {
+        return (
+            <div className="fixed inset-0 bg-gray-100 flex items-center justify-center z-50">
+                <div className="bg-white rounded-lg p-8 flex flex-col items-center gap-3">
+                    <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+                    <p className="text-gray-600 text-lg font-medium">Loading...</p>
+                </div>
+            </div>
         );
     }
 
-    // For logged-in users and guests - load all public contexts
-    return (
+    // Memoize providers to prevent unnecessary re-renders
+    const adminProviders = useMemo(() => (
+        <ProductProvider>
+            <FreeCashProvider>
+                <UserProvider>
+                    <CategoryProvider>
+                        <BannerProvider>
+                            {children}
+                        </BannerProvider>
+                    </CategoryProvider>
+                </UserProvider>
+            </FreeCashProvider>
+        </ProductProvider>
+    ), [children]);
+
+    const publicProviders = useMemo(() => (
         <CompanySettingsProvider>
             <ProductProvider>
-                <FreeCashProvider>
-                    <AnnouncementProvider>
-                        <BannerProvider>
-                            <DiscountProvider>
-                                <CartProvider>
-                                    <CategoryProvider>
+                <CategoryProvider>
+                    <BannerProvider>
+                        <DiscountProvider>
+                            <AnnouncementProvider>
+                                <FreeCashProvider>
+                                    <CartProvider>
                                         {children}
-                                    </CategoryProvider>
-                                </CartProvider>
-                            </DiscountProvider>
-                        </BannerProvider>
-                    </AnnouncementProvider>
-                </FreeCashProvider>
+                                    </CartProvider>
+                                </FreeCashProvider>
+                            </AnnouncementProvider>
+                        </DiscountProvider>
+                    </BannerProvider>
+                </CategoryProvider>
             </ProductProvider>
         </CompanySettingsProvider>
-    );
+    ), [children]);
+
+    if (user?.role === "admin") {
+        return adminProviders;
+    }
+
+    return publicProviders;
 };
 
 export default ConditionalProvider;

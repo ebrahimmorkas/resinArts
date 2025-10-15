@@ -126,13 +126,13 @@ const AddAnnouncement = ({ onSuccess }) => {
             <h2 className="text-2xl sm:text-3xl lg:text-4xl font-bold text-gray-900 mb-2">
               Create Announcement
             </h2>
-            <p className="text-sm sm:text-base lg:text-lg text-gray-600">
+            <p className="text-sm sm:text-base lg:text-lg text-gray-600 dark:text-gray-400">
               Share important updates with your customers
             </p>
           </div>
 
           {/* Main Form Card */}
-          <div className="bg-white rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
+          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl border border-gray-100 overflow-hidden">
             <div className="p-6 sm:p-8 lg:p-10">
               <div className="space-y-6">
                 {/* Announcement Text */}
@@ -148,7 +148,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                       onChange={handleChange} 
                       required 
                       placeholder="Enter your announcement message..."
-                      className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 resize-none text-sm sm:text-base"
+                      className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 resize-none text-sm sm:text-base"
                       rows="4"
                     />
                     <div className="absolute bottom-3 right-3 text-xs text-gray-400">
@@ -171,7 +171,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                         value={formData.startDate} 
                         onChange={handleChange} 
                         required 
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-sm sm:text-base" 
+                        className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-sm sm:text-base" 
                       />
                       <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -191,7 +191,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                         value={formData.endDate} 
                         onChange={handleChange} 
                         required 
-                        className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-sm sm:text-base" 
+                        className="w-full px-4 py-3 border-2 border-gray-200 dark:border-gray-700 rounded-xl focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all duration-200 text-sm sm:text-base" 
                       />
                       <svg className="absolute right-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -216,7 +216,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                       <label className="text-sm font-medium text-gray-900 cursor-pointer">
                         Set as Default Announcement
                       </label>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
                         This announcement will be displayed as the primary notification
                       </p>
                     </div>
@@ -252,7 +252,7 @@ const AddAnnouncement = ({ onSuccess }) => {
         {/* Error Modal */}
         {showErrorModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
               <div className="p-6">
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-3">
@@ -265,7 +265,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                   </div>
                   <button 
                     onClick={closeErrorModal}
-                    className="text-gray-400 hover:text-gray-600 transition-colors"
+                    className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors"
                   >
                     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -289,7 +289,7 @@ const AddAnnouncement = ({ onSuccess }) => {
         {/* Modal for default announcement conflict */}
         {showModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform transition-all">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-lg w-full mx-4 transform transition-all">
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-10 h-10 bg-amber-100 rounded-full flex items-center justify-center">
@@ -300,13 +300,13 @@ const AddAnnouncement = ({ onSuccess }) => {
                   <h3 className="text-lg font-bold text-gray-900">Default Announcement Exists</h3>
                 </div>
                 
-                <p className="text-gray-600 mb-4">A default announcement already exists:</p>
+                <p className="text-gray-600 dark:text-gray-400 mb-4">A default announcement already exists:</p>
                 
-                <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
-                  <p className="text-gray-800 font-medium">"{existingDefault?.text}"</p>
+                <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl p-4 mb-6">
+                  <p className="-800 dark:text-gray-100 font-medium">"{existingDefault?.text}"</p>
                 </div>
                 
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
                   Do you want to override it and make this new announcement the default?
                 </p>
                 
@@ -334,7 +334,7 @@ const AddAnnouncement = ({ onSuccess }) => {
         {/* Confirmation Modal for continuing without default */}
         {showConfirmModal && (
           <div className="fixed inset-0 bg-black bg-opacity-50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-            <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-2xl max-w-md w-full mx-4 transform transition-all">
               <div className="p-6">
                 <div className="flex items-center space-x-3 mb-4">
                   <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
@@ -345,7 +345,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                   <h3 className="text-lg font-bold text-gray-900">Continue Without Default?</h3>
                 </div>
                 
-                <p className="text-gray-600 mb-6">
+                <p className="text-gray-600 dark:text-gray-400 mb-6">
                   Do you want to continue adding this announcement without making it the default?
                 </p>
                 
@@ -373,7 +373,7 @@ const AddAnnouncement = ({ onSuccess }) => {
         {/* Minimal Loading Overlay */}
         {loading && (
           <div className="fixed inset-0 bg-black bg-opacity-20 backdrop-blur-sm flex items-center justify-center z-40">
-            <div className="bg-white rounded-2xl shadow-xl p-6 flex items-center space-x-4">
+            <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl p-6 flex items-center space-x-4">
               <div className="animate-spin rounded-full h-8 w-8 border-3 border-blue-500 border-t-transparent"></div>
               <span className="text-gray-700 font-medium">Processing your request...</span>
             </div>

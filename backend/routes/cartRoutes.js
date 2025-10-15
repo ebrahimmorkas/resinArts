@@ -21,9 +21,19 @@ const updateAbandonedCart = async (userId, req) => {
     const cartItems = await Cart.find({ user_id: userId });
     
     if (cartItems.length === 0) {
-      // If cart is empty, remove abandoned cart
-      const deleted = await AbandonedCart.findOneAndDelete({ user_id: userId });
-      if (deleted && io) {
+      // If cart is empty, remove abandoned cart and notification
+      const deletedCart = await AbandonedCart.findOneAndDelete({ user_id: userId });
+      
+      if (deletedCart) {
+        // Delete associated notification
+        const Notification = require('../models/Notification');
+        await Notification.deleteMany({ 
+          abandonedCartId: deletedCart._id,
+          type: 'abandonedCart'
+        });
+      }
+      
+      if (io) {
         io.to('admin_room').emit('abandoned_cart_removed', { userId: userId.toString() });
       }
       return;
@@ -228,8 +238,18 @@ router.delete("/clear", async (req, res) => {
     process.nextTick(async () => {
       try {
         const io = req.app.get('io');
-        const deleted = await AbandonedCart.findOneAndDelete({ user_id: req.user.id });
-        if (deleted && io) {
+        const deletedCart = await AbandonedCart.findOneAndDelete({ user_id: req.user.id });
+        
+        if (deletedCart) {
+          // Delete associated notification
+          const Notification = require('../models/Notification');
+          await Notification.deleteMany({ 
+            abandonedCartId: deletedCart._id,
+            type: 'abandonedCart'
+          });
+        }
+        
+        if (deletedCart && io) {
           io.to('admin_room').emit('abandoned_cart_removed', { userId: req.user.id.toString() });
         }
       } catch (error) {

@@ -34,10 +34,36 @@ const notificationSchema = new mongoose.Schema({
     ref: 'Product',
     required: false,
   },
+  abandonedCartId: {
+    type: mongoose.Types.ObjectId,
+    ref: 'AbandonedCart',
+    required: false,
+  },
+  userId: {
+    type: mongoose.Types.ObjectId,
+    ref: 'User',
+    required: false,
+  },
   type: {
     type: String,
-    enum: ['order', 'lowStock', 'outOfStock'],
+    enum: ['order', 'lowStock', 'outOfStock', 'abandonedCart'],
     default: 'order',
+  },
+  itemCount: {
+    type: Number,
+    required: false,
+  },
+  customerName: {
+    type: String,
+    required: false,
+  },
+  whatsappNumber: {
+    type: String,
+    required: false,
+  },
+  cartItems: {
+    type: Array,
+    required: false,
   },
 });
 

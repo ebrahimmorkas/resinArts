@@ -40,10 +40,10 @@ const PriceRangeSection = React.memo(
         </div>
         <div className="space-y-3">
           {ranges.map((range, index) => (
-            <div key={range._id || `range-${index}`} className="bg-white p-3 rounded-md border border-blue-100">
+            <div key={range._id || `range-${index}`} className="bg-white dark:bg-gray-900 p-3 rounded-md border border-blue-100">
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 items-end">
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
                     Retail Price {index === 0 && isRequired ? "*" : ""}
                   </label>
                   <input
@@ -62,7 +62,7 @@ const PriceRangeSection = React.memo(
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
                     Wholesale Price {index === 0 && isRequired ? "*" : ""}
                   </label>
                   <input
@@ -80,7 +80,7 @@ const PriceRangeSection = React.memo(
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-600 mb-1">
+                  <label className="block text-sm font-medium text-gray-600 dark:text-gray-400 mb-1">
                     Threshold Quantity {index === 0 && isRequired ? "*" : ""}
                   </label>
                   <input
@@ -1334,9 +1334,9 @@ const AddProduct = () => {
 
   const SuccessModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl">
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-xl">
         <h3 className="text-lg font-semibold text-green-600 mb-4">Product Added Successfully!</h3>
-        <p className="text-gray-600 mb-6">Your product has been added to the inventory.</p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Your product has been added to the inventory.</p>
         <button
           onClick={() => setShowSuccessModal(false)}
           className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200"
@@ -1349,9 +1349,9 @@ const AddProduct = () => {
 
   const ErrorModal = () => (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-xl">
+      <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-xl">
         <h3 className="text-lg font-semibold text-red-600 mb-4">Product Not Added</h3>
-        <p className="text-gray-600 mb-6">Please check the errors below and try again.</p>
+        <p className="text-gray-600 dark:text-gray-400 mb-6">Please check the errors below and try again.</p>
         {errors.server && <p className="text-red-500 text-sm mb-4">{errors.server}</p>}
         <button
           onClick={() => setShowErrorModal(false)}
@@ -1369,7 +1369,7 @@ const AddProduct = () => {
         <div className="flex items-center justify-center h-64">
           <div className="text-center">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-            <p className="text-gray-600">Loading...</p>
+            <p className="text-gray-600 dark:text-gray-400">Loading...</p>
           </div>
         </div>
       )}
@@ -1397,12 +1397,12 @@ const AddProduct = () => {
           {showSuccessModal && <SuccessModal />}
           {showErrorModal && <ErrorModal />}
           <div className="mb-10">
-            <h1 className="text-3xl font-extrabold text-gray-800 mb-3 tracking-tight">Add New Product</h1>
+            <h1 className="text-3xl font-extrabold -800 dark:text-gray-100 mb-3 tracking-tight">Add New Product</h1>
             <p className="text-gray-500 text-base">Complete the form below to add a new product to your inventory</p>
           </div>
           <form onSubmit={handleSubmit} className="space-y-10">
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Basic Information</h2>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold -800 dark:text-gray-100 mb-6">Basic Information</h2>
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 <div>
                   <label className="block text-sm font-semibold text-gray-700 mb-2">Product Name *</label>
@@ -1462,8 +1462,8 @@ const AddProduct = () => {
               {errors.base_price && <p className="text-red-500 text-xs mt-1">{errors.base_price}</p>}
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Category Selection</h2>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold -800 dark:text-gray-100 mb-6">Category Selection</h2>
               {categories.length > 0 ? (
                 <div className="space-y-4">
                   {renderCategoryDropdowns()}
@@ -1481,8 +1481,8 @@ const AddProduct = () => {
               )}
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Product Details</h2>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold -800 dark:text-gray-100 mb-6">Product Details</h2>
               <div className="space-y-4">
                 {details.map((detail, index) => (
                   <div key={index} className="flex flex-col sm:flex-row gap-4 items-start">
@@ -1526,13 +1526,13 @@ const AddProduct = () => {
               </button>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Color Variants</h2>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold -800 dark:text-gray-100 mb-6">Color Variants</h2>
               <div className="space-y-6">
                 {colorVariants.map((variant, variantIndex) => (
-                  <div key={variantIndex} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                  <div key={variantIndex} className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                      <h3 className="text-lg font-semibold text-gray-800">Color Variant {variantIndex + 1}</h3>
+                      <h3 className="text-lg font-semibold -800 dark:text-gray-100">Color Variant {variantIndex + 1}</h3>
                       {colorVariants.length > 1 && (
                         <button
                           type="button"
@@ -1612,7 +1612,7 @@ const AddProduct = () => {
                       <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Select Sizes *</label>
                         <div className="relative">
-                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white space-y-2">
+                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white dark:bg-gray-900 space-y-2">
                             {sizeOptions.map((size, index) => (
                               <div key={index} className="flex items-center">
                                 <label className="flex items-center space-x-2">
@@ -1720,14 +1720,14 @@ const AddProduct = () => {
               </button>
             </div>
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-              <h2 className="text-2xl font-semibold text-gray-800 mb-6">Size Variants</h2>
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-100">
+              <h2 className="text-2xl font-semibold -800 dark:text-gray-100 mb-6">Size Variants</h2>
               {errors.size && <p className="text-red-500 text-xs mt-1">{errors.size}</p>}
               <div className="space-y-6">
                 {sizeVariants.map((variant, variantIndex) => (
-                  <div key={variantIndex} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                  <div key={variantIndex} className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
                     <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                      <h3 className="text-lg font-semibold text-gray-800">Size Variant {variantIndex + 1}</h3>
+                      <h3 className="text-lg font-semibold -800 dark:text-gray-100">Size Variant {variantIndex + 1}</h3>
                       {sizeVariants.length > 1 && (
                         <button
                           type="button"
@@ -1840,7 +1840,7 @@ const AddProduct = () => {
                       <div className="mb-4">
                         <label className="block text-sm font-semibold text-gray-700 mb-2">Select Colors *</label>
                         <div className="relative">
-                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white space-y-2">
+                          <div className="w-full px-4 py-2 border border-gray-300 rounded-lg bg-white dark:bg-gray-900 space-y-2">
                             {colorVariants.map((colorVariant, index) => (
                               <div key={index} className="flex items-center">
                                 <label className="flex items-center space-x-2">
@@ -1947,13 +1947,13 @@ const AddProduct = () => {
             </div>
 
             {!isBasePriceFilled && !isColorPriceFilled && !isSizePriceFilled && (
-              <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
-                <h2 className="text-2xl font-semibold text-gray-800 mb-6">Pricing Combinations</h2>
+              <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-100">
+                <h2 className="text-2xl font-semibold -800 dark:text-gray-100 mb-6">Pricing Combinations</h2>
                 <div className="space-y-6">
                   {pricingSections.map((section, index) => (
-                    <div key={index} className="bg-gray-50 p-6 rounded-lg border border-gray-200">
+                    <div key={index} className="bg-gray-50 dark:bg-gray-800 p-6 rounded-lg border border-gray-200 dark:border-gray-700">
                       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-3">
-                        <h3 className="text-lg font-semibold text-gray-800">Pricing Combination {index + 1}</h3>
+                        <h3 className="text-lg font-semibold -800 dark:text-gray-100">Pricing Combination {index + 1}</h3>
                         {pricingSections.length > 1 && (
                           <button
                             type="button"
@@ -2037,7 +2037,7 @@ const AddProduct = () => {
               </div>
             )}
 
-            <div className="bg-white p-6 rounded-lg shadow-sm border border-gray-100">
+            <div className="bg-white dark:bg-gray-900 p-6 rounded-lg shadow-sm border border-gray-100">
               <button
                 type="submit"
                 disabled={isSubmitting}

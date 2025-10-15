@@ -958,7 +958,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
         
         <div className="flex-1">
           <div 
-            className={`flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 transition-colors ${isMainParent ? 'bg-blue-50' : ''} ${category.image && !isEditMode ? 'cursor-pointer' : ''}`}
+            className={`flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 dark:bg-gray-800 transition-colors ${isMainParent ? 'bg-blue-50' : ''} ${category.image && !isEditMode ? 'cursor-pointer' : ''}`}
             onClick={() => !isEditMode && category.image && setImageModal({ isOpen: true, url: category.image })}
           >
             {showImageUpload && imagePreview && isUploading ? (
@@ -971,7 +971,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               <img 
                 src={category.image} 
                 alt={category.categoryName}
-                className="w-12 h-12 object-cover rounded-md border border-gray-200"
+                className="w-12 h-12 object-cover rounded-md border border-gray-200 dark:border-gray-700"
               />
             ) : (
               <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">
@@ -998,7 +998,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 </button>
                 <button
                   onClick={handleCancelEdit}
-                  className="p-1.5 text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
+                  className="p-1.5 text-gray-600 dark:text-gray-400 hover:bg-gray-100 rounded-md transition-colors"
                   title="Cancel"
                 >
                   <X className="w-4 h-4" />
@@ -1071,7 +1071,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
           )}
 
           {isUploading && (
-            <div className="mt-2 p-4 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="mt-2 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
               <input
                 type="file"
                 ref={fileInputRef}
@@ -1100,7 +1100,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                   </button>
                   <button
                     onClick={handleCancelImageUpload}
-                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 transition-colors"
+                    className="px-4 py-2 border border-gray-300 rounded-md hover:bg-gray-50 dark:bg-gray-800 transition-colors"
                   >
                     Cancel
                   </button>
@@ -1133,7 +1133,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               </button>
               <button
                 onClick={handleCancelAddSubcategory}
-                className="px-3 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-50 transition-colors"
+                className="px-3 py-1.5 border border-gray-300 text-sm rounded-md hover:bg-gray-50 dark:bg-gray-800 transition-colors"
               >
                 Cancel
               </button>
@@ -1158,7 +1158,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-blue-600 animate-spin mx-auto mb-4" />
-          <p className="text-gray-600">Loading categories...</p>
+          <p className="text-gray-600 dark:text-gray-400">Loading categories...</p>
         </div>
       </div>
     );
@@ -1184,15 +1184,15 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
             <h1 className="text-2xl font-bold text-white mb-2">Categories Management</h1>
             <p className="text-blue-100 text-sm">Manage and organize your product categories</p>
           </div>
-          <button className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2.5 bg-white text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors shadow-md">
+          <button className="mt-4 sm:mt-0 inline-flex items-center px-4 py-2.5 bg-white dark:bg-gray-900 text-blue-600 rounded-lg font-medium hover:bg-blue-50 transition-colors shadow-md">
             <Plus className="w-5 h-5 mr-2" />
             Add Category
           </button>
         </div>
       </div>
 
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm">
-        <div className="px-6 py-4 border-b border-gray-200">
+      <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700 shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div>
               <p className="text-sm text-gray-500">
@@ -1215,21 +1215,21 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 <div className="flex items-center space-x-2">
                     <button 
       onClick={() => handleBulkStatusToggle(true)}
-      className="inline-flex items-center px-3 py-2 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+      className="inline-flex items-center px-3 py-2 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white dark:bg-gray-900 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
     >
       <Power className="w-4 h-4 mr-2" />
       Activate ({selectedRows.length})
     </button>
     <button 
       onClick={() => handleBulkStatusToggle(false)}
-      className="inline-flex items-center px-3 py-2 border border-orange-300 rounded-md text-sm font-medium text-orange-700 bg-white hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors"
+      className="inline-flex items-center px-3 py-2 border border-orange-300 rounded-md text-sm font-medium text-orange-700 bg-white dark:bg-gray-900 hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors"
     >
       <PowerOff className="w-4 h-4 mr-2" />
       Deactivate ({selectedRows.length})
     </button>
                   <button 
                     onClick={handleBulkDelete}
-                    className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+                    className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white dark:bg-gray-900 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete ({selectedRows.length})
@@ -1239,14 +1239,14 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 <div className="flex items-center space-x-2">
                   <button 
                     onClick={() => setFilterModal(true)}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                   >
                     <Filter className="w-4 h-4 mr-2" />
                     Filter
                   </button>
                   <button 
                     onClick={handleExport}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export
@@ -1269,12 +1269,12 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
           </div>
         ) : (
           <>
-            <div className="overflow-hidden border-t border-gray-200">
+            <div className="overflow-hidden border-t border-gray-200 dark:border-gray-700">
               <div className="overflow-x-auto overflow-y-auto max-h-96">
                 <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50 sticky top-0 z-10">
+                  <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                     <tr>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '60px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '60px' }}>
                         <input
                           type="checkbox"
                           checked={selectedRows.length === currentData.length && currentData.length > 0}
@@ -1282,32 +1282,32 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         />
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '80px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
                         Sr No.
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '100px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
                         Image
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '180px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '180px' }}>
                         Name
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                         Sub Categories
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                         Created At
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
   Status
 </th>
                       {selectedRows.length === 0 && (
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '220px' }}>
+                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '220px' }}>
                           Actions
                         </th>
                       )}
                     </tr>
                   </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
+                  <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                     {currentData.map((item, index) => {
                       const categoryId = typeof item._id === 'object' ? item._id.$oid : item._id;
                       const subcategoryCount = getSubcategoryCount(categoryId);
@@ -1318,7 +1318,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                       });
 
                       return (
-                        <tr key={categoryId} className="hover:bg-gray-50 transition-colors">
+                        <tr key={categoryId} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '60px' }}>
                             <input
                               type="checkbox"
@@ -1339,7 +1339,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                               <img 
                                 src={item.image} 
                                 alt={item.categoryName}
-                                className="w-12 h-12 object-cover rounded-md mx-auto border border-gray-200"
+                                className="w-12 h-12 object-cover rounded-md mx-auto border border-gray-200 dark:border-gray-700"
                               />
                             ) : (
                               <div className="w-12 h-12 bg-gray-200 rounded-md mx-auto flex items-center justify-center">
@@ -1420,7 +1420,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               </div>
             </div>
 
-            <div className="px-6 py-4 border-t border-gray-200">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 <div className="flex items-center space-x-2">
                   <span className="text-sm text-gray-700">Show</span>
@@ -1441,7 +1441,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4 mr-1" />
                     Previous
@@ -1467,7 +1467,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                           className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                             currentPage === pageNumber
                               ? 'bg-blue-600 text-white'
-                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:bg-gray-800'
                           }`}
                         >
                           {pageNumber}
@@ -1479,7 +1479,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     Next
                     <ChevronRight className="w-4 h-4 ml-1" />
@@ -1494,8 +1494,8 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       {/* Filter Modal */}
       {filterModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-lg">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
@@ -1585,7 +1585,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               </div>
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse gap-2">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-row-reverse gap-2">
               <button
                 type="button"
                 onClick={applyFilters}
@@ -1596,7 +1596,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Clear Filters
               </button>
@@ -1608,7 +1608,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       {/* Unsaved Changes Confirmation Modal */}
       {confirmModal.isOpen && (
         <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-md">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-md">
             <div className="px-6 py-4">
               <div className="flex items-start">
                 <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-yellow-100">
@@ -1626,7 +1626,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse gap-2">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-row-reverse gap-2">
               <button
                 type="button"
                 onClick={confirmModal.isClosing ? handleConfirmCloseModal : handleSaveUnsavedChanges}
@@ -1637,7 +1637,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               <button
                 type="button"
                 onClick={confirmModal.isClosing ? handleDiscardCloseModal : handleDiscardChanges}
-                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Discard
               </button>
@@ -1649,7 +1649,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       {/* Delete Confirmation Modal */}
       {deleteModal.isOpen && (
         <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-lg">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-lg">
             <div className="px-6 py-4">
               <div className="flex items-start">
                 <div className="flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
@@ -1678,7 +1678,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 </div>
               </div>
             </div>
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse gap-2">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-row-reverse gap-2">
               <button
                 type="button"
                 disabled={isDeleting}
@@ -1698,7 +1698,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 type="button"
                 disabled={isDeleting}
                 onClick={() => setDeleteModal({ isOpen: false, categoryId: null, categoryName: '' })}
-                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Cancel
               </button>
@@ -1710,8 +1710,8 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       {/* Hierarchy Modal (View Only) */}
       {hierarchyModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-3xl">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-purple-100">
@@ -1750,11 +1750,11 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               )}
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-row-reverse">
               <button
                 type="button"
                 onClick={() => setHierarchyModal({ isOpen: false, category: null })}
-                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Close
               </button>
@@ -1766,8 +1766,8 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       {/* Edit Modal */}
       {editModal.isOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-          <div className="bg-white rounded-lg shadow-xl w-full max-w-3xl">
-            <div className="px-6 py-4 border-b border-gray-200">
+          <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl w-full max-w-3xl">
+            <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
               <div className="flex items-center justify-between">
                 <div className="flex items-center space-x-3">
                   <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-green-100">
@@ -1795,11 +1795,11 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               {editModal.category && renderHierarchyTree(editModal.category, 0, true)}
             </div>
             
-            <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex flex-row-reverse">
+            <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex flex-row-reverse">
               <button
                 type="button"
                 onClick={handleCloseEditModal}
-                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Close
               </button>
@@ -1829,14 +1829,14 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       {/* Status Confirmation Modal */}
 {showStatusModal && (
   <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
-    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900">
           {statusModalData.isActive ? 'Activate Category' : 'Deactivate Category'}
         </h3>
       </div>
       <div className="px-6 py-4">
-        <p className="text-gray-600 mb-3">
+        <p className="text-gray-600 dark:text-gray-400 mb-3">
           Are you sure you want to {statusModalData.isActive ? 'activate' : 'deactivate'}{' '}
           <span className="font-semibold text-gray-900">"{statusModalData.categoryName}"</span>?
         </p>
@@ -1859,10 +1859,10 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
           </div>
         )}
       </div>
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
         <button
           onClick={() => setShowStatusModal(false)}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors"
           disabled={isLoading}
         >
           Cancel
@@ -1886,14 +1886,14 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
 {/* Reactivate Products Confirmation */}
 {showReactivateConfirm && (
   <div className="fixed inset-0 z-[70] flex items-center justify-center p-4 bg-black bg-opacity-50">
-    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900">
           Reactivate Products?
         </h3>
       </div>
       <div className="px-6 py-4">
-        <p className="text-gray-600 mb-3">
+        <p className="text-gray-600 dark:text-gray-400 mb-3">
           Do you want to reactivate all products that were deactivated when this category was deactivated?
         </p>
         <div className="p-3 bg-blue-50 border border-blue-200 rounded-md">
@@ -1903,10 +1903,10 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
           </p>
         </div>
       </div>
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
         <button
           onClick={() => confirmStatusChange(false)}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors"
           disabled={isLoading}
         >
           No, Only Category
@@ -1926,14 +1926,14 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
 {/* Bulk Status Modal */}
 {showBulkStatusModal && (
   <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black bg-opacity-50">
-    <div className="bg-white rounded-xl max-w-md w-full shadow-2xl">
-      <div className="px-6 py-4 border-b border-gray-200">
+    <div className="bg-white dark:bg-gray-900 rounded-xl max-w-md w-full shadow-2xl">
+      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
         <h3 className="text-lg font-semibold text-gray-900">
           {bulkStatusAction ? 'Activate' : 'Deactivate'} Multiple Categories
         </h3>
       </div>
       <div className="px-6 py-4">
-        <p className="text-gray-600 mb-3">
+        <p className="text-gray-600 dark:text-gray-400 mb-3">
           Are you sure you want to {bulkStatusAction ? 'activate' : 'deactivate'}{' '}
           <span className="font-semibold text-gray-900">{selectedRows.length} selected categories</span>?
         </p>
@@ -1946,10 +1946,10 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
           </div>
         )}
       </div>
-      <div className="px-6 py-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-2">
+      <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
         <button
           onClick={() => setShowBulkStatusModal(false)}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors"
           disabled={isLoading}
         >
           Cancel

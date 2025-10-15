@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from "react";
+import { createContext, useState, useEffect, useMemo } from "react";
 import axios from "axios";
 
 export const ProductContext = createContext();
@@ -8,26 +8,54 @@ export const ProductProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  useEffect(() => {
-    const fetchProducts = async () => {
-      try {
-        const response = await axios.get(
-          "https://api.simplyrks.cloud/api/product/all",
-          { withCredentials: true } // Keep for potential user-specific features
-        );
-        setProducts(response.data.products);
-        setLoading(false);
-      } catch (err) {
-        setError(err.response?.data?.message || "Error fetching products");
-        setLoading(false);
+  const fetchProducts = async () => {
+    try {
+      // Check sessionStorage cache first
+      const cachedData = sessionStorage.getItem('productsCache');
+      const cacheTimestamp = sessionStorage.getItem('productsCacheTime');
+      
+      if (cachedData && cacheTimestamp) {
+        const now = Date.now();
+        const cacheAge = now - parseInt(cacheTimestamp);
+        
+        // Use cache if less than 5 minutes old (300000ms)
+        if (cacheAge < 300000) {
+          setProducts(JSON.parse(cachedData));
+          setLoading(false);
+          return;
+        }
       }
-    };
-    
+
+      const response = await axios.get(
+        "https://api.simplyrks.cloud/api/product/all",
+        { withCredentials: true }
+      );
+      
+      const productsData = response.data.products || [];
+      setProducts(productsData);
+      
+      // Cache the data
+      sessionStorage.setItem('productsCache', JSON.stringify(productsData));
+      sessionStorage.setItem('productsCacheTime', Date.now().toString());
+      
+      setLoading(false);
+    } catch (err) {
+      setError(err.response?.data?.message || "Error fetching products");
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     fetchProducts();
-  }, []); // Remove dependency on user/authLoading
+  }, []);
+
+  const contextValue = useMemo(
+    () => ({ products, setProducts, fetchProducts, loading, error }),
+    [products, loading, error]
+  );
 
   return (
-    <ProductContext.Provider value={{ products, loading, error }}>
+    <ProductContext.Provider value={contextValue}>
       {children}
     </ProductContext.Provider>
   );

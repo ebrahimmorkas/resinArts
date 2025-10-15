@@ -1,10 +1,11 @@
 "use client"
 
 import { useState, useMemo, useEffect, useContext } from "react"
-import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar } from "lucide-react"
+import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar, DollarSign } from "lucide-react"
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from "jspdf";
+import io from 'socket.io-client';
 
 import axios from "axios"
 import { ProductContext } from "../../../../../Context/ProductContext"
@@ -64,6 +65,9 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   const [orderId, setOrderId] = useState("");
   const [currentOrder, setCurrentOrder] = useState(null);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isEditShippingPrice, setIsEditShippingPrice] = useState(false)
+  const [pendingAcceptOrderId, setPendingAcceptOrderId] = useState(null);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -104,7 +108,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     if (currentStock === undefined || currentStock === null) {
       return {
         bgColor: "bg-gray-100",
-        textColor: "text-gray-600",
+        textColor: "text-gray-600 dark:text-gray-400",
         status: "Unknown Stock",
         icon: AlertTriangle,
       };
@@ -130,14 +134,14 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   // Start of order details modal
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-5xl w-full max-h-[90vh] overflow-y-auto">
         {/* Modal Header */}
-        <div className="sticky top-0 bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center rounded-t-xl">
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Order Details</h2>
-            <p className="text-sm text-gray-600">Order ID: {order._id}</p>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Order Details</h2>
+            <p className="text-sm text-gray-600 dark:text-gray-400">Order ID: {order._id}</p>
           </div>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 dark:text-gray-400 transition-colors">
             <X className="h-6 w-6" />
           </button>
         </div>
@@ -145,7 +149,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         {/* Modal Content */}
         <div className="p-6 space-y-6">
           {/* Order Status and Actions */}
-          <div className="bg-gray-50 rounded-lg p-4">
+          <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
             <div className="flex justify-between items-center mb-4">
               <div className="flex items-center space-x-3">
                 <span
@@ -158,25 +162,62 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
 
             {/* Action Buttons */}
             <div className="flex flex-wrap gap-3">
-              <button
-                onClick={() => {
-                  onStatusChange(order._id, "Accepted");
-                  setOrderId(order._id);
-                  setShowShippingPriceModal(true);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={
-                  order.status === "Accepted" ||
-                  !productMappedWithOrderId ||
-                  order.orderedProducts.some((product, index) => {
-                    const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
-                    return stock === undefined || stock < product.quantity;
-                  })
-                }
-              >
-                <Check className="h-4 w-4 mr-2" />
-                Accept
-              </button>
+            <button
+  onClick={async () => {
+    try {
+      setOrderId(order._id);
+
+      // Show ShippingPriceModal only if total_price is "Pending" (pending shipping)
+      if (order.total_price === "Pending") {
+        setPendingAcceptOrderId(order._id);
+        setShowShippingPriceModal(true);
+      } else {
+        // Update local state immediately for better UX
+        onStatusChange(order._id, "Accepted");
+        
+        // Call backend to persist status change
+        await handleStatusChangeBackend("Accepted", order._id);
+
+        // Call endpoint to send acceptance email
+        const res = await axios.post(
+          'https://api.simplyrks.cloud/api/order/sendAcceptEmailWhenShippingPriceAddedAutomatically',
+          {
+            email: order.email,
+            orderId: order._id,
+          },
+          { withCredentials: true }
+        );
+        console.log('Email sent successfully:', res.data);
+      }
+    } catch (error) {
+      console.error('Error accepting order:', error.response?.data || error.message);
+      // Revert local state on error
+      onStatusChange(order._id, "Pending");
+    }
+  }}
+  className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={
+    order.status === "Accepted" ||
+    !productMappedWithOrderId ||
+    order.orderedProducts.some((product, index) => {
+      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+      return stock === undefined || stock < product.quantity;
+    })
+  }
+  title={
+    order.orderedProducts.some((product, index) => {
+      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+      return stock === undefined || stock < product.quantity;
+    })
+      ? "Cannot accept order: Insufficient stock for one or more products"
+      : order.status === "Accepted"
+      ? "Order already accepted"
+      : "Accept order"
+  }
+>
+  <Check className="h-4 w-4 mr-2" />
+  Accept
+</button>
               <button
                 onClick={() => {
                   onStatusChange(order._id, "Rejected");
@@ -232,6 +273,20 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 <CheckCircle className="h-4 w-4 mr-2" />
                 Complete
               </button>
+{order.status === "Accepted" && (
+  <button
+    onClick={() => {
+      setOrderId(order._id);
+      setShowShippingPriceModal(true);
+      setIsEditShippingPrice(true);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-yellow-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+    disabled={isLoading}
+  >
+    <DollarSign className="h-4 w-4 mr-2" />
+    Edit Shipping ({order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price}`})
+  </button>
+)}
               <button
                 onClick={() => {
                   handleEdit(order);
@@ -247,62 +302,68 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
             {/* Customer Information */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center mb-3">
                 <User className="h-5 w-5 text-blue-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Customer Information</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Customer Information</h3>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Name:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Name:</span>
                   <span className="font-medium">{order.user_name}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">User ID:</span>
+                  <span className="text-gray-600 dark:text-gray-400">User ID:</span>
                   <span className="font-medium text-xs">{order.user_id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Email:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Email:</span>
                   <span className="font-medium">{order.email}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Phone:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Phone:</span>
                   <span className="font-medium">{order.phone_number}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">WhatsApp:</span>
+                  <span className="text-gray-600 dark:text-gray-400">WhatsApp:</span>
                   <span className="font-medium">{order.whatsapp_number}</span>
                 </div>
               </div>
             </div>
 
             {/* Order Summary */}
-            <div className="bg-white border border-gray-200 rounded-lg p-4">
+            <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
               <div className="flex items-center mb-3">
                 <Package className="h-5 w-5 text-green-600 mr-2" />
-                <h3 className="text-lg font-semibold text-gray-900">Order Summary</h3>
+                <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Order Summary</h3>
               </div>
               <div className="space-y-3 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Order ID:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Order ID:</span>
                   <span className="font-medium text-xs">{order._id}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Products:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Total Products:</span>
                   <span className="font-medium">{order.orderedProducts.length}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Total Quantity:</span>
+                  <span className="text-gray-600 dark:text-gray-400">Total Quantity:</span>
                   <span className="font-medium">{totalQuantity}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-gray-600">Subtotal:</span>
-                  <span className="font-medium">${order.price}</span>
+                  <span className="text-gray-600 dark:text-gray-400">Subtotal:</span>
+                  <span className="font-medium">₹{order.price}</span>
                 </div>
+                <div className="flex justify-between">
+  <span className="text-gray-600 dark:text-gray-400">Shipping:</span>
+  <span className="font-medium">
+    {order.total_price === "Pending" ? 'Pending' : order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price.toFixed(2)}`}
+  </span>
+</div>
                 <div className="flex justify-between border-t pt-2 font-semibold">
-                  <span className="text-gray-900">Total:</span>
-                  <span className="text-gray-900">
-                    {order.total_price === "Pending" ? "Pending" : `$${order.total_price}`}
+                  <span className="text-gray-900 dark:text-white">Total:</span>
+                  <span className="text-gray-900 dark:text-white">
+                    {order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`}
                   </span>
                 </div>
               </div>
@@ -310,10 +371,10 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
           </div>
 
           {/* Products List */}
-          <div className="bg-white border border-gray-200 rounded-lg p-4">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
             <div className="flex items-center mb-4">
               <Package className="h-5 w-5 text-purple-600 mr-2" />
-              <h3 className="text-lg font-semibold text-gray-900">Ordered Products</h3>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Ordered Products</h3>
             </div>
             <div className="space-y-4">
               {order.orderedProducts.map((product, index) => {
@@ -322,7 +383,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 const StockIcon = stockStatus.icon;
 
                 return (
-                  <div key={index} className={`p-4 rounded-lg border-2 ${stockStatus.bgColor} border-gray-200`}>
+                  <div key={index} className={`p-4 rounded-lg border-2 ${stockStatus.bgColor} border-gray-200 dark:border-gray-700`}>
                     <div className="flex items-start space-x-4">
                       <img
                         src={product.image_url || "/placeholder.svg?height=80&width=80"}
@@ -331,7 +392,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-semibold text-gray-900 text-lg">{product.product_name}</h4>
+                          <h4 className="font-semibold text-gray-900 dark:text-white text-lg">{product.product_name}</h4>
                           <div
                             className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${stockStatus.bgColor} ${stockStatus.textColor}`}
                           >
@@ -343,19 +404,19 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 text-sm">
                           <div className="space-y-2">
                             <div>
-                              <span className="text-gray-600">Product ID:</span>
-                              <div className="font-medium text-xs break-all">{product.product_id}</div>
+                              <span className="text-gray-600 dark:text-black">Product ID:</span>
+                              <div className="font-medium text-xs break-all dark:text-blue-500">{product.product_id}</div>
                             </div>
                             {product.variant_id && (
                               <div>
-                                <span className="text-gray-600">Variant ID:</span>
-                                <div className="font-medium text-xs break-all">{product.variant_id}</div>
+                                <span className="text-gray-600 dark:text-black">Variant ID:</span>
+                                <div className="font-medium text-xs break-all dark:text-blue-500">{product.variant_id}</div>
                               </div>
                             )}
                             {product.size_id && (
                               <div>
-                                <span className="text-gray-600">Size ID:</span>
-                                <div className="font-medium text-xs break-all">{product.size_id}</div>
+                                <span className="text-gray-600 dark:text-black">Size ID:</span>
+                                <div className="font-medium text-xs break-all dark:text-blue-500">{product.size_id}</div>
                               </div>
                             )}
                           </div>
@@ -363,36 +424,36 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                           <div className="space-y-2">
                             {product.variant_name && (
                               <div>
-                                <span className="text-gray-600">Variant:</span>
-                                <div className="font-medium">{product.variant_name}</div>
+                                <span className="text-gray-600 dark:text-black">Variant:</span>
+                                <div className="font-medium dark:text-black font-bold">{product.variant_name}</div>
                               </div>
                             )}
                             {product.size && (
                               <div>
-                                <span className="text-gray-600">Size:</span>
-                                <div className="font-medium">{product.size}</div>
+                                <span className="text-gray-600 dark:text-black">Size:</span>
+                                <div className="font-medium dark:text-blue-500 font-bold">{product.size}</div>
                               </div>
                             )}
                             <div>
-                              <span className="text-gray-600">Unit Price:</span>
-                              <div className="font-medium">${product.price}</div>
+                              <span className="text-gray-600 dark:text-black">Unit Price:</span>
+                              <div className="font- dark:text-blue-500 font-bold">₹{product.price}</div>
                             </div>
                           </div>
 
                           <div className="space-y-2">
                             <div>
-                              <span className="text-gray-600">Ordered Quantity:</span>
-                              <div className="font-medium">{product.quantity}</div>
+                              <span className="text-gray-600 dark:text-black">Ordered Quantity:</span>
+                              <div className="font-medium dark:text-blue-500 font-bold">{product.quantity}</div>
                             </div>
                             <div>
-                              <span className="text-gray-600">Current Stock:</span>
-                              <div className={`font-medium ${stockStatus.textColor}`}>
+                              <span className="text-gray-600 dark:text-black">Current Stock:</span>
+                              <div className={`font-medium ${stockStatus.textColor} dark:text-blue-500 font-bold`}>
                                 {stock !== undefined ? stock : "Unknown"}
                               </div>
                             </div>
                             <div>
-                              <span className="text-gray-600">Total:</span>
-                              <div className="font-semibold text-lg">${product.total}</div>
+                              <span className="text-gray-600 dark:text-black">Total:</span>
+                              <div className="font-semibold text-lg dark:text-green-500 font-extrabold">₹{product.total}</div>
                             </div>
                           </div>
                         </div>
@@ -421,18 +482,34 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         </div>
 
         {/* Modal Footer */}
-        <div className="sticky bottom-0 bg-gray-50 px-6 py-4 border-t border-gray-200 rounded-b-xl">
+        <div className="sticky bottom-0 bg-gray-50 dark:bg-gray-800 px-6 py-4 border-t border-gray-200 dark:border-gray-700 rounded-b-xl">
           <div className="flex justify-end">
             <button
               onClick={onClose}
-              className="px-6 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+              className="px-6 py-2 bg-gray-600 text-black dark:text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
             >
               Close
             </button>
           </div>
         </div>
       </div>
-      {showShippingPriceModal && <ShippingPriceModal onClose={() => setShowShippingPriceModal(false)} orderId={orderId} email={order.email} />}
+      {showShippingPriceModal && (
+  <ShippingPriceModal
+    onClose={(success) => {
+      setShowShippingPriceModal(false);
+      setIsEditShippingPrice(false);
+      // If was accepting order and user cancelled, revert status via parent callback
+      if (pendingAcceptOrderId && !isEditShippingPrice && !success) {
+        onStatusChange(pendingAcceptOrderId, "Pending");
+      }
+      setPendingAcceptOrderId(null);
+    }}
+    orderId={orderId}
+    email={order.email}
+    isEditMode={isEditShippingPrice}
+    currentShippingPrice={isEditShippingPrice ? order.shipping_price : 0}
+  />
+)}
       {showStatusModal && (
         <StatusModal
           onClose={() => {
@@ -534,11 +611,11 @@ export default function OrdersManagement() {
                       <div>
                         ${product.variant_name ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Variant:</strong> ${product.variant_name}</p>` : ''}
                         ${product.size ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Size:</strong> ${product.size}</p>` : ''}
-                        <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ${product.price}</p>
+                        <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹{product.price}</p>
                       </div>
                       <div>
                         <p style="margin: 4px 0; font-size: 14px;"><strong>Quantity:</strong> ${product.quantity}</p>
-                        <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ${product.total}</strong></p>
+                        <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹{product.total}</strong></p>
                       </div>
                     </div>
                     <div style="font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 8px; border-radius: 4px;">
@@ -556,9 +633,9 @@ export default function OrdersManagement() {
           <div style="border-top: 2px solid #3b82f6; padding-top: 20px; margin-bottom: 40px;">
             <div style="text-align: right;">
               <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; display: inline-block; min-width: 300px;">
-                <p style="margin: 8px 0; font-size: 16px;"><strong>Subtotal:</strong> ${order.price}</p>
+                <p style="margin: 8px 0; font-size: 16px;"><strong>Subtotal:</strong> ₹{order.price}</p>
                 <p style="margin: 12px 0 0 0; font-size: 20px; color: #059669; border-top: 1px solid #d1d5db; padding-top: 12px;">
-                  <strong>Total: ${order.total_price === "Pending" ? "Pending" : `${order.total_price}`}</strong>
+                  <strong>Total: ${order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`}</strong>
                 </p>
               </div>
             </div>
@@ -720,13 +797,13 @@ export default function OrdersManagement() {
       'Phone': order.phone_number,
       'WhatsApp': order.whatsapp_number,
       'Email': order.email,
-      'Total Price': order.total_price === "Pending" ? "Pending" : `$${order.total_price}`,
+      'Total Price': order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`,
       'Status': order.status,
       'Ordered At': formatOrderDate(order.createdAt, index),
       'User ID': order.user_id,
       'Products': order.orderedProducts.map(p => p.product_name).join(', '),
       'Quantities': order.orderedProducts.map(p => p.quantity).join(', '),
-      'Subtotal': `$${order.price}`
+      'Subtotal': `₹${order.price}`
     }));
 
     const ws = XLSX.utils.json_to_sheet(exportData);
@@ -737,28 +814,30 @@ export default function OrdersManagement() {
 
   // Fetching the orders
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const res = await axios.get("https://api.simplyrks.cloud/api/order/all", {
-          withCredentials: true,
-        });
+  const fetchOrders = async () => {
+    try {
+      const res = await axios.get("https://api.simplyrks.cloud/api/order/all", {
+        withCredentials: true,
+      });
 
-        if (res.status === 200) {
-          console.log(res.data.orders);
-          const ordersData = Array.isArray(res.data.orders) ? res.data.orders : [];
-          setOrders(ordersData);
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-        setIsError("Failed to fetch orders");
-        setOrders([]);
-      } finally {
-        setIsLoading(false);
+      if (res.status === 200) {
+        console.log(res.data.orders);
+        const ordersData = Array.isArray(res.data.orders) ? res.data.orders : [];
+        // Sort orders by createdAt in descending order
+        const sortedOrders = ordersData.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
       }
-    };
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+      setIsError("Failed to fetch orders");
+      setOrders([]);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
-    fetchOrders();
-  }, []);
+  fetchOrders();
+}, []);
 
   useEffect(() => {
     const loadProducts = () => {
@@ -785,63 +864,129 @@ export default function OrdersManagement() {
     }
   }, [orders, products]);
 
+ useEffect(() => {
+    const socket = io('https://api.simplyrks.cloud', {
+      withCredentials: true,
+      auth: { token: localStorage.getItem('token') },
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+    });
+
+    socket.on('connect', () => {
+      console.log('Connected to Socket.IO server:', socket.id);
+      socket.emit('join', 'admin_room');
+    });
+
+    socket.on('newOrder', (newOrder) => {
+      console.log('New order received:', newOrder);
+      if (newOrder && newOrder._id && newOrder.orderedProducts && Array.isArray(newOrder.orderedProducts)) {
+        setOrders((prevOrders) => {
+          // Prevent duplicate orders
+          if (prevOrders.some((order) => order._id === newOrder._id)) {
+            console.log('Duplicate order ignored:', newOrder._id);
+            return prevOrders;
+          }
+          const updatedOrders = [newOrder, ...prevOrders];
+          return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        });
+      } else {
+        console.error('Invalid new order received:', newOrder);
+      }
+    });
+
+    socket.on('shippingPriceUpdated', (updatedOrder) => {
+      console.log('Shipping price updated:', updatedOrder);
+      if (updatedOrder && updatedOrder._id && updatedOrder.total_price && updatedOrder.shipping_price) {
+        setOrders((prevOrders) => {
+          const updatedOrders = prevOrders.map((order) =>
+            order._id === updatedOrder._id
+              ? { ...order, shipping_price: updatedOrder.shipping_price, total_price: updatedOrder.total_price, status: updatedOrder.status }
+              : order
+          );
+          return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        });
+        if (selectedOrder && selectedOrder._id === updatedOrder._id) {
+          setSelectedOrder((prev) => ({
+            ...prev,
+            shipping_price: updatedOrder.shipping_price,
+            total_price: updatedOrder.total_price,
+            status: updatedOrder.status,
+          }));
+        }
+      } else {
+        console.error('Invalid shipping price update received:', updatedOrder);
+      }
+    });
+
+    socket.on('connect_error', (error) => {
+      console.error('Socket.IO connection error:', error);
+    });
+
+    return () => {
+      socket.disconnect();
+      console.log('Disconnected from Socket.IO server');
+    };
+  }, [selectedOrder]);
+
   // Enhanced filter orders based on search term, status, and date
   const filteredOrders = useMemo(() => {
-    let filtered = orders;
+  let filtered = orders;
 
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter((order) => {
-        const searchableFields = [
-          order._id,
-          order.user_name,
-          order.email,
-          order.phone_number,
-          order.whatsapp_number,
-          order.status,
-          ...order.orderedProducts.map((p) => p.product_name),
-          ...order.orderedProducts.map((p) => p.variant_name).filter(Boolean),
-        ];
+  // Search filter
+  if (searchTerm) {
+    filtered = filtered.filter((order) => {
+      const searchableFields = [
+        order._id,
+        order.user_name,
+        order.email,
+        order.phone_number,
+        order.whatsapp_number,
+        order.status,
+        ...order.orderedProducts.map((p) => p.product_name),
+        ...order.orderedProducts.map((p) => p.variant_name).filter(Boolean),
+      ];
 
-        return searchableFields.some(
-          (field) => field && field.toString().toLowerCase().includes(searchTerm.toLowerCase()),
-        );
-      });
-    }
+      return searchableFields.some(
+        (field) => field && field.toString().toLowerCase().includes(searchTerm.toLowerCase()),
+      );
+    });
+  }
 
-    // Status filter
-    if (statusFilter) {
-      filtered = filtered.filter(order => order.status.toLowerCase() === statusFilter.toLowerCase());
-    }
+  // Status filter
+  if (statusFilter) {
+    filtered = filtered.filter(order => order.status.toLowerCase() === statusFilter.toLowerCase());
+  }
 
-    // Date filter
-    if (dateFilter) {
-      filtered = filtered.filter((order, index) => {
-        const orderDate = order.createdAt || generateDummyDate(index);
-        
-        switch (dateFilter) {
-          case 'today':
-            return isToday(orderDate);
-          case 'yesterday':
-            return isYesterday(orderDate);
-          case 'single':
-            if (singleDate) {
-              return isSingleDate(orderDate, singleDate);
-            }
-            return true;
-          case 'custom':
-            if (customStartDate && customEndDate) {
-              return isInDateRange(orderDate, customStartDate, customEndDate);
-            }
-            return true;
-          default:
-            return true;
-        }
-      });
-    }
+  // Date filter
+  if (dateFilter) {
+    filtered = filtered.filter((order, index) => {
+      const orderDate = order.createdAt || generateDummyDate(index);
+      
+      switch (dateFilter) {
+        case 'today':
+          return isToday(orderDate);
+        case 'yesterday':
+          return isYesterday(orderDate);
+        case 'single':
+          if (singleDate) {
+            return isSingleDate(orderDate, singleDate);
+          }
+          return true;
+        case 'custom':
+          if (customStartDate && customEndDate) {
+            return isInDateRange(orderDate, customStartDate, customEndDate);
+          }
+          return true;
+        default:
+          return true;
+      }
+    });
+  }
 
-    return filtered;
-  }, [orders, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, singleDate]);
+  // Sort filtered orders by createdAt in descending order
+  return filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+}, [orders, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, singleDate]);
 
   // Reset to page 1 when search changes
   useEffect(() => {
@@ -954,12 +1099,15 @@ export default function OrdersManagement() {
 
   // Truncate order ID for display
   const truncateOrderId = (orderId) => {
-    if (orderId.length > 12) {
-      return `${orderId.substring(0, 12)}...`;
-    }
-    return orderId;
-  };
-
+  if (!orderId || typeof orderId !== 'string') {
+    console.warn('Invalid orderId:', orderId);
+    return 'Unknown ID';
+  }
+  if (orderId.length > 12) {
+    return `${orderId.substring(0, 12)}...`;
+  }
+  return orderId;
+};
   const getStatusBadge = (status) => {
     const statusStyles = {
       'Completed': 'bg-green-100 text-green-800 border-green-200',
@@ -974,7 +1122,7 @@ export default function OrdersManagement() {
     };
     
     return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyles[status] || 'bg-gray-100 text-gray-800'}`}>
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium border ${statusStyles[status] || 'bg-gray-100 -800 dark:text-gray-100'}`}>
         {status}
       </span>
     );
@@ -1020,14 +1168,14 @@ export default function OrdersManagement() {
 
   // Main content starts from here
   return (
-    <div className="min-h-screen bg-gray-50 py-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-6">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-6">
         {/* Header Section */}
         <div className="text-center mb-8">
           <h1 className="text-4xl font-bold bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 bg-clip-text text-transparent mb-2">
             Orders Management Dashboard
           </h1>
-          <p className="text-gray-600 text-lg">Manage and track all your orders efficiently</p>
+          <p className="text-gray-600 dark:text-gray-400 text-lg">Manage and track all your orders efficiently</p>
         </div>
 
         {/* Stats Section */}
@@ -1136,13 +1284,13 @@ export default function OrdersManagement() {
         </div>
 
         {/* Orders Table */}
-        <div className="bg-white rounded-xl border border-gray-200 shadow-lg overflow-hidden">
+        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
           {/* Table Header - Fixed */}
-          <div className="px-6 py-5 border-b border-gray-200 bg-gray-50">
+          <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
               <div>
-                <h3 className="text-xl font-semibold text-gray-900">Orders Table</h3>
-                <p className="text-sm text-gray-500 mt-1">
+                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Orders Table</h3>
+                <p className="text-sm text-gray-500 dark:text-white mt-1">
                   Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} results
                 </p>
               </div>
@@ -1164,7 +1312,7 @@ export default function OrdersManagement() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="appearance-none bg-white dark:bg-gray-900 border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                   >
                     <option value="">All Status</option>
                     <option value="pending">Pending</option>
@@ -1184,7 +1332,7 @@ export default function OrdersManagement() {
                     <select
                       value={dateFilter}
                       onChange={(e) => setDateFilter(e.target.value)}
-                      className="appearance-none bg-white border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="appearance-none bg-white dark:bg-gray-900 border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     >
                       <option value="">All Dates</option>
                       <option value="today">Today</option>
@@ -1236,72 +1384,107 @@ export default function OrdersManagement() {
           {/* Table Content - Scrollable */}
           <div className="overflow-y-auto max-h-[600px]">
             <table className="w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 sticky top-0 z-10">
+              <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Sr No.
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Order ID
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     User Name
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Phone
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     WhatsApp
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Email
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+  Items Total
+</th>
+<th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+  Shipping Price
+</th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Total Price
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">
+                    Edit Shipping
+                  </th>
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Status
                   </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Ordered At
                   </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50">
+                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
                     Actions
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
+              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                 {currentOrders.map((order, index) => (
-                  <tr key={order._id} className="hover:bg-gray-50 transition-colors cursor-pointer" onClick={() => handleOrderClick(order)}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                  <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 transition-colors cursor-pointer" onClick={() => handleOrderClick(order)}>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {startIndex + index + 1}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       <span className="font-medium text-blue-600" title={order._id}>{truncateOrderId(order._id)}</span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
                       {order.user_name}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                       {order.phone_number}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                       {order.whatsapp_number}
                     </td>
-                    <td className="px-6 py-4 text-sm text-gray-900">
+                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
                       <div className="max-w-xs truncate" title={order.email}>
                         {order.email}
                       </div>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      <span className="font-medium">
-                        {order.total_price === "Pending" ? "Pending" : `${order.total_price}`}
-                      </span>
-                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+  <span className="font-medium">₹{order.price.toFixed(2)}</span>
+</td>
+<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+  <span className="font-medium">
+    {order.total_price === "Pending" ? 'Pending' : order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price.toFixed(2)}`}
+  </span>
+</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+  <span className="font-medium">
+    {order.status === "Pending" ? "Pending" : `₹${order.total_price}`}
+  </span>
+</td>
+<td className="px-6 py-4 whitespace-nowrap text-center">
+  {order.status === "Accepted" ? (
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        setSelectedOrder(order);
+        setSingleOrderedProduct(orderedProducts[order._id] || null);
+        setIsModalOpen(true);
+      }}
+      className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
+      title="Edit Shipping Price"
+    >
+      <DollarSign className="w-4 h-4" />
+    </button>
+  ) : (
+    <span className="text-gray-400 text-xs">-</span>
+  )}
+</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
                       {getStatusBadge(order.status)}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
                       {formatOrderDate(order.createdAt, startIndex + index)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -1361,7 +1544,7 @@ export default function OrdersManagement() {
           {currentOrders.length === 0 && (
             <div className="text-center py-12">
               <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500 text-lg font-medium">No orders found</p>
+              <p className="text-gray-500 dark:text-white text-lg font-medium">No orders found</p>
               {(searchTerm || statusFilter || dateFilter) && (
                 <p className="text-gray-400 text-sm mt-2">Try adjusting your search criteria or filters</p>
               )}
@@ -1370,7 +1553,7 @@ export default function OrdersManagement() {
 
           {/* Table Footer */}
           {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200 bg-gray-50">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 {/* Items per page */}
                 <div className="flex items-center space-x-2">
@@ -1394,7 +1577,7 @@ export default function OrdersManagement() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronLeft className="w-4 h-4" />
                   </button>
@@ -1418,8 +1601,8 @@ export default function OrdersManagement() {
                           onClick={() => setCurrentPage(pageNumber)}
                           className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
                             currentPage === pageNumber
-                              ? 'bg-blue-600 text-white shadow-sm'
-                              : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100'
+                              ? 'bg-blue-600 text-blue-600 shadow-sm'
+                              : 'text-gray-500 dark:text-white hover:text-gray-700 hover:bg-gray-100'
                           }`}
                         >
                           {pageNumber}
@@ -1431,7 +1614,7 @@ export default function OrdersManagement() {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                   >
                     <ChevronRight className="w-4 h-4" />
                   </button>

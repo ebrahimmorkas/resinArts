@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useMemo } from "react"
+import { useState, useEffect, useMemo, useContext } from "react"
 import jsPDF from "jspdf"
 import {
   Search,
@@ -24,6 +24,7 @@ import {
 } from "lucide-react"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
+import { CompanySettingsContext } from "../../../Context/CompanySettingsContext"
 
 const statusConfig = {
   pending: {
@@ -96,10 +97,10 @@ const paymentStatusConfig = {
     label: "Payment Pending",
     color: "bg-yellow-100 text-yellow-800 border-yellow-200",
   },
-  refunded: {
-    label: "Refunded",
-    color: "bg-gray-100 text-gray-800 border-gray-200",
-  },
+ refunded: {
+  label: "Refunded",
+  color: "bg-gray-100 dark:bg-gray-700 text-gray-800 dark:text-gray-100 border-gray-200 dark:border-gray-600",
+},
   refund_pending: {
     label: "Refund Pending",
     color: "bg-orange-100 text-orange-800 border-orange-200",
@@ -282,6 +283,7 @@ export default function Orders() {
   const [customEndYear, setCustomEndYear] = useState("");
   const { userId } = useParams();
   const navigate = useNavigate();
+  const { companySettings, loadingSettings } = useContext(CompanySettingsContext);
 
   // Setup axios interceptors
   useEffect(() => {
@@ -418,107 +420,190 @@ export default function Orders() {
     exportToExcel(filteredOrders);
   };
 
-  const downloadInvoice = async (order, e) => {
-    e.stopPropagation();
-    try {
-      const doc = new jsPDF();
-      doc.setFontSize(24);
-      doc.setFont(undefined, "bold");
-      doc.text("OULA MARKET", 20, 30);
-      doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
-      doc.text("Email: support@oulamarket.com", 20, 40);
-      doc.text("Phone: +1 (555) 123-4567", 20, 45);
-      doc.text("WhatsApp: +1 (555) 987-6543", 20, 50);
-      doc.text("Address: 123 Business Ave, Commerce City, CC 12345", 20, 55);
-      doc.setFontSize(18);
-      doc.setFont(undefined, "bold");
-      doc.text("INVOICE", 120, 30);
-      doc.setFontSize(9);
-      doc.setFont(undefined, "normal");
-      doc.text(`Invoice #: ${order.id}`, 120, 40);
-      doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, 45);
-      doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 50);
-      doc.text(`Payment: ${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}`, 120, 55);
-      doc.setFontSize(12);
-      doc.setFont(undefined, "bold");
-      doc.text("BILL TO:", 20, 75);
-      doc.setFontSize(10);
-      doc.setFont(undefined, "normal");
-      const addressLines = doc.splitTextToSize(order.shippingAddress, 170);
-      let addressY = 85;
-      addressLines.forEach((line) => {
-        doc.text(line, 20, addressY);
-        addressY += 5;
-      });
-      const itemsStartY = addressY + 10;
-      doc.setFontSize(12);
-      doc.setFont(undefined, "bold");
-      doc.text("ITEMS:", 20, itemsStartY);
-      const tableStartY = itemsStartY + 10;
-      doc.setFontSize(9);
-      doc.setFont(undefined, "bold");
-      doc.text("Image", 20, tableStartY);
-      doc.text("Item", 40, tableStartY);
-      doc.text("Qty", 120, tableStartY);
-      doc.text("Price", 140, tableStartY);
-      doc.text("Total", 170, tableStartY);
-      doc.line(20, tableStartY + 3, 190, tableStartY + 3);
-      let yPosition = tableStartY + 10;
-      doc.setFont(undefined, "normal");
-      for (const item of order.items) {
-        const itemTotal = safeNumber(item.price) * safeNumber(item.quantity);
+ const downloadInvoice = async (order, e) => {
+  e.stopPropagation();
+  try {
+    const doc = new jsPDF();
+    
+    // Center "INVOICE" text
+    doc.setFontSize(18);
+    doc.setFont(undefined, "bold");
+    const invoiceText = "INVOICE";
+    const invoiceTextWidth = doc.getTextWidth(invoiceText);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.text(invoiceText, (pageWidth - invoiceTextWidth) / 2, 20);
+    
+    // Logo and Company Name centered below INVOICE
+    let logoY = 30;
+    const logoSize = 25;
+    const centerX = pageWidth / 2;
+    
+    // Load company logo if available
+    if (companySettings?.companyLogo) {
+      try {
+        const logoImg = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = function () {
+            resolve(this);
+          };
+          img.onerror = function () {
+            reject(new Error('Logo load failed'));
+          };
+          img.src = companySettings.companyLogo;
+        });
+        
+        // Add logo centered
+        doc.addImage(logoImg, "JPEG", centerX - logoSize / 2, logoY, logoSize, logoSize);
+        logoY += logoSize + 5;
+      } catch (error) {
+        console.log("Could not add logo to PDF");
+      }
+    }
+    
+    // Company name centered below logo
+    doc.setFontSize(24);
+    doc.setFont(undefined, "bold");
+    const companyName = loadingSettings ? "Loading..." : companySettings?.companyName || "OULA MARKET";
+    const companyNameWidth = doc.getTextWidth(companyName);
+    doc.text(companyName, (pageWidth - companyNameWidth) / 2, logoY + 5);
+    
+    // Contact information (left aligned)
+    let contactY = logoY + 15;
+    doc.setFontSize(10);
+    doc.setFont(undefined, "normal");
+    doc.text(`Email: ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, contactY);
+    doc.text(`Phone: ${companySettings?.adminPhoneNumber || "+1 (555) 123-4567"}`, 20, contactY + 6);
+    doc.text(`WhatsApp: ${companySettings?.adminWhatsappNumber || "+1 (555) 987-6543"}`, 20, contactY + 12);
+    
+    const addressLines = doc.splitTextToSize(
+      `Address: ${companySettings?.adminAddress || "123 Business Ave"}, ${companySettings?.adminCity || "Commerce City"}, ${companySettings?.adminState || "CC"} ${companySettings?.adminPincode || "12345"}`,
+      170
+    );
+    let addressY = contactY + 18;
+    addressLines.forEach((line) => {
+      doc.text(line, 20, addressY);
+      addressY += 6;
+    });
+    
+    // Invoice details (right aligned)
+    doc.setFontSize(9);
+    doc.setFont(undefined, "normal");
+    doc.text(`Invoice #: ${order.id}`, 120, contactY);
+    doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, contactY + 6);
+    doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, contactY + 12);
+    
+    // Bill To section
+    const billToY = addressY + 10;
+    doc.setFontSize(12);
+    doc.setFont(undefined, "bold");
+    doc.text("BILL TO:", 20, billToY);
+    doc.setFontSize(10);
+    doc.setFont(undefined, "normal");
+    const addressLinesBill = doc.splitTextToSize(order.shippingAddress, 170);
+    let addressYBill = billToY + 10;
+    addressLinesBill.forEach((line) => {
+      doc.text(line, 20, addressYBill);
+      addressYBill += 5;
+    });
+    
+    // Items section
+    const itemsStartY = addressYBill + 10;
+    doc.setFontSize(12);
+    doc.setFont(undefined, "bold");
+    doc.text("ITEMS:", 20, itemsStartY);
+    const tableStartY = itemsStartY + 10;
+    doc.setFontSize(9);
+    doc.setFont(undefined, "bold");
+    doc.text("Image", 20, tableStartY);
+    doc.text("Item", 40, tableStartY);
+    doc.text("Qty", 120, tableStartY);
+    doc.text("Price", 140, tableStartY);
+    doc.text("Total", 170, tableStartY);
+    doc.line(20, tableStartY + 3, 190, tableStartY + 3);
+    let yPosition = tableStartY + 10;
+    doc.setFont(undefined, "normal");
+    
+    // Load all images first
+    const imagePromises = order.items.map(item => {
+      return new Promise((resolve) => {
         if (item.image && item.image !== "/placeholder.svg") {
-          try {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.onload = function () {
-              doc.addImage(this, "JPEG", 20, yPosition - 5, 15, 10);
-            };
-            img.src = item.image;
-          } catch (error) {
-            console.log("Could not add image to PDF");
-          }
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = function () {
+            resolve({ success: true, img: this });
+          };
+          img.onerror = function () {
+            resolve({ success: false });
+          };
+          img.src = item.image;
         } else {
+          resolve({ success: false });
+        }
+      });
+    });
+
+    const loadedImages = await Promise.all(imagePromises);
+
+    // Now add items with loaded images
+    for (let i = 0; i < order.items.length; i++) {
+      const item = order.items[i];
+      const imageData = loadedImages[i];
+      const itemTotal = safeNumber(item.price) * safeNumber(item.quantity);
+      
+      if (imageData.success) {
+        try {
+          doc.addImage(imageData.img, "JPEG", 20, yPosition - 5, 15, 10);
+        } catch (error) {
+          console.log("Could not add image to PDF");
           doc.setFillColor(240, 240, 240);
           doc.rect(20, yPosition - 5, 15, 10, "F");
           doc.setFontSize(6);
           doc.text("IMG", 25, yPosition);
           doc.setFontSize(9);
         }
-        const itemName = item.name.length > 35 ? item.name.substring(0, 35) + "..." : item.name;
-        doc.text(itemName, 40, yPosition);
-        doc.text(safeNumber(item.quantity).toString(), 120, yPosition);
-        doc.text(`$${safeNumber(item.price).toFixed(2)}`, 140, yPosition);
-        doc.text(`$${itemTotal.toFixed(2)}`, 170, yPosition);
-        yPosition += 15;
+      } else {
+        doc.setFillColor(240, 240, 240);
+        doc.rect(20, yPosition - 5, 15, 10, "F");
+        doc.setFontSize(6);
+        doc.text("IMG", 25, yPosition);
+        doc.setFontSize(9);
       }
-      yPosition += 5;
-      doc.line(20, yPosition, 190, yPosition);
-      yPosition += 10;
-      doc.setFont(undefined, "normal");
-      doc.text(`Items Subtotal:`, 120, yPosition);
-      doc.text(`$${safeNumber(order.itemsTotal).toFixed(2)}`, 170, yPosition);
-      yPosition += 8;
-      doc.text(`Shipping:`, 120, yPosition);
-      doc.text(`$${safeNumber(order.shippingPrice).toFixed(2)}`, 170, yPosition);
-      yPosition += 8;
-      doc.setFont(undefined, "bold");
-      doc.setFontSize(12);
-      doc.text(`TOTAL:`, 120, yPosition);
-      doc.text(`$${safeNumber(order.total).toFixed(2)}`, 170, yPosition);
-      yPosition += 20;
-      doc.setFontSize(8);
-      doc.setFont(undefined, "normal");
-      doc.text("Thank you for your business!", 20, yPosition);
-      doc.text("For support, contact us at support@oulamarket.com", 20, yPosition + 5);
-      const filename = `invoice-${order.id.substring(0, 10)}.pdf`;
-      doc.save(filename);
-    } catch (error) {
-      console.error("Error generating invoice:", error);
-      alert('Error generating invoice. Please try again.');
+      
+      const itemName = item.name.length > 35 ? item.name.substring(0, 35) + "..." : item.name;
+      doc.text(itemName, 40, yPosition);
+      doc.text(safeNumber(item.quantity).toString(), 120, yPosition);
+      doc.text(`$${safeNumber(item.price).toFixed(2)}`, 140, yPosition);
+      doc.text(`$${itemTotal.toFixed(2)}`, 170, yPosition);
+      yPosition += 15;
     }
-  };
+    
+    yPosition += 5;
+    doc.line(20, yPosition, 190, yPosition);
+    yPosition += 10;
+    doc.setFont(undefined, "normal");
+    doc.text(`Items Subtotal:`, 120, yPosition);
+    doc.text(`$${safeNumber(order.itemsTotal).toFixed(2)}`, 170, yPosition);
+    yPosition += 8;
+    doc.text(`Shipping:`, 120, yPosition);
+    doc.text(`$${safeNumber(order.shippingPrice).toFixed(2)}`, 170, yPosition);
+    yPosition += 8;
+    doc.setFont(undefined, "bold");
+    doc.setFontSize(12);
+    doc.text(`TOTAL:`, 120, yPosition);
+    doc.text(`$${safeNumber(order.total).toFixed(2)}`, 170, yPosition);
+    yPosition += 20;
+    doc.setFontSize(8);
+    doc.setFont(undefined, "normal");
+    doc.text("Thank you for your business!", 20, yPosition);
+    doc.text(`For support, contact us at ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, yPosition + 5);
+    const filename = `invoice-${order.id.substring(0, 10)}.pdf`;
+    doc.save(filename);
+  } catch (error) {
+    console.error("Error generating invoice:", error);
+    alert('Error generating invoice. Please try again.');
+  }
+};
 
   const getPaymentStatus = (order) => {
     if (order.status === "returned") {
@@ -552,13 +637,13 @@ export default function Orders() {
   const OrderDetailsModal = ({ order, onClose }) => {
     if (!order) return null;
     return (
-      <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+      <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4">
+        <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
           <div className="p-6">
             <div className="flex justify-between items-start mb-6">
               <div>
-                <h2 className="text-2xl font-bold text-gray-800">Order Details</h2>
-                <p className="text-gray-600">{order.id}</p>
+                <h2 className="text-2xl font-bold -800 dark:text-gray-100">Order Details</h2>
+                <p className="text-gray-600 dark:text-gray-400">{order.id}</p>
               </div>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <XCircle className="w-5 h-5" />
@@ -567,54 +652,54 @@ export default function Orders() {
             <div className="grid md:grid-cols-2 gap-6 mb-6">
               <div className="space-y-4">
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Order Information</h3>
+                  <h3 className="font-semibold -800 dark:text-gray-100 mb-2">Order Information</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Order Date:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Order Date:</span>
                       <span>{formatDate(order.orderedAt)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Status:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Status:</span>
                       <StatusBadge status={order.status} />
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Items Total:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Items Total:</span>
                       <span className="font-semibold">${safeNumber(order.itemsTotal).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Shipping:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Shipping:</span>
                       <span className="font-semibold">${safeNumber(order.shippingPrice).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Total:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Total:</span>
                       <span className="font-semibold">${safeNumber(order.total).toFixed(2)}</span>
                     </div>
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Payment:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Payment:</span>
                       <PaymentStatusBadge order={order} />
                     </div>
                   </div>
                 </div>
                 <div>
-                  <h3 className="font-semibold text-gray-800 mb-2">Tracking</h3>
+                  <h3 className="font-semibold -800 dark:text-gray-100 mb-2">Tracking</h3>
                   <div className="space-y-2 text-sm">
                     <div className="flex justify-between">
-                      <span className="text-gray-600">Tracking Number:</span>
+                      <span className="text-gray-600 dark:text-gray-400">Tracking Number:</span>
                       <span className="font-mono">{order.trackingNumber}</span>
                     </div>
                   </div>
                 </div>
               </div>
               <div>
-                <h3 className="font-semibold text-gray-800 mb-2">Shipping Address</h3>
-                <p className="text-sm text-gray-600">{order.shippingAddress}</p>
+                <h3 className="font-semibold -800 dark:text-gray-100 mb-2">Shipping Address</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400">{order.shippingAddress}</p>
               </div>
             </div>
             <div>
-              <h3 className="font-semibold text-gray-800 mb-4">Items Ordered</h3>
+              <h3 className="font-semibold -800 dark:text-gray-100 mb-4">Items Ordered</h3>
               <div className="space-y-3">
                 {order.items.map((item, index) => (
-                  <div key={index} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+                  <div key={index} className="flex items-center space-x-4 p-3 bg-gray-50 dark:bg-gray-800 rounded-lg">
                     <img
                       src={item.image || "/placeholder.svg"}
                       alt={item.name}
@@ -624,15 +709,15 @@ export default function Orders() {
                       }}
                     />
                     <div className="flex-1">
-                      <h4 className="font-medium text-gray-800">{item.name}</h4>
-                      <p className="text-sm text-gray-600">
+                      <h4 className="font-medium -800 dark:text-gray-100">{item.name}</h4>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">
                         Quantity: {safeNumber(item.quantity)}
                         {item.size && ` • Size: ${item.size}`}
                       </p>
                     </div>
                     <div className="text-right">
                       <p className="font-semibold">${(safeNumber(item.price) * safeNumber(item.quantity)).toFixed(2)}</p>
-                      <p className="text-sm text-gray-600">${safeNumber(item.price).toFixed(2)} each</p>
+                      <p className="text-sm text-gray-600 dark:text-gray-400">${safeNumber(item.price).toFixed(2)} each</p>
                     </div>
                   </div>
                 ))}
@@ -672,37 +757,37 @@ export default function Orders() {
 
   if (loadingOrders) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Loading your orders...</p>
+          <p className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">Loading your orders...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-6">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Professional Header */}
         <div className="mb-6 flex items-center space-x-4">
           <button 
             onClick={handleBackClick} 
-            className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm transition-colors"
+            className="inline-flex items-center px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500 shadow-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </button>
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">My Orders</h1>
-            <p className="text-gray-600 mt-1">Track and manage your orders</p>
+            <h1 className="text-3xl font-bold text-gray-900 dark:text-gray-100">My Orders</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">Track and manage your orders</p>
           </div>
         </div>
 
         {/* Professional Table Container */}
-        <div className="bg-white rounded-lg border border-gray-200">
+        <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-700">
           {/* Table Header */}
-          <div className="px-6 py-4 border-b border-gray-200">
+          <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
               <div>
                 <h3 className="text-lg font-medium text-gray-900">Orders Management</h3>
@@ -719,7 +804,7 @@ export default function Orders() {
                     placeholder="Search orders, products..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
+                    className="pl-10 pr-4 py-2 bopl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm bg-white dark:bg-gray-800 text-gray-900 dark:text-gray-100 focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
                   />
                 </div>
                 
@@ -728,7 +813,7 @@ export default function Orders() {
                   <select
                     value={statusFilter}
                     onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="ongoing">Ongoing Orders</option>
                     <option value="all">All Status</option>
@@ -747,7 +832,7 @@ export default function Orders() {
                   <select
                     value={paymentFilter}
                     onChange={(e) => setPaymentFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="all">All Payments</option>
                     <option value="paid">Paid</option>
@@ -758,7 +843,7 @@ export default function Orders() {
                   <select
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <option value="all">All Dates</option>
                     <option value="today">Today</option>
@@ -770,7 +855,7 @@ export default function Orders() {
                   </select>
                   <button 
                     onClick={handleExportToExcel}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-blue-500"
+                    className="inline-flex items-center px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export Orders
@@ -782,7 +867,7 @@ export default function Orders() {
 
           {/* Date Filter Inputs */}
           {dateFilter !== "all" && dateFilter !== "today" && dateFilter !== "yesterday" && (
-            <div className="px-6 py-3 border-b border-gray-200 bg-gray-50">
+            <div className="px-6 py-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
               <div className="flex items-center space-x-4 flex-wrap">
                 {dateFilter === "custom" && (
                   <div>
@@ -864,62 +949,62 @@ export default function Orders() {
           )}
 
           {/* Table Container with Horizontal Scroll and Sticky Header */}
-          <div className="overflow-hidden border-t border-gray-200">
+          <div className="overflow-hidden border-t border-gray-200 dark:border-gray-700">
             <div className="overflow-x-auto overflow-y-auto max-h-96">
               <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50 sticky top-0 z-10">
+                <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '80px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
                       Sr No.
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '200px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '200px' }}>
                       Order ID
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '140px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                       Ordered At
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '250px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '250px' }}>
                       Products
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '100px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
                       Quantity
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Status
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Payment
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 border-b border-gray-200" style={{ minWidth: '120px' }}>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Actions
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                   {currentData.map((order, index) => (
-                    <tr key={order.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
+                    <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '80px' }}>
                         {startIndex + index + 1}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '200px' }}>
                         <span className="font-medium text-blue-600">{order.id}</span>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '140px' }}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '140px' }}>
                         {formatDate(order.orderedAt)}
                       </td>
-                      <td className="px-6 py-4 text-sm text-center text-gray-900" style={{ minWidth: '250px' }}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '250px' }}>
                         <div className="truncate" title={order.items.map(item => item.name).join(', ')}>
                           {order.items.length > 0 ? order.items[0].name : 'No items'}
                           {order.items.length > 1 && ` +${order.items.length - 1} more`}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '100px' }}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '100px' }}>
                         {order.items.reduce((total, item) => total + safeNumber(item.quantity), 0)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '120px' }}>
                         <span className="font-medium">${safeNumber(order.total).toFixed(2)}</span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
@@ -962,8 +1047,8 @@ export default function Orders() {
           {currentData.length === 0 && (
             <div className="text-center py-12">
               <ShoppingBag className="mx-auto h-12 w-12 text-gray-400" />
-              <h3 className="mt-2 text-sm font-medium text-gray-900">No orders found</h3>
-              <p className="mt-1 text-sm text-gray-500">
+              <h3 className="mt-2 text-sm font-medium text-gray-900 dark:text-gray-100">No orders found</h3>
+              <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">
                 {searchQuery || statusFilter !== "ongoing" || paymentFilter !== "all" || dateFilter !== "all"
                   ? "Try adjusting your search or filter criteria."
                   : "You haven't placed any orders yet."}
@@ -973,11 +1058,11 @@ export default function Orders() {
 
           {/* Table Footer */}
           {totalPages > 0 && (
-            <div className="px-6 py-4 border-t border-gray-200">
+            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 {/* Items per page */}
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Show</span>
+                  <span className="text-sm text-black dark:text-gray-300">Show</span>
                   <select
                     value={ordersPerPage}
                     onChange={(e) => setOrdersPerPage(Number(e.target.value))}
@@ -989,7 +1074,7 @@ export default function Orders() {
                     <option value={50}>50</option>
                     <option value={100}>100</option>
                   </select>
-                  <span className="text-sm text-gray-700">entries per page</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-300">entries per page</span>
                 </div>
 
                 {/* Pagination */}
@@ -998,7 +1083,7 @@ export default function Orders() {
                     <button
                       onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                       disabled={currentPage === 1}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <ChevronLeft className="w-4 h-4 mr-1" />
                       Previous
@@ -1023,8 +1108,8 @@ export default function Orders() {
                             onClick={() => setCurrentPage(pageNumber)}
                             className={`px-3 py-2 text-sm font-medium rounded-md transition-colors ${
                               currentPage === pageNumber
-                                ? 'bg-blue-600 text-white'
-                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                                ? 'bg-blue-600 text-blue-500'
+                                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50 dark:bg-gray-800'
                             }`}
                           >
                             {pageNumber}
@@ -1036,7 +1121,7 @@ export default function Orders() {
                     <button
                       onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                       disabled={currentPage === totalPages}
-                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       Next
                       <ChevronRight className="w-4 h-4 ml-1" />

@@ -46,8 +46,9 @@ const addFreeCash = async (req, res) => {
 
         // Handle categories
         let categoryId = null;
+        let mainCategory = null;
         if (cashForm.selectedMainCategory && cashForm.selectedMainCategory.trim() !== '') {
-            const mainCategory = await findCategoryById(cashForm.selectedMainCategory.trim());
+            mainCategory = await findCategoryById(cashForm.selectedMainCategory.trim());
             if (!mainCategory) {
                 return res.status(400).json({ message: "Main category not found" });
             }
@@ -55,8 +56,9 @@ const addFreeCash = async (req, res) => {
         }
 
         let subCategoryId = null;
+        let subCategory = null;
         if (cashForm.selectedSubCategory && cashForm.selectedSubCategory.trim() !== '') {
-            const subCategory = await findSubCategoryById(cashForm.selectedSubCategory.trim());
+            subCategory = await findSubCategoryById(cashForm.selectedSubCategory.trim());
             if (!subCategory) {
                 return res.status(400).json({ message: "Sub category not found" });
             }
@@ -79,17 +81,36 @@ const addFreeCash = async (req, res) => {
 
         await newFreeCash.save();
 
-        if(isAllProducts) {
-            if(endDate) {
-                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove} valid till ${endDate}`);
+        // Send email based on conditions
+        if (isAllProducts) {
+            if (endDate) {
+                await sendEmail(
+                    user.email,
+                    `Hurray! Free Cash ${amount}`,
+                    `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove} valid till ${endDate.toISOString().split('T')[0]}`,
+                );
             } else {
-                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove}`);
+                await sendEmail(
+                    user.email,
+                    `Hurray! Free Cash ${amount}`,
+                    `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove}`,
+                );
             }
         } else {
-            if(endDate) {
-                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategory.categoryName} and Sub category: ${subCategory.categoryName} valid above on order of ₹ ${validAbove} valid till ${endDate}`);
+            const mainCategoryName = mainCategory ? mainCategory.categoryName : 'Unknown';
+            const subCategoryName = subCategory ? subCategory.categoryName : 'None';
+            if (endDate) {
+                await sendEmail(
+                    user.email,
+                    `Hurray! Free Cash ${amount}`,
+                    `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategoryName}${subCategory ? ` and Sub category: ${subCategoryName}` : ''} valid above on order of ₹ ${validAbove} valid till ${endDate.toISOString().split('T')[0]}`,
+                );
             } else {
-                sendEmail(user.email, `Hurray! Free Cash ${amount}`, `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategory.categoryName} and Sub category: ${subCategory.categoryName} valid above on order of ₹ ${validAbove}`);
+                await sendEmail(
+                    user.email,
+                    `Hurray! Free Cash ${amount}`,
+                    `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategoryName}${subCategory ? ` and Sub category: ${subCategoryName}` : ''} valid above on order of ₹ ${validAbove}`,
+                );
             }
         }
 
@@ -135,4 +156,134 @@ const checkFreeCashEligibility = async (req, res) => {
     }
 };
 
-module.exports = { addFreeCash, checkFreeCashEligibility };
+const bulkAddFreeCash = async (req, res) => {
+    try {
+        const { cashForm, userIds } = req.body;
+
+        if (!userIds || !Array.isArray(userIds) || userIds.length === 0) {
+            return res.status(400).json({ message: "No user IDs provided" });
+        }
+
+        const amount = parseFloat(cashForm.amount);
+        const validAbove = parseFloat(cashForm.validAbove) || 0;
+        const isAllProducts = cashForm.validForAllProducts === true || cashForm.validForAllProducts === 'true';
+
+        if (isNaN(amount) || amount <= 0) {
+            return res.status(400).json({ message: "Amount must be a positive number" });
+        }
+
+        if (!isAllProducts && (!cashForm.selectedMainCategory || cashForm.selectedMainCategory.trim() === '')) {
+            return res.status(400).json({ message: "Main category required when not valid for all products" });
+        }
+
+        let endDate = null;
+        if (cashForm.endDate && cashForm.endDate.trim() !== '') {
+            const parsedDate = new Date(cashForm.endDate.trim());
+            if (isNaN(parsedDate.getTime())) {
+                return res.status(400).json({ message: "Invalid end date" });
+            }
+            endDate = parsedDate;
+        }
+
+        let categoryId = null;
+        let mainCategory = null;
+        if (cashForm.selectedMainCategory && cashForm.selectedMainCategory.trim() !== '') {
+            mainCategory = await findCategoryById(cashForm.selectedMainCategory.trim());
+            if (!mainCategory) {
+                return res.status(400).json({ message: "Main category not found" });
+            }
+            categoryId = mainCategory._id;
+        }
+
+        let subCategoryId = null;
+        let subCategory = null;
+        if (cashForm.selectedSubCategory && cashForm.selectedSubCategory.trim() !== '') {
+            subCategory = await findSubCategoryById(cashForm.selectedSubCategory.trim());
+            if (!subCategory) {
+                return res.status(400).json({ message: "Sub category not found" });
+            }
+            subCategoryId = subCategory._id;
+        }
+
+        const successfulUsers = [];
+        const errors = [];
+
+        for (const userId of userIds) {
+            try {
+                const user = await findUserById(userId);
+                if (!user) {
+                    errors.push(`User ${userId} not found`);
+                    continue;
+                }
+
+                const newFreeCash = new FreeCash({
+                    user_id: user._id,
+                    start_date: new Date(),
+                    end_date: endDate,
+                    amount: amount,
+                    valid_above_amount: validAbove,
+                    category: categoryId,
+                    sub_category: subCategoryId,
+                    is_cash_applied_on__all_products: isAllProducts,
+                    is_cash_used: false,
+                    is_cash_expired: false,
+                });
+
+                await newFreeCash.save();
+
+                // Send email
+                if (isAllProducts) {
+                    if (endDate) {
+                        await sendEmail(
+                            user.email,
+                            `Hurray! Free Cash ₹${amount}`,
+                            `Congrats, You have been provided ₹${amount} free cash on all products valid on orders above ₹${validAbove} valid till ${endDate.toISOString().split('T')[0]}`,
+                        );
+                    } else {
+                        await sendEmail(
+                            user.email,
+                            `Hurray! Free Cash ₹${amount}`,
+                            `Congrats, You have been provided ₹${amount} free cash on all products valid on orders above ₹${validAbove}`,
+                        );
+                    }
+                } else {
+                    const mainCategoryName = mainCategory ? mainCategory.categoryName : 'Unknown';
+                    const subCategoryName = subCategory ? subCategory.categoryName : '';
+                    if (endDate) {
+                        await sendEmail(
+                            user.email,
+                            `Hurray! Free Cash ₹${amount}`,
+                            `Congrats, You have been provided ₹${amount} free cash on ${mainCategoryName}${subCategory ? ` > ${subCategoryName}` : ''} valid on orders above ₹${validAbove} valid till ${endDate.toISOString().split('T')[0]}`,
+                        );
+                    } else {
+                        await sendEmail(
+                            user.email,
+                            `Hurray! Free Cash ₹${amount}`,
+                            `Congrats, You have been provided ₹${amount} free cash on ${mainCategoryName}${subCategory ? ` > ${subCategoryName}` : ''} valid on orders above ₹${validAbove}`,
+                        );
+                    }
+                }
+
+                successfulUsers.push(user.email);
+            } catch (error) {
+                errors.push(`Error for user ${userId}: ${error.message}`);
+            }
+        }
+
+        return res.status(200).json({
+            message: `Free cash added to ${successfulUsers.length} user(s)`,
+            successCount: successfulUsers.length,
+            errorCount: errors.length,
+            errors: errors.length > 0 ? errors : undefined
+        });
+    } catch (error) {
+        console.error("Bulk Add Free Cash Error:", error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+};
+
+module.exports = { 
+    addFreeCash, 
+    checkFreeCashEligibility,
+    bulkAddFreeCash
+};

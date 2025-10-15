@@ -198,10 +198,10 @@ const Sidebar = ({ isOpen, onClose }) => {
               level > 0 ? 'pl-8 py-2' : ''
             } ${
               item.danger 
-                ? 'hover:bg-red-50 text-gray-600 hover:text-red-600' 
+                ? 'hover:bg-red-50 text-gray-600 dark:text-gray-400 hover:text-red-600' 
                 : isExactMatch
                   ? 'bg-blue-50 text-blue-700 border-r-2 border-blue-600'
-                  : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+                  : 'text-gray-700 hover:bg-gray-50 dark:bg-gray-800 hover:text-gray-900'
             } rounded-md mx-2 my-0.5`}
             onClick={onClose}
           >
@@ -233,8 +233,8 @@ const Sidebar = ({ isOpen, onClose }) => {
             level > 0 ? 'pl-8 py-2' : ''
           } ${
             item.danger 
-              ? 'hover:bg-red-50 text-gray-600 hover:text-red-600' 
-              : 'text-gray-700 hover:bg-gray-50 hover:text-gray-900'
+              ? 'hover:bg-red-50 text-gray-600 dark:text-gray-400 hover:text-red-600' 
+              : 'text-gray-700 hover:bg-gray-50 dark:bg-gray-800 hover:text-gray-900'
           } ${hasSubmenu ? 'cursor-pointer' : ''} rounded-md mx-2 my-0.5`}
           onClick={hasSubmenu ? () => toggleSubmenu(item.id) : undefined}
         >
@@ -265,7 +265,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {hasSubmenu && isExpanded && (
-          <div className="bg-gray-50 border-l-2 border-blue-200 ml-4 mt-1 mb-2">
+          <div className="bg-gray-50 dark:bg-gray-800 border-l-2 border-blue-200 ml-4 mt-1 mb-2">
             {item.submenu.map((subItem) => (
               <MenuItem key={subItem.id} item={subItem} level={level + 1} />
             ))}
@@ -287,12 +287,12 @@ const Sidebar = ({ isOpen, onClose }) => {
 
       {/* Sidebar - Increased width to 400px */}
       <div
-        className={`fixed top-0 left-0 h-full w-96 bg-white shadow-xl transform transition-transform duration-300 ease-in-out z-50 border-r border-gray-200 flex flex-col ${
+        className={`fixed top-0 left-0 h-full w-96 bg-white dark:bg-gray-900 shadow-xl transform transition-transform duration-300 ease-in-out z-50 border-r border-gray-200 dark:border-gray-700 flex flex-col ${
           isOpen ? 'translate-x-0' : '-translate-x-full'
         }`}
       >
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white flex-shrink-0">
+        <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
               <Store className="w-6 h-6 text-white" />
@@ -322,7 +322,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Bottom Menu Items */}
-        <div className="border-t border-gray-200 bg-white flex-shrink-0">
+        <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
           <nav className="p-2">
             <div className="space-y-1">
               {bottomMenuItems.map((item) => (
@@ -333,10 +333,10 @@ const Sidebar = ({ isOpen, onClose }) => {
         </div>
 
         {/* Footer */}
-        <div className="p-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
+        <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
           <div className="flex items-center space-x-3">
             <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-              <User className="w-5 h-5 text-gray-600" />
+              <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-sm font-medium text-gray-900">Ebrahim Kanchwala</p>

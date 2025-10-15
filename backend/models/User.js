@@ -22,7 +22,15 @@ const userSchema = mongoose.Schema({
     zip_code: {
         type: String,
         required: true
-    }
+    },
+    resetPasswordToken: {
+    type: String,
+    select: false,
+  },
+  resetPasswordExpires: {
+    type: Date,
+    select: false,
+  },
 });
 
 module.exports = mongoose.model('User', userSchema);

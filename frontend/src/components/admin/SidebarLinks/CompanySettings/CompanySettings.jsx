@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import JoditEditor from 'jodit-react';
-import { ChevronDown, ChevronUp, Save, Loader2, Upload, Trash2, Image as ImageIcon } from 'lucide-react';
+import * as XLSX from 'xlsx';
+import { ChevronDown, ChevronUp, Save, Loader2, Upload, Trash2, Image as ImageIcon, Edit2 } from 'lucide-react';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
+import axios from 'axios';
 
 const CompanySettings = () => {
   const [loading, setLoading] = useState(false);
@@ -39,8 +41,21 @@ const CompanySettings = () => {
     receiveOrderEmails: true,
     lowStockAlertThreshold: 10,
     receiveLowStockEmail: false,
-    receiveOutOfStockEmail: false
+    receiveOutOfStockEmail: false,
+    shippingPriceSettings: {
+    isManual: true,
+    sameForAll: false,
+    commonShippingPrice: 0,
+    shippingType: 'city',
+    shippingPrices: [],
+    freeShipping: false,
+    freeShippingAboveAmount: 0
+  }
   });
+  const [editingIndex, setEditingIndex] = useState(null);
+const [editLocation, setEditLocation] = useState('');
+const [editPrice, setEditPrice] = useState('');
+const [uploadingExcel, setUploadingExcel] = useState(false);
 
   const [logoFile, setLogoFile] = useState(null);
   const [logoPreview, setLogoPreview] = useState('');
@@ -93,7 +108,25 @@ const CompanySettings = () => {
         insertImageAsBase64URI: true
       },
       removeButtons: ['video', 'file'],
-      disablePlugins: 'mobile'
+      disablePlugins: 'mobile',
+      style: {
+  color: '#000000',
+  backgroundColor: '#ffffff',
+  '.jodit-wysiwyg': {
+    color: '#000000',
+    backgroundColor: '#ffffff'
+  }
+},
+iframeStyle: `
+  .jodit-wysiwyg {
+    color: #000000 !important;
+    background-color: #ffffff !important;
+  }
+  .dark .jodit-wysiwyg {
+    color: #ffffff !important;
+    background-color: #1f2937 !important;
+  }
+`
     }),
     []
   );
@@ -181,6 +214,250 @@ const CompanySettings = () => {
     }));
   };
 
+const handleShippingTypeChange = (e) => {
+  const newType = e.target.value;
+  
+  // Map shippingType to the corresponding price field
+  const priceFieldMap = {
+    city: 'cityPrices',
+    state: 'statePrices',
+    zipcode: 'zipCodePrices',
+    country: 'shippingPrices' // fallback
+  };
+  
+  const priceField = priceFieldMap[newType];
+  const pricesForType = formData.shippingPriceSettings[priceField] || [];
+  
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      shippingType: newType,
+      shippingPrices: pricesForType
+    }
+  }));
+  
+  setEditLocation('');
+  setEditPrice('');
+  setEditingIndex(null);
+};
+
+const handleShippingToggle = (e) => {
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      isManual: e.target.checked,
+      sameForAll: false,
+      commonShippingPrice: 0
+    }
+  }));
+};
+
+const handleSameForAllToggle = (e) => {
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      sameForAll: e.target.checked
+    }
+  }));
+};
+
+const handleCommonShippingPriceChange = (e) => {
+  const price = parseFloat(e.target.value) || 0;
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      commonShippingPrice: price
+    }
+  }));
+};
+
+const handleFreeShippingToggle = (e) => {
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      freeShipping: e.target.checked
+    }
+  }));
+};
+
+const handleFreeShippingAmountChange = (e) => {
+  const amount = parseFloat(e.target.value) || 0;
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      freeShippingAboveAmount: amount
+    }
+  }));
+};
+
+const handleAddShippingPrice = () => {
+  if (!editLocation || !editPrice) {
+    toast.error('Please enter both location and price');
+    return;
+  }
+
+  const priceNum = parseFloat(editPrice);
+  if (isNaN(priceNum)) {
+    toast.error('Price must be a valid number');
+    return;
+  }
+
+  const currentType = formData.shippingPriceSettings.shippingType;
+  const priceFieldMap = {
+    city: 'cityPrices',
+    state: 'statePrices',
+    zipcode: 'zipCodePrices',
+    country: 'shippingPrices'
+  };
+  const priceField = priceFieldMap[currentType];
+
+  if (editingIndex !== null) {
+    setFormData(prev => ({
+      ...prev,
+      shippingPriceSettings: {
+        ...prev.shippingPriceSettings,
+        shippingPrices: prev.shippingPriceSettings.shippingPrices.map((item, idx) =>
+          idx === editingIndex ? { location: editLocation, price: priceNum } : item
+        ),
+        [priceField]: prev.shippingPriceSettings[priceField].map((item, idx) =>
+          idx === editingIndex ? { location: editLocation, price: priceNum } : item
+        )
+      }
+    }));
+    toast.success('Shipping price updated successfully!');
+    setEditingIndex(null);
+  } else {
+    const duplicate = formData.shippingPriceSettings.shippingPrices.find(
+      item => item.location.toLowerCase() === editLocation.toLowerCase()
+    );
+    if (duplicate) {
+      toast.error(`${editLocation} already exists`);
+      return;
+    }
+
+    const newPrice = { location: editLocation, price: priceNum };
+    
+    setFormData(prev => ({
+      ...prev,
+      shippingPriceSettings: {
+        ...prev.shippingPriceSettings,
+        shippingPrices: [...prev.shippingPriceSettings.shippingPrices, newPrice],
+        [priceField]: [...prev.shippingPriceSettings[priceField], newPrice]
+      }
+    }));
+    toast.success('Shipping price added successfully!');
+  }
+
+  setEditLocation('');
+  setEditPrice('');
+};
+
+const handleEditShippingPrice = (index) => {
+  const item = formData.shippingPriceSettings.shippingPrices[index];
+  setEditLocation(item.location);
+  setEditPrice(item.price.toString());
+  setEditingIndex(index);
+};
+
+const handleDeleteShippingPrice = (index) => {
+  const currentType = formData.shippingPriceSettings.shippingType;
+  const priceFieldMap = {
+    city: 'cityPrices',
+    state: 'statePrices',
+    zipcode: 'zipCodePrices',
+    country: 'shippingPrices'
+  };
+  const priceField = priceFieldMap[currentType];
+
+  setFormData(prev => ({
+    ...prev,
+    shippingPriceSettings: {
+      ...prev.shippingPriceSettings,
+      shippingPrices: prev.shippingPriceSettings.shippingPrices.filter((_, i) => i !== index),
+      [priceField]: prev.shippingPriceSettings[priceField].filter((_, i) => i !== index)
+    }
+  }));
+  toast.success('Shipping price deleted successfully!');
+};
+
+const handleExcelUpload = async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const validExtensions = ['.xlsx', '.xls'];
+  const fileExtension = file.name.slice(file.name.lastIndexOf('.')).toLowerCase();
+  
+  if (!validExtensions.includes(fileExtension)) {
+    toast.error('Please upload an Excel file (.xlsx or .xls)');
+    return;
+  }
+
+  try {
+    setUploadingExcel(true);
+    const data = await file.arrayBuffer();
+    const workbook = XLSX.read(data, { type: 'array' });
+    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+    if (jsonData.length === 0) {
+      toast.error('Excel file is empty');
+      return;
+    }
+
+    const headers = Object.keys(jsonData[0]);
+    
+    if (!headers[0] || !headers[1]) {
+      toast.error('Excel must have at least 2 columns');
+      return;
+    }
+
+    const locationHeader = headers[0];
+    const priceHeader = headers[1];
+
+    const newPrices = jsonData.map(row => ({
+      location: String(row[locationHeader] || '').trim(),
+      price: parseFloat(row[priceHeader]) || 0
+    })).filter(item => item.location && !isNaN(item.price));
+
+    if (newPrices.length === 0) {
+      toast.error('No valid data found in Excel file');
+      return;
+    }
+
+    const currentType = formData.shippingPriceSettings.shippingType;
+    const priceFieldMap = {
+      city: 'cityPrices',
+      state: 'statePrices',
+      zipcode: 'zipCodePrices',
+      country: 'shippingPrices'
+    };
+    const priceField = priceFieldMap[currentType];
+
+    setFormData(prev => ({
+      ...prev,
+      shippingPriceSettings: {
+        ...prev.shippingPriceSettings,
+        shippingPrices: newPrices,
+        [priceField]: newPrices
+      }
+    }));
+
+    toast.success(`${newPrices.length} shipping prices imported successfully!`);
+  } catch (error) {
+    console.error('Excel upload error:', error);
+    toast.error('Error processing Excel file. Please check the format.');
+  } finally {
+    setUploadingExcel(false);
+    e.target.value = '';
+  }
+};
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     
@@ -190,59 +467,65 @@ const CompanySettings = () => {
     }
 
     try {
-      setLoading(true);
-      
-      const formDataToSend = new FormData();
-      
-      formDataToSend.append('adminName', formData.adminName);
-      formDataToSend.append('adminWhatsappNumber', formData.adminWhatsappNumber);
-      formDataToSend.append('adminPhoneNumber', formData.adminPhoneNumber);
-      formDataToSend.append('adminAddress', formData.adminAddress);
-      formDataToSend.append('adminCity', formData.adminCity);
-      formDataToSend.append('adminState', formData.adminState);
-      formDataToSend.append('adminPincode', formData.adminPincode);
-      formDataToSend.append('adminEmail', formData.adminEmail);
-      formDataToSend.append('companyName', formData.companyName);
-      formDataToSend.append('instagramId', formData.instagramId);
-      formDataToSend.append('facebookId', formData.facebookId);
-      formDataToSend.append('privacyPolicy', formData.privacyPolicy);
-      formDataToSend.append('returnPolicy', formData.returnPolicy);
-      formDataToSend.append('shippingPolicy', formData.shippingPolicy);
-      formDataToSend.append('refundPolicy', formData.refundPolicy);
-      formDataToSend.append('termsAndConditions', formData.termsAndConditions);
-      formDataToSend.append('aboutUs', formData.aboutUs);
-      formDataToSend.append('receiveOrderEmails', formData.receiveOrderEmails);
-      formDataToSend.append('lowStockAlertThreshold', formData.lowStockAlertThreshold);
-      formDataToSend.append('receiveLowStockEmail', formData.receiveLowStockEmail);
-      formDataToSend.append('receiveOutOfStockEmail', formData.receiveOutOfStockEmail);
-      
-      if (logoFile) {
-        formDataToSend.append('logo', logoFile);
-      }
+  setLoading(true);
+  
+  const formDataToSend = new FormData();
+  
+  formDataToSend.append('adminName', formData.adminName);
+  formDataToSend.append('adminWhatsappNumber', formData.adminWhatsappNumber);
+  formDataToSend.append('adminPhoneNumber', formData.adminPhoneNumber);
+  formDataToSend.append('adminAddress', formData.adminAddress);
+  formDataToSend.append('adminCity', formData.adminCity);
+  formDataToSend.append('adminState', formData.adminState);
+  formDataToSend.append('adminPincode', formData.adminPincode);
+  formDataToSend.append('adminEmail', formData.adminEmail);
+  formDataToSend.append('companyName', formData.companyName);
+  formDataToSend.append('instagramId', formData.instagramId);
+  formDataToSend.append('facebookId', formData.facebookId);
+  formDataToSend.append('privacyPolicy', formData.privacyPolicy);
+  formDataToSend.append('returnPolicy', formData.returnPolicy);
+  formDataToSend.append('shippingPolicy', formData.shippingPolicy);
+  formDataToSend.append('refundPolicy', formData.refundPolicy);
+  formDataToSend.append('termsAndConditions', formData.termsAndConditions);
+  formDataToSend.append('aboutUs', formData.aboutUs);
+  formDataToSend.append('receiveOrderEmails', formData.receiveOrderEmails);
+  formDataToSend.append('lowStockAlertThreshold', formData.lowStockAlertThreshold);
+  formDataToSend.append('receiveLowStockEmail', formData.receiveLowStockEmail);
+  formDataToSend.append('receiveOutOfStockEmail', formData.receiveOutOfStockEmail);
+  formDataToSend.append('shippingPriceSettings', JSON.stringify(formData.shippingPriceSettings));
 
-      const response = await fetch('https://api.simplyrks.cloud/api/company-settings', {
-        method: 'PUT',
-        credentials: 'include',
-        body: formDataToSend
-      });
-      
-      const data = await response.json();
-      
-      if (data.success) {
-        toast.success('Company settings updated successfully!');
-        setFormData(data.data);
-        if (data.data.companyLogo) {
-          setLogoPreview(data.data.companyLogo);
-        }
-        setLogoFile(null);
-      } else {
-        toast.error(data.message || 'Failed to update settings');
+  if (logoFile) {
+    formDataToSend.append('logo', logoFile);
+  }
+
+  const response = await axios.put(
+    'https://api.simplyrks.cloud/api/company-settings',
+    formDataToSend,
+    {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'multipart/form-data'
       }
-    } catch (error) {
-      toast.error(error.message || 'Failed to update settings');
-    } finally {
-      setLoading(false);
     }
+  );
+  
+  if (response.data.success) {
+    toast.success(response.data.message || 'Company settings updated successfully!');
+    setFormData(response.data.data);
+    if (response.data.data.company_logo) {
+      setLogoPreview(response.data.data.company_logo);
+    }
+    setLogoFile(null);
+  } else {
+    toast.error(response.data.message || 'Failed to update settings');
+  }
+} catch (error) {
+  const errorMessage = error.response?.data?.message || error.message || 'Failed to update settings';
+  toast.error(errorMessage);
+  console.error('Update error:', error);
+} finally {
+  setLoading(false);
+}
   };
 
   const accordions = [
@@ -250,11 +533,11 @@ const CompanySettings = () => {
       title: 'Personal Information',
       content: (
         <div className="p-4 space-y-6">
-          <div className="border-b border-gray-200 pb-6">
-            <h3 className="text-lg font-semibold text-gray-800 mb-4">Company Logo</h3>
+          <div className="border-b border-gray-200 dark:border-gray-700 pb-6">
+            <h3 className="text-lg font-semibold text-gray-800 dark:text-white mb-4">Company Logo</h3>
             <div className="flex flex-col md:flex-row gap-4 items-start">
               <div className="flex-shrink-0">
-                <div className="w-32 h-32 border-2 border-dashed border-gray-300 rounded-lg flex items-center justify-center bg-gray-50 overflow-hidden">
+                <div className="w-32 h-32 border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-lg flex items-center justify-center bg-gray-50 dark:bg-gray-800 overflow-hidden">
                   {logoPreview || formData.companyLogo ? (
                     <img
                       src={logoPreview || formData.companyLogo}
@@ -262,7 +545,7 @@ const CompanySettings = () => {
                       className="w-full h-full object-contain"
                     />
                   ) : (
-                    <ImageIcon className="w-12 h-12 text-gray-400" />
+                    <ImageIcon className="w-12 h-12 text-gray-400 dark:text-gray-300" />
                   )}
                 </div>
               </div>
@@ -277,7 +560,7 @@ const CompanySettings = () => {
                       className="hidden"
                       disabled={uploadingLogo}
                     />
-                    <div className="px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors text-center border border-blue-200 flex items-center justify-center gap-2">
+                    <div className="px-4 py-2 bg-blue-50 dark:bg-blue-900 text-blue-600 dark:text-white rounded-lg hover:bg-blue-100 dark:hover:bg-blue-800 transition-colors text-center border border-blue-200 dark:border-blue-700 flex items-center justify-center gap-2">
                       <Upload className="w-4 h-4" />
                       <span className="text-sm font-medium">Choose Logo</span>
                     </div>
@@ -302,7 +585,7 @@ const CompanySettings = () => {
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-gray-500 dark:text-white">
                   PNG or JPG. Max size: 5MB. Image will be saved when you click "Save Settings"
                 </p>
                 {logoFile && (
@@ -316,7 +599,7 @@ const CompanySettings = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2">
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Company Name
               </label>
               <input
@@ -324,13 +607,13 @@ const CompanySettings = () => {
                 name="companyName"
                 value={formData.companyName}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter company name"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Admin Name <span className="text-red-500">*</span>
               </label>
               <input
@@ -338,13 +621,13 @@ const CompanySettings = () => {
                 name="adminName"
                 value={formData.adminName}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter admin name"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Admin Email <span className="text-red-500">*</span>
               </label>
               <input
@@ -352,13 +635,13 @@ const CompanySettings = () => {
                 name="adminEmail"
                 value={formData.adminEmail}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter admin email"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 WhatsApp Number
               </label>
               <input
@@ -366,13 +649,13 @@ const CompanySettings = () => {
                 name="adminWhatsappNumber"
                 value={formData.adminWhatsappNumber}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter WhatsApp number"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Phone Number
               </label>
               <input
@@ -380,13 +663,13 @@ const CompanySettings = () => {
                 name="adminPhoneNumber"
                 value={formData.adminPhoneNumber}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter phone number"
               />
             </div>
 
             <div className="flex flex-col md:col-span-2">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Address
               </label>
               <input
@@ -394,13 +677,13 @@ const CompanySettings = () => {
                 name="adminAddress"
                 value={formData.adminAddress}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter address"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 City
               </label>
               <input
@@ -408,13 +691,13 @@ const CompanySettings = () => {
                 name="adminCity"
                 value={formData.adminCity}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter city"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 State
               </label>
               <input
@@ -422,13 +705,13 @@ const CompanySettings = () => {
                 name="adminState"
                 value={formData.adminState}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter state"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Pincode
               </label>
               <input
@@ -436,13 +719,13 @@ const CompanySettings = () => {
                 name="adminPincode"
                 value={formData.adminPincode}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter pincode"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Instagram ID
               </label>
               <input
@@ -450,13 +733,13 @@ const CompanySettings = () => {
                 name="instagramId"
                 value={formData.instagramId}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter Instagram ID"
               />
             </div>
 
             <div className="flex flex-col">
-              <label className="text-sm font-medium text-gray-700 mb-1">
+              <label className="text-sm font-medium text-gray-700 dark:text-white mb-1">
                 Facebook ID
               </label>
               <input
@@ -464,7 +747,7 @@ const CompanySettings = () => {
                 name="facebookId"
                 value={formData.facebookId}
                 onChange={handleInputChange}
-                className="px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                 placeholder="Enter Facebook ID"
               />
             </div>
@@ -562,12 +845,12 @@ const CompanySettings = () => {
         <div className="p-4">
           <div className="space-y-4">
             {/* Email Notification Toggle */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
-                <label htmlFor="receiveOrderEmails" className="text-sm font-medium text-gray-700 cursor-pointer">
+                <label htmlFor="receiveOrderEmails" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
                   Receive emails when order is placed
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-white mt-1">
                   Get notified via email whenever a new order is placed on your store
                 </p>
               </div>
@@ -581,14 +864,14 @@ const CompanySettings = () => {
                     onChange={handleCheckboxChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                 </label>
               </div>
             </div>
 
             {/* Low Stock Alert Threshold */}
-            <div className="p-4 bg-gray-50 rounded-lg">
-              <label htmlFor="lowStockAlertThreshold" className="text-sm font-medium text-gray-700 block mb-2">
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <label htmlFor="lowStockAlertThreshold" className="text-sm font-medium text-gray-700 dark:text-white block mb-2">
                 Show low stock alert after
               </label>
               <div className="flex items-center gap-2">
@@ -600,23 +883,23 @@ const CompanySettings = () => {
                   onChange={handleInputChange}
                   min="0"
                   max="1000"
-                  className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
                   placeholder="Enter number of items"
                 />
-                <span className="text-sm text-gray-600">items</span>
+                <span className="text-sm text-gray-600 dark:text-white">items</span>
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-gray-500 dark:text-white mt-2">
                 Low stock alert will be triggered when product stock falls below this number
               </p>
             </div>
 
             {/* Receive Low Stock Email */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
-                <label htmlFor="receiveLowStockEmail" className="text-sm font-medium text-gray-700 cursor-pointer">
+                <label htmlFor="receiveLowStockEmail" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
                   Receive low stock emails
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-white mt-1">
                   Get notified when product stock falls below the threshold
                 </p>
               </div>
@@ -630,18 +913,18 @@ const CompanySettings = () => {
                     onChange={handleCheckboxChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                 </label>
               </div>
             </div>
 
             {/* Receive Out Of Stock Email */}
-            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
               <div className="flex-1">
-                <label htmlFor="receiveOutOfStockEmail" className="text-sm font-medium text-gray-700 cursor-pointer">
+                <label htmlFor="receiveOutOfStockEmail" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
                   Receive out of stock emails
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
+                <p className="text-xs text-gray-500 dark:text-white mt-1">
                   Get notified when product stock becomes zero
                 </p>
               </div>
@@ -655,34 +938,310 @@ const CompanySettings = () => {
                     onChange={handleCheckboxChange}
                     className="sr-only peer"
                   />
-                  <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
                 </label>
               </div>
             </div>
           </div>
         </div>
       )
-    }
+    },
+  {
+  title: 'Shipping Price',
+  content: (
+    <div className="p-4">
+      <div className="space-y-4">
+        {/* Manual Shipping Price Toggle */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border-b border-gray-200 dark:border-gray-700 pb-6">
+          <div className="flex-1">
+            <label htmlFor="isManualShipping" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
+              Enter Shipping price manually
+            </label>
+            <p className="text-xs text-gray-500 dark:text-white mt-1">
+              When enabled, shipping price will be entered manually for each order
+            </p>
+          </div>
+          <div className="ml-4">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                id="isManualShipping"
+                checked={formData.shippingPriceSettings.isManual}
+                onChange={handleShippingToggle}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
+            </label>
+          </div>
+        </div>
+
+        {/* Manual Pricing Options */}
+        {formData.shippingPriceSettings.isManual && (
+          <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            {/* Same For All Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+              <div className="flex-1">
+                <label htmlFor="sameForAll" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
+                  Same shipping price for all products
+                </label>
+                <p className="text-xs text-gray-500 dark:text-white mt-1">
+                  Apply a single shipping price to all orders
+                </p>
+              </div>
+              <div className="ml-4">
+                <label className="relative inline-flex items-center cursor-pointer">
+                  <input
+                    type="checkbox"
+                    id="sameForAll"
+                    checked={formData.shippingPriceSettings.sameForAll}
+                    onChange={handleSameForAllToggle}
+                    className="sr-only peer"
+                  />
+                  <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 dark:peer-checked:bg-blue-500"></div>
+                </label>
+              </div>
+            </div>
+
+            {/* Common Shipping Price Input */}
+            {formData.shippingPriceSettings.sameForAll && (
+              <div className="p-4 bg-blue-50 dark:bg-blue-900 rounded-lg border border-blue-200 dark:border-blue-700">
+                <label htmlFor="commonPrice" className="text-sm font-medium text-gray-700 dark:text-white block mb-2">
+                  Enter Common Shipping Price
+                </label>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-gray-600 dark:text-white">₹</span>
+                  <input
+                    type="number"
+                    id="commonPrice"
+                    placeholder="Enter shipping price"
+                    value={formData.shippingPriceSettings.commonShippingPrice}
+                    onChange={handleCommonShippingPriceChange}
+                    min="0"
+                    step="0.01"
+                    className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent"
+                  />
+                </div>
+                <p className="text-xs text-gray-500 dark:text-white mt-2">
+                  This price will be applied to all orders
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Dynamic Shipping Price Section */}
+        {!formData.shippingPriceSettings.isManual && (
+          <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            {/* Shipping Type Dropdown */}
+            <div className="space-y-2">
+              <label className="text-sm font-medium text-gray-700 dark:text-white">Shipping Price according to</label>
+              <select
+                value={formData.shippingPriceSettings.shippingType}
+                onChange={handleShippingTypeChange}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-gray-700 dark:text-white bg-white dark:bg-gray-900"
+              >
+                <option value="country">Country</option>
+                <option value="state">State</option>
+                <option value="city">City</option>
+                <option value="zipcode">Zip Code</option>
+              </select>
+            </div>
+
+            {/* Excel Upload Section */}
+            <div className="p-3 bg-blue-50 dark:bg-blue-900 rounded-lg border border-blue-200 dark:border-blue-700">
+              <div className="flex items-center gap-2 mb-2">
+                <Upload className="w-4 h-4 text-blue-600 dark:text-white" />
+                <label className="text-sm font-medium text-gray-700 dark:text-white">
+                  Upload {formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + formData.shippingPriceSettings.shippingType.slice(1)} Excel
+                </label>
+              </div>
+              <label className="relative flex items-center gap-2 px-3 py-2 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer transition-colors">
+                <input
+                  type="file"
+                  accept=".xlsx,.xls"
+                  onChange={handleExcelUpload}
+                  disabled={uploadingExcel}
+                  className="hidden"
+                />
+                {uploadingExcel ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 dark:border-blue-400"></div>
+                    <span className="text-sm text-gray-600 dark:text-white">Uploading...</span>
+                  </>
+                ) : (
+                  <span className="text-sm text-gray-600 dark:text-white">Click to upload or drag and drop</span>
+                )}
+              </label>
+              <p className="text-xs text-gray-500 dark:text-white mt-2">Excel should have 2 columns: {formData.shippingPriceSettings.shippingType} and Shipping Price</p>
+            </div>
+
+            {/* Add/Edit Shipping Price */}
+            <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg space-y-3">
+              <h4 className="text-sm font-medium text-gray-800 dark:text-white">
+                {editingIndex !== null ? 'Edit' : 'Add'} Shipping Price
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                <input
+                  type="text"
+                  placeholder={formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + formData.shippingPriceSettings.shippingType.slice(1)}
+                  value={editLocation}
+                  onChange={(e) => setEditLocation(e.target.value)}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-sm"
+                />
+                <input
+                  type="number"
+                  placeholder="Shipping Price"
+                  value={editPrice}
+                  onChange={(e) => setEditPrice(e.target.value)}
+                  min="0"
+                  step="0.01"
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:border-transparent text-sm"
+                />
+                <button
+                  onClick={handleAddShippingPrice}
+                  className="px-4 py-2 bg-blue-600 dark:bg-blue-500 text-green-600 rounded-lg hover:bg-blue-700 dark:hover:bg-blue-600 text-sm font-medium transition-colors"
+                >
+                  {editingIndex !== null ? 'Update' : 'Add'}
+                </button>
+              </div>
+              {editingIndex !== null && (
+                <button
+                  onClick={() => {
+                    setEditingIndex(null);
+                    setEditLocation('');
+                    setEditPrice('');
+                  }}
+                  className="text-xs text-red-600 dark:text-white font-medium"
+                >
+                  Cancel Edit
+                </button>
+              )}
+            </div>
+
+            {/* Shipping Prices Table */}
+            {formData.shippingPriceSettings.shippingPrices.length > 0 && (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="bg-gray-100 dark:bg-gray-700 border-b border-gray-300 dark:border-gray-600">
+                      <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-white">
+                        {formData.shippingPriceSettings.shippingType.charAt(0).toUpperCase() + formData.shippingPriceSettings.shippingType.slice(1)}
+                      </th>
+                      <th className="px-4 py-2 text-left font-semibold text-gray-700 dark:text-white">Shipping Price (₹)</th>
+                      <th className="px-4 py-2 text-center font-semibold text-gray-700 dark:text-white">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {formData.shippingPriceSettings.shippingPrices.map((item, index) => (
+                      <tr key={index} className="border-b border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700">
+                        <td className="px-4 py-2 text-gray-800 dark:text-white">{item.location}</td>
+                        <td className="px-4 py-2 text-gray-800 dark:text-white">₹{item.price.toFixed(2)}</td>
+                        <td className="px-4 py-2 text-center">
+                          <div className="flex items-center justify-center gap-2">
+                            <button
+                              onClick={() => handleEditShippingPrice(index)}
+                              className="p-1 text-blue-600 dark:text-white hover:bg-blue-100 dark:hover:bg-blue-800 rounded transition-colors"
+                              title="Edit"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteShippingPrice(index)}
+                              className="p-1 text-red-600 dark:text-white hover:bg-red-100 dark:hover:bg-red-800 rounded transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+
+            {formData.shippingPriceSettings.shippingPrices.length === 0 && (
+              <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg text-center">
+                <p className="text-sm text-gray-500 dark:text-white">No shipping prices added yet</p>
+              </div>
+            )}
+          </div>
+        )}
+        {/* Free Shipping Toggle - Appears Regardless of Manual/Dynamic */}
+        <div className="pt-4 border-t border-gray-200 dark:border-gray-700 space-y-4">
+          <div className="flex items-center justify-between p-4 bg-green-50 dark:bg-green-900 rounded-lg border border-green-200 dark:border-green-700">
+            <div className="flex-1">
+              <label htmlFor="freeShipping" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
+                Free Shipping
+              </label>
+              <p className="text-xs text-gray-500 dark:text-white mt-1">
+                Offer free shipping above a certain order amount
+              </p>
+            </div>
+            <div className="ml-4">
+              <label className="relative inline-flex items-center cursor-pointer">
+                <input
+                  type="checkbox"
+                  id="freeShipping"
+                  checked={formData.shippingPriceSettings.freeShipping}
+                  onChange={handleFreeShippingToggle}
+                  className="sr-only peer"
+                />
+                <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-green-300 dark:peer-focus:ring-green-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-green-600 dark:peer-checked:bg-green-500"></div>
+              </label>
+            </div>
+          </div>
+
+          {/* Free Shipping Amount Input */}
+          {formData.shippingPriceSettings.freeShipping && (
+            <div className="p-4 bg-green-50 dark:bg-green-900 rounded-lg border border-green-200 dark:border-green-700">
+              <label htmlFor="freeShippingAmount" className="text-sm font-medium text-gray-700 dark:text-white block mb-2">
+                Free Shipping Above Amount
+              </label>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-gray-600 dark:text-white">₹</span>
+                <input
+                  type="number"
+                  id="freeShippingAmount"
+                  placeholder="Enter amount"
+                  value={formData.shippingPriceSettings.freeShippingAboveAmount}
+                  onChange={handleFreeShippingAmountChange}
+                  min="0"
+                  step="0.01"
+                  className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 dark:focus:ring-green-400 focus:border-transparent"
+                />
+              </div>
+              <p className="text-xs text-gray-500 dark:text-white mt-2">
+                Customers will get free shipping when their order total is above this amount
+              </p>
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+},
   ];
 
   if (fetchLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+      <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-800">
         <div className="text-center">
-          <Loader2 className="w-12 h-12 animate-spin text-blue-600 mx-auto" />
-          <p className="mt-4 text-gray-600">Loading settings...</p>
+          <Loader2 className="w-12 h-12 animate-spin text-blue-600 dark:text-blue-400 mx-auto" />
+          <p className="mt-4 text-gray-600 dark:text-white">Loading settings...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-8 px-4 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 py-8 px-4 sm:px-6 lg:px-8">
       <div className="max-w-6xl mx-auto">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-8 sm:px-8">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900 px-6 py-8 sm:px-8">
             <h1 className="text-3xl font-bold text-white">Company Settings</h1>
-            <p className="mt-2 text-blue-100">Manage your company information and policies</p>
+            <p className="mt-2 text-blue-100 dark:text-blue-200">Manage your company information and policies</p>
           </div>
 
           <form onSubmit={handleSubmit}>
@@ -690,20 +1249,20 @@ const CompanySettings = () => {
               {accordions.map((accordion, index) => (
                 <div
                   key={index}
-                  className="border border-gray-200 rounded-xl overflow-hidden hover:shadow-md transition-shadow duration-200"
+                  className="border border-gray-200 dark:border-gray-700 rounded-xl overflow-hidden hover:shadow-md transition-shadow duration-200"
                 >
                   <button
                     type="button"
                     onClick={() => toggleAccordion(index)}
-                    className="w-full flex items-center justify-between px-6 py-4 bg-gray-50 hover:bg-gray-100 transition-colors duration-200"
+                    className="w-full flex items-center justify-between px-6 py-4 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors duration-200"
                   >
-                    <span className="text-lg font-semibold text-gray-800">
+                    <span className="text-lg font-semibold text-gray-800 dark:text-white">
                       {accordion.title}
                     </span>
                     {activeAccordion === index ? (
-                      <ChevronUp className="w-5 h-5 text-gray-600" />
+                      <ChevronUp className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     ) : (
-                      <ChevronDown className="w-5 h-5 text-gray-600" />
+                      <ChevronDown className="w-5 h-5 text-gray-600 dark:text-gray-400" />
                     )}
                   </button>
 
@@ -714,7 +1273,7 @@ const CompanySettings = () => {
                         : 'max-h-0 opacity-0 overflow-hidden'
                     }`}
                   >
-                    <div className="bg-white border-t border-gray-200">
+                    <div className="bg-white dark:bg-gray-900 border-t border-gray-200 dark:border-gray-700">
                       {accordion.content}
                     </div>
                   </div>
@@ -722,11 +1281,11 @@ const CompanySettings = () => {
               ))}
             </div>
 
-            <div className="px-6 py-6 bg-gray-50 border-t border-gray-200 sm:px-8">
+            <div className="px-6 py-6 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 sm:px-8">
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white font-semibold rounded-lg hover:from-blue-700 hover:to-blue-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
+                className="w-full sm:w-auto flex items-center justify-center gap-2 px-8 py-3 bg-gradient-to-r from-blue-600 to-blue-700 dark:from-blue-800 dark:to-blue-900 text-white font-semibold rounded-lg hover:from-blue-700 dark:hover:from-blue-900 hover:to-blue-800 dark:hover:to-blue-950 focus:outline-none focus:ring-2 focus:ring-blue-500 dark:focus:ring-blue-400 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200 shadow-lg hover:shadow-xl"
               >
                 {loading ? (
                   <>
