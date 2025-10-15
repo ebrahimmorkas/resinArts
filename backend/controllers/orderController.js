@@ -1033,17 +1033,297 @@ const handleStatusChange = async (req, res) => {
       }
     );
 
+    // Send email notification for status changes
     try {
+      // Prepare order details text for email
+      const orderDetailsText = order.orderedProducts
+        .map((item, index) => {
+          let itemDetails = `${index + 1}. ${item.product_name}`;
+          if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+          if (item.size) itemDetails += ` - Size: ${item.size}`;
+          itemDetails += `\n   Quantity: ${item.quantity}`;
+          itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
+          itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
+          if (parseFloat(item.cash_applied || 0) > 0) itemDetails += `\n   Free Cash Applied: ₹${parseFloat(item.cash_applied || 0).toFixed(2)}`;
+          return itemDetails;
+        })
+        .join('\n\n');
+
+      let emailSubject, emailText;
+
       switch (status) {
         case "Rejected":
-          await sendEmail(user.email, 'Order Rejected', `Unfortunately, your order with ID ${orderId} has been rejected`);
+          emailSubject = `Order #${orderId} - Status Updated to Rejected`;
+          emailText = `Dear ${order.user_name || user.name},
+
+We regret to inform you that your order #${orderId} has been **REJECTED**.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER REJECTION NOTIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ${orderId}
+Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Current Status: REJECTED
+
+We sincerely apologize for this inconvenience. After careful review, we were unable to process your order due to one or more of the following reasons:
+• Unavailability of requested items
+• Payment processing issues
+• Address verification concerns
+• Inventory constraints
+• Technical or system limitations
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CUSTOMER INFORMATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name: ${order.user_name || user.name}
+Email: ${order.email || user.email}
+Phone: ${order.phone_number || user.phone_number}
+WhatsApp: ${order.whatsapp_number || ''}
+
+ORDER ITEMS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${orderDetailsText}
+
+PRICING SUMMARY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Subtotal: ₹${parseFloat(order.price || 0).toFixed(2)}
+Shipping Cost: ₹${parseFloat(order.shipping_price || 0).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL AMOUNT: ₹${parseFloat(order.total_price || 0).toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Your order has been cancelled and no charges have been applied
+2️⃣ You can place a new order at any time
+3️⃣ Consider checking product availability before placing future orders
+4️⃣ Contact us if you need clarification about this rejection
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}, ${companySettings?.adminState || ''} - ${companySettings?.adminPincode || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We apologize for any inconvenience this may have caused. Our team is committed to providing you with the best possible shopping experience. We value your business and hope to serve you better in the future.
+
+If you have any questions regarding this rejection or would like to discuss alternative options, please don't hesitate to contact us.
+
+Thank you for your understanding,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}`;
           break;
+
         case "Confirm":
-          await sendEmail(user.email, 'Order Confirmed', `We have successfully received your payment for order ${orderId}. Your order will be delivered soon`);
+          emailSubject = `Order #${orderId} - Confirmed & Payment Received`;
+          emailText = `Dear ${order.user_name || user.name},
+
+Excellent news! Your order #${orderId} has been **CONFIRMED** and payment has been successfully received.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER CONFIRMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ${orderId}
+Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Confirmation Date: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Current Status: CONFIRMED
+
+Thank you for completing your payment! Your order is now being processed by our team and will be prepared for dispatch soon.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CUSTOMER INFORMATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name: ${order.user_name || user.name}
+Email: ${order.email || user.email}
+Phone: ${order.phone_number || user.phone_number}
+WhatsApp: ${order.whatsapp_number || ''}
+
+DELIVERY ADDRESS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${order.address || 'Address details will be confirmed soon'}
+
+ORDER ITEMS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${orderDetailsText}
+
+PRICING SUMMARY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Subtotal: ₹${parseFloat(order.price || 0).toFixed(2)}
+Shipping Cost: ₹${parseFloat(order.shipping_price || 0).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL AMOUNT: ₹${parseFloat(order.total_price || 0).toFixed(2)}
+Payment Status: PAID ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PROCESSING TIMELINE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Order Confirmation: ✅ Completed
+• Processing: ⏳ In Progress (1-2 business days)
+• Quality Check: ⏳ Pending
+• Dispatch: ⏳ Pending
+• Delivery: ⏳ Pending (3-7 business days after dispatch)
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHAT HAPPENS NEXT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Your order is being processed by our warehouse team
+2️⃣ Each item undergoes quality verification
+3️⃣ You will receive a dispatch confirmation with tracking details
+4️⃣ Track your order status in your account dashboard
+5️⃣ Estimated delivery within 3-7 business days after dispatch
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}, ${companySettings?.adminState || ''} - ${companySettings?.adminPincode || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}! We are committed to delivering your order with care and efficiency. Our team works diligently to ensure your satisfaction.
+
+You can track your order progress in real-time through your account dashboard or by contacting our support team.
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}`;
           break;
+
         case "Dispatched":
-          await sendEmail(user.email, 'Order Dispatched', `Your order ${orderId} has been successfully dispatched`);
+          emailSubject = `Order #${orderId} - Dispatched & On Its Way!`;
+          emailText = `Dear ${order.user_name || user.name},
+
+Great news! Your order #${orderId} has been **DISPATCHED** and is on its way to you.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER DISPATCH NOTIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ${orderId}
+Dispatch Date: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Current Status: DISPATCHED
+
+Your package has left our warehouse and is now with our trusted shipping partner for delivery.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+CUSTOMER INFORMATION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Name: ${order.user_name || user.name}
+Email: ${order.email || user.email}
+Phone: ${order.phone_number || user.phone_number}
+WhatsApp: ${order.whatsapp_number || ''}
+
+DELIVERY ADDRESS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${order.address || 'As provided during checkout'}
+
+ORDER ITEMS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${orderDetailsText}
+
+PRICING SUMMARY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Subtotal: ₹${parseFloat(order.price || 0).toFixed(2)}
+Shipping Cost: ₹${parseFloat(order.shipping_price || 0).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TOTAL AMOUNT: ₹${parseFloat(order.total_price || 0).toFixed(2)}
+Payment Status: PAID ✓
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+DELIVERY INFORMATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Expected Delivery: 3-7 business days from dispatch
+• Shipping Partner: ${companySettings?.shippingPartner || 'Our trusted courier service'}
+• Tracking: Available soon via your account dashboard
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TRACKING YOUR ORDER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Check your account dashboard for real-time tracking updates
+2️⃣ You will receive tracking number via WhatsApp/SMS
+3️⃣ Track your shipment directly with our shipping partner
+4️⃣ Contact us if you don't receive tracking details within 24 hours
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+WHAT TO EXPECT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Delivery attempts will be made during business hours
+• If you're unavailable, the courier will attempt delivery on the next working day
+• You may need to present valid ID for high-value orders
+• Inspect your package upon delivery and report any issues immediately
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}, ${companySettings?.adminState || ''} - ${companySettings?.adminPincode || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Thank you for your patience! We're excited for you to receive your order. Our team has carefully packed and shipped your items with care. If you have any questions about your delivery or need assistance with tracking, please don't hesitate to contact us.
+
+Happy Shopping!
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}`;
           break;
+      }
+
+      // Send the email if subject and text are defined
+      if (emailSubject && emailText) {
+        await sendEmail(user.email, emailSubject, emailText);
+        console.log(`Status update email sent to: ${user.email} for status: ${status}`);
       }
     } catch (error) {
       console.log("Error in sending email:", error);
