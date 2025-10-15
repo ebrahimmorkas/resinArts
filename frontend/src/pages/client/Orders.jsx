@@ -420,46 +420,94 @@ export default function Orders() {
     exportToExcel(filteredOrders);
   };
 
-    const downloadInvoice = async (order, e) => {
+ const downloadInvoice = async (order, e) => {
   e.stopPropagation();
   try {
     const doc = new jsPDF();
+    
+    // Center "INVOICE" text
     doc.setFontSize(18);
     doc.setFont(undefined, "bold");
-    doc.text("INVOICE", 120, 20);
+    const invoiceText = "INVOICE";
+    const invoiceTextWidth = doc.getTextWidth(invoiceText);
+    const pageWidth = doc.internal.pageSize.getWidth();
+    doc.text(invoiceText, (pageWidth - invoiceTextWidth) / 2, 20);
+    
+    // Logo and Company Name centered below INVOICE
+    let logoY = 30;
+    const logoSize = 25;
+    const centerX = pageWidth / 2;
+    
+    // Load company logo if available
+    if (companySettings?.companyLogo) {
+      try {
+        const logoImg = await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = "anonymous";
+          img.onload = function () {
+            resolve(this);
+          };
+          img.onerror = function () {
+            reject(new Error('Logo load failed'));
+          };
+          img.src = companySettings.companyLogo;
+        });
+        
+        // Add logo centered
+        doc.addImage(logoImg, "JPEG", centerX - logoSize / 2, logoY, logoSize, logoSize);
+        logoY += logoSize + 5;
+      } catch (error) {
+        console.log("Could not add logo to PDF");
+      }
+    }
+    
+    // Company name centered below logo
     doc.setFontSize(24);
     doc.setFont(undefined, "bold");
-    doc.text(loadingSettings ? "Loading..." : companySettings?.companyName || "OULA MARKET", 20, 30);
+    const companyName = loadingSettings ? "Loading..." : companySettings?.companyName || "OULA MARKET";
+    const companyNameWidth = doc.getTextWidth(companyName);
+    doc.text(companyName, (pageWidth - companyNameWidth) / 2, logoY + 5);
+    
+    // Contact information (left aligned)
+    let contactY = logoY + 15;
     doc.setFontSize(10);
     doc.setFont(undefined, "normal");
-    doc.text(`Email: ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, 40);
-    doc.text(`Phone: ${companySettings?.adminPhoneNumber || "+1 (555) 123-4567"}`, 20, 46);
-    doc.text(`WhatsApp: ${companySettings?.adminWhatsappNumber || "+1 (555) 987-6543"}`, 20, 52);
+    doc.text(`Email: ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, contactY);
+    doc.text(`Phone: ${companySettings?.adminPhoneNumber || "+1 (555) 123-4567"}`, 20, contactY + 6);
+    doc.text(`WhatsApp: ${companySettings?.adminWhatsappNumber || "+1 (555) 987-6543"}`, 20, contactY + 12);
+    
     const addressLines = doc.splitTextToSize(
       `Address: ${companySettings?.adminAddress || "123 Business Ave"}, ${companySettings?.adminCity || "Commerce City"}, ${companySettings?.adminState || "CC"} ${companySettings?.adminPincode || "12345"}`,
       170
     );
-    let addressY = 58;
+    let addressY = contactY + 18;
     addressLines.forEach((line) => {
       doc.text(line, 20, addressY);
       addressY += 6;
     });
+    
+    // Invoice details (right aligned)
     doc.setFontSize(9);
     doc.setFont(undefined, "normal");
-    doc.text(`Invoice #: ${order.id}`, 120, 30);
-    doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, 36);
-    doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, 42);
+    doc.text(`Invoice #: ${order.id}`, 120, contactY);
+    doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, contactY + 6);
+    doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, contactY + 12);
+    
+    // Bill To section
+    const billToY = addressY + 10;
     doc.setFontSize(12);
     doc.setFont(undefined, "bold");
-    doc.text("BILL TO:", 20, 75);
+    doc.text("BILL TO:", 20, billToY);
     doc.setFontSize(10);
     doc.setFont(undefined, "normal");
     const addressLinesBill = doc.splitTextToSize(order.shippingAddress, 170);
-    let addressYBill = 85;
+    let addressYBill = billToY + 10;
     addressLinesBill.forEach((line) => {
       doc.text(line, 20, addressYBill);
       addressYBill += 5;
     });
+    
+    // Items section
     const itemsStartY = addressYBill + 10;
     doc.setFontSize(12);
     doc.setFont(undefined, "bold");
