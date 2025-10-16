@@ -27,6 +27,7 @@ const ConditionalProvider = ({children}) => {
 
     // Memoize providers to prevent unnecessary re-renders
     const adminProviders = useMemo(() => (
+        <CompanySettingsProvider>
         <ProductProvider>
             <FreeCashProvider>
                 <UserProvider>
@@ -38,6 +39,7 @@ const ConditionalProvider = ({children}) => {
                 </UserProvider>
             </FreeCashProvider>
         </ProductProvider>
+        </CompanySettingsProvider>
     ), [children]);
 
     const publicProviders = useMemo(() => (
