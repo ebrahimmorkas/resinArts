@@ -1081,23 +1081,23 @@ const bulkOverrideProducts = async (req, res) => {
 
         // Collect old images to delete
         const imagesToDelete = [];
-        if (existingProduct.image) imagesToDelete.push(existingProduct.image);
-        if (existingProduct.additionalImages) imagesToDelete.push(...existingProduct.additionalImages);
-        if (existingProduct.variants) {
-          existingProduct.variants.forEach(v => {
-            if (v.variantImage) imagesToDelete.push(v.variantImage);
-            if (v.moreDetails) {
-              v.moreDetails.forEach(md => {
-                if (md.additionalImages) imagesToDelete.push(...md.additionalImages);
-              });
-            }
-          });
-        }
+        // if (existingProduct.image) imagesToDelete.push(existingProduct.image);
+        // if (existingProduct.additionalImages) imagesToDelete.push(...existingProduct.additionalImages);
+        // if (existingProduct.variants) {
+        //   existingProduct.variants.forEach(v => {
+        //     if (v.variantImage) imagesToDelete.push(v.variantImage);
+        //     if (v.moreDetails) {
+        //       v.moreDetails.forEach(md => {
+        //         if (md.additionalImages) imagesToDelete.push(...md.additionalImages);
+        //       });
+        //     }
+        //   });
+        // }
 
-        // Validate categories
-        if (!firstRow.mainCategory) {
-          throw new Error('Missing required field: mainCategory');
-        }
+        // // Validate categories
+        // if (!firstRow.mainCategory) {
+        //   throw new Error('Missing required field: mainCategory');
+        // }
 
         const mainCategory = await Category.findOne({
           categoryName: { $regex: `^${firstRow.mainCategory.trim()}$`, $options: 'i' },
@@ -1159,16 +1159,21 @@ const bulkOverrideProducts = async (req, res) => {
           }
 
           let additionalImageUrls = [];
-          if (firstRow.additionalImages && firstRow.additionalImages.trim() !== '') {
-            const imageFilenames = firstRow.additionalImages.split(',').map(f => f.trim());
-            for (const filename of imageFilenames) {
-              const imagePath = findImageInTemp(filename);
-              if (imagePath) {
-                const url = await BulkUploadImageToCloudinary(imagePath, 'products/additional');
-                additionalImageUrls.push(url);
-              }
-            }
-          }
+if (firstRow.additionalImages && firstRow.additionalImages.trim() !== '') {
+  const imageFilenames = firstRow.additionalImages.split(',').map(f => f.trim());
+  console.log(`Looking for additional images: ${imageFilenames.join(', ')}`);
+  for (const filename of imageFilenames) {
+    const imagePath = findImageInTemp(filename);
+    if (imagePath) {
+      const url = await BulkUploadImageToCloudinary(imagePath, 'products/additional');
+      additionalImageUrls.push(url);
+      console.log(`Additional image uploaded: ${url}`);
+    } else {
+      console.warn(`Additional image not found in ZIP: ${filename}`);
+    }
+  }
+  console.log(`Total additional images uploaded: ${additionalImageUrls.length}`);
+}
 
           let bulkPricing = [];
           if (firstRow.bulkPricing && firstRow.bulkPricing.trim() !== '' && firstRow.bulkPricing !== '[]') {
@@ -1353,7 +1358,42 @@ const bulkOverrideProducts = async (req, res) => {
 
           productData.variants = variants;
         }
+// Now collect images to delete - only delete if we have replacements
+if (productData.image && existingProduct.image && productData.image !== existingProduct.image) {
+  imagesToDelete.push(existingProduct.image);
+}
 
+if (productData.additionalImages && productData.additionalImages.length > 0) {
+  // New additional images uploaded, delete old ones
+  if (existingProduct.additionalImages && existingProduct.additionalImages.length > 0) {
+    imagesToDelete.push(...existingProduct.additionalImages);
+  }
+}
+
+if (productData.hasVariants && productData.variants) {
+  // Handle variant images
+  productData.variants.forEach((variant, vIndex) => {
+    const existingVariant = existingProduct.variants?.[vIndex];
+    
+    if (variant.variantImage && existingVariant?.variantImage && variant.variantImage !== existingVariant.variantImage) {
+      imagesToDelete.push(existingVariant.variantImage);
+    }
+    
+    if (variant.moreDetails) {
+      variant.moreDetails.forEach((md, mdIndex) => {
+        const existingMd = existingVariant?.moreDetails?.[mdIndex];
+        
+        if (md.additionalImages && md.additionalImages.length > 0) {
+          if (existingMd?.additionalImages && existingMd.additionalImages.length > 0) {
+            imagesToDelete.push(...existingMd.additionalImages);
+          }
+        }
+      });
+    }
+  });
+}
+
+console.log(`Images marked for deletion: ${imagesToDelete.length}`);
         // Update product in database
         console.log('Updating product in database...');
         const updatedProduct = await Product.findByIdAndUpdate(
