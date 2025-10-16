@@ -1431,16 +1431,16 @@ const CategoryNavigationBar = () => {
     if (showBulkPrice) {
       return (
         <>
-          <span className="text-lg font-bold text-gray-900">₹ {bulkPrice1Plus.wholesalePrice.toFixed(2)}</span>
-          <span className="text-sm text-gray-500 line-through">₹ {displayPrice.toFixed(2)}</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">₹ {bulkPrice1Plus.wholesalePrice.toFixed(2)}</span>
+          <span className="text-sm text-gray-500 line-through dark:text-gray-400">₹ {displayPrice.toFixed(2)}</span>
         </>
       );
     } else {
       return (
         <>
-          <span className="text-lg font-bold text-gray-900">₹ {displayPrice.toFixed(2)}</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">₹ {displayPrice.toFixed(2)}</span>
           {strikePrice && (
-            <span className="text-sm text-gray-500 line-through">₹ {strikePrice.toFixed(2)}</span>
+            <span className="text-sm text-gray-500 line-through dark:text-gray-400">₹ {strikePrice.toFixed(2)}</span>
           )}
         </>
       );
@@ -2065,13 +2065,13 @@ const CategoryNavigationBar = () => {
                       onClick={() =>
                         setCurrentImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length)
                       }
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
+                      className="dark:text-white absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev + 1) % currentImages.length)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
+                      className="dark:text-white absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
