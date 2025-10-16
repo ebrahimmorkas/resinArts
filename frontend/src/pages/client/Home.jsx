@@ -2476,14 +2476,14 @@ const ProductDetailsModal = ({ product, onClose }) => {
 />
                 {badge && (
                   <div className="absolute top-3 left-3">
-                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold text-white ${badge.color}`}>
+                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold text-white ${badge.color} dark:text-white`}>
                       {badge.text}
                     </span>
                   </div>
                 )}
                 {discountPercentage > 0 && (
                   <div className="absolute top-3 right-3">
-                    <span className="bg-red-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
+                    <span className="bg-red-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold dark:text-white">
                       {discountPercentage}% OFF
                     </span>
                   </div>
@@ -2493,13 +2493,13 @@ const ProductDetailsModal = ({ product, onClose }) => {
                   <>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length)}
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors dark:text-white"
                     >
                       <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev + 1) % currentImages.length)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors dark:text-white"
                     >
                       <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
@@ -2517,7 +2517,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {product.hasVariants && product.variants && product.variants.length > 1 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Variant Images</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 dark:text-white">Variant Images</h4>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {product.variants.filter(v => v.isActive !== false).map((variant) => (
                       <button
@@ -2541,7 +2541,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {selectedSize && selectedSize.additionalImages && selectedSize.additionalImages.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Additional Images</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 dark:text-white">Additional Images</h4>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {selectedSize.additionalImages.map((img, index) => (
                       <button
@@ -2565,17 +2565,17 @@ const ProductDetailsModal = ({ product, onClose }) => {
             {/* Right Section - Product Details */}
             <div className="space-y-4 sm:space-y-5">
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 dark:text-white">{product.name}</h1>
                 <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 space-y-1">
                   {product.mainCategory && (
-                    <p>Main Category: <span className="font-medium">
+                    <p><span className="dark:text-white">Main Category: </span><span className="font-medium">
                       {typeof product.mainCategory === 'object' 
                         ? product.mainCategory.categoryName 
                         : categories.find(cat => cat._id === product.mainCategory)?.categoryName || product.mainCategory}
                     </span></p>
                   )}
                   {product.subCategory && (
-                    <p>Sub Category: <span className="font-medium">
+                    <p><span className="dark:text-white">Sub Category: </span><span className="font-medium">
                       {typeof product.subCategory === 'object' 
                         ? product.subCategory.categoryName 
                         : categories.find(cat => cat._id === product.subCategory)?.categoryName || product.subCategory}
@@ -2590,7 +2590,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                     ₹ {effectiveUnitPrice.toFixed(2)}
                   </span>
                   {effectiveUnitPrice < displayPrice && (
-                    <span className="text-sm text-green-600 ml-2">(Bulk discount applied)</span>
+                    <span className="text-sm text-green-600 ml-2 dark:text-blue-600">(Bulk discount applied)</span>
                   )}
                 </div>
                 {hasActiveDiscount && originalPrice > displayPrice && (
@@ -2602,7 +2602,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {product.hasVariants && product.variants && (
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">
+                  <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">
                     Color: {selectedVariant?.colorName || "Select Color"}
                   </h3>
                   <div className="flex gap-2 flex-wrap">
@@ -2625,7 +2625,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {selectedVariant && selectedVariant.moreDetails && selectedVariant.moreDetails.length > 0 && (
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">
+                  <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">
                     Size: {selectedSize ? formatSize(selectedSize.size) : "Select Size"}
                   </h3>
                   <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -2685,7 +2685,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
       <button 
         onClick={() => handleRemoveFromCart(cartKey)}
-        className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+        className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors dark:text-white"
       >
         <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
         Remove from Cart
@@ -2735,12 +2735,12 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {product.productDetails && product.productDetails.length > 0 && (
                 <div className="border-t pt-4">
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">Product Details</h3>
+                  <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">Product Details</h3>
                   <div className="space-y-2">
                     {product.productDetails.map((detail) => (
                       <div key={detail._id} className="flex text-sm sm:text-base">
-                        <span className="font-medium text-gray-700 w-24 sm:w-32">{detail.key}:</span>
-                        <span className="text-gray-600 dark:text-gray-400 flex-1">{detail.value}</span>
+                        <span className="font-medium text-gray-700 w-24 sm:w-32 dark:text-white">{detail.key}:</span>
+                        <span className="text-gray-600 dark:text-gray-400 flex-1 dark:text-gray-400">{detail.value}</span>
                       </div>
                     ))}
                   </div>
@@ -3180,19 +3180,19 @@ if (justArrivedProductsList.length > 0) {
             ) : searchResults.length > 0 ? (
               <>
                 <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-                  <p className="text-sm font-semibold text-gray-700">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-white">
                     Results for: "{searchQuery}" ({searchResults.length})
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-400">
                     Press Enter to see all results in main section
                   </p>
                 </div>
-                <div className="py-2">
+                <div className="py-2 ">
                   {searchResults.map((result, index) => (
                     <button
                       key={`${result.productId}-${result.variantId}-${index}`}
                       onClick={() => handleSearchResultClick(result)}
-                      className="w-full px-4 py-3 hover:bg-gray-50 dark:bg-gray-800 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+                      className="w-full px-4 py-3 hover:bg-gray-50 dark:bg-gray-800 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0 dark:text-white"
                     >
                       <img
   src={getOptimizedImageUrl(result.image, { width: 100 }) || "/placeholder.svg"}
@@ -3201,14 +3201,14 @@ if (justArrivedProductsList.length > 0) {
   loading="lazy"
 />
                       <div className="flex-1 text-left">
-                        <p className="text-gray-900 text-sm">
+                        <p className="text-gray-900 text-sm dark:text-gray-400">
                           {highlightMatchedText(result.fullDisplayName, searchQuery)}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-sm font-semibold text-blue-600">
                             ₹{result.price.toFixed(2)}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
                             Stock: {result.stock}
                           </span>
                         </div>
@@ -3218,7 +3218,7 @@ if (justArrivedProductsList.length > 0) {
                 </div>
               </>
             ) : (
-              <div className="p-4 text-center text-gray-500">
+              <div className="p-4 text-center text-gray-500 dark:text-white">
                 No results for "{searchQuery}"
               </div>
             )}
