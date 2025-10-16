@@ -937,6 +937,9 @@ const openPolicyModal = (type) => {
     case 'refund':
       content = companySettings.refundPolicy || 'Refund Policy not available.';
       break;
+      case 'about':
+  content = companySettings?.aboutUs || 'About us not available.';
+  break;
     default:
       content = 'Content not available.';
   }
@@ -955,6 +958,7 @@ const getPolicyTitle = (type) => {
     case 'shipping': return 'Shipping Policy';
     case 'return': return 'Return Policy';
     case 'refund': return 'Refund Policy';
+    case 'about': return 'About Us';
     default: return 'Policy';
   }
 };
@@ -3589,32 +3593,48 @@ if (justArrivedProductsList.length > 0) {
   <div className="w-full px-4 sm:px-6 lg:px-8">
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
       {/* About Us */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">About Us</h3>
-        <p className="text-gray-300 text-sm">
-          Your trusted e-commerce partner for quality products and exceptional service.
-        </p>
-      </div>
+      {/* About Us */}
+<div>
+  <h3 className="text-lg font-semibold mb-4">About Us</h3>
+  <a 
+    href="#"
+    onClick={(e) => {
+      e.preventDefault();
+      openPolicyModal('about');
+    }}
+    className="text-gray-300 text-sm hover:text-white transition-colors"
+  >
+    Learn more about us
+  </a>
+</div>
 
       {/* Customer Service */}
       <div>
         <h3 className="text-lg font-semibold mb-4">Customer Service</h3>
         <ul className="space-y-2 text-gray-300 text-sm">
           <li>
-            <button 
-              onClick={() => openPolicyModal('return')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('return');
+              }}
+              className="hover:text-white transition-colors"
             >
               Return Policy
-            </button>
+            </a>
           </li>
           <li>
-            <button 
-              onClick={() => openPolicyModal('refund')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('refund');
+              }}
+              className="hover:text-white transition-colors"
             >
               Refund Policy
-            </button>
+            </a>
           </li>
         </ul>
       </div>
@@ -3624,28 +3644,40 @@ if (justArrivedProductsList.length > 0) {
         <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
         <ul className="space-y-2 text-gray-300 text-sm">
           <li>
-            <button 
-              onClick={() => openPolicyModal('privacy')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('privacy');
+              }}
+              className="hover:text-white transition-colors"
             >
               Privacy Policy
-            </button>
+            </a>
           </li>
           <li>
-            <button 
-              onClick={() => openPolicyModal('terms')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('terms');
+              }}
+              className="hover:text-white transition-colors"
             >
               Terms and Conditions
-            </button>
+            </a>
           </li>
           <li>
-            <button 
-              onClick={() => openPolicyModal('shipping')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('shipping');
+              }}
+              className="hover:text-white transition-colors"
             >
               Shipping Policy
-            </button>
+            </a>
           </li>
         </ul>
       </div>

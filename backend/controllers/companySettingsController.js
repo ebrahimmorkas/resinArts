@@ -208,7 +208,8 @@ exports.getPublicPolicies = async (req, res) => {
         returnPolicy: settings.returnPolicy,
         shippingPolicy: settings.shippingPolicy,
         refundPolicy: settings.refundPolicy,
-        termsAndConditions: settings.termsAndConditions
+        termsAndConditions: settings.termsAndConditions,
+        aboutUs: settings.aboutUs
       }
     });
   } catch (error) {
