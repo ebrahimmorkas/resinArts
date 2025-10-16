@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Package, Users, Info, Archive } from 'lucide-react';
 import axios from 'axios';
 import io from 'socket.io-client';
+import OverrideProductsModal from './OverrideProductsModal';
 
 const socket = io('http://localhost:3000');
 
@@ -514,6 +515,13 @@ const BulkUpload = () => {
   // Product files
   const [productExcelFile, setProductExcelFile] = useState(null);
   const [productZipFile, setProductZipFile] = useState(null);
+  // Add these after existing state declarations
+const [overrideModal, setOverrideModal] = useState({
+  isOpen: false,
+  products: []
+});
+const [isOverriding, setIsOverriding] = useState(false);
+const [pendingUploadData, setPendingUploadData] = useState(null);
   
   // Category files
   const [categoryFile, setCategoryFile] = useState(null);
@@ -578,38 +586,112 @@ const BulkUpload = () => {
   };
 
   const handleProductSubmit = async () => {
-    if (!productExcelFile || !productZipFile) {
-      showErrorModal('Missing Files', 'Please select both Excel file and images ZIP file.');
-      return;
-    }
+  if (!productExcelFile || !productZipFile) {
+    showErrorModal('Missing Files', 'Please select both Excel file and images ZIP file.');
+    return;
+  }
 
-    const formData = new FormData();
-    formData.append('excelFile', productExcelFile);
-    formData.append('imagesZip', productZipFile);
+  const formData = new FormData();
+  formData.append('excelFile', productExcelFile);
+  formData.append('imagesZip', productZipFile);
 
-    try {
-      const res = await axios.post('http://localhost:3000/api/product/bulk-upload', formData, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+  try {
+    const res = await axios.post('http://localhost:3000/api/product/bulk-upload', formData, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    // Check if there are products that already exist
+    if (res.data.existingProducts && res.data.existingProducts.length > 0) {
+      // Store the upload data for later use
+      setPendingUploadData({ formData, excelFile: productExcelFile, zipFile: productZipFile });
+      
+      // Show override modal
+      setOverrideModal({
+        isOpen: true,
+        products: res.data.existingProducts
       });
+      
+      // Show partial success message
+      if (res.data.results.successCount > 0) {
+        showToast(
+          `${res.data.results.successCount} products uploaded. ${res.data.existingProducts.length} products already exist.`,
+          'info'
+        );
+      }
+    } else {
+      // All products uploaded successfully
       setProductResponse(res.data);
       setProductError(null);
       setProductProgress(null);
       showToast('Products uploaded successfully!', 'success');
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Upload failed.';
-      setProductError(errorMessage);
-      setProductResponse(null);
-      setProductProgress(null);
-      showErrorModal(
-        'Product Upload Failed', 
-        errorMessage,
-        err.response?.data ? JSON.stringify(err.response.data, null, 2) : ''
-      );
     }
-  };
+  } catch (err) {
+    const errorMessage = err.response?.data?.message || 'Upload failed.';
+    setProductError(errorMessage);
+    setProductResponse(null);
+    setProductProgress(null);
+    showErrorModal(
+      'Product Upload Failed',
+      errorMessage,
+      err.response?.data ? JSON.stringify(err.response.data, null, 2) : ''
+    );
+  }
+};
+
+const handleOverrideProducts = async (selectedProductIds) => {
+  if (selectedProductIds.length === 0) {
+    showToast('Please select at least one product to override', 'error');
+    return;
+  }
+
+  setIsOverriding(true);
+
+  try {
+    const formData = new FormData();
+    formData.append('excelFile', pendingUploadData.excelFile);
+    formData.append('imagesZip', pendingUploadData.zipFile);
+    formData.append('productIds', JSON.stringify(selectedProductIds));
+
+    const res = await axios.post('http://localhost:3000/api/product/bulk-override', formData, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+
+    setIsOverriding(false);
+    setOverrideModal({ isOpen: false, products: [] });
+    setPendingUploadData(null);
+    
+    // Combine results if there were successful uploads before
+    if (productResponse) {
+      const combinedResults = {
+        ...res.data,
+        results: {
+          ...res.data.results,
+          successCount: (productResponse.results?.successCount || 0) + res.data.results.successCount,
+          totalProcessed: (productResponse.results?.totalProcessed || 0) + res.data.results.totalProcessed
+        }
+      };
+      setProductResponse(combinedResults);
+    } else {
+      setProductResponse(res.data);
+    }
+
+    showToast(`${res.data.results.successCount} products overridden successfully!`, 'success');
+  } catch (err) {
+    setIsOverriding(false);
+    const errorMessage = err.response?.data?.message || 'Override failed.';
+    showErrorModal(
+      'Override Failed',
+      errorMessage,
+      err.response?.data ? JSON.stringify(err.response.data, null, 2) : ''
+    );
+  }
+};
 
   const handleCategorySubmit = async () => {
     if (!categoryFile) {
@@ -809,6 +891,17 @@ const BulkUpload = () => {
         message={errorModal.message}
         details={errorModal.details}
       />
+      {/* Add this before Toast and ErrorModal components */}
+<OverrideProductsModal
+  isOpen={overrideModal.isOpen}
+  onClose={() => {
+    setOverrideModal({ isOpen: false, products: [] });
+    setPendingUploadData(null);
+  }}
+  products={overrideModal.products}
+  onOverride={handleOverrideProducts}
+  isProcessing={isOverriding}
+/>
     </div>
   );
 };
