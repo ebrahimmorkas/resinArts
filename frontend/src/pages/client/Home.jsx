@@ -1136,7 +1136,7 @@ const CategoryNavigationBar = () => {
     document.getElementById('all-products-section')?.scrollIntoView({ behavior: 'smooth' });
   }, 100);
 }}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-red-600 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium whitespace-nowrap"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-red-600 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium whitespace-nowrap dark:text-gray-400"
               >
                 <X className="w-4 h-4" />
                 Clear
@@ -3460,7 +3460,7 @@ if (justArrivedProductsList.length > 0) {
       </h2>
       <button
         onClick={clearSearch}
-        className="text-sm text-gray-600 dark:text-gray-400 hover:-800 dark:text-gray-100 flex items-center gap-1"
+        className="text-sm text-gray-600 dark:text-gray-400 hover:-800 flex items-center gap-1"
       >
         <X className="w-4 h-4" />
         Clear Search
@@ -3477,7 +3477,7 @@ if (justArrivedProductsList.length > 0) {
         <p className="text-gray-500 text-lg">No products found for "{searchQuery}"</p>
         <button
           onClick={clearSearch}
-          className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+          className="mt-4 text-blue-600 hover:text-blue-700 font-medium dark:text-gray-400"
         >
           Clear search and browse all products
         </button>
@@ -3516,7 +3516,7 @@ if (justArrivedProductsList.length > 0) {
             <Package className="w-16 h-16 text-gray-400" />
           </div>
           <h3 className="text-xl font-semibold -800 dark:text-gray-100 mb-2">No Products Available</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
+          <p className="text-gray-600 dark:text-gray-400 text-center mb-6 dark:text-black">
             We couldn't find any products in the "{selectedCategory}" category at the moment.
           </p>
           <button
@@ -3524,7 +3524,7 @@ if (justArrivedProductsList.length > 0) {
               setSelectedCategory(null);
               setSelectedCategoryPath([]);
             }}
-            className="px-6 py-3 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+            className="dark:text-gray-400 px-6 py-3 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
           >
             Browse All Products
           </button>

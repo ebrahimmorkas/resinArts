@@ -843,7 +843,7 @@ const DeleteConfirmationModal = () => {
                   setShowDeleteModal(false);
                   setSelectedProductForDelete(null);
                 }}
-                className="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors"
+                className="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors dark:text-white"
                 disabled={isLoading}
               >
                 Cancel
@@ -1621,7 +1621,7 @@ const DeleteConfirmationModal = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <h2 className="text-xl font-semibold text-gray-900">Restock Multiple Products</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Restock Multiple Products</h2>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <X className="w-5 h-5" />
               </button>
@@ -1634,8 +1634,8 @@ const DeleteConfirmationModal = () => {
                       <div className="flex items-center gap-4 mb-4">
                         <img src={getImageUrl(product)} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
                         <div>
-                          <h3 className="font-medium text-gray-900">{product.name}</h3>
-                          <p className="text-sm text-gray-500">Has Variants</p>
+                          <h3 className="font-medium text-gray-900 dark:text-white">{product.name}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Has Variants</p>
                         </div>
                       </div>
                       {product.variants.map(variant => (
@@ -1717,7 +1717,7 @@ const DeleteConfirmationModal = () => {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
           <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-gray-900">Restock Product</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Restock Product</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <X className="w-5 h-5" />
             </button>
@@ -1730,14 +1730,14 @@ const DeleteConfirmationModal = () => {
                     <div className="flex items-center gap-4">
                       <img src={getImageUrl(product)} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
                       <div>
-                        <h3 className="font-medium text-gray-900">{product.name}</h3>
-                        <p className="text-sm text-gray-500">Variant: {variant.colorName}</p>
+                        <h3 className="font-medium text-gray-900 dark:text-white">{product.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Variant: {variant.colorName}</p>
                       </div>
                     </div>
                     {variant.moreDetails.map((details) => (
                       <div key={details._id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg">
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2">Size: {details.size.length} X {details.size.breadth} X {details.size.height}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3">Current stock: {details.stock}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-2 dark:text-gray-400">Size: {details.size.length} X {details.size.breadth} X {details.size.height}</p>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mb-3 dark:text-white">Current stock: {details.stock}</p>
                         <input 
                           type="number"
                           min="0"
@@ -1764,12 +1764,12 @@ const DeleteConfirmationModal = () => {
                   <div className="flex items-center gap-4">
                     <img src={getImageUrl(product)} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
                     <div>
-                      <h3 className="font-medium text-gray-900">{product.name}</h3>
-                      <p className="text-sm text-gray-500">Current Stock: {product.stock}</p>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{product.name}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Current Stock: {product.stock}</p>
                     </div>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Update Stock Quantity</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Update Stock Quantity</label>
                     <input
                       value={stockTextfield}
                       onChange={(e) => setStockTextfield(e.target.value)}
@@ -1784,7 +1784,7 @@ const DeleteConfirmationModal = () => {
             </div>
           </div>
           <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:bg-gray-800 transition-colors" disabled={modalLoading}>
+            <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:text-gray-400 dark:bg-gray-800 transition-colors" disabled={modalLoading}>
               Cancel
             </button>
             <button onClick={handleUpdateStock} disabled={modalLoading} className="px-4 py-2 bg-blue-600 text-green-600 rounded-md hover:bg-blue-700 transition-colors disabled:opacity-50">
@@ -1942,7 +1942,7 @@ const DeleteConfirmationModal = () => {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <div className="bg-white dark:bg-gray-900 rounded-xl max-w-4xl w-full max-h-[90vh] flex flex-col">
             <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <h2 className="text-xl font-semibold text-gray-900">Revised Rate - Multiple Products</h2>
+              <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Revised Rate - Multiple Products</h2>
               <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
                 <X className="w-5 h-5" />
               </button>
@@ -1955,8 +1955,8 @@ const DeleteConfirmationModal = () => {
                       <div className="flex items-center gap-4 mb-4">
                         <img src={getImageUrl(product)} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
                         <div>
-                          <h3 className="font-medium text-gray-900">{product.name}</h3>
-                          <p className="text-sm text-gray-500">Has Variants</p>
+                          <h3 className="font-medium text-gray-900 dark:text-white">{product.name}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Has Variants</p>
                         </div>
                       </div>
                       {product.variants.map(variant => (
@@ -2241,7 +2241,7 @@ const DeleteConfirmationModal = () => {
               </div>
             </div>
             <div className="flex justify-end gap-3 p-6 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
-              <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:bg-gray-800 transition-colors" disabled={modalLoading}>
+              <button onClick={onClose} className="px-4 py-2 border border-gray-300 text-gray-700 rounded-md hover:bg-gray-50 dark:text-white dark:bg-gray-800 transition-colors" disabled={modalLoading}>
                 Cancel
               </button>
               <button onClick={() => handleUpdateMultipleRevisedRate(localMultipleForRevisedRate)} disabled={modalLoading} className="px-4 py-2 bg-green-600 text-green-600 rounded-md hover:bg-green-700 transition-colors disabled:opacity-50">
@@ -3067,7 +3067,7 @@ const DeleteConfirmationModal = () => {
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
         <button
           onClick={() => setShowStatusModal(false)}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors"
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors dark:text-white"
           disabled={isLoading}
         >
           Cancel
@@ -3121,7 +3121,7 @@ const DeleteConfirmationModal = () => {
       <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 flex justify-end gap-2">
         <button
           onClick={() => setShowBulkStatusModal(false)}
-          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors"
+          className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors dark:text-white"
           disabled={isLoading}
         >
           Cancel
