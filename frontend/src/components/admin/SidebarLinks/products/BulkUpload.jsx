@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { Upload, FileSpreadsheet, X, CheckCircle, AlertCircle, Package, Users, Info, Archive } from 'lucide-react';
 import axios from 'axios';
 import io from 'socket.io-client';
 import OverrideProductsModal from './OverrideProductsModal';
+import { ProductContext } from '../../../../../Context/ProductContext';
 
 const socket = io('http://localhost:3000');
 
@@ -553,6 +554,8 @@ const [pendingUploadData, setPendingUploadData] = useState(null);
     };
   }, []);
 
+  const { fetchProducts } = useContext(ProductContext);
+
   const showToast = (message, type = 'success') => {
     setToast({ message, type });
   };
@@ -665,6 +668,11 @@ const handleOverrideProducts = async (selectedProductIds) => {
     setIsOverriding(false);
     setOverrideModal({ isOpen: false, products: [] });
     setPendingUploadData(null);
+    
+    // Clear cache and refresh products
+    sessionStorage.removeItem('productsCache');
+    sessionStorage.removeItem('productsCacheTime');
+    await fetchProducts();
     
     // Combine results if there were successful uploads before
     if (productResponse) {

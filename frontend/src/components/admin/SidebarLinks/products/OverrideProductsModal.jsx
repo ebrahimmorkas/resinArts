@@ -1,6 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import { X, AlertTriangle, RefreshCw, Package, CheckCircle, Search, Tag, Layers, ChevronRight, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { fetchCategories } from '../../../../../utils/api';
+import { ProductContext } from '../../../../../Context/ProductContext';
 
 // Helper to flatten category tree
 const flattenCategories = (categories, parentPath = "", parentId = null) => {
@@ -37,6 +38,7 @@ const OverrideProductsModal = ({ isOpen, onClose, products, onOverride, isProces
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [categoryPath, setCategoryPath] = useState('');
   const [isFilterOpen, setIsFilterOpen] = useState(false);
+  const { fetchProducts } = useContext(ProductContext);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -96,9 +98,11 @@ const OverrideProductsModal = ({ isOpen, onClose, products, onOverride, isProces
     }
   };
 
-  const handleOverride = () => {
-    onOverride(selectedProducts);
-  };
+  const handleOverride = async () => {
+  await onOverride(selectedProducts);
+  // Refresh products after override
+  await fetchProducts();
+};
 
   const handleCategorySelect = (level, categoryId) => {
     let newSelectedCategoryIds = [...selectedCategoryIds.slice(0, level), categoryId].filter(Boolean);
