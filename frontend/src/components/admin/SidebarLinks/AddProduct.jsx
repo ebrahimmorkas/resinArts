@@ -495,7 +495,7 @@ export default function AddProduct() {
   const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl focus:ring-blue-500`
   const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 dark:border-gray-700 focus:ring-gray-500`
   const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white focus:ring-red-500`
-  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900`
+  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600`;
 
   // Dynamic Category Dropdowns
   const handleCategorySelect = (level, categoryId) => {
@@ -622,7 +622,7 @@ export default function AddProduct() {
                 {/* Product Details */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-semibold text-gray-900">Product Specifications</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Product Specifications</h3>
                     <button
                       type="button"
                       className={secondaryButtonClass}
@@ -661,7 +661,7 @@ export default function AddProduct() {
                         </div>
                         <button
                           type="button"
-                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                           onClick={() => removeKeyValuePair(setProductDetails, productDetails, index)}
                         >
                           <X className="w-4 h-4" />
@@ -758,7 +758,7 @@ export default function AddProduct() {
                     {/* Additional Images */}
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-semibold text-gray-900">Additional Images</h3>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Additional Images</h3>
                         <button
                           type="button"
                           className={secondaryButtonClass}
@@ -806,7 +806,7 @@ export default function AddProduct() {
                             </div>
                             <button
                               type="button"
-                              className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                              className="dark:text-white absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                               onClick={() => removeImageField(setAdditionalImages, additionalImages, index)}
                             >
                               <X className="w-3 h-3" />
@@ -819,7 +819,7 @@ export default function AddProduct() {
                     {/* Bulk Pricing */}
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-semibold text-gray-900">Bulk Pricing Options</h3>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Bulk Pricing Options</h3>
                         <button
                           type="button"
                           className={secondaryButtonClass}
@@ -863,7 +863,7 @@ export default function AddProduct() {
                             </div>
                             <button
                               type="button"
-                              className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                              className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                               onClick={() => removeBulkPricingField(setBulkPricing, bulkPricing, index)}
                             >
                               <X className="w-4 h-4" />
@@ -906,7 +906,7 @@ export default function AddProduct() {
                         </h3>
                         <button
                           type="button"
-                          className={dangerButtonClass}
+                          className={`${dangerButtonClass} dark:text-white`}
                           onClick={() => removeVariant(variantIndex)}
                         >
                           <X className="w-4 h-4" />
@@ -976,7 +976,7 @@ export default function AddProduct() {
                       {/* Variant Optional Details */}
                       <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-100 space-y-6">
                         <div className="flex justify-between items-center">
-                          <h4 className="text-lg font-semibold text-gray-900">Variant Specifications</h4>
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Variant Specifications</h4>
                           <button
                             type="button"
                             className={secondaryButtonClass}
@@ -1024,7 +1024,7 @@ export default function AddProduct() {
                               </div>
                               <button
                                 type="button"
-                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                 onClick={() => {
                                   const newDetails = variant.optionalDetails.filter((_, i) => i !== index)
                                   updateVariantField(variantIndex, "optionalDetails", newDetails)
@@ -1059,7 +1059,7 @@ export default function AddProduct() {
                               <h4 className="text-lg font-semibold -800 dark:text-gray-100">Size Configuration {mdIndex + 1}</h4>
                               <button
                                 type="button"
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-white"
                                 onClick={() => removeSizeSection(variantIndex, mdIndex)}
                               >
                                 <X className="w-4 h-4" />
@@ -1236,7 +1236,7 @@ export default function AddProduct() {
                                       </div>
                                       <button
                                         type="button"
-                                        className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                        className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors dark:text-white"
                                         onClick={() => {
                                           const newImages = md.additionalImages.filter((_, i) => i !== index)
                                           if (md.additionalImages[index]?.preview)
@@ -1359,7 +1359,7 @@ export default function AddProduct() {
                                         </div>
                                         <button
                                           type="button"
-                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                           onClick={() => {
                                             const newDetails = md.optionalDetails.filter((_, i) => i !== index)
                                             updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
@@ -1467,7 +1467,7 @@ export default function AddProduct() {
                                         </div>
                                         <button
                                           type="button"
-                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                           onClick={() => {
                                             const newBPC = md.bulkPricingCombinations.filter((_, i) => i !== index)
                                             updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
@@ -1542,7 +1542,7 @@ export default function AddProduct() {
                       {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
                         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                           <div className="flex justify-between items-center">
-                            <h4 className="text-xl font-semibold text-gray-900">Common Bulk Pricing Combinations</h4>
+                            <h4 className="text-xl font-semibold text-gray-900 dark:text-white">Common Bulk Pricing Combinations</h4>
                             <button
                               type="button"
                               className={secondaryButtonClass}
@@ -1597,7 +1597,7 @@ export default function AddProduct() {
                                 </div>
                                 <button
                                   type="button"
-                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                   onClick={() => {
                                     const newBPC = variant.commonBulkPricingCombinations.filter((_, i) => i !== index)
                                     updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
