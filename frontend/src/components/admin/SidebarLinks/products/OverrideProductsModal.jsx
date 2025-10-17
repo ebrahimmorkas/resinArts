@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, AlertTriangle, RefreshCw, Package, CheckCircle, Search, Tag, Layers, ChevronRight } from 'lucide-react';
+import { X, AlertTriangle, RefreshCw, Package, CheckCircle, Search, Tag, Layers, ChevronRight, Filter, ChevronDown, ChevronUp } from 'lucide-react';
 import { fetchCategories } from '../../../../../utils/api';
 
 // Helper to flatten category tree
@@ -36,6 +36,7 @@ const OverrideProductsModal = ({ isOpen, onClose, products, onOverride, isProces
   const [allCategoriesFlat, setAllCategoriesFlat] = useState([]);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
   const [categoryPath, setCategoryPath] = useState('');
+  const [isFilterOpen, setIsFilterOpen] = useState(false);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -111,6 +112,14 @@ const OverrideProductsModal = ({ isOpen, onClose, products, onOverride, isProces
     const newSelectedCategoryIds = selectedCategoryIds.slice(0, index + 1);
     setSelectedCategoryIds(newSelectedCategoryIds);
   };
+
+  const handleClearFilters = () => {
+    setSearchQuery('');
+    setSelectedCategoryIds([]);
+    setCategoryPath('');
+  };
+
+  const hasActiveFilters = searchQuery || selectedCategoryIds.length > 0;
 
   const renderCategoryDropdowns = () => {
     const dropdowns = [];
@@ -214,7 +223,7 @@ const OverrideProductsModal = ({ isOpen, onClose, products, onOverride, isProces
               </div>
               <div>
                 <h3 className="text-2xl font-bold text-gray-900 dark:text-white">
-                  Products Already Exist
+                  Products Already Exists
                 </h3>
                 <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
                   Select products to override with new data
@@ -232,43 +241,70 @@ const OverrideProductsModal = ({ isOpen, onClose, products, onOverride, isProces
           </div>
         </div>
 
-        {/* Filters Section - Fixed */}
-        <div className="p-6 border-b border-gray-200 dark:border-gray-700 space-y-4 flex-shrink-0 bg-gray-50 dark:bg-gray-800">
-          {/* Search Bar */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search products by name..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400"
-            />
-          </div>
+        {/* Filter Section - Fixed */}
+        <div className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
+          <div className="p-6">
+            {/* Filter Buttons - Always Visible */}
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center space-x-3">
+                <button
+                  onClick={() => setIsFilterOpen(!isFilterOpen)}
+                  className="flex items-center space-x-2 px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-gray-700 dark:text-white"
+                >
+                  <Filter className="w-5 h-5" />
+                  <span>{isFilterOpen ? 'Close Filters' : 'Open Filters'}</span>
+                  {hasActiveFilters && (
+                    <span className="ml-2 px-2 py-0.5 bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-400 text-xs font-semibold rounded-full">
+                      Active
+                    </span>
+                  )}
+                  {isFilterOpen ? (
+                    <ChevronUp className="w-4 h-4 ml-2" />
+                  ) : (
+                    <ChevronDown className="w-4 h-4 ml-2" />
+                  )}
+                </button>
 
-          {/* Category Filters */}
-          {renderCategoryDropdowns()}
+                {!isFilterOpen && hasActiveFilters && (
+                  <button
+                    onClick={handleClearFilters}
+                    className="px-4 py-2.5 bg-white dark:bg-gray-900 border border-gray-300 dark:border-gray-600 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors font-medium text-gray-700 dark:text-white"
+                  >
+                    Clear Filters
+                  </button>
+                )}
+              </div>
 
-          {/* Category Path */}
-          {renderCategoryPath()}
+              {/* Filter Results Summary */}
+              <div className="flex items-center space-x-4">
+                <span className="text-sm text-gray-600 dark:text-gray-400">
+                  Showing <span className="font-semibold text-gray-900 dark:text-white">{filteredProducts.length}</span> of{' '}
+                  <span className="font-semibold text-gray-900 dark:text-white">{products.length}</span> products
+                </span>
+              </div>
+            </div>
 
-          {/* Filter Results Summary */}
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-gray-600 dark:text-gray-400">
-              Showing <span className="font-semibold text-gray-900 dark:text-white">{filteredProducts.length}</span> of{' '}
-              <span className="font-semibold text-gray-900 dark:text-white">{products.length}</span> products
-            </span>
-            {(searchQuery || selectedCategoryIds.length > 0) && (
-              <button
-                onClick={() => {
-                  setSearchQuery('');
-                  setSelectedCategoryIds([]);
-                  setCategoryPath('');
-                }}
-                className="text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-300 font-medium"
-              >
-                Clear all filters
-              </button>
+            {/* Collapsible Filter Content */}
+            {isFilterOpen && (
+              <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+                {/* Search Bar */}
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-gray-400" />
+                  <input
+                    type="text"
+                    placeholder="Search products by name..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 py-3 border border-gray-300 dark:border-gray-600 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 dark:text-white placeholder-gray-400"
+                  />
+                </div>
+
+                {/* Category Filters */}
+                {renderCategoryDropdowns()}
+
+                {/* Category Path */}
+                {renderCategoryPath()}
+              </div>
             )}
           </div>
         </div>
