@@ -106,7 +106,7 @@ export default function EditProduct() {
     const fetchProduct = async () => {
       try {
         setIsFetchingProduct(true)
-        const response = await axios.get(`http://localhost:3000/api/product/${id}`, {
+        const response = await axios.get(`https://api.simplyrks.cloud/api/product/${id}`, {
           withCredentials: true
         })
         const product = response.data

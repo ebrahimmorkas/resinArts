@@ -96,7 +96,7 @@ export default function BulkEditProducts() {
         const productIds = ids.split(',')
         
         const promises = productIds.map(id => 
-          axios.get(`http://localhost:3000/api/product/${id}`, {
+          axios.get(`https://api.simplyrks.cloud/api/product/${id}`, {
             withCredentials: true
           })
         )

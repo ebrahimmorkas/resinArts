@@ -501,7 +501,7 @@ export default function Users() {
   useEffect(() => {
     const getCategories = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
+        const res = await axios.get("https://api.simplyrks.cloud/api/category/fetch-categories", {withCredentials: true});
         if (res.status === 200) {
           const flatCats = res.data.categories;
           const activeFlatCats = flatCats.filter(cat => cat.isActive === true);
@@ -701,7 +701,7 @@ export default function Users() {
   const confirmDelete = async () => {
     try {
       const userIds = selectedUser ? [selectedUser._id] : selectedUsers;
-      const res = await axios.post('http://localhost:3000/api/user/delete', 
+      const res = await axios.post('https://api.simplyrks.cloud/api/user/delete', 
         { userIds: userIds }, 
         { withCredentials: true }
       );
@@ -730,7 +730,7 @@ export default function Users() {
     e.preventDefault();
     try {
       const userIds = selectedUser ? [selectedUser._id] : selectedUsers;
-      const res = await axios.post('http://localhost:3000/api/user/send-email', 
+      const res = await axios.post('https://api.simplyrks.cloud/api/user/send-email', 
         { userIds: userIds, subject: emailForm.subject, body: emailForm.body },
         { withCredentials: true }
       );
@@ -756,7 +756,7 @@ export default function Users() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await axios.post('http://localhost:3000/api/user/import', formData, {
+      const res = await axios.post('https://api.simplyrks.cloud/api/user/import', formData, {
         withCredentials: true,
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -776,7 +776,7 @@ export default function Users() {
 
   const handleExport = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/user/export', {
+      const res = await axios.get('https://api.simplyrks.cloud/api/user/export', {
         withCredentials: true,
         responseType: 'blob'
       });
@@ -795,7 +795,7 @@ export default function Users() {
 
   const handleSampleDownload = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/user/sample', { responseType: 'blob' });
+      const res = await axios.get('https://api.simplyrks.cloud/api/user/sample', { responseType: 'blob' });
       const url = window.URL.createObjectURL(new Blob([res.data]));
       const link = document.createElement('a');
       link.href = url;
@@ -812,7 +812,7 @@ export default function Users() {
   const handleAddUser = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:3000/api/auth/register', userForm, { withCredentials: true });
+      const res = await axios.post('https://api.simplyrks.cloud/api/auth/register', userForm, { withCredentials: true });
       if (res.status === 200) {
         toast.success("User added successfully");
         await refetchUsers();
@@ -907,7 +907,7 @@ export default function Users() {
     }
     try {
       const userIds = selectedUser ? [selectedUser._id] : selectedUsers;
-      const res = await axios.post('http://localhost:3000/api/free-cash/bulk-add', 
+      const res = await axios.post('https://api.simplyrks.cloud/api/free-cash/bulk-add', 
         { cashForm: cleanedCashForm, userIds: userIds },
         { withCredentials: true }
       );
