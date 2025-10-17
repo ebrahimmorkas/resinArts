@@ -98,7 +98,7 @@ const setupAxiosInterceptors = (navigate) => {
       ) {
         console.log("JWT token expired or unauthorized - redirecting to login");
         alert("Your session has expired. Please log in again.");
-        navigate('/login');
+        navigate('/auth/login');
       }
       return Promise.reject(error);
     },
@@ -765,15 +765,15 @@ const filteredOrders = useMemo(() => {
   };
 
   if (loadingOrders) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">Loading your orders...</p>
-        </div>
+  return (
+    <div className="min-h-screen w-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+  <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-900 dark:text-gray-100 text-lg">Loading orders...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
