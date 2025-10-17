@@ -1965,10 +1965,10 @@ const DeleteConfirmationModal = () => {
                           {variant.moreDetails.map(details => (
                             <div key={details._id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
                               <p className="text-sm text-gray-600 dark:text-gray-400">Size: {details.size.length} X {details.size.breadth} X {details.size.height}</p>
-                              <p className="text-sm text-gray-600 dark:text-gray-400">Current price: {details.price}</p>
+                              <p className="text-sm text-gray-600 dark:text-white">Current price: {details.price}</p>
                               
                               <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Discounted Price</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-400">Discounted Price</label>
                                 <input 
                                   type="number"
                                   min="0"
@@ -1995,7 +1995,7 @@ const DeleteConfirmationModal = () => {
 
                               <div className="grid grid-cols-2 gap-3">
                                 <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">Start Date</label>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-400">Start Date</label>
                                   <input 
                                     type="datetime-local"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
@@ -2017,7 +2017,7 @@ const DeleteConfirmationModal = () => {
                                 </div>
 
                                 <div>
-                                  <label className="block text-xs font-medium text-gray-700 mb-1">End Date</label>
+                                  <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-400">End Date</label>
                                   <input 
                                     type="datetime-local"
                                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
@@ -2040,9 +2040,10 @@ const DeleteConfirmationModal = () => {
                               </div>
 
                               <div>
-                                <label className="block text-xs font-medium text-gray-700 mb-1">Return to Original Price?</label>
+                                <label className="block text-xs font-medium text-gray-700 mb-1 dark:text-gray-400">Return to Original Price?</label>
                                 <select 
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+
                                   value={localMultipleForRevisedRate[product._id]?.[variant._id]?.[details._id]?.comeBackToOriginalPrice || ''}
                                   onChange={(e) => setLocalMultipleForRevisedRate(prev => ({
                                     ...prev,
@@ -2069,7 +2070,7 @@ const DeleteConfirmationModal = () => {
                                   <h5 className="text-xs font-medium text-gray-700">Bulk Pricing</h5>
                                   <button 
                                     onClick={() => addDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id, variant._id, details._id)}
-                                    className="px-2 py-1 bg-blue-500 text-black rounded text-xs hover:bg-blue-600 transition-colors"
+                                    className="px-2 py-1 bg-blue-500 text-black rounded text-xs hover:bg-blue-600 transition-colors dark:text-gray-400"
                                   >
                                     Add Tier
                                   </button>
@@ -2113,13 +2114,13 @@ const DeleteConfirmationModal = () => {
                       <div className="flex items-center gap-4 mb-4">
                         <img src={getImageUrl(product)} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
                         <div>
-                          <h3 className="font-medium text-gray-900">{product.name}</h3>
-                          <p className="text-sm text-gray-500">Current Price: ${product.price}</p>
+                          <h3 className="font-medium text-gray-900 dark:text-white">{product.name}</h3>
+                          <p className="text-sm text-gray-500 dark:text-gray-400">Current Price: ${product.price}</p>
                         </div>
                       </div>
                       <div className="space-y-3">
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Discounted Price</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">Discounted Price</label>
                           <input 
                             type="number"
                             min="0"
@@ -2140,7 +2141,7 @@ const DeleteConfirmationModal = () => {
 
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">Start Date</label>
                             <input 
                               type="datetime-local"
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -2156,7 +2157,7 @@ const DeleteConfirmationModal = () => {
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">End Date</label>
                             <input 
                               type="datetime-local"
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -2173,9 +2174,9 @@ const DeleteConfirmationModal = () => {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-1">Return to Original Price?</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">Return to Original Price?</label>
                           <select 
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             value={localMultipleForRevisedRate[product._id]?.comeBackToOriginalPrice || ''}
                             onChange={(e) => setLocalMultipleForRevisedRate(prev => ({
                               ...prev,
@@ -2196,7 +2197,7 @@ const DeleteConfirmationModal = () => {
                             <h4 className="font-medium text-sm text-gray-700">Bulk Pricing</h4>
                             <button 
                               onClick={() => addDiscountBulkPricingSection(setLocalMultipleForRevisedRate, product._id)}
-                              className="px-3 py-1 bg-blue-500 text-black rounded text-sm hover:bg-blue-600 transition-colors"
+                              className="px-3 py-1 bg-blue-500 text-black rounded text-sm hover:bg-blue-600 transition-colors dark:text-gray-400"
                             >
                               Add Tier
                             </button>
@@ -2258,7 +2259,7 @@ const DeleteConfirmationModal = () => {
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] flex flex-col">
           <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
-            <h2 className="text-xl font-semibold text-gray-900">Revised Rate</h2>
+            <h2 className="text-xl font-semibold text-gray-900 dark:text-white">Revised Rate</h2>
             <button onClick={onClose} className="p-2 hover:bg-gray-100 rounded-full transition-colors">
               <X className="w-5 h-5" />
             </button>
@@ -2271,17 +2272,17 @@ const DeleteConfirmationModal = () => {
                     <div className="flex items-center gap-4">
                       <img src={getImageUrl(product)} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
                       <div>
-                        <h3 className="font-medium text-gray-900">{product.name}</h3>
-                        <p className="text-sm text-gray-500">Variant: {variant.colorName}</p>
+                        <h3 className="font-medium text-gray-900 dark:text-white">{product.name}</h3>
+                        <p className="text-sm text-gray-500 dark:text-gray-400">Variant: {variant.colorName}</p>
                       </div>
                     </div>
                     {variant.moreDetails.map((details) => (
                       <div key={details._id} className="bg-gray-50 dark:bg-gray-800 p-4 rounded-lg space-y-3">
                         <p className="text-sm text-gray-600 dark:text-gray-400">Size: {details.size.length} X {details.size.breadth} X {details.size.height}</p>
-                        <p className="text-sm text-gray-600 dark:text-gray-400">Current price: ${details.price}</p>
+                        <p className="text-sm text-gray-600 dark:text-white">Current price: ${details.price}</p>
                         
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Discounted Price</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Discounted Price</label>
                           <input 
                             type="number"
                             min="0"
@@ -2304,7 +2305,7 @@ const DeleteConfirmationModal = () => {
                         
                         <div className="grid grid-cols-2 gap-3">
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Start Date</label>
                             <input 
                               type="datetime-local"
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -2323,7 +2324,7 @@ const DeleteConfirmationModal = () => {
                           </div>
 
                           <div>
-                            <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">End Date</label>
                             <input 
                               type="datetime-local"
                               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -2343,9 +2344,9 @@ const DeleteConfirmationModal = () => {
                         </div>
 
                         <div>
-                          <label className="block text-sm font-medium text-gray-700 mb-2">Return to Original Price?</label>
+                          <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Return to Original Price?</label>
                           <select 
-                            className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                             value={stateVariableToReviseRateForSingleProductWithVariants[variant._id]?.[details._id]?.comeBackToOriginalPrice || ""}
                             onChange={(e) => setStateVariableToReviseRateForSingleProductWithVariants(prev => ({
                               ...prev,
@@ -2379,7 +2380,7 @@ const DeleteConfirmationModal = () => {
                                   ]
                                 }
                               }
-                            }))} className="px-3 py-1 bg-blue-500 text-black rounded text-sm hover:bg-blue-600 transition-colors">
+                            }))} className="px-3 py-1 bg-blue-500 text-black rounded text-sm hover:bg-blue-600 transition-colors dark:text-gray-400">
                               Add Tier
                             </button>
                           </div>
@@ -2452,13 +2453,13 @@ const DeleteConfirmationModal = () => {
                   <div className="flex items-center gap-4">
                     <img src={getImageUrl(product)} alt={product.name} className="w-16 h-16 rounded-lg object-cover" />
                     <div>
-                      <h3 className="font-medium text-gray-900">{product.name}</h3>
-                      <p className="text-sm text-gray-500">Current Price: ${product.price}</p>
+                      <h3 className="font-medium text-gray-900 dark:text-white">{product.name}</h3>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">Current Price: ${product.price}</p>
                     </div>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Discounted Price</label>
+                  <div> 
+                    <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Discounted Price</label>
                     <input 
                       type="number"
                       min="0"
@@ -2472,7 +2473,7 @@ const DeleteConfirmationModal = () => {
                   
                   <div className="grid grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">Start Date</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Start Date</label>
                       <input 
                         type="datetime-local"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -2482,7 +2483,7 @@ const DeleteConfirmationModal = () => {
                     </div>
                     
                     <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-2">End Date</label>
+                      <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">End Date</label>
                       <input 
                         type="datetime-local"
                         className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
@@ -2493,22 +2494,22 @@ const DeleteConfirmationModal = () => {
                   </div>
 
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">Return to Original Price?</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Return to Original Price?</label>
                     <select 
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                      value={comeBackToOriginalPrice}
-                      onChange={(e) => setComeBackToOriginalPrice(e.target.value)}
-                    >
-                      <option value="">Select option</option>
-                      <option value="yes">Yes</option>
-                      <option value="no">No</option>
-                    </select>
+  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+  value={comeBackToOriginalPrice}
+  onChange={(e) => setComeBackToOriginalPrice(e.target.value)}
+>
+  <option value="">Select option</option>
+  <option value="yes">Yes</option>
+  <option value="no">No</option>
+</select>
                   </div>
 
                   <div className="bg-gray-50 dark:bg-gray-800 p-3 rounded">
                     <div className="flex justify-between items-center mb-3">
                       <h4 className="font-medium text-sm">Bulk Pricing Tiers</h4>
-                      <button onClick={() => setSingleProductDiscountBulkPricing(prev => [...prev, { wholesalePrice: "", quantity: "" }])} className="px-3 py-1 bg-blue-500 text-black rounded text-sm hover:bg-blue-600 transition-colors">
+                      <button onClick={() => setSingleProductDiscountBulkPricing(prev => [...prev, { wholesalePrice: "", quantity: "" }])} className="px-3 py-1 bg-blue-500 text-black rounded text-sm hover:bg-blue-600 transition-colors dark:text-gray-400">
                         Add Tier
                       </button>
                     </div>
@@ -2721,11 +2722,11 @@ const DeleteConfirmationModal = () => {
                   {dateFilter === 'range' && (
                     <>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Start Date</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">Start Date</label>
                         <input type="date" value={customDateRange.start} onChange={(e) => setCustomDateRange(prev => ({...prev, start: e.target.value}))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
                       </div>
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">End Date</label>
+                        <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">End Date</label>
                         <input type="date" value={customDateRange.end} onChange={(e) => setCustomDateRange(prev => ({...prev, end: e.target.value}))} className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500" />
                       </div>
                     </>
