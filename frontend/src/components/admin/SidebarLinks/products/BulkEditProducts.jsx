@@ -96,7 +96,9 @@ export default function BulkEditProducts() {
         const productIds = ids.split(',')
         
         const promises = productIds.map(id => 
-          axios.get(`http://localhost:3000/api/product/${id}`)
+          axios.get(`http://localhost:3000/api/product/${id}`, {
+            withCredentials: true
+          })
         )
         
         const responses = await Promise.all(promises)
@@ -665,7 +667,8 @@ export default function BulkEditProducts() {
         `http://localhost:3000/api/product/bulk-edit`,
         formData,
         {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': 'multipart/form-data' },
+          withCredentials: true
         }
       )
 

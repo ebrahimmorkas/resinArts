@@ -106,7 +106,9 @@ export default function EditProduct() {
     const fetchProduct = async () => {
       try {
         setIsFetchingProduct(true)
-        const response = await axios.get(`http://localhost:3000/api/product/${id}`)
+        const response = await axios.get(`http://localhost:3000/api/product/${id}`, {
+          withCredentials: true
+        })
         const product = response.data
 
         setProductName(product.name || "")
@@ -519,7 +521,8 @@ commonStock: variant.commonStock?.toString() || "",
     const response = await axios.put(`http://localhost:3000/api/product/edit-product/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
-      }
+      },
+      withCredentials: true
     })
 
     toast.success("Product updated successfully!", {
