@@ -780,7 +780,6 @@ const handleLogout = async () => {
   }
 
   const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1) => {
-  const scrollY = window.scrollY;
   
   const product = products.find((p) => p._id === productId);
   if (!product) return;
@@ -810,25 +809,16 @@ const productData = {
 
   await addToCart(productId, colorName, sizeString, quantity, productData);
   
-  requestAnimationFrame(() => {
-    window.scrollTo(0, scrollY);
-  });
 };
 
   const handleUpdateQuantity = async (cartKey, change) => {
-  const scrollY = window.scrollY;
+  
   await updateQuantity(cartKey, change);
-  requestAnimationFrame(() => {
-    window.scrollTo(0, scrollY);
-  });
 };
 
   const handleRemoveFromCart = async (cartKey) => {
-  const scrollY = window.scrollY;
+  
   await removeFromCart(cartKey);
-  requestAnimationFrame(() => {
-    window.scrollTo(0, scrollY);
-  });
 };
 
 const handleCategoryClick = (category) => {
@@ -1648,7 +1638,7 @@ const CategoryNavigationBar = () => {
             <input
               type="number"
               min="1"
-              value={addQuantity}
+              // value={addQuantity}
               onChange={(e) => setAddQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
               className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
             />
@@ -2252,7 +2242,7 @@ const CategoryNavigationBar = () => {
           <input
             type="number"
             min="1"
-            value={localQuantityToAdd}
+            // value={localQuantityToAdd}
             onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
             className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
           />
@@ -2292,7 +2282,7 @@ const CategoryNavigationBar = () => {
                 <input
                   type="number"
                   min="1"
-                  value={localQuantityToAdd}
+                  // value={localQuantityToAdd}
                   onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
                   className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
                 />
@@ -3407,7 +3397,7 @@ if (justArrivedProductsList.length > 0) {
 
       <div className="w-full max-w-[100vw] overflow-x-hidden px-4 sm:px-6 lg:px-8 py-8">
         <section className="mb-12 overflow-hidden" ref={categoriesRef} id="categories-section">
-  <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">
+  <h2 className="text-2xl font-bold -800 mb-6 dark:text-black">
     Shop by Categories
   </h2>
   
@@ -3425,7 +3415,7 @@ if (justArrivedProductsList.length > 0) {
     {/* Categories Container */}
     <div
       ref={categoriesContainerRef}
-      className="flex gap-4 overflow-x-auto scroll-smooth custom-scrollbar pb-2 px-1"
+      className="flex gap-4 overflow-x-auto scroll-smooth custom-scrollbar pb-2 px-1 dark:text-black"
       style={{
         scrollBehavior: "smooth",
         WebkitOverflowScrolling: "touch",
@@ -3438,7 +3428,7 @@ if (justArrivedProductsList.length > 0) {
         <div
           key={category._id}
           onClick={() => handleCategoryClick(category)}
-          className="flex-shrink-0 text-center cursor-pointer group/item transition-all duration-200"
+          className="flex-shrink-0 text-center cursor-pointer group/item transition-all duration-200 dark:text-black"
         >
           <div
             className={`w-20 h-20 sm:w-24 sm:h-24 bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center mb-2 group-hover/item:shadow-xl transition-all duration-300 overflow-hidden relative ${
@@ -3532,7 +3522,7 @@ if (justArrivedProductsList.length > 0) {
 </section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-bold -800 dark:text-gray-100 mb-4 text-center">Filters</h2>
+          <h2 className="text-xl font-bold -800mb-4 text-center dark:text-black">Filters</h2>
           <div className="flex flex-wrap gap-3 justify-center">
             {filterOptions.map((filter) => (
               <button
@@ -3635,7 +3625,7 @@ if (justArrivedProductsList.length > 0) {
 
         {justArrivedProductsList.length > 0 && (
           <section className="mb-12" ref={justArrivedRef}>
-            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Just Arrived</h2>
+            <h2 className="text-2xl font-bold -80 mb-6 dark:text-black">Just Arrived</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {justArrivedProductsList
                 .slice(0, 10)
@@ -3670,7 +3660,7 @@ if (justArrivedProductsList.length > 0) {
 
         {outOfStockProductsList.length > 0 && (
           <section className="mb-12" ref={outOfStockRef}>
-            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Out of Stock</h2>
+            <h2 className="text-2xl font-bold -800 dark:text-black mb-6">Out of Stock</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {outOfStockProductsList.map((product) => (
                 <ProductCard key={`out-of-stock-${product._id}`} product={product} forcedBadge={{ text: "Out of Stock", color: "bg-red-500" }} />
@@ -3680,7 +3670,7 @@ if (justArrivedProductsList.length > 0) {
         )}
 
         <section>
-  <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">All Products</h2>
+  <h2 className="text-2xl font-bold -800 dark:text-black mb-6">All Products</h2>
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
     {sortProductsByPrice(filteredProductsList).map((product) => (
       <ProductCard key={product._id} product={product} />
