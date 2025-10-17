@@ -149,6 +149,8 @@ const handleCartCheckout = async () => {
   const [recentSearches, setRecentSearches] = useState([])
   const [isProcessing, setIsProcessing] = useState(false);
   const [showClearCartModal, setShowClearCartModal] = useState(false);
+  const [categoriesScrollPosition, setCategoriesScrollPosition] = useState(0);
+const categoriesContainerRef = useRef(null);
   
   // Scroll to top functionality
 useEffect(() => {
@@ -881,6 +883,20 @@ const handleFilterChange = (filter) => {
       outOfStockRef.current?.scrollIntoView({ behavior: "smooth" });
     }
   }, 100);
+};
+
+const scrollCategories = (direction) => {
+  const container = categoriesContainerRef.current;
+  if (!container) return;
+
+  const scrollAmount = 200; // Adjust this value to control scroll distance
+  const newPosition =
+    direction === "left"
+      ? Math.max(0, categoriesScrollPosition - scrollAmount)
+      : categoriesScrollPosition + scrollAmount;
+
+  container.scrollLeft = newPosition;
+  setCategoriesScrollPosition(newPosition);
 };
 
   const toggleWishlist = (productId) => {
@@ -3389,48 +3405,131 @@ if (justArrivedProductsList.length > 0) {
 
       <BannerCarousel />
 
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-        <section className="mb-12" ref={categoriesRef} id="categories-section">
-  <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Shop by Categories</h2>
-  <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
-            {mainCategories.slice(0, 10).map((category) => (
-              <div
-                key={category._id}
-                onClick={() => handleCategoryClick(category)}
-                className={`text-center cursor-pointer group transition-all duration-200 ${
-                  selectedCategory === category.categoryName ? "transform scale-105" : ""
-                }`}
-              >
-                <div
-                  className={`w-16 h-16 sm:w-20 sm:h-20 bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center mb-2 mx-auto group-hover:shadow-xl transition-all duration-300 overflow-hidden relative ${
-                    selectedCategory === category.categoryName ? "ring-4 ring-blue-500 shadow-xl" : ""
-                  }`}
-                >
-                  <img
-  src={getOptimizedImageUrl(category.image, { width: 100 }) || "/placeholder.svg"}
-  alt={`${category.categoryName} category`}
-  className="w-full h-full object-cover rounded-full"
-  loading="lazy"
-/>
-                  {selectedCategory === category.categoryName && (
-                    <div className="absolute inset-0 bg-blue-500/20 rounded-full flex items-center justify-center">
-                      <Check className="w-6 h-6 text-blue-600 bg-white dark:bg-gray-900 rounded-full p-1" />
-                    </div>
-                  )}
-                </div>
-                <p
-                  className={`text-xs sm:text-sm font-medium transition-colors duration-200 text-center leading-tight px-1 ${
-                    selectedCategory === category.categoryName
-                      ? "text-blue-600 font-bold"
-                      : "text-gray-700 group-hover:text-blue-600"
-                  }`}
-                >
-                  {category.categoryName}
-                </p>
+      <div className="w-full max-w-[100vw] overflow-x-hidden px-4 sm:px-6 lg:px-8 py-8">
+        <section className="mb-12 overflow-hidden" ref={categoriesRef} id="categories-section">
+  <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">
+    Shop by Categories
+  </h2>
+  
+  <div className="relative group">
+    {/* Left Arrow Button - Hidden on Mobile */}
+    <button
+      onClick={() => scrollCategories("left")}
+      className="hidden md:block absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full shadow-lg transition-all duration-200 opacity-0 group-hover:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
+      disabled={categoriesScrollPosition === 0}
+      aria-label="Scroll categories left"
+    >
+      <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+    </button>
+
+    {/* Categories Container */}
+    <div
+      ref={categoriesContainerRef}
+      className="flex gap-4 overflow-x-auto scroll-smooth custom-scrollbar pb-2 px-1"
+      style={{
+        scrollBehavior: "smooth",
+        WebkitOverflowScrolling: "touch",
+      }}
+      onScroll={(e) => {
+        setCategoriesScrollPosition(e.target.scrollLeft);
+      }}
+    >
+      {mainCategories.map((category) => (
+        <div
+          key={category._id}
+          onClick={() => handleCategoryClick(category)}
+          className="flex-shrink-0 text-center cursor-pointer group/item transition-all duration-200"
+        >
+          <div
+            className={`w-20 h-20 sm:w-24 sm:h-24 bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center mb-2 group-hover/item:shadow-xl transition-all duration-300 overflow-hidden relative ${
+              selectedCategory === category.categoryName
+                ? "ring-4 ring-blue-500 shadow-xl scale-110"
+                : ""
+            }`}
+          >
+            <img
+              src={
+                getOptimizedImageUrl(category.image, { width: 100 }) ||
+                "/placeholder.svg"
+              }
+              alt={`${category.categoryName} category`}
+              className="w-full h-full object-cover rounded-full"
+              loading="lazy"
+            />
+            {selectedCategory === category.categoryName && (
+              <div className="absolute inset-0 bg-blue-500/20 rounded-full flex items-center justify-center">
+                <Check className="w-6 h-6 text-blue-600 bg-white dark:bg-gray-900 rounded-full p-1" />
               </div>
-            ))}
+            )}
           </div>
-        </section>
+          <p
+            className={`text-xs sm:text-sm font-medium transition-colors duration-200 text-center leading-tight px-2 max-w-[100px] line-clamp-2 ${
+              selectedCategory === category.categoryName
+                ? "text-blue-600 font-bold"
+                : "text-gray-700 group-hover/item:text-blue-600 dark:text-gray-300"
+            }`}
+          >
+            {category.categoryName}
+          </p>
+        </div>
+      ))}
+    </div>
+
+    {/* Right Arrow Button - Hidden on Mobile */}
+    <button
+      onClick={() => scrollCategories("right")}
+      className="hidden md:block absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full shadow-lg transition-all duration-200 opacity-0 group-hover:opacity-100"
+      aria-label="Scroll categories right"
+    >
+      <ChevronRight className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+    </button>
+  </div>
+
+  {/* Professional Custom Scrollbar Styles */}
+  <style>{`
+    .custom-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 8px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+      margin: 0 10px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: linear-gradient(to right, #3b82f6, #8b5cf6);
+      border-radius: 10px;
+      transition: background 0.3s ease;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(to right, #2563eb, #7c3aed);
+    }
+    
+    /* Dark mode scrollbar */
+    .dark .custom-scrollbar {
+      scrollbar-color: #4b5563 #1f2937;
+    }
+    
+    .dark .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1f2937;
+    }
+    
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: linear-gradient(to right, #60a5fa, #a78bfa);
+    }
+    
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(to right, #3b82f6, #8b5cf6);
+    }
+  `}</style>
+</section>
 
         <section className="mb-8">
           <h2 className="text-xl font-bold -800 dark:text-gray-100 mb-4 text-center">Filters</h2>
