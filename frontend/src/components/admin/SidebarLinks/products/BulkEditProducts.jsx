@@ -696,7 +696,7 @@ export default function BulkEditProducts() {
   const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl focus:ring-purple-500`
   const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 dark:border-gray-700 focus:ring-gray-500`
   const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white focus:ring-red-500`
-  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900`
+  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600`;
 
   if (isFetchingProducts) {
     return (
@@ -765,7 +765,7 @@ export default function BulkEditProducts() {
                   
                   {/* Product Info */}
                   <div className="text-left flex-1 min-w-0">
-                    <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
+                    <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate dark:text-white">
                       {product.productName || 'Unnamed Product'}
                     </h3>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-2 text-xs md:text-sm text-gray-600 dark:text-gray-400">
@@ -783,7 +783,7 @@ export default function BulkEditProducts() {
 
                 {/* Expand/Collapse Icon */}
                 <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 ml-4">
-                  <span className="hidden md:block text-sm text-gray-500">
+                  <span className="hidden md:block text-sm text-gray-500 dark:text-gray-400">
                     {expandedProducts[product._id] ? 'Click to collapse' : 'Click to expand'}
                   </span>
                   {expandedProducts[product._id] ? (
@@ -800,7 +800,7 @@ export default function BulkEditProducts() {
                   <div className="space-y-8">
                     {/* Basic Information Section */}
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2 dark:text-white">
                         <Package className="w-6 h-6 text-purple-600" />
                         Basic Information
                       </h3>
@@ -845,7 +845,7 @@ export default function BulkEditProducts() {
                         {/* Product Details */}
                         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                           <div className="flex justify-between items-center">
-                            <h4 className="text-lg font-semibold text-gray-900">Product Specifications</h4>
+                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Product Specifications</h4>
                             <button
                               type="button"
                               className={secondaryButtonClass}
@@ -884,7 +884,7 @@ export default function BulkEditProducts() {
                                 </div>
                                 <button
                                   type="button"
-                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                   onClick={() => removeKeyValuePairForProduct(product._id, 'productDetails', index)}
                                 >
                                   <X className="w-4 h-4" />
@@ -988,7 +988,7 @@ export default function BulkEditProducts() {
                             {/* Additional Images */}
                             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                               <div className="flex justify-between items-center">
-                                <h4 className="text-lg font-semibold text-gray-900">Additional Images</h4>
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Additional Images</h4>
                                 <button
                                   type="button"
                                   className={secondaryButtonClass}
@@ -1047,7 +1047,7 @@ export default function BulkEditProducts() {
                             {/* Bulk Pricing */}
                             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                               <div className="flex justify-between items-center">
-                                <h4 className="text-lg font-semibold text-gray-900">Bulk Pricing Options</h4>
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Bulk Pricing Options</h4>
                                 <button
                                   type="button"
                                   className={secondaryButtonClass}
@@ -1091,7 +1091,7 @@ export default function BulkEditProducts() {
                                     </div>
                                     <button
                                       type="button"
-                                      className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                      className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                       onClick={() => removeBulkPricingFieldForProduct(product._id, 'bulkPricing', index)}
                                     >
                                       <X className="w-4 h-4" />
@@ -1120,7 +1120,7 @@ export default function BulkEditProducts() {
                     {/* Product Variants Section */}
                     {product.hasVariants && (
                       <div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2 dark:text-white">
                           <Layers className="w-6 h-6 text-purple-600" />
                           Product Variants
                         </h3>
@@ -1142,7 +1142,7 @@ export default function BulkEditProducts() {
                                 </h4>
                                 <button
                                   type="button"
-                                  className={dangerButtonClass}
+                                  className={`${dangerButtonClass} dark:text-white`}
                                   onClick={() => removeVariantForProduct(product._id, variantIndex)}
                                 >
                                   <X className="w-4 h-4" />
@@ -1214,7 +1214,7 @@ export default function BulkEditProducts() {
                               {/* Variant Optional Details */}
                               <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-100 space-y-6">
                                 <div className="flex justify-between items-center">
-                                  <h5 className="text-lg font-semibold text-gray-900">Variant Specifications</h5>
+                                  <h5 className="text-lg font-semibold text-gray-900 dark:text-white">Variant Specifications</h5>
                                   <button
                                     type="button"
                                     className={secondaryButtonClass}
@@ -1261,7 +1261,7 @@ export default function BulkEditProducts() {
                                       </div>
                                       <button
                                         type="button"
-                                        className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                        className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                         onClick={() => {
                                           const newVariants = [...product.variants]
                                           newVariants[variantIndex].optionalDetails = newVariants[variantIndex].optionalDetails.filter((_, i) => i !== index)
@@ -1294,7 +1294,7 @@ export default function BulkEditProducts() {
                                       <h5 className="text-lg font-semibold -800 dark:text-gray-100">Size Configuration {mdIndex + 1}</h5>
                                       <button 
                                         type="button" 
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-white" 
                                         onClick={() => removeSizeSectionForProduct(product._id, variantIndex, mdIndex)}
                                       >
                                         <X className="w-4 h-4" />
@@ -1552,7 +1552,7 @@ export default function BulkEditProducts() {
                                                 </div>
                                                 <button 
                                                   type="button" 
-                                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" 
+                                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white" 
                                                   onClick={() => {
                                                     const newVariants = [...product.variants]
                                                     newVariants[variantIndex].moreDetails[mdIndex].optionalDetails = 
@@ -1655,7 +1655,7 @@ export default function BulkEditProducts() {
                                               </div>
                                               <button 
                                                 type="button" 
-                                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" 
+                                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white" 
                                                 onClick={() => {
                                                   const newVariants = [...product.variants]
                                                   newVariants[variantIndex].moreDetails[mdIndex].bulkPricingCombinations = 
@@ -1782,7 +1782,7 @@ export default function BulkEditProducts() {
                                         </div>
                                         <button 
                                           type="button" 
-                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" 
+                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white" 
                                           onClick={() => {
                                             const newVariants = [...product.variants]
                                             newVariants[variantIndex].commonBulkPricingCombinations = 
@@ -1825,14 +1825,14 @@ export default function BulkEditProducts() {
             <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-purple-50 to-pink-50 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
-                  <p className="font-medium">Ready to update {productsData.length} products?</p>
-                  <p className="text-xs mt-1">All changes will be saved simultaneously</p>
+                  <p className="font-medium dark:text-black">Ready to update {productsData.length} products?</p>
+                  <p className="text-xs mt-1 dark:text-black">All changes will be saved simultaneously</p>
                 </div>
                 <div className="flex gap-4 w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={() => navigate('/admin/panel/products')}
-                    className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors"
+                    className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors dark:text-white"
                   >
                     Cancel
                   </button>
