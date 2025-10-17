@@ -37,50 +37,25 @@ const statusConfig = {
     color: "bg-blue-100 text-blue-800 border-blue-200",
     icon: CheckCircle2,
   },
-  confirmed: {
+  confirm: {
     label: "Confirmed",
     color: "bg-indigo-100 text-indigo-800 border-indigo-200",
     icon: CheckCircle,
-  },
-  processing: {
-    label: "Processing",
-    color: "bg-purple-100 text-purple-800 border-purple-200",
-    icon: Package,
-  },
-  shipped: {
-    label: "Shipped",
-    color: "bg-cyan-100 text-cyan-800 border-cyan-200",
-    icon: Truck,
   },
   dispatched: {
     label: "Dispatched",
     color: "bg-cyan-100 text-cyan-800 border-cyan-200",
     icon: Truck,
   },
-  delivered: {
-    label: "Delivered",
+  completed: {
+    label: "Completed",
     color: "bg-green-100 text-green-800 border-green-200",
     icon: CheckCircle,
-  },
-  cancelled: {
-    label: "Cancelled",
-    color: "bg-red-100 text-red-800 border-red-200",
-    icon: XCircle,
   },
   rejected: {
     label: "Rejected",
     color: "bg-red-100 text-red-800 border-red-200",
     icon: AlertCircle,
-  },
-  returned: {
-    label: "Returned",
-    color: "bg-orange-100 text-orange-800 border-orange-200",
-    icon: RotateCcw,
-  },
-  completed: {
-    label: "Completed",
-    color: "bg-emerald-100 text-emerald-800 border-emerald-200",
-    icon: CheckCircle,
   },
 }
 
@@ -107,7 +82,7 @@ const paymentStatusConfig = {
   },
 }
 
-const ongoingStatuses = ["pending", "accepted", "confirmed", "processing", "shipped", "dispatched", "delivered"]
+const ongoingStatuses = ["pending", "accepted", "confirm", "dispatched", "completed"]
 
 // Axios interceptor to handle JWT expiration
 const setupAxiosInterceptors = (navigate) => {
@@ -123,7 +98,7 @@ const setupAxiosInterceptors = (navigate) => {
       ) {
         console.log("JWT token expired or unauthorized - redirecting to login");
         alert("Your session has expired. Please log in again.");
-        navigate('/login');
+        navigate('/auth/login');
       }
       return Promise.reject(error);
     },
@@ -221,6 +196,15 @@ const isYearInRange = (dateString, startYear, endYear) => {
   }
 };
 
+const getValidPaymentStatuses = (orderStatus) => {
+  // Payment can be 'paid' only for confirm, dispatched, completed
+  if (["confirm", "dispatched", "completed"].includes(orderStatus)) {
+    return ["paid", "pending"];
+  }
+  // For all other statuses, payment status should be pending only
+  return ["pending"];
+};
+
 // Safe number conversion
 const safeNumber = (value, fallback = 0) => {
   const num = parseFloat(value);
@@ -281,6 +265,7 @@ export default function Orders() {
   const [customYear, setCustomYear] = useState("");
   const [customStartYear, setCustomStartYear] = useState("");
   const [customEndYear, setCustomEndYear] = useState("");
+  // const [isAutoSwitching, setIsAutoSwitching] = useState(false);
   const { userId } = useParams();
   const navigate = useNavigate();
   const { companySettings, loadingSettings } = useContext(CompanySettingsContext);
@@ -289,6 +274,22 @@ export default function Orders() {
   useEffect(() => {
     setupAxiosInterceptors(navigate);
   }, [navigate]);
+
+// Auto-switch payment filter when status filter changes
+useEffect(() => {
+  const statusToPaymentMap = {
+    "all": "all",
+    "pending": "all",
+    "accepted": "all",
+    "rejected": "all",
+    "confirm": "paid",
+    "dispatched": "paid",
+    "completed": "paid",
+  };
+
+  const newPaymentFilter = statusToPaymentMap[statusFilter] || "all";
+  setPaymentFilter(newPaymentFilter);
+}, [statusFilter]);
 
   // Fetch orders directly from DB
   useEffect(() => {
@@ -363,43 +364,51 @@ export default function Orders() {
   };
 
   // Filter and search functionality using useMemo
-  const filteredOrders = useMemo(() => {
-    return orders.map(transformOrder).filter((order) => {
-      // Search filter
-      const matchesSearch = !searchQuery || 
-        order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        order.items.some((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
+const filteredOrders = useMemo(() => {
+  return orders.map(transformOrder).filter((order) => {
+    // Search filter
+    const matchesSearch = !searchQuery || 
+      order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      order.items.some((item) => item.name.toLowerCase().includes(searchQuery.toLowerCase()));
 
-      // Status filter
-      let matchesStatus = true;
-      if (statusFilter === "ongoing") {
-        matchesStatus = ongoingStatuses.includes(order.status);
-      } else if (statusFilter !== "all") {
-        matchesStatus = order.status === statusFilter;
+    // Status filter
+    let matchesStatus = true;
+    if (statusFilter === "ongoing") {
+      matchesStatus = ongoingStatuses.includes(order.status);
+    } else if (statusFilter !== "all") {
+      matchesStatus = order.status === statusFilter;
+    }
+
+    // Payment filter - considering status-based rules
+    let matchesPayment = true;
+    if (paymentFilter !== "all") {
+      const validPaymentStatuses = getValidPaymentStatuses(order.status);
+      if (paymentFilter === "paid") {
+        matchesPayment = order.paymentStatus === "paid" && validPaymentStatuses.includes("paid");
+      } else if (paymentFilter === "pending") {
+        matchesPayment = order.paymentStatus === "pending" || !validPaymentStatuses.includes("paid");
       }
+    }
 
-      // Payment filter
-      const matchesPayment = paymentFilter === "all" || order.paymentStatus === paymentFilter;
+    // Date filter
+    let matchesDate = true;
+    if (dateFilter === "today") {
+      matchesDate = isToday(order.orderedAt);
+    } else if (dateFilter === "yesterday") {
+      matchesDate = isYesterday(order.orderedAt);
+    } else if (dateFilter === "custom" && customDate) {
+      matchesDate = isSameDate(order.orderedAt, customDate);
+    } else if (dateFilter === "range" && customStartDate && customEndDate) {
+      matchesDate = isDateInRange(order.orderedAt, customStartDate, customEndDate);
+    } else if (dateFilter === "year" && customYear) {
+      matchesDate = isSameYear(order.orderedAt, customYear);
+    } else if (dateFilter === "yearRange" && customStartYear && customEndYear) {
+      matchesDate = isYearInRange(order.orderedAt, customStartYear, customEndYear);
+    }
 
-      // Date filter
-      let matchesDate = true;
-      if (dateFilter === "today") {
-        matchesDate = isToday(order.orderedAt);
-      } else if (dateFilter === "yesterday") {
-        matchesDate = isYesterday(order.orderedAt);
-      } else if (dateFilter === "custom" && customDate) {
-        matchesDate = isSameDate(order.orderedAt, customDate);
-      } else if (dateFilter === "range" && customStartDate && customEndDate) {
-        matchesDate = isDateInRange(order.orderedAt, customStartDate, customEndDate);
-      } else if (dateFilter === "year" && customYear) {
-        matchesDate = isSameYear(order.orderedAt, customYear);
-      } else if (dateFilter === "yearRange" && customStartYear && customEndYear) {
-        matchesDate = isYearInRange(order.orderedAt, customStartYear, customEndYear);
-      }
-
-      return matchesSearch && matchesStatus && matchesPayment && matchesDate;
-    });
-  }, [orders, searchQuery, statusFilter, paymentFilter, dateFilter, customDate, customStartDate, customEndDate, customYear, customStartYear, customEndYear, userAddress]);
+    return matchesSearch && matchesStatus && matchesPayment && matchesDate;
+  });
+}, [orders, searchQuery, statusFilter, paymentFilter, dateFilter, customDate, customStartDate, customEndDate, customYear, customStartYear, customEndYear, userAddress]);
 
   // Pagination logic
   const totalPages = Math.ceil(filteredOrders.length / ordersPerPage);
@@ -756,15 +765,15 @@ export default function Orders() {
   };
 
   if (loadingOrders) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-800 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">Loading your orders...</p>
-        </div>
+  return (
+    <div className="min-h-screen w-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
+  <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-gray-900 dark:text-gray-100 text-lg">Loading orders...</p>
       </div>
-    );
-  }
+    </div>
+  );
+}
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
@@ -811,35 +820,27 @@ export default function Orders() {
                 {/* Actions */}
                 <div className="flex items-center space-x-2">
                   <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="ongoing">Ongoing Orders</option>
-                    <option value="all">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="accepted">Accepted</option>
-                    <option value="confirmed">Confirmed</option>
-                    <option value="processing">Processing</option>
-                    <option value="shipped">Shipped</option>
-                    <option value="dispatched">Dispatched</option>
-                    <option value="delivered">Delivered</option>
-                    <option value="cancelled">Cancelled</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="returned">Returned</option>
-                    <option value="completed">Completed</option>
-                  </select>
+  value={statusFilter}
+  onChange={(e) => setStatusFilter(e.target.value)}
+  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+>
+  <option value="all">All Statuses</option>
+  <option value="pending">Pending</option>
+  <option value="accepted">Accepted</option>
+  <option value="confirm">Confirmed</option>
+  <option value="dispatched">Dispatched</option>
+  <option value="completed">Completed</option>
+  <option value="rejected">Rejected</option>
+</select>
                   <select
-                    value={paymentFilter}
-                    onChange={(e) => setPaymentFilter(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
-                  >
-                    <option value="all">All Payments</option>
-                    <option value="paid">Paid</option>
-                    <option value="pending">Payment Pending</option>
-                    <option value="refunded">Refunded</option>
-                    <option value="refund_pending">Refund Pending</option>
-                  </select>
+  value={paymentFilter}
+  onChange={(e) => setPaymentFilter(e.target.value)}
+  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md text-sm font-medium text-gray-700 dark:text-gray-200 bg-white dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-700 focus:outline-none focus:ring-1 focus:ring-blue-500"
+>
+  <option value="all">All Payments</option>
+  <option value="paid">Paid</option>
+  <option value="pending">Payment Pending</option>
+</select>
                   <select
                     value={dateFilter}
                     onChange={(e) => setDateFilter(e.target.value)}
@@ -985,7 +986,7 @@ export default function Orders() {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                   {currentData.map((order, index) => (
-                    <tr key={order.id} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                    <tr key={order.id} onClick={() => handleView(order)} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors hover:cursor-pointer">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '80px' }}>
                         {startIndex + index + 1}
                       </td>

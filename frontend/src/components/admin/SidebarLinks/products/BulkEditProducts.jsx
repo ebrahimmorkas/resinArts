@@ -96,7 +96,9 @@ export default function BulkEditProducts() {
         const productIds = ids.split(',')
         
         const promises = productIds.map(id => 
-          axios.get(`https://api.simplyrks.cloud/api/product/${id}`)
+          axios.get(`http://localhost:3000/api/product/${id}`, {
+            withCredentials: true
+          })
         )
         
         const responses = await Promise.all(promises)
@@ -665,7 +667,8 @@ export default function BulkEditProducts() {
         `https://api.simplyrks.cloud/api/product/bulk-edit`,
         formData,
         {
-          headers: { 'Content-Type': 'multipart/form-data' }
+          headers: { 'Content-Type': 'multipart/form-data' },
+          withCredentials: true
         }
       )
 
@@ -693,7 +696,7 @@ export default function BulkEditProducts() {
   const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800 text-white shadow-lg hover:shadow-xl focus:ring-purple-500`
   const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 dark:border-gray-700 focus:ring-gray-500`
   const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white focus:ring-red-500`
-  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900`
+  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600`;
 
   if (isFetchingProducts) {
     return (
@@ -762,7 +765,7 @@ export default function BulkEditProducts() {
                   
                   {/* Product Info */}
                   <div className="text-left flex-1 min-w-0">
-                    <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate">
+                    <h3 className="text-lg md:text-xl font-bold text-gray-900 truncate dark:text-white">
                       {product.productName || 'Unnamed Product'}
                     </h3>
                     <div className="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4 mt-2 text-xs md:text-sm text-gray-600 dark:text-gray-400">
@@ -780,7 +783,7 @@ export default function BulkEditProducts() {
 
                 {/* Expand/Collapse Icon */}
                 <div className="flex items-center gap-2 md:gap-4 flex-shrink-0 ml-4">
-                  <span className="hidden md:block text-sm text-gray-500">
+                  <span className="hidden md:block text-sm text-gray-500 dark:text-gray-400">
                     {expandedProducts[product._id] ? 'Click to collapse' : 'Click to expand'}
                   </span>
                   {expandedProducts[product._id] ? (
@@ -797,7 +800,7 @@ export default function BulkEditProducts() {
                   <div className="space-y-8">
                     {/* Basic Information Section */}
                     <div>
-                      <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                      <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2 dark:text-white">
                         <Package className="w-6 h-6 text-purple-600" />
                         Basic Information
                       </h3>
@@ -805,7 +808,7 @@ export default function BulkEditProducts() {
                       <div className="space-y-6">
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <label className={labelClass}>
+                            <label className={`${inputClass} dark:text-white`}>
                               Product Name *
                             </label>
                             <input
@@ -813,7 +816,7 @@ export default function BulkEditProducts() {
                               value={product.productName}
                               onChange={(e) => updateProductField(product._id, 'productName', e.target.value)}
                               placeholder="Enter your product name"
-                              className={inputClass}
+                              className={`${inputClass} dark:text-gray-400`}
                             />
                           </div>
                           <div className="space-y-6">
@@ -842,7 +845,7 @@ export default function BulkEditProducts() {
                         {/* Product Details */}
                         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                           <div className="flex justify-between items-center">
-                            <h4 className="text-lg font-semibold text-gray-900">Product Specifications</h4>
+                            <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Product Specifications</h4>
                             <button
                               type="button"
                               className={secondaryButtonClass}
@@ -855,7 +858,7 @@ export default function BulkEditProducts() {
                           {product.productDetails.map((detail, index) => (
                             <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                               <div className="space-y-2">
-                                <label className={labelClass}>Specification</label>
+                                <label className={`${inputClass} dark:text-white`}>Specification</label>
                                 <input
                                   type="text"
                                   value={detail.key}
@@ -863,12 +866,12 @@ export default function BulkEditProducts() {
                                     updateKeyValuePairForProduct(product._id, 'productDetails', index, "key", e.target.value)
                                   }
                                   placeholder="e.g., Material, Weight, Color"
-                                  className={inputClass}
+                                  className={`${inputClass} dark:text-gray-400`}
                                 />
                               </div>
                               <div className="space-y-2 flex gap-4 items-end">
                                 <div className="flex-1">
-                                  <label className={labelClass}>Value</label>
+                                  <label className={`${inputClass} dark:text-white`}>Value</label>
                                   <input
                                     type="text"
                                     value={detail.value}
@@ -876,12 +879,12 @@ export default function BulkEditProducts() {
                                       updateKeyValuePairForProduct(product._id, 'productDetails', index, "value", e.target.value)
                                     }
                                     placeholder="e.g., Cotton, 500g, Blue"
-                                    className={inputClass}
+                                    className={`${inputClass} dark:text-gray-400`}
                                   />
                                 </div>
                                 <button
                                   type="button"
-                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                   onClick={() => removeKeyValuePairForProduct(product._id, 'productDetails', index)}
                                 >
                                   <X className="w-4 h-4" />
@@ -909,7 +912,7 @@ export default function BulkEditProducts() {
                           <>
                             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                               <div className="space-y-2">
-                                <label className={labelClass}>
+                                <label className={`${inputClass} dark:text-white`}>
                                   <Package className="inline w-4 h-4 mr-2" />
                                   Stock Quantity
                                 </label>
@@ -918,11 +921,11 @@ export default function BulkEditProducts() {
                                   value={product.stock}
                                   onChange={(e) => updateProductField(product._id, 'stock', e.target.value)}
                                   placeholder="Available quantity"
-                                  className={inputClass}
+                                  className={`${inputClass} dark:text-gray-400`}
                                 />
                               </div>
                               <div className="space-y-2">
-                                <label className={labelClass}>
+                                <label className={`${inputClass} dark:text-white`}>
                                   <DollarSign className="inline w-4 h-4 mr-2" />
                                   Price ($)
                                 </label>
@@ -931,14 +934,14 @@ export default function BulkEditProducts() {
                                   value={product.price}
                                   onChange={(e) => updateProductField(product._id, 'price', e.target.value)}
                                   placeholder="Product price"
-                                  className={inputClass}
+                                  className={`${inputClass} dark:text-gray-400`}
                                 />
                               </div>
                             </div>
 
                             {/* Main Image Upload */}
                             <div className="space-y-4">
-                              <label className={labelClass}>
+                              <label className={`${inputClass} dark:text-white`}>
                                 <ImageIcon className="inline w-4 h-4 mr-2" />
                                 Product Main Image
                               </label>
@@ -985,7 +988,7 @@ export default function BulkEditProducts() {
                             {/* Additional Images */}
                             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                               <div className="flex justify-between items-center">
-                                <h4 className="text-lg font-semibold text-gray-900">Additional Images</h4>
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Additional Images</h4>
                                 <button
                                   type="button"
                                   className={secondaryButtonClass}
@@ -1044,7 +1047,7 @@ export default function BulkEditProducts() {
                             {/* Bulk Pricing */}
                             <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                               <div className="flex justify-between items-center">
-                                <h4 className="text-lg font-semibold text-gray-900">Bulk Pricing Options</h4>
+                                <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Bulk Pricing Options</h4>
                                 <button
                                   type="button"
                                   className={secondaryButtonClass}
@@ -1057,7 +1060,7 @@ export default function BulkEditProducts() {
                               {product.bulkPricing.map((bp, index) => (
                                 <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                                   <div className="space-y-2">
-                                    <label className={labelClass}>Wholesale Price ($)</label>
+                                    <label className={`${inputClass} dark:text-white`}>Wholesale Price ($)</label>
                                     <input
                                       type="number"
                                       value={bp.wholesalePrice}
@@ -1065,7 +1068,7 @@ export default function BulkEditProducts() {
                                         updateBulkPricingFieldForProduct(product._id, 'bulkPricing', index, "wholesalePrice", e.target.value)
                                       }
                                       placeholder="Bulk price"
-                                      className={inputClass}
+                                      className={`${inputClass} dark:text-gray-400`}
                                     />
                                     {product.price &&
                                       bp.wholesalePrice &&
@@ -1075,7 +1078,7 @@ export default function BulkEditProducts() {
                                   </div>
                                   <div className="space-y-2 flex gap-4 items-end">
                                     <div className="flex-1">
-                                      <label className={labelClass}>Minimum Quantity</label>
+                                      <label className={`${inputClass} dark:text-white`}>Minimum Quantity</label>
                                       <input
                                         type="number"
                                         value={bp.quantity}
@@ -1083,12 +1086,12 @@ export default function BulkEditProducts() {
                                           updateBulkPricingFieldForProduct(product._id, 'bulkPricing', index, "quantity", e.target.value)
                                         }
                                         placeholder="Min qty"
-                                        className={inputClass}
+                                        className={`${inputClass} dark:text-gray-400`}
                                       />
                                     </div>
                                     <button
                                       type="button"
-                                      className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                      className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                       onClick={() => removeBulkPricingFieldForProduct(product._id, 'bulkPricing', index)}
                                     >
                                       <X className="w-4 h-4" />
@@ -1117,7 +1120,7 @@ export default function BulkEditProducts() {
                     {/* Product Variants Section */}
                     {product.hasVariants && (
                       <div>
-                        <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2">
+                        <h3 className="text-xl font-semibold text-gray-900 mb-6 flex items-center gap-2 dark:text-white">
                           <Layers className="w-6 h-6 text-purple-600" />
                           Product Variants
                         </h3>
@@ -1139,7 +1142,7 @@ export default function BulkEditProducts() {
                                 </h4>
                                 <button
                                   type="button"
-                                  className={dangerButtonClass}
+                                  className={`${dangerButtonClass} dark:text-white`}
                                   onClick={() => removeVariantForProduct(product._id, variantIndex)}
                                 >
                                   <X className="w-4 h-4" />
@@ -1149,17 +1152,17 @@ export default function BulkEditProducts() {
 
                               <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Color/Variant Name</label>
+                                  <label className={`${inputClass} dark:text-white`}>Color/Variant Name</label>
                                   <input
                                     type="text"
                                     value={variant.colorName}
                                     onChange={(e) => updateVariantFieldForProduct(product._id, variantIndex, "colorName", e.target.value)}
                                     placeholder="e.g., Red, Blue, Large"
-                                    className={inputClass}
+                                    className={`${inputClass} dark:text-gray-400`}
                                   />
                                 </div>
                                 <div className="space-y-4">
-                                  <label className={labelClass}>Variant Image</label>
+                                  <label className={`${inputClass} dark:text-white`}>Variant Image</label>
                                   <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:border-purple-400 transition-colors">
                                     <input
                                       id={`variant-image-${product._id}-${variantIndex}`}
@@ -1211,7 +1214,7 @@ export default function BulkEditProducts() {
                               {/* Variant Optional Details */}
                               <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-100 space-y-6">
                                 <div className="flex justify-between items-center">
-                                  <h5 className="text-lg font-semibold text-gray-900">Variant Specifications</h5>
+                                  <h5 className="text-lg font-semibold text-gray-900 dark:text-white">Variant Specifications</h5>
                                   <button
                                     type="button"
                                     className={secondaryButtonClass}
@@ -1228,7 +1231,7 @@ export default function BulkEditProducts() {
                                 {variant.optionalDetails.map((detail, index) => (
                                   <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                     <div className="space-y-2">
-                                      <label className={labelClass}>Specification</label>
+                                      <label className={`${inputClass} dark:text-white`}>Specification</label>
                                       <input
                                         type="text"
                                         value={detail.key}
@@ -1238,12 +1241,12 @@ export default function BulkEditProducts() {
                                           updateProductField(product._id, 'variants', newVariants)
                                         }}
                                         placeholder="e.g., Material"
-                                        className={inputClass}
+                                        className={`${inputClass} dark:text-gray-400`}
                                       />
                                     </div>
                                     <div className="space-y-2 flex gap-4 items-end">
                                       <div className="flex-1">
-                                        <label className={labelClass}>Value</label>
+                                        <label className={`${inputClass} dark:text-white`}>Value</label>
                                         <input
                                           type="text"
                                           value={detail.value}
@@ -1253,12 +1256,12 @@ export default function BulkEditProducts() {
                                             updateProductField(product._id, 'variants', newVariants)
                                           }}
                                           placeholder="e.g., Cotton"
-                                          className={inputClass}
+                                          className={`${inputClass} dark:text-gray-400`}
                                         />
                                       </div>
                                       <button
                                         type="button"
-                                        className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                        className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                         onClick={() => {
                                           const newVariants = [...product.variants]
                                           newVariants[variantIndex].optionalDetails = newVariants[variantIndex].optionalDetails.filter((_, i) => i !== index)
@@ -1291,7 +1294,7 @@ export default function BulkEditProducts() {
                                       <h5 className="text-lg font-semibold -800 dark:text-gray-100">Size Configuration {mdIndex + 1}</h5>
                                       <button 
                                         type="button" 
-                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" 
+                                        className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-white" 
                                         onClick={() => removeSizeSectionForProduct(product._id, variantIndex, mdIndex)}
                                       >
                                         <X className="w-4 h-4" />
@@ -1302,37 +1305,37 @@ export default function BulkEditProducts() {
                                       <h6 className="font-semibold -800 dark:text-gray-100">Dimensions</h6>
                                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                         <div className="space-y-2">
-                                          <label className={labelClass}>Length</label>
+                                          <label className={`${inputClass} dark:text-white`}>Length</label>
                                           <input 
                                             type="number" 
                                             value={md.size.length} 
                                             onChange={(e) => updateSingleSizeFieldForProduct(product._id, variantIndex, mdIndex, "length", e.target.value)} 
                                             placeholder="0" 
-                                            className={inputClass} 
+                                            className={`${inputClass} dark:text-gray-400`} 
                                           />
                                         </div>
                                         <div className="space-y-2">
-                                          <label className={labelClass}>Width</label>
+                                          <label className={`${inputClass} dark:text-white`}>Width</label>
                                           <input 
                                             type="number" 
                                             value={md.size.breadth} 
                                             onChange={(e) => updateSingleSizeFieldForProduct(product._id, variantIndex, mdIndex, "breadth", e.target.value)} 
                                             placeholder="0" 
-                                            className={inputClass} 
+                                            className={`${inputClass} dark:text-gray-400`} 
                                           />
                                         </div>
                                         <div className="space-y-2">
-                                          <label className={labelClass}>Height</label>
+                                          <label className={`${inputClass} dark:text-white`}>Height</label>
                                           <input 
                                             type="number" 
                                             value={md.size.height} 
                                             onChange={(e) => updateSingleSizeFieldForProduct(product._id, variantIndex, mdIndex, "height", e.target.value)} 
                                             placeholder="0" 
-                                            className={inputClass} 
+                                            className={`${inputClass} dark:text-gray-400`} 
                                           />
                                         </div>
                                         <div className="space-y-2">
-                                          <label className={labelClass}>Unit</label>
+                                          <label className={`${inputClass} dark:text-white`}>Unit</label>
                                           <select 
                                             value={md.size.unit} 
                                             onChange={(e) => updateSingleSizeFieldForProduct(product._id, variantIndex, mdIndex, "unit", e.target.value)} 
@@ -1365,7 +1368,7 @@ export default function BulkEditProducts() {
                                       </div>
                                       {getReuseOptionsForProduct(product._id, variantIndex, mdIndex, "images").length > 0 && (
                                         <div className="space-y-2">
-                                          <label className={labelClass}>Do you want to reuse additional images?</label>
+                                          <label className={`${inputClass} dark:text-white`}>Do you want to reuse additional images?</label>
                                           <select 
                                             value={md.reuseAdditionalImages} 
                                             onChange={(e) => {
@@ -1384,7 +1387,7 @@ export default function BulkEditProducts() {
                                       )}
                                       {md.reuseAdditionalImages === "yes" && getReuseOptionsForProduct(product._id, variantIndex, mdIndex, "images").length > 0 && (
                                         <div className="space-y-2">
-                                          <label className={labelClass}>Select source</label>
+                                          <label className={`${inputClass} dark:text-white`}>Select source</label>
                                           <select 
                                             value={md.reusedImageSource} 
                                             onChange={(e) => handleReuseSelectionForProduct(product._id, variantIndex, mdIndex, "images", e.target.value)} 
@@ -1482,7 +1485,7 @@ export default function BulkEditProducts() {
                                       </div>
                                       {getReuseOptionsForProduct(product._id, variantIndex, mdIndex, "optionalDetails").length > 0 && (
                                         <div className="space-y-2">
-                                          <label className={labelClass}>Do you want to reuse optional details?</label>
+                                          <label className={`${inputClass} dark:text-white`}>Do you want to reuse optional details?</label>
                                           <select 
                                             value={md.reuseOptionalDetails} 
                                             onChange={(e) => {
@@ -1501,7 +1504,7 @@ export default function BulkEditProducts() {
                                       )}
                                       {md.reuseOptionalDetails === "yes" && getReuseOptionsForProduct(product._id, variantIndex, mdIndex, "optionalDetails").length > 0 && (
                                         <div className="space-y-2">
-                                          <label className={labelClass}>Select source</label>
+                                          <label className={`${inputClass} dark:text-white`}>Select source</label>
                                           <select 
                                             value={md.reusedOptionalDetailSource} 
                                             onChange={(e) => handleReuseSelectionForProduct(product._id, variantIndex, mdIndex, "optionalDetails", e.target.value)} 
@@ -1519,7 +1522,7 @@ export default function BulkEditProducts() {
                                           {md.optionalDetails.map((detail, detailIndex) => (
                                             <div key={detailIndex} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                               <div className="space-y-2">
-                                                <label className={labelClass}>Key</label>
+                                                <label className={`${inputClass} dark:text-white`}>Key</label>
                                                 <input 
                                                   type="text" 
                                                   value={detail.key} 
@@ -1529,12 +1532,12 @@ export default function BulkEditProducts() {
                                                     updateProductField(product._id, 'variants', newVariants)
                                                   }} 
                                                   placeholder="e.g., Feature" 
-                                                  className={inputClass} 
+                                                  className={`${inputClass} dark:text-gray-400`} 
                                                 />
                                               </div>
                                               <div className="space-y-2 flex gap-4 items-end">
                                                 <div className="flex-1">
-                                                  <label className={labelClass}>Value</label>
+                                                  <label className={`${inputClass} dark:text-white`}>Value</label>
                                                   <input 
                                                     type="text" 
                                                     value={detail.value} 
@@ -1544,12 +1547,12 @@ export default function BulkEditProducts() {
                                                       updateProductField(product._id, 'variants', newVariants)
                                                     }} 
                                                     placeholder="e.g., Waterproof" 
-                                                    className={inputClass} 
+                                                    className={`${inputClass} dark:text-gray-400`} 
                                                   />
                                                 </div>
                                                 <button 
                                                   type="button" 
-                                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" 
+                                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white" 
                                                   onClick={() => {
                                                     const newVariants = [...product.variants]
                                                     newVariants[variantIndex].moreDetails[mdIndex].optionalDetails = 
@@ -1569,7 +1572,7 @@ export default function BulkEditProducts() {
                                     {/* Price and Stock for this size if applicable */}
                                     {variant.moreDetails.length > 1 && variant.isPriceSame === "no" && (
                                       <div className="space-y-2">
-                                        <label className={labelClass}>
+                                        <label className={`${inputClass} dark:text-white`}>
                                           Price ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})
                                         </label>
                                         <input 
@@ -1577,13 +1580,13 @@ export default function BulkEditProducts() {
                                           value={md.price} 
                                           onChange={(e) => updateSizeSectionFieldForProduct(product._id, variantIndex, mdIndex, "price", e.target.value)} 
                                           placeholder="Enter price" 
-                                          className={inputClass} 
+                                          className={`${inputClass} dark:text-gray-400`} 
                                         />
                                       </div>
                                     )}
                                     {variant.moreDetails.length > 1 && variant.isStockSame === "no" && (
                                       <div className="space-y-2">
-                                        <label className={labelClass}>
+                                        <label className={`${inputClass} dark:text-white`}>
                                           Stock ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})
                                         </label>
                                         <input 
@@ -1591,7 +1594,7 @@ export default function BulkEditProducts() {
                                           value={md.stock} 
                                           onChange={(e) => updateSizeSectionFieldForProduct(product._id, variantIndex, mdIndex, "stock", e.target.value)} 
                                           placeholder="Enter stock" 
-                                          className={inputClass} 
+                                          className={`${inputClass} dark:text-gray-400`} 
                                         />
                                       </div>
                                     )}
@@ -1619,7 +1622,7 @@ export default function BulkEditProducts() {
                                         {md.bulkPricingCombinations.map((bpc, bpcIndex) => (
                                           <div key={bpcIndex} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                                             <div className="space-y-2">
-                                              <label className={labelClass}>Wholesale Price ($)</label>
+                                              <label className={`${inputClass} dark:text-white`}>Wholesale Price ($)</label>
                                               <input 
                                                 type="number" 
                                                 value={bpc.wholesalePrice} 
@@ -1629,7 +1632,7 @@ export default function BulkEditProducts() {
                                                   updateProductField(product._id, 'variants', newVariants)
                                                 }} 
                                                 placeholder="Enter wholesale price" 
-                                                className={inputClass} 
+                                                className={`${inputClass} dark:text-gray-400`} 
                                               />
                                               {md.price && bpc.wholesalePrice && Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(md.price) && (
                                                 <p className="text-red-500 text-sm">Wholesale price must be less than this price.</p>
@@ -1637,7 +1640,7 @@ export default function BulkEditProducts() {
                                             </div>
                                             <div className="space-y-2 flex gap-4 items-end">
                                               <div className="flex-1">
-                                                <label className={labelClass}>Quantity</label>
+                                                <label className={`${inputClass} dark:text-white`}>Quantity</label>
                                                 <input 
                                                   type="number" 
                                                   value={bpc.quantity} 
@@ -1647,12 +1650,12 @@ export default function BulkEditProducts() {
                                                     updateProductField(product._id, 'variants', newVariants)
                                                   }} 
                                                   placeholder="Enter quantity" 
-                                                  className={inputClass} 
+                                                  className={`${inputClass} dark:text-gray-400`} 
                                                 />
                                               </div>
                                               <button 
                                                 type="button" 
-                                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" 
+                                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white" 
                                                 onClick={() => {
                                                   const newVariants = [...product.variants]
                                                   newVariants[variantIndex].moreDetails[mdIndex].bulkPricingCombinations = 
@@ -1675,7 +1678,7 @@ export default function BulkEditProducts() {
                               {variant.moreDetails.length > 1 && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                   <div className="space-y-2">
-                                    <label className={labelClass}>Same price for all sizes?</label>
+                                    <label className={`${inputClass} dark:text-white`}>Same price for all sizes?</label>
                                     <select 
                                       value={variant.isPriceSame} 
                                       onChange={(e) => updateVariantFieldForProduct(product._id, variantIndex, "isPriceSame", e.target.value)} 
@@ -1686,7 +1689,7 @@ export default function BulkEditProducts() {
                                     </select>
                                   </div>
                                   <div className="space-y-2">
-                                    <label className={labelClass}>Same stock for all sizes?</label>
+                                    <label className={`${inputClass} dark:text-white`}>Same stock for all sizes?</label>
                                     <select 
                                       value={variant.isStockSame} 
                                       onChange={(e) => updateVariantFieldForProduct(product._id, variantIndex, "isStockSame", e.target.value)} 
@@ -1703,23 +1706,23 @@ export default function BulkEditProducts() {
                               {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
                                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                                   <div className="space-y-2">
-                                    <label className={labelClass}>Price ($)</label>
+                                    <label className={`${inputClass} dark:text-white`}>Price ($)</label>
                                     <input 
                                       type="number" 
                                       value={variant.commonPrice} 
                                       onChange={(e) => updateVariantFieldForProduct(product._id, variantIndex, "commonPrice", e.target.value)} 
                                       placeholder="Variant price" 
-                                      className={inputClass} 
+                                      className={`${inputClass} dark:text-gray-400`} 
                                     />
                                   </div>
                                   <div className="space-y-2">
-                                    <label className={labelClass}>Stock</label>
+                                    <label className={`${inputClass} dark:text-white`}>Stock</label>
                                     <input 
                                       type="number" 
                                       value={variant.commonStock} 
                                       onChange={(e) => updateVariantFieldForProduct(product._id, variantIndex, "commonStock", e.target.value)} 
                                       placeholder="Stock quantity" 
-                                      className={inputClass} 
+                                      className={`${inputClass} dark:text-gray-400`} 
                                     />
                                   </div>
                                 </div>
@@ -1746,7 +1749,7 @@ export default function BulkEditProducts() {
                                   {variant.commonBulkPricingCombinations.map((bpc, index) => (
                                     <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                                       <div className="space-y-2">
-                                        <label className={labelClass}>Wholesale Price ($)</label>
+                                        <label className={`${inputClass} dark:text-white`}>Wholesale Price ($)</label>
                                         <input 
                                           type="number" 
                                           value={bpc.wholesalePrice} 
@@ -1756,7 +1759,7 @@ export default function BulkEditProducts() {
                                             updateProductField(product._id, 'variants', newVariants)
                                           }} 
                                           placeholder="Enter wholesale price" 
-                                          className={inputClass} 
+                                          className={`${inputClass} dark:text-gray-400`} 
                                         />
                                         {variant.commonPrice && bpc.wholesalePrice && Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(variant.commonPrice) && (
                                           <p className="text-red-500 text-sm">Wholesale price must be less than common price.</p>
@@ -1764,7 +1767,7 @@ export default function BulkEditProducts() {
                                       </div>
                                       <div className="space-y-2 flex gap-4 items-end">
                                         <div className="flex-1">
-                                          <label className={labelClass}>Quantity</label>
+                                          <label className={`${inputClass} dark:text-white`}>Quantity</label>
                                           <input 
                                             type="number" 
                                             value={bpc.quantity} 
@@ -1774,12 +1777,12 @@ export default function BulkEditProducts() {
                                               updateProductField(product._id, 'variants', newVariants)
                                             }} 
                                             placeholder="Enter quantity" 
-                                            className={inputClass} 
+                                            className={`${inputClass} dark:text-gray-400`} 
                                           />
                                         </div>
                                         <button 
                                           type="button" 
-                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" 
+                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white" 
                                           onClick={() => {
                                             const newVariants = [...product.variants]
                                             newVariants[variantIndex].commonBulkPricingCombinations = 
@@ -1822,14 +1825,14 @@ export default function BulkEditProducts() {
             <div className="px-6 md:px-8 py-6 bg-gradient-to-r from-purple-50 to-pink-50 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row justify-between items-center gap-4">
                 <div className="text-sm text-gray-600 dark:text-gray-400 text-center sm:text-left">
-                  <p className="font-medium">Ready to update {productsData.length} products?</p>
-                  <p className="text-xs mt-1">All changes will be saved simultaneously</p>
+                  <p className="font-medium dark:text-black">Ready to update {productsData.length} products?</p>
+                  <p className="text-xs mt-1 dark:text-black">All changes will be saved simultaneously</p>
                 </div>
                 <div className="flex gap-4 w-full sm:w-auto">
                   <button
                     type="button"
                     onClick={() => navigate('/admin/panel/products')}
-                    className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors"
+                    className="flex-1 sm:flex-none px-6 py-3 rounded-xl font-semibold border border-gray-300 text-gray-700 hover:bg-gray-50 dark:bg-gray-800 transition-colors dark:text-white"
                   >
                     Cancel
                   </button>

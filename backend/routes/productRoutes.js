@@ -1,6 +1,6 @@
 const express = require("express")
 const router = express.Router()
-const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, deleteProduct, editProduct, getProductById, bulkEditProducts, duplicateProducts, toggleProductStatus, bulkToggleProductStatus, toggleVariantSizeStatus } = require("../controllers/productController")
+const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, bulkOverrideProducts, deleteProduct, editProduct, getProductById, bulkEditProducts, duplicateProducts, toggleProductStatus, bulkToggleProductStatus, toggleVariantSizeStatus } = require("../controllers/productController")
 const authenticate = require("../middlewares/authenticate")
 const authorize = require("../middlewares/authorize")
 const productController = require("../controllers/productController")
@@ -18,6 +18,10 @@ router.post("/bulk-upload", authenticate, authorize(['admin']), upload.fields([
   { name: 'excelFile', maxCount: 1 },
   { name: 'imagesZip', maxCount: 1 }
 ]), bulkUploadProducts);
+router.post("/bulk-override", authenticate, authorize(['admin']), upload.fields([
+  { name: 'excelFile', maxCount: 1 },
+  { name: 'imagesZip', maxCount: 1 }
+]), bulkOverrideProducts);
 router.delete("/delete-product/:id", authenticate, authorize(['admin']), deleteProduct)
 router.put('/edit-product/:id', authenticate, authorize(['admin']), upload.any(), editProduct);
 router.get('/:id', authenticate, authorize(['admin']), getProductById);

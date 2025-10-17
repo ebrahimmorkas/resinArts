@@ -106,7 +106,9 @@ export default function EditProduct() {
     const fetchProduct = async () => {
       try {
         setIsFetchingProduct(true)
-        const response = await axios.get(`https://api.simplyrks.cloud/api/product/${id}`)
+        const response = await axios.get(`http://localhost:3000/api/product/${id}`, {
+          withCredentials: true
+        })
         const product = response.data
 
         setProductName(product.name || "")
@@ -519,7 +521,8 @@ commonStock: variant.commonStock?.toString() || "",
     const response = await axios.put(`https://api.simplyrks.cloud/api/product/edit-product/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
-      }
+      },
+      withCredentials: true
     })
 
     toast.success("Product updated successfully!", {
@@ -553,7 +556,7 @@ commonStock: variant.commonStock?.toString() || "",
   const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl focus:ring-blue-500`
   const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 dark:border-gray-700 focus:ring-gray-500`
   const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white focus:ring-red-500`
-  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900`
+  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600`;
 
   const handleCategorySelect = (level, categoryId) => {
     let newSelectedCategoryIds = [...selectedCategoryIds.slice(0, level), categoryId].filter(Boolean)
@@ -571,7 +574,7 @@ commonStock: variant.commonStock?.toString() || "",
     const mainCategoryOptions = allCategoriesTree.filter((cat) => !cat.parentCategoryId && !cat.parent_category_id)
     dropdowns.push(
       <div key={`category-dropdown-0`} className="space-y-2">
-        <label htmlFor={`category-level-0`} className={labelClass}>
+        <label htmlFor={`category-level-0`} className={`${inputClass} dark:text-white`}>
           <Tag className="inline w-4 h-4 mr-2" />
           Main Category
         </label>
@@ -598,7 +601,7 @@ commonStock: variant.commonStock?.toString() || "",
     if (selectedCategoryIds.length > 0 && subCategoryOptions.length > 0) {
       dropdowns.push(
         <div key={`category-dropdown-sub`} className="space-y-2">
-          <label htmlFor={`category-level-sub`} className={labelClass}>
+          <label htmlFor={`category-level-sub`} className={`${inputClass} dark:text-white`}>
             <Layers className="inline w-4 h-4 mr-2" />
             Sub Category
           </label>
@@ -666,13 +669,13 @@ commonStock: variant.commonStock?.toString() || "",
                 <Package className="w-8 h-8 text-blue-600" />
                 Basic Information
               </h2>
-              <p className={subtitleClass}>Essential details about your product</p>
+              <p className={`${subtitleClass} dark:text-black`}>Essential details about your product</p>
             </div>
             <div className={sectionClass}>
               <div className="space-y-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label htmlFor="productName" className={labelClass}>
+                    <label htmlFor="productName" className={`${labelClass} dark:text-white`}>
                       Product Name *
                     </label>
                     <input
@@ -681,7 +684,7 @@ commonStock: variant.commonStock?.toString() || "",
                       value={productName}
                       onChange={(e) => setProductName(e.target.value)}
                       placeholder="Enter your product name"
-                      className={inputClass}
+                      className={`${inputClass} dark:text-gray-400`}
                     />
                   </div>
                   <div className="space-y-6">
@@ -692,14 +695,14 @@ commonStock: variant.commonStock?.toString() || "",
                 {categoryPath && (
                   <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl p-4">
                     <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-2 text-blue-800 font-medium">
+                      <div className="flex items-center gap-2 text-blue-800 font-medium dark:text-black">
                         <Check className="w-5 h-5" />
                         Category Path: {categoryPath}
                       </div>
                       <button
                         type="button"
                         onClick={() => setIsCategoryEditable(!isCategoryEditable)}
-                        className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-100 rounded-lg transition-colors"
+                        className="flex items-center gap-1 px-3 py-1 text-sm text-blue-600 hover:bg-blue-100 rounded-lg transition-colors dark:text-gray-100"
                       >
                         <Edit className="w-4 h-4" />
                         {isCategoryEditable ? 'Done' : 'Edit Category'}
@@ -711,7 +714,7 @@ commonStock: variant.commonStock?.toString() || "",
                 {/* Product Details */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-semibold text-gray-900">Product Specifications</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Product Specifications</h3>
                     <button
                       type="button"
                       className={secondaryButtonClass}
@@ -724,7 +727,7 @@ commonStock: variant.commonStock?.toString() || "",
                   {productDetails.map((detail, index) => (
                     <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className={labelClass}>Specification</label>
+                        <label className={`${labelClass} dark:text-white`}>Specification</label>
                         <input
                           type="text"
                           value={detail.key}
@@ -732,12 +735,12 @@ commonStock: variant.commonStock?.toString() || "",
                             updateKeyValuePair(setProductDetails, productDetails, index, "key", e.target.value)
                           }
                           placeholder="e.g., Material, Weight, Color"
-                          className={inputClass}
+                          className={`${inputClass} dark:text-gray-400`}
                         />
                       </div>
                       <div className="space-y-2 flex gap-4 items-end">
                         <div className="flex-1">
-                          <label className={labelClass}>Value</label>
+                          <label className={`${labelClass} dark:text-white`}>Value</label>
                           <input
                             type="text"
                             value={detail.value}
@@ -745,12 +748,12 @@ commonStock: variant.commonStock?.toString() || "",
                               updateKeyValuePair(setProductDetails, productDetails, index, "value", e.target.value)
                             }
                             placeholder="e.g., Cotton, 500g, Blue"
-                            className={inputClass}
+                            className={`${inputClass} dark:text-gray-400`}
                           />
                         </div>
                         <button
                           type="button"
-                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                           onClick={() => removeKeyValuePair(setProductDetails, productDetails, index)}
                         >
                           <X className="w-4 h-4" />
@@ -778,7 +781,7 @@ commonStock: variant.commonStock?.toString() || "",
                   <>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                       <div className="space-y-2">
-                        <label htmlFor="stock" className={labelClass}>
+                        <label htmlFor="stock" className={`${labelClass} dark:text-white`}>
                           <Package className="inline w-4 h-4 mr-2" />
                           Stock Quantity
                         </label>
@@ -788,11 +791,11 @@ commonStock: variant.commonStock?.toString() || "",
                           value={stock}
                           onChange={(e) => setStock(e.target.value)}
                           placeholder="Available quantity"
-                          className={inputClass}
+                          className={`${inputClass} dark:text-gray-400`}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="price" className={labelClass}>
+                        <label htmlFor="price" className={`${labelClass} dark:text-white`}>
                           <DollarSign className="inline w-4 h-4 mr-2" />
                           Price ($)
                         </label>
@@ -802,14 +805,14 @@ commonStock: variant.commonStock?.toString() || "",
                           value={price}
                           onChange={(e) => setPrice(e.target.value)}
                           placeholder="Product price"
-                          className={inputClass}
+                          className={`${inputClass} dark:text-gray-400`}
                         />
                       </div>
                     </div>
 
                     {/* Main Image Upload */}
                     <div className="space-y-4">
-                      <label htmlFor="mainImage" className={labelClass}>
+                      <label htmlFor="mainImage" className={`${labelClass} dark:text-white`}>
                         <ImageIcon className="inline w-4 h-4 mr-2" />
                         Product Main Image
                       </label>
@@ -847,7 +850,7 @@ commonStock: variant.commonStock?.toString() || "",
                     {/* Additional Images */}
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-semibold text-gray-900">Additional Images</h3>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Additional Images</h3>
                         <button
                           type="button"
                           className={secondaryButtonClass}
@@ -908,7 +911,7 @@ commonStock: variant.commonStock?.toString() || "",
                     {/* Bulk Pricing */}
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-semibold text-gray-900">Bulk Pricing Options</h3>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Bulk Pricing Options</h3>
                         <button
                           type="button"
                           className={secondaryButtonClass}
@@ -921,7 +924,7 @@ commonStock: variant.commonStock?.toString() || "",
                       {bulkPricing.map((bp, index) => (
                         <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                           <div className="space-y-2">
-                            <label className={labelClass}>Wholesale Price ($)</label>
+                            <label className={`${inputClass} dark:text-white`}>Wholesale Price ($)</label>
                             <input
                               type="number"
                               value={bp.wholesalePrice}
@@ -929,7 +932,7 @@ commonStock: variant.commonStock?.toString() || "",
                                 updateBulkPricingField(setBulkPricing, bulkPricing, index, "wholesalePrice", e.target.value)
                               }
                               placeholder="Bulk price"
-                              className={inputClass}
+                              className={`${inputClass} dark:text-gray-400`}
                             />
                             {price &&
                               bp.wholesalePrice &&
@@ -939,7 +942,7 @@ commonStock: variant.commonStock?.toString() || "",
                           </div>
                           <div className="space-y-2 flex gap-4 items-end">
                             <div className="flex-1">
-                              <label className={labelClass}>Minimum Quantity</label>
+                              <label className={`${inputClass} dark:text-white`}>Minimum Quantity</label>
                               <input
                                 type="number"
                                 value={bp.quantity}
@@ -947,12 +950,12 @@ commonStock: variant.commonStock?.toString() || "",
                                   updateBulkPricingField(setBulkPricing, bulkPricing, index, "quantity", e.target.value)
                                 }
                                 placeholder="Min qty"
-                                className={inputClass}
+                                className={`${inputClass} dark:text-gray-400`}
                               />
                             </div>
                             <button
                               type="button"
-                              className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                              className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                               onClick={() => removeBulkPricingField(setBulkPricing, bulkPricing, index)}
                             >
                               <X className="w-4 h-4" />
@@ -1007,7 +1010,7 @@ commonStock: variant.commonStock?.toString() || "",
                         </h3>
                         <button
                           type="button"
-                          className={dangerButtonClass}
+                          className={`${dangerButtonClass} dark:text-white`}
                           onClick={() => removeVariant(variantIndex)}
                         >
                           <X className="w-4 h-4" />
@@ -1017,17 +1020,17 @@ commonStock: variant.commonStock?.toString() || "",
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                          <label className={labelClass}>Color/Variant Name</label>
+                          <label className={`${inputClass} dark:text-white`}>Color/Variant Name</label>
                           <input
                             type="text"
                             value={variant.colorName}
                             onChange={(e) => updateVariantField(variantIndex, "colorName", e.target.value)}
                             placeholder="e.g., Red, Blue, Large"
-                            className={inputClass}
+                            className={`${inputClass} dark:text-gray-400`}
                           />
                         </div>
                         <div className="space-y-4">
-                          <label className={labelClass}>Variant Image</label>
+                          <label className={`${inputClass} dark:text-white`}>Variant Image</label>
                           <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
                             <input
                               id={`variant-image-${variantIndex}`}
@@ -1095,7 +1098,7 @@ commonStock: variant.commonStock?.toString() || "",
                         {variant.optionalDetails.map((detail, index) => (
                           <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <label className={labelClass}>Specification</label>
+                              <label className={`${inputClass} dark:text-white`}>Specification</label>
                               <input
                                 type="text"
                                 value={detail.key}
@@ -1105,12 +1108,12 @@ commonStock: variant.commonStock?.toString() || "",
                                   updateVariantField(variantIndex, "optionalDetails", newDetails)
                                 }}
                                 placeholder="e.g., Material"
-                                className={inputClass}
+                                className={`${inputClass} dark:text-gray-400`}
                               />
                             </div>
                             <div className="space-y-2 flex gap-4 items-end">
                               <div className="flex-1">
-                                <label className={labelClass}>Value</label>
+                                <label className={`${inputClass} dark:text-white`}>Value</label>
                                 <input
                                   type="text"
                                   value={detail.value}
@@ -1120,12 +1123,12 @@ commonStock: variant.commonStock?.toString() || "",
                                     updateVariantField(variantIndex, "optionalDetails", newDetails)
                                   }}
                                   placeholder="e.g., Cotton"
-                                  className={inputClass}
+                                  className={`${inputClass} dark:text-gray-400`}
                                 />
                               </div>
                               <button
                                 type="button"
-                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                 onClick={() => {
                                   const newDetails = variant.optionalDetails.filter((_, i) => i !== index)
                                   updateVariantField(variantIndex, "optionalDetails", newDetails)
@@ -1151,7 +1154,7 @@ commonStock: variant.commonStock?.toString() || "",
                           <div key={mdIndex} className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 p-6 space-y-6">
                             <div className="flex justify-between items-center">
                               <h4 className="text-lg font-semibold -800 dark:text-gray-100">Size Configuration {mdIndex + 1}</h4>
-                              <button type="button" className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" onClick={() => removeSizeSection(variantIndex, mdIndex)}>
+                              <button type="button" className="dark:text-white p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors" onClick={() => removeSizeSection(variantIndex, mdIndex)}>
                                 <X className="w-4 h-4" />
                               </button>
                             </div>
@@ -1160,19 +1163,19 @@ commonStock: variant.commonStock?.toString() || "",
                               <h5 className="font-semibold -800 dark:text-gray-100">Dimensions</h5>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Length</label>
-                                  <input type="number" value={md.size.length} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "length", e.target.value)} placeholder="0" className={inputClass} />
+                                  <label className={`${inputClass} dark:text-white`}>Length</label>
+                                  <input type="number" value={md.size.length} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "length", e.target.value)} placeholder="0" className={`${inputClass} dark:text-gray-400`} />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Width</label>
-                                  <input type="number" value={md.size.breadth} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "breadth", e.target.value)} placeholder="0" className={inputClass} />
+                                  <label className={`${inputClass} dark:text-white`}>Width</label>
+                                  <input type="number" value={md.size.breadth} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "breadth", e.target.value)} placeholder="0" className={`${inputClass} dark:text-gray-400`} />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Height</label>
-                                  <input type="number" value={md.size.height} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "height", e.target.value)} placeholder="0" className={inputClass} />
+                                  <label className={`${inputClass} dark:text-white`}>Height</label>
+                                  <input type="number" value={md.size.height} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "height", e.target.value)} placeholder="0" className={`${inputClass} dark:text-gray-400`} />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Unit</label>
+                                  <label className={`${inputClass} dark:text-white`}>Unit</label>
                                   <select value={md.size.unit} onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "unit", e.target.value)} className={selectClass}>
                                     <option value="cm">cm</option>
                                     <option value="m">m</option>
@@ -1200,7 +1203,7 @@ commonStock: variant.commonStock?.toString() || "",
                               </div>
                               {getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Do you want to reuse additional images?</label>
+                                  <label className={`${inputClass} dark:text-white`}>Do you want to reuse additional images?</label>
                                   <select value={md.reuseAdditionalImages} onChange={(e) => {
                                     updateSizeSectionField(variantIndex, mdIndex, "reuseAdditionalImages", e.target.value)
                                     if (e.target.value === "no") {
@@ -1215,7 +1218,7 @@ commonStock: variant.commonStock?.toString() || "",
                               )}
                               {md.reuseAdditionalImages === "yes" && getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Select source</label>
+                                  <label className={`${inputClass} dark:text-white`}>Select source</label>
                                   <select value={md.reusedImageSource} onChange={(e) => handleReuseSelection(variantIndex, mdIndex, "images", e.target.value)} className={selectClass}>
                                     <option value="">Select source</option>
                                     {getReuseOptions(variantIndex, mdIndex, "images").map((option) => (
@@ -1271,7 +1274,7 @@ commonStock: variant.commonStock?.toString() || "",
                               </div>
                               {getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Do you want to reuse optional details?</label>
+                                  <label className={`${inputClass} dark:text-white`}>Do you want to reuse optional details?</label>
                                   <select value={md.reuseOptionalDetails} onChange={(e) => {
                                     updateSizeSectionField(variantIndex, mdIndex, "reuseOptionalDetails", e.target.value)
                                     if (e.target.value === "no") {
@@ -1286,7 +1289,7 @@ commonStock: variant.commonStock?.toString() || "",
                               )}
                               {md.reuseOptionalDetails === "yes" && getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Select source</label>
+                                  <label className={`${inputClass} dark:text-white`}>Select source</label>
                                   <select value={md.reusedOptionalDetailSource} onChange={(e) => handleReuseSelection(variantIndex, mdIndex, "optionalDetails", e.target.value)} className={selectClass}>
                                     <option value="">Select source</option>
                                     {getReuseOptions(variantIndex, mdIndex, "optionalDetails").map((option) => (
@@ -1300,23 +1303,23 @@ commonStock: variant.commonStock?.toString() || "",
                                   {md.optionalDetails.map((detail, index) => (
                                     <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <div className="space-y-2">
-                                        <label className={labelClass}>Key</label>
+                                        <label className={`${inputClass} dark:text-white`}>Key</label>
                                         <input type="text" value={detail.key} onChange={(e) => {
                                           const newDetails = [...md.optionalDetails]
                                           newDetails[index].key = e.target.value
                                           updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
-                                        }} placeholder="e.g., Feature" className={inputClass} />
+                                        }} placeholder="e.g., Feature" className={`${inputClass} dark:text-gray-400`} />
                                       </div>
                                       <div className="space-y-2 flex gap-4 items-end">
                                         <div className="flex-1">
-                                          <label className={labelClass}>Value</label>
+                                          <label className={`${inputClass} dark:text-white`}>Value</label>
                                           <input type="text" value={detail.value} onChange={(e) => {
                                             const newDetails = [...md.optionalDetails]
                                             newDetails[index].value = e.target.value
                                             updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
-                                          }} placeholder="e.g., Waterproof" className={inputClass} />
+                                          }} placeholder="e.g., Waterproof" className={`${inputClass} dark:text-gray-400`} />
                                         </div>
-                                        <button type="button" className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" onClick={() => {
+                                        <button type="button" className="dark:text-white p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" onClick={() => {
                                           const newDetails = md.optionalDetails.filter((_, i) => i !== index)
                                           updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
                                         }}>
@@ -1331,14 +1334,14 @@ commonStock: variant.commonStock?.toString() || "",
 
                             {variant.moreDetails.length > 1 && variant.isPriceSame === "no" && (
                               <div className="space-y-2">
-                                <label className={labelClass}>Price ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})</label>
-                                <input type="number" value={md.price} onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "price", e.target.value)} placeholder="Enter price" className={inputClass} />
+                                <label className={`${inputClass} dark:text-white`}>Price ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})</label>
+                                <input type="number" value={md.price} onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "price", e.target.value)} placeholder="Enter price" className={`${inputClass} dark:text-gray-400`} />
                               </div>
                             )}
                             {variant.moreDetails.length > 1 && variant.isStockSame === "no" && (
                               <div className="space-y-2">
-                                <label className={labelClass}>Stock ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})</label>
-                                <input type="number" value={md.stock} onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "stock", e.target.value)} placeholder="Enter stock" className={inputClass} />
+                                <label className={`${inputClass} dark:text-white`}>Stock ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x{md.size?.height || "?"})</label>
+                                <input type="number" value={md.stock} onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "stock", e.target.value)} placeholder="Enter stock" className={`${inputClass} dark:text-gray-400`} />
                               </div>
                             )}
                             {variant.moreDetails.length > 1 && variant.isPriceSame === "no" && (
@@ -1355,26 +1358,26 @@ commonStock: variant.commonStock?.toString() || "",
                                 {md.bulkPricingCombinations.map((bpc, index) => (
                                   <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                                     <div className="space-y-2">
-                                      <label className={labelClass}>Wholesale Price ($)</label>
+                                      <label className={`${inputClass} dark:text-white`}>Wholesale Price ($)</label>
                                       <input type="number" value={bpc.wholesalePrice} onChange={(e) => {
                                         const newBPC = [...md.bulkPricingCombinations]
                                         newBPC[index].wholesalePrice = e.target.value
                                         updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
-                                      }} placeholder="Enter wholesale price" className={inputClass} />
+                                      }} placeholder="Enter wholesale price" className={`${inputClass} dark:text-gray-400`} />
                                       {md.price && bpc.wholesalePrice && Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(md.price) && (
                                         <p className="text-red-500 text-sm">Wholesale price must be less than this price.</p>
                                       )}
                                     </div>
                                     <div className="space-y-2 flex gap-4 items-end">
                                       <div className="flex-1">
-                                        <label className={labelClass}>Quantity</label>
+                                        <label className={`${inputClass} dark:text-white`}>Quantity</label>
                                         <input type="number" value={bpc.quantity} onChange={(e) => {
                                           const newBPC = [...md.bulkPricingCombinations]
                                           newBPC[index].quantity = e.target.value
                                           updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
-                                        }} placeholder="Enter quantity" className={inputClass} />
+                                        }} placeholder="Enter quantity" className={`${inputClass} dark:text-gray-400`} />
                                       </div>
-                                      <button type="button" className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" onClick={() => {
+                                      <button type="button" className="dark:text-white p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" onClick={() => {
                                         const newBPC = md.bulkPricingCombinations.filter((_, i) => i !== index)
                                         updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
                                       }}>
@@ -1392,14 +1395,14 @@ commonStock: variant.commonStock?.toString() || "",
                       {variant.moreDetails.length > 1 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <label className={labelClass}>Same price for all sizes?</label>
+                            <label className={`${inputClass} dark:text-white`}>Same price for all sizes?</label>
                             <select value={variant.isPriceSame} onChange={(e) => updateVariantField(variantIndex, "isPriceSame", e.target.value)} className={selectClass}>
                               <option value="yes">Yes</option>
                               <option value="no">No</option>
                             </select>
                           </div>
                           <div className="space-y-2">
-                            <label className={labelClass}>Same stock for all sizes?</label>
+                            <label className={`${inputClass} dark:text-white`}>Same stock for all sizes?</label>
                             <select value={variant.isStockSame} onChange={(e) => updateVariantField(variantIndex, "isStockSame", e.target.value)} className={selectClass}>
                               <option value="yes">Yes</option>
                               <option value="no">No</option>
@@ -1411,12 +1414,12 @@ commonStock: variant.commonStock?.toString() || "",
                       {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <label className={labelClass}>Price ($)</label>
-                            <input type="number" value={variant.commonPrice} onChange={(e) => updateVariantField(variantIndex, "commonPrice", e.target.value)} placeholder="Variant price" className={inputClass} />
+                            <label className={`${inputClass} dark:text-white`}>Price ($)</label>
+                            <input type="number" value={variant.commonPrice} onChange={(e) => updateVariantField(variantIndex, "commonPrice", e.target.value)} placeholder="Variant price" className={`${inputClass} dark:text-gray-400`} />
                           </div>
                           <div className="space-y-2">
-                            <label className={labelClass}>Stock</label>
-                            <input type="number" value={variant.commonStock} onChange={(e) => updateVariantField(variantIndex, "commonStock", e.target.value)} placeholder="Stock quantity" className={inputClass} />
+                            <label className={`${inputClass} dark:text-white`}>Stock</label>
+                            <input type="number" value={variant.commonStock} onChange={(e) => updateVariantField(variantIndex, "commonStock", e.target.value)} placeholder="Stock quantity" className={`${inputClass} dark:text-gray-400`} />
                           </div>
                         </div>
                       )}
@@ -1435,26 +1438,26 @@ commonStock: variant.commonStock?.toString() || "",
                           {variant.commonBulkPricingCombinations.map((bpc, index) => (
                             <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                               <div className="space-y-2">
-                                <label className={labelClass}>Wholesale Price ($)</label>
+                                <label className={`${inputClass} dark:text-white`}>Wholesale Price ($)</label>
                                 <input type="number" value={bpc.wholesalePrice} onChange={(e) => {
                                   const newBPC = [...variant.commonBulkPricingCombinations]
                                   newBPC[index].wholesalePrice = e.target.value
                                   updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
-                                }} placeholder="Enter wholesale price" className={inputClass} />
+                                }} placeholder="Enter wholesale price" className={`${inputClass} dark:text-gray-400`} />
                                 {variant.commonPrice && bpc.wholesalePrice && Number.parseFloat(bpc.wholesalePrice) >= Number.parseFloat(variant.commonPrice) && (
                                   <p className="text-red-500 text-sm">Wholesale price must be less than common price.</p>
                                 )}
                               </div>
                               <div className="space-y-2 flex gap-4 items-end">
                                 <div className="flex-1">
-                                  <label className={labelClass}>Quantity</label>
+                                  <label className={`${inputClass} dark:text-white`}>Quantity</label>
                                   <input type="number" value={bpc.quantity} onChange={(e) => {
                                     const newBPC = [...variant.commonBulkPricingCombinations]
                                     newBPC[index].quantity = e.target.value
                                     updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
-                                  }} placeholder="Enter quantity" className={inputClass} />
+                                  }} placeholder="Enter quantity" className={`${inputClass} dark:text-gray-400`} />
                                 </div>
-                                <button type="button" className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" onClick={() => {
+                                <button type="button" className="dark:text-white p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors" onClick={() => {
                                   const newBPC = variant.commonBulkPricingCombinations.filter((_, i) => i !== index)
                                   updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
                                 }}>
@@ -1495,12 +1498,12 @@ commonStock: variant.commonStock?.toString() || "",
               <div className="flex justify-end gap-4">
                 <button
                   type="button"
-                  className={secondaryButtonClass}
+                  className={`${secondaryButtonClass} dark:text-black`}
                   onClick={() => navigate('/admin/panel/products')}
                 >
                   Cancel
                 </button>
-                <button
+                <button 
                   type="submit"
                   className={primaryButtonClass}
                 >

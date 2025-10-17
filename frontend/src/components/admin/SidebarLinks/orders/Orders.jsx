@@ -12,6 +12,7 @@ import { ProductContext } from "../../../../../Context/ProductContext"
 import ShippingPriceModal from "./ShippingPriceModal"
 import StatusModal from "./StatusModal";
 import EditOrderModal from "./EditOrderModal"
+import { CompanySettingsContext } from "../../../../../Context/CompanySettingsContext";
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -540,6 +541,7 @@ export default function OrdersManagement() {
   const [customEndDate, setCustomEndDate] = useState("");
   const [singleDate, setSingleDate] = useState("");
   const { products, loading, error } = useContext(ProductContext);
+  const { companySettings, loadingSettings } = useContext(CompanySettingsContext);
   const [orderedProducts, setOrderedProducts] = useState({});
   const [singleOrderedProduct, setSingleOrderedProduct] = useState(null);
 
@@ -559,20 +561,31 @@ export default function OrdersManagement() {
       const formattedDate = formatOrderDate(order.createdAt, orderIndex);
 
       // Generate HTML content
-      pdfContent.innerHTML = `
-        <div style="max-width: 714px; margin: 0 auto;">
-          <!-- Header -->
-          <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3b82f6; padding-bottom: 20px;">
-            <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
-              <div style="width: 60px; height: 60px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
-                <span style="color: white; font-weight: bold; font-size: 24px;">MM</span>
-              </div>
-              <div style="text-align: left;">
-                <h1 style="color: #3b82f6; font-size: 28px; margin: 0;">MOULD MARKET</h1>
-                <p style="color: #6b7280; margin: 0; font-size: 14px;">Order Invoice</p>
-              </div>
-            </div>
+pdfContent.innerHTML = `
+  <div style="max-width: 714px; margin: 0 auto;">
+    <!-- Header -->
+    <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3b82f6; padding-bottom: 20px;">
+      <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
+        ${companySettings?.companyLogo ? `
+          <img src="${companySettings.companyLogo}" alt="Company Logo" style="width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover;" />
+        ` : `
+          <div style="width: 60px; height: 60px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
+            <span style="color: white; font-weight: bold; font-size: 24px;">MM</span>
           </div>
+        `}
+        <div style="text-align: left;">
+          <h1 style="color: #3b82f6; font-size: 28px; margin: 0;">${loadingSettings ? 'Loading...' : companySettings?.companyName || 'MOULD MARKET'}</h1>
+          <p style="color: #6b7280; margin: 0; font-size: 14px;">Order Invoice</p>
+        </div>
+      </div>
+      ${companySettings?.adminEmail || companySettings?.adminPhoneNumber ? `
+        <div style="font-size: 12px; color: #6b7280; margin-top: 10px;">
+          ${companySettings?.adminEmail ? `<p style="margin: 2px 0;">Email: ${companySettings.adminEmail}</p>` : ''}
+          ${companySettings?.adminPhoneNumber ? `<p style="margin: 2px 0;">Phone: ${companySettings.adminPhoneNumber}</p>` : ''}
+          ${companySettings?.adminWhatsappNumber ? `<p style="margin: 2px 0;">WhatsApp: ${companySettings.adminWhatsappNumber}</p>` : ''}
+        </div>
+      ` : ''}
+    </div>
 
           <!-- Order Info Grid -->
           <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
@@ -641,22 +654,22 @@ export default function OrdersManagement() {
             </div>
           </div>
 
-          <!-- Signature Section -->
-          <div style="display: flex; justify-content: space-between; align-items: end; margin-bottom: 30px;">
-            <div style="flex: 1;"></div>
-            <div style="text-align: center; min-width: 250px;">
-              <div style="border-bottom: 1px solid #374151; margin-bottom: 8px; height: 60px;"></div>
-              <p style="margin: 0; font-size: 14px; color: #374151;"><strong>Authorized Signature</strong></p>
-              <p style="margin: 4px 0; font-size: 12px; color: #6b7280;">Mould Market</p>
-            </div>
-          </div>
+         <!-- Signature Section -->
+<div style="display: flex; justify-content: space-between; align-items: end; margin-bottom: 30px;">
+  <div style="flex: 1;"></div>
+  <div style="text-align: center; min-width: 250px;">
+    <div style="border-bottom: 1px solid #374151; margin-bottom: 8px; height: 60px;"></div>
+    <p style="margin: 0; font-size: 14px; color: #374151;"><strong>Authorized Signature</strong></p>
+    <p style="margin: 4px 0; font-size: 12px; color: #6b7280;">${companySettings?.companyName || 'Mould Market'}</p>
+  </div>
+</div>
 
-          <!-- Footer -->
-          <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-            <p style="color: #6b7280; font-size: 12px; margin: 0;">Generated on ${new Date().toLocaleDateString()} | Mould Market Order Management System</p>
-            <p style="color: #6b7280; font-size: 10px; margin: 5px 0 0 0;">Thank you for your business!</p>
-          </div>
-        </div>
+         <!-- Footer -->
+<div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+  <p style="color: #6b7280; font-size: 12px; margin: 0;">Generated on ${new Date().toLocaleDateString()} | ${companySettings?.companyName || 'Mould Market'} Order Management System</p>
+  ${companySettings?.adminEmail ? `<p style="color: #6b7280; font-size: 10px; margin: 5px 0 0 0;">For support, contact us at ${companySettings.adminEmail}</p>` : ''}
+  <p style="color: #6b7280; font-size: 10px; margin: 5px 0 0 0;">Thank you for your business!</p>
+</div>
       `;
 
       // Append to body temporarily

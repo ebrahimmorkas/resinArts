@@ -149,6 +149,8 @@ const handleCartCheckout = async () => {
   const [recentSearches, setRecentSearches] = useState([])
   const [isProcessing, setIsProcessing] = useState(false);
   const [showClearCartModal, setShowClearCartModal] = useState(false);
+  const [categoriesScrollPosition, setCategoriesScrollPosition] = useState(0);
+const categoriesContainerRef = useRef(null);
   
   // Scroll to top functionality
 useEffect(() => {
@@ -367,7 +369,7 @@ const highlightMatchedText = (text, searchQuery) => {
     if (match.start > lastIndex) {
       parts.push(text.substring(lastIndex, match.start))
     }
-    parts.push(<strong key={`bold-${match.start}`} className="font-bold text-gray-900">{text.substring(match.start, match.end)}</strong>)
+    parts.push(<strong key={`bold-${match.start}`} className="font-bold text-gray-900 dark:text-white">{text.substring(match.start, match.end)}</strong>)
     lastIndex = match.end
   })
   
@@ -778,7 +780,6 @@ const handleLogout = async () => {
   }
 
   const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1) => {
-  const scrollY = window.scrollY;
   
   const product = products.find((p) => p._id === productId);
   if (!product) return;
@@ -808,25 +809,16 @@ const productData = {
 
   await addToCart(productId, colorName, sizeString, quantity, productData);
   
-  requestAnimationFrame(() => {
-    window.scrollTo(0, scrollY);
-  });
 };
 
   const handleUpdateQuantity = async (cartKey, change) => {
-  const scrollY = window.scrollY;
+  
   await updateQuantity(cartKey, change);
-  requestAnimationFrame(() => {
-    window.scrollTo(0, scrollY);
-  });
 };
 
   const handleRemoveFromCart = async (cartKey) => {
-  const scrollY = window.scrollY;
+  
   await removeFromCart(cartKey);
-  requestAnimationFrame(() => {
-    window.scrollTo(0, scrollY);
-  });
 };
 
 const handleCategoryClick = (category) => {
@@ -883,6 +875,20 @@ const handleFilterChange = (filter) => {
   }, 100);
 };
 
+const scrollCategories = (direction) => {
+  const container = categoriesContainerRef.current;
+  if (!container) return;
+
+  const scrollAmount = 200; // Adjust this value to control scroll distance
+  const newPosition =
+    direction === "left"
+      ? Math.max(0, categoriesScrollPosition - scrollAmount)
+      : categoriesScrollPosition + scrollAmount;
+
+  container.scrollLeft = newPosition;
+  setCategoriesScrollPosition(newPosition);
+};
+
   const toggleWishlist = (productId) => {
     setWishlist((prev) => (prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]))
   }
@@ -937,6 +943,9 @@ const openPolicyModal = (type) => {
     case 'refund':
       content = companySettings.refundPolicy || 'Refund Policy not available.';
       break;
+      case 'about':
+  content = companySettings?.aboutUs || 'About us not available.';
+  break;
     default:
       content = 'Content not available.';
   }
@@ -955,6 +964,7 @@ const getPolicyTitle = (type) => {
     case 'shipping': return 'Shipping Policy';
     case 'return': return 'Return Policy';
     case 'refund': return 'Refund Policy';
+    case 'about': return 'About Us';
     default: return 'Policy';
   }
 };
@@ -1058,7 +1068,7 @@ const CategoryNavigationBar = () => {
               <div key={cat._id} className="flex items-center gap-2">
                 <button
                   onClick={() => handleBreadcrumbClick(index)}
-                  className="text-blue-600 hover:text-blue-800 text-xs transition-colors hover:underline"
+                  className="text-blue-600 hover:text-blue-800 text-xs transition-colors hover:underline dark:text-white"
                 >
                   {cat.categoryName}
                 </button>
@@ -1118,7 +1128,7 @@ const CategoryNavigationBar = () => {
             <div className="flex gap-2 w-full sm:w-auto">
               <button
                 onClick={() => categoriesRef.current?.scrollIntoView({ behavior: 'smooth' })}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-blue-600 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
+                className="dark:text-white flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-blue-600 text-blue-600 rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium whitespace-nowrap"
               >
                 <ChevronLeft className="w-4 h-4" />
                 Go to Categories
@@ -1132,7 +1142,7 @@ const CategoryNavigationBar = () => {
     document.getElementById('all-products-section')?.scrollIntoView({ behavior: 'smooth' });
   }, 100);
 }}
-                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-red-600 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium whitespace-nowrap"
+                className="flex-1 sm:flex-initial flex items-center justify-center gap-2 px-4 py-2 bg-red-600 text-red-600 rounded-lg hover:bg-red-700 transition-colors text-sm font-medium whitespace-nowrap dark:text-gray-400"
               >
                 <X className="w-4 h-4" />
                 Clear
@@ -1192,13 +1202,13 @@ const CategoryNavigationBar = () => {
           <>
             <button
               onClick={() => setCurrentBanner((prev) => (prev - 1 + banners.length) % banners.length)}
-              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-900/80 hover:bg-white dark:bg-gray-900 p-2 rounded-full transition-colors duration-200"
+              className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-900/80 hover:bg-white dark:bg-gray-900 dark:text-white p-2 rounded-full transition-colors duration-200"
             >
               <ChevronLeft className="h-6 w-6" />
             </button>
             <button
               onClick={() => setCurrentBanner((prev) => (prev + 1) % banners.length)}
-              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white dark:bg-gray-900/80 hover:bg-white dark:bg-gray-900 p-2 rounded-full transition-colors duration-200"
+              className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-white dark:text-white dark:bg-gray-900/80 hover:bg-white dark:bg-gray-900 p-2 rounded-full transition-colors duration-200"
             >
               <ChevronRight className="h-6 w-6" />
             </button>
@@ -1350,7 +1360,7 @@ const CategoryNavigationBar = () => {
                     e.stopPropagation()
                     handleImageNavigation("prev")
                   }}
-                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity dark:text-white"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
@@ -1359,7 +1369,7 @@ const CategoryNavigationBar = () => {
                     e.stopPropagation()
                     handleImageNavigation("next")
                   }}
-                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                  className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity dark:text-white"
                 >
                   <ChevronRight className="w-4 h-4" />
                 </button>
@@ -1427,16 +1437,16 @@ const CategoryNavigationBar = () => {
     if (showBulkPrice) {
       return (
         <>
-          <span className="text-lg font-bold text-gray-900">₹ {bulkPrice1Plus.wholesalePrice.toFixed(2)}</span>
-          <span className="text-sm text-gray-500 line-through">₹ {displayPrice.toFixed(2)}</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">₹ {bulkPrice1Plus.wholesalePrice.toFixed(2)}</span>
+          <span className="text-sm text-gray-500 line-through dark:text-gray-400">₹ {displayPrice.toFixed(2)}</span>
         </>
       );
     } else {
       return (
         <>
-          <span className="text-lg font-bold text-gray-900">₹ {displayPrice.toFixed(2)}</span>
+          <span className="text-lg font-bold text-gray-900 dark:text-white">₹ {displayPrice.toFixed(2)}</span>
           {strikePrice && (
-            <span className="text-sm text-gray-500 line-through">₹ {strikePrice.toFixed(2)}</span>
+            <span className="text-sm text-gray-500 line-through dark:text-gray-400">₹ {strikePrice.toFixed(2)}</span>
           )}
         </>
       );
@@ -1628,7 +1638,7 @@ const CategoryNavigationBar = () => {
             <input
               type="number"
               min="1"
-              value={addQuantity}
+              // value={addQuantity}
               onChange={(e) => setAddQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
               className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
             />
@@ -2061,13 +2071,13 @@ const CategoryNavigationBar = () => {
                       onClick={() =>
                         setCurrentImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length)
                       }
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
+                      className="dark:text-white absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
                     >
                       <ChevronLeft className="w-4 h-4" />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev + 1) % currentImages.length)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
+                      className="dark:text-white absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1 rounded-full"
                     >
                       <ChevronRight className="w-4 h-4" />
                     </button>
@@ -2232,7 +2242,7 @@ const CategoryNavigationBar = () => {
           <input
             type="number"
             min="1"
-            value={localQuantityToAdd}
+            // value={localQuantityToAdd}
             onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
             className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
           />
@@ -2272,7 +2282,7 @@ const CategoryNavigationBar = () => {
                 <input
                   type="number"
                   min="1"
-                  value={localQuantityToAdd}
+                  // value={localQuantityToAdd}
                   onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
                   className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
                 />
@@ -2472,14 +2482,14 @@ const ProductDetailsModal = ({ product, onClose }) => {
 />
                 {badge && (
                   <div className="absolute top-3 left-3">
-                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold text-white ${badge.color}`}>
+                    <span className={`px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold text-white ${badge.color} dark:text-white`}>
                       {badge.text}
                     </span>
                   </div>
                 )}
                 {discountPercentage > 0 && (
                   <div className="absolute top-3 right-3">
-                    <span className="bg-red-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold">
+                    <span className="bg-red-500 text-white px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-semibold dark:text-white">
                       {discountPercentage}% OFF
                     </span>
                   </div>
@@ -2489,13 +2499,13 @@ const ProductDetailsModal = ({ product, onClose }) => {
                   <>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length)}
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors dark:text-white"
                     >
                       <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev + 1) % currentImages.length)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors dark:text-white"
                     >
                       <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
@@ -2513,7 +2523,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {product.hasVariants && product.variants && product.variants.length > 1 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Variant Images</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 dark:text-white">Variant Images</h4>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {product.variants.filter(v => v.isActive !== false).map((variant) => (
                       <button
@@ -2537,7 +2547,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {selectedSize && selectedSize.additionalImages && selectedSize.additionalImages.length > 0 && (
                 <div>
-                  <h4 className="text-sm font-semibold text-gray-700 mb-2">Additional Images</h4>
+                  <h4 className="text-sm font-semibold text-gray-700 mb-2 dark:text-white">Additional Images</h4>
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {selectedSize.additionalImages.map((img, index) => (
                       <button
@@ -2561,17 +2571,17 @@ const ProductDetailsModal = ({ product, onClose }) => {
             {/* Right Section - Product Details */}
             <div className="space-y-4 sm:space-y-5">
               <div>
-                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2">{product.name}</h1>
+                <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold text-gray-900 mb-2 dark:text-white">{product.name}</h1>
                 <div className="text-sm sm:text-base text-gray-600 dark:text-gray-400 space-y-1">
                   {product.mainCategory && (
-                    <p>Main Category: <span className="font-medium">
+                    <p><span className="dark:text-white">Main Category: </span><span className="font-medium">
                       {typeof product.mainCategory === 'object' 
                         ? product.mainCategory.categoryName 
                         : categories.find(cat => cat._id === product.mainCategory)?.categoryName || product.mainCategory}
                     </span></p>
                   )}
                   {product.subCategory && (
-                    <p>Sub Category: <span className="font-medium">
+                    <p><span className="dark:text-white">Sub Category: </span><span className="font-medium">
                       {typeof product.subCategory === 'object' 
                         ? product.subCategory.categoryName 
                         : categories.find(cat => cat._id === product.subCategory)?.categoryName || product.subCategory}
@@ -2586,7 +2596,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                     ₹ {effectiveUnitPrice.toFixed(2)}
                   </span>
                   {effectiveUnitPrice < displayPrice && (
-                    <span className="text-sm text-green-600 ml-2">(Bulk discount applied)</span>
+                    <span className="text-sm text-green-600 ml-2 dark:text-blue-600">(Bulk discount applied)</span>
                   )}
                 </div>
                 {hasActiveDiscount && originalPrice > displayPrice && (
@@ -2598,7 +2608,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {product.hasVariants && product.variants && (
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">
+                  <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">
                     Color: {selectedVariant?.colorName || "Select Color"}
                   </h3>
                   <div className="flex gap-2 flex-wrap">
@@ -2621,7 +2631,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {selectedVariant && selectedVariant.moreDetails && selectedVariant.moreDetails.length > 0 && (
                 <div>
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">
+                  <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">
                     Size: {selectedSize ? formatSize(selectedSize.size) : "Select Size"}
                   </h3>
                   <div className="grid grid-cols-2 gap-2 sm:gap-3">
@@ -2681,7 +2691,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
       <button 
         onClick={() => handleRemoveFromCart(cartKey)}
-        className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+        className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors dark:text-white"
       >
         <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
         Remove from Cart
@@ -2731,12 +2741,12 @@ const ProductDetailsModal = ({ product, onClose }) => {
 
               {product.productDetails && product.productDetails.length > 0 && (
                 <div className="border-t pt-4">
-                  <h3 className="text-base sm:text-lg font-semibold mb-3">Product Details</h3>
+                  <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">Product Details</h3>
                   <div className="space-y-2">
                     {product.productDetails.map((detail) => (
                       <div key={detail._id} className="flex text-sm sm:text-base">
-                        <span className="font-medium text-gray-700 w-24 sm:w-32">{detail.key}:</span>
-                        <span className="text-gray-600 dark:text-gray-400 flex-1">{detail.value}</span>
+                        <span className="font-medium text-gray-700 w-24 sm:w-32 dark:text-white">{detail.key}:</span>
+                        <span className="text-gray-600 dark:text-gray-400 flex-1 dark:text-gray-400">{detail.value}</span>
                       </div>
                     ))}
                   </div>
@@ -2828,8 +2838,8 @@ const confirmClearCart = async () => {
         <div className="flex-shrink-0 p-4 sm:p-6 border-b border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900">
           <div className="flex justify-between items-center">
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold text-gray-900">Shopping Cart</h2>
-              <p className="text-sm text-gray-500 mt-1">
+              <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">Shopping Cart</h2>
+              <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">
                 {getTotalItemsCount()} items • {getUniqueCartItemsCount()} products
               </p>
             </div>
@@ -2847,23 +2857,23 @@ const confirmClearCart = async () => {
           {cartLoading && (
             <div className="text-center py-12">
               <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-              <p className="text-gray-500 mt-4">Loading cart...</p>
+              <p className="text-gray-500 mt-4 dark:text-white">Loading cart...</p>
             </div>
           )}
           
           {cartError && (
             <div className="text-center py-8">
-              <p className="text-red-500">{cartError}</p>
+              <p className="text-red-500 dark:text-gary-400">{cartError}</p>
             </div>
           )}
           
           {Object.keys(cartItems).length === 0 && !cartLoading ? (
             <div className="text-center py-16">
               <ShoppingCart className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-500 text-lg">Your cart is empty</p>
+              <p className="text-gray-500 text-lg dark:text-white">Your cart is empty</p>
               <button
                 onClick={() => setIsCartOpen(false)}
-                className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:text-gray-400"
               >
                 Continue Shopping
               </button>
@@ -2872,7 +2882,8 @@ const confirmClearCart = async () => {
             <div className="space-y-4">
               {/* Free Cash Section */}
               {freeCash && (
-                <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200">
+                <div className="p-3 sm:p-4 bg-gradient-to-r from-blue-50 to-purple-50 rounded-xl border border-blue-200 dark:bg-gray-700 dark:bg-none
+">
                   <label className="flex items-start space-x-3">
                    <input
   type="checkbox"
@@ -2884,24 +2895,24 @@ const confirmClearCart = async () => {
   disabled={isFreeCashDisabled}
 />
                     <div className="flex-1">
-                      <span className="text-sm font-semibold text-gray-900">
+                      <span className="text-sm font-semibold text-gray-900 dark:text-white">
                         Apply Free Cash (₹{freeCash.amount.toFixed(2)} available)
                       </span>
-                      <p className="text-xs text-gray-600 mt-1">
+                      <p className="text-xs text-gray-600 mt-1 dark:text-gray-400">
                         Valid above ₹{validAboveAmount}
                       </p>
                       {!isAllProducts && (
-                        <p className="text-xs text-gray-600 mt-1">
+                        <p className="text-xs text-gray-600 mt-1 dark:text-gray-400">
                           {categoryName && `Category: ${categoryName}`}
                           {subCategoryName && ` • ${subCategoryName}`}
                         </p>
                       )}
                       {isAllProducts && (
-                        <p className="text-xs text-gray-600 mt-1">Eligible for all products</p>
+                        <p className="text-xs text-gray-600 mt-1 dark:text-gray-400">Eligible for all products</p>
                       )}
-                      <p className="text-xs text-gray-500 mt-1">Expires: {endDateFormatted}</p>
+                      <p className="text-xs text-gray-500 mt-1 dark:text-white">Expires: {endDateFormatted}</p>
                       {isFreeCashDisabled && (
-                        <p className="text-xs text-red-600 mt-2 font-medium">
+                        <p className="text-xs text-red-600 mt-2 font-medium dark:text-white">
                           {cartTotal < validAboveAmount
                             ? `Minimum cart value ₹${validAboveAmount} required`
                             : !hasEligibleProduct
@@ -2935,11 +2946,11 @@ const confirmClearCart = async () => {
                         loading="lazy"
                       />
                       <div className="flex-1 min-w-0">
-                        <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate">
+                        <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate dark:text-white">
                           {item.productName}
                         </h3>
                         {(item.colorName || item.sizeString) && (
-                          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                          <p className="text-xs sm:text-sm text-gray-500 mt-1 dark:text-gray-400">
                             {item.colorName && item.sizeString
                               ? `${item.colorName} • ${item.sizeString}`
                               : item.colorName || item.sizeString}
@@ -2950,7 +2961,7 @@ const confirmClearCart = async () => {
                             ₹{effectiveUnit.toFixed(2)}
                           </span>
                           {effectiveUnit < basePrice && (
-                            <span className="text-xs sm:text-sm text-gray-500 line-through">
+                            <span className="text-xs sm:text-sm text-gray-500 line-through dark:text-gray-400">
                               ₹{basePrice.toFixed(2)}
                             </span>
                           )}
@@ -2964,12 +2975,12 @@ const confirmClearCart = async () => {
                       <div className="flex flex-col items-end justify-between">
                         <button
                           onClick={() => handleRemoveFromCart(cartKey)}
-                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors"
+                          className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors dark:text-white"
                           disabled={cartLoading}
                         >
                           <Trash2 className="h-4 w-4" />
                         </button>
-                        <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg p-1">
+                        <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg p-1 dark:bg-gray-700">
                           <button
                             onClick={() => handleUpdateQuantity(cartKey, -1)}
                             className="p-1 hover:bg-white rounded transition-colors"
@@ -3007,7 +3018,7 @@ const confirmClearCart = async () => {
               </div>
             )}
             <div className="flex justify-between items-center mb-4 pb-4 border-b border-gray-200">
-              <span className="text-lg font-bold text-gray-900">Total:</span>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">Total:</span>
               <span className="text-2xl font-bold text-blue-600">₹{localCartTotal.toFixed(2)}</span>
             </div>
             <div className="space-y-2">
@@ -3022,7 +3033,7 @@ const confirmClearCart = async () => {
               >
                 {isProcessing ? (
                   <>
-                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
+                    <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white dark:text-gray-400"></div>
                     Processing...
                   </>
                 ) : (
@@ -3035,7 +3046,7 @@ const confirmClearCart = async () => {
               <button
                 onClick={handleClearCart}
                 disabled={cartLoading}
-                className="w-full bg-red-600 hover:bg-red-700 disabled:bg-gray-400 text-red-600 py-2.5 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                className="w-full bg-red-600 dark:text-gray-400 hover:bg-red-700 disabled:bg-gray-400 text-red-600 py-2.5 rounded-xl font-medium transition-colors duration-200 flex items-center justify-center gap-2"
               >
                 <Trash2 className="w-4 h-4" />
                 Clear Cart
@@ -3176,19 +3187,19 @@ if (justArrivedProductsList.length > 0) {
             ) : searchResults.length > 0 ? (
               <>
                 <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-                  <p className="text-sm font-semibold text-gray-700">
+                  <p className="text-sm font-semibold text-gray-700 dark:text-white">
                     Results for: "{searchQuery}" ({searchResults.length})
                   </p>
-                  <p className="text-xs text-gray-500 mt-0.5">
+                  <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-400">
                     Press Enter to see all results in main section
                   </p>
                 </div>
-                <div className="py-2">
+                <div className="py-2 ">
                   {searchResults.map((result, index) => (
                     <button
                       key={`${result.productId}-${result.variantId}-${index}`}
                       onClick={() => handleSearchResultClick(result)}
-                      className="w-full px-4 py-3 hover:bg-gray-50 dark:bg-gray-800 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+                      className="w-full px-4 py-3 hover:bg-gray-50 dark:bg-gray-800 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0 dark:text-white"
                     >
                       <img
   src={getOptimizedImageUrl(result.image, { width: 100 }) || "/placeholder.svg"}
@@ -3197,14 +3208,14 @@ if (justArrivedProductsList.length > 0) {
   loading="lazy"
 />
                       <div className="flex-1 text-left">
-                        <p className="text-gray-900 text-sm">
+                        <p className="text-gray-900 text-sm dark:text-gray-400">
                           {highlightMatchedText(result.fullDisplayName, searchQuery)}
                         </p>
                         <div className="flex items-center gap-2 mt-1">
                           <span className="text-sm font-semibold text-blue-600">
                             ₹{result.price.toFixed(2)}
                           </span>
-                          <span className="text-xs text-gray-500">
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
                             Stock: {result.stock}
                           </span>
                         </div>
@@ -3214,7 +3225,7 @@ if (justArrivedProductsList.length > 0) {
                 </div>
               </>
             ) : (
-              <div className="p-4 text-center text-gray-500">
+              <div className="p-4 text-center text-gray-500 dark:text-white">
                 No results for "{searchQuery}"
               </div>
             )}
@@ -3227,7 +3238,7 @@ if (justArrivedProductsList.length > 0) {
         <div className="relative profile-dropdown">
           <button
             onClick={() => setIsProfileOpen(!isProfileOpen)}
-            className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors duration-200"
+            className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors duration-200 dark:text-white"
           >
             <User className="h-6 w-6" />
             <ChevronDown className="h-4 w-4" />
@@ -3288,7 +3299,7 @@ if (justArrivedProductsList.length > 0) {
         </div>
         <button
           onClick={() => setIsCartOpen(true)}
-          className="relative text-gray-700 hover:text-blue-600 transition-colors duration-200"
+          className="relative text-gray-700 hover:text-blue-600 transition-colors duration-200 dark:text-white"
         >
           <ShoppingCart className="h-6 w-6" />
           {getUniqueCartItemsCount() > 0 && (
@@ -3328,14 +3339,14 @@ if (justArrivedProductsList.length > 0) {
       {showSearchResults && (
         <div className="absolute top-full mt-2 w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200 dark:border-gray-700 left-0 right-0">
           {isSearching ? (
-            <div className="p-4 text-center text-gray-500">Searching...</div>
+            <div className="p-4 text-center text-gray-500 dark:text-gray-400">Searching...</div>
           ) : searchResults.length > 0 ? (
             <>
               <div className="px-4 py-2 bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 sticky top-0">
-                <p className="text-sm font-semibold text-gray-700">
+                <p className="text-sm font-semibold text-gray-700 dark:text-white">
                   Results for: "{searchQuery}" ({searchResults.length})
                 </p>
-                <p className="text-xs text-gray-500 mt-0.5">
+                <p className="text-xs text-gray-500 mt-0.5 dark:text-gray-400">
                   Press Enter to see all results in main section
                 </p>
               </div>
@@ -3353,14 +3364,14 @@ if (justArrivedProductsList.length > 0) {
   loading="lazy"
 />
                     <div className="flex-1 text-left">
-                      <p className="text-gray-900 text-sm">
+                      <p className="text-gray-900 text-sm dark:text-gray-400">
                         {highlightMatchedText(result.fullDisplayName, searchQuery)}
                       </p>
                       <div className="flex items-center gap-2 mt-1">
                         <span className="text-sm font-semibold text-blue-600">
                           ₹{result.price.toFixed(2)}
                         </span>
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-gray-500 dark:text-gray-400">
                           Stock: {result.stock}
                         </span>
                       </div>
@@ -3370,7 +3381,7 @@ if (justArrivedProductsList.length > 0) {
               </div>
             </>
           ) : (
-            <div className="p-4 text-center text-gray-500">
+            <div className="p-4 text-center text-gray-500 dark:text-black">
               No results for "{searchQuery}"
             </div>
           )}
@@ -3384,51 +3395,134 @@ if (justArrivedProductsList.length > 0) {
 
       <BannerCarousel />
 
-      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-        <section className="mb-12" ref={categoriesRef} id="categories-section">
-  <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Shop by Categories</h2>
-  <div className="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 xl:grid-cols-10 gap-4">
-            {mainCategories.slice(0, 10).map((category) => (
-              <div
-                key={category._id}
-                onClick={() => handleCategoryClick(category)}
-                className={`text-center cursor-pointer group transition-all duration-200 ${
-                  selectedCategory === category.categoryName ? "transform scale-105" : ""
-                }`}
-              >
-                <div
-                  className={`w-16 h-16 sm:w-20 sm:h-20 bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center mb-2 mx-auto group-hover:shadow-xl transition-all duration-300 overflow-hidden relative ${
-                    selectedCategory === category.categoryName ? "ring-4 ring-blue-500 shadow-xl" : ""
-                  }`}
-                >
-                  <img
-  src={getOptimizedImageUrl(category.image, { width: 100 }) || "/placeholder.svg"}
-  alt={`${category.categoryName} category`}
-  className="w-full h-full object-cover rounded-full"
-  loading="lazy"
-/>
-                  {selectedCategory === category.categoryName && (
-                    <div className="absolute inset-0 bg-blue-500/20 rounded-full flex items-center justify-center">
-                      <Check className="w-6 h-6 text-blue-600 bg-white dark:bg-gray-900 rounded-full p-1" />
-                    </div>
-                  )}
-                </div>
-                <p
-                  className={`text-xs sm:text-sm font-medium transition-colors duration-200 text-center leading-tight px-1 ${
-                    selectedCategory === category.categoryName
-                      ? "text-blue-600 font-bold"
-                      : "text-gray-700 group-hover:text-blue-600"
-                  }`}
-                >
-                  {category.categoryName}
-                </p>
+      <div className="w-full max-w-[100vw] overflow-x-hidden px-4 sm:px-6 lg:px-8 py-8">
+        <section className="mb-12 overflow-hidden" ref={categoriesRef} id="categories-section">
+  <h2 className="text-2xl font-bold -800 mb-6 dark:text-black">
+    Shop by Categories
+  </h2>
+  
+  <div className="relative group">
+    {/* Left Arrow Button - Hidden on Mobile */}
+    <button
+      onClick={() => scrollCategories("left")}
+      className="hidden md:block absolute left-0 top-1/2 transform -translate-y-1/2 z-10 bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full shadow-lg transition-all duration-200 opacity-0 group-hover:opacity-100 disabled:opacity-30 disabled:cursor-not-allowed"
+      disabled={categoriesScrollPosition === 0}
+      aria-label="Scroll categories left"
+    >
+      <ChevronLeft className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+    </button>
+
+    {/* Categories Container */}
+    <div
+      ref={categoriesContainerRef}
+      className="flex gap-4 overflow-x-auto scroll-smooth custom-scrollbar pb-2 px-1 dark:text-black"
+      style={{
+        scrollBehavior: "smooth",
+        WebkitOverflowScrolling: "touch",
+      }}
+      onScroll={(e) => {
+        setCategoriesScrollPosition(e.target.scrollLeft);
+      }}
+    >
+      {mainCategories.map((category) => (
+        <div
+          key={category._id}
+          onClick={() => handleCategoryClick(category)}
+          className="flex-shrink-0 text-center cursor-pointer group/item transition-all duration-200 dark:text-black"
+        >
+          <div
+            className={`w-20 h-20 sm:w-24 sm:h-24 bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center mb-2 group-hover/item:shadow-xl transition-all duration-300 overflow-hidden relative ${
+              selectedCategory === category.categoryName
+                ? "ring-4 ring-blue-500 shadow-xl scale-110"
+                : ""
+            }`}
+          >
+            <img
+              src={
+                getOptimizedImageUrl(category.image, { width: 100 }) ||
+                "/placeholder.svg"
+              }
+              alt={`${category.categoryName} category`}
+              className="w-full h-full object-cover rounded-full"
+              loading="lazy"
+            />
+            {selectedCategory === category.categoryName && (
+              <div className="absolute inset-0 bg-blue-500/20 rounded-full flex items-center justify-center">
+                <Check className="w-6 h-6 text-blue-600 bg-white dark:bg-gray-900 rounded-full p-1" />
               </div>
-            ))}
+            )}
           </div>
-        </section>
+          <p
+            className={`text-xs sm:text-sm font-medium transition-colors duration-200 text-center leading-tight px-2 max-w-[100px] line-clamp-2 ${
+              selectedCategory === category.categoryName
+                ? "text-blue-600 font-bold"
+                : "text-gray-700 group-hover/item:text-blue-600 dark:text-gray-300"
+            }`}
+          >
+            {category.categoryName}
+          </p>
+        </div>
+      ))}
+    </div>
+
+    {/* Right Arrow Button - Hidden on Mobile */}
+    <button
+      onClick={() => scrollCategories("right")}
+      className="hidden md:block absolute right-0 top-1/2 transform -translate-y-1/2 z-10 bg-white dark:bg-gray-900 hover:bg-gray-100 dark:hover:bg-gray-800 p-2 rounded-full shadow-lg transition-all duration-200 opacity-0 group-hover:opacity-100"
+      aria-label="Scroll categories right"
+    >
+      <ChevronRight className="w-5 h-5 text-gray-700 dark:text-gray-300" />
+    </button>
+  </div>
+
+  {/* Professional Custom Scrollbar Styles */}
+  <style>{`
+    .custom-scrollbar {
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar {
+      height: 8px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+      margin: 0 10px;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: linear-gradient(to right, #3b82f6, #8b5cf6);
+      border-radius: 10px;
+      transition: background 0.3s ease;
+    }
+    
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(to right, #2563eb, #7c3aed);
+    }
+    
+    /* Dark mode scrollbar */
+    .dark .custom-scrollbar {
+      scrollbar-color: #4b5563 #1f2937;
+    }
+    
+    .dark .custom-scrollbar::-webkit-scrollbar-track {
+      background: #1f2937;
+    }
+    
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: linear-gradient(to right, #60a5fa, #a78bfa);
+    }
+    
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: linear-gradient(to right, #3b82f6, #8b5cf6);
+    }
+  `}</style>
+</section>
 
         <section className="mb-8">
-          <h2 className="text-xl font-bold -800 dark:text-gray-100 mb-4 text-center">Filters</h2>
+          <h2 className="text-xl font-bold -800mb-4 text-center dark:text-black">Filters</h2>
           <div className="flex flex-wrap gap-3 justify-center">
             {filterOptions.map((filter) => (
               <button
@@ -3450,12 +3544,12 @@ if (justArrivedProductsList.length > 0) {
             {showSearchSection && searchQuery && (
   <section className="mb-12" id="search-results-section">
     <div className="flex items-center justify-between mb-6">
-      <h2 className="text-2xl font-bold -800 dark:text-gray-100">
+      <h2 className="text-2xl font-bold -800 dark:text-black">
         Results for: "{searchQuery}"
       </h2>
       <button
         onClick={clearSearch}
-        className="text-sm text-gray-600 dark:text-gray-400 hover:-800 dark:text-gray-100 flex items-center gap-1"
+        className="text-sm text-gray-600 dark:text-gray-400 hover:-800 flex items-center gap-1"
       >
         <X className="w-4 h-4" />
         Clear Search
@@ -3472,7 +3566,7 @@ if (justArrivedProductsList.length > 0) {
         <p className="text-gray-500 text-lg">No products found for "{searchQuery}"</p>
         <button
           onClick={clearSearch}
-          className="mt-4 text-blue-600 hover:text-blue-700 font-medium"
+          className="mt-4 text-blue-600 hover:text-blue-700 font-medium dark:text-gray-400"
         >
           Clear search and browse all products
         </button>
@@ -3511,7 +3605,7 @@ if (justArrivedProductsList.length > 0) {
             <Package className="w-16 h-16 text-gray-400" />
           </div>
           <h3 className="text-xl font-semibold -800 dark:text-gray-100 mb-2">No Products Available</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
+          <p className="text-gray-600 dark:text-gray-400 text-center mb-6 dark:text-black">
             We couldn't find any products in the "{selectedCategory}" category at the moment.
           </p>
           <button
@@ -3519,7 +3613,7 @@ if (justArrivedProductsList.length > 0) {
               setSelectedCategory(null);
               setSelectedCategoryPath([]);
             }}
-            className="px-6 py-3 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+            className="dark:text-gray-400 px-6 py-3 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
           >
             Browse All Products
           </button>
@@ -3531,7 +3625,7 @@ if (justArrivedProductsList.length > 0) {
 
         {justArrivedProductsList.length > 0 && (
           <section className="mb-12" ref={justArrivedRef}>
-            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Just Arrived</h2>
+            <h2 className="text-2xl font-bold -80 mb-6 dark:text-black">Just Arrived</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {justArrivedProductsList
                 .slice(0, 10)
@@ -3566,7 +3660,7 @@ if (justArrivedProductsList.length > 0) {
 
         {outOfStockProductsList.length > 0 && (
           <section className="mb-12" ref={outOfStockRef}>
-            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Out of Stock</h2>
+            <h2 className="text-2xl font-bold -800 dark:text-black mb-6">Out of Stock</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
               {outOfStockProductsList.map((product) => (
                 <ProductCard key={`out-of-stock-${product._id}`} product={product} forcedBadge={{ text: "Out of Stock", color: "bg-red-500" }} />
@@ -3576,7 +3670,7 @@ if (justArrivedProductsList.length > 0) {
         )}
 
         <section>
-  <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">All Products</h2>
+  <h2 className="text-2xl font-bold -800 dark:text-black mb-6">All Products</h2>
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
     {sortProductsByPrice(filteredProductsList).map((product) => (
       <ProductCard key={product._id} product={product} />
@@ -3589,32 +3683,48 @@ if (justArrivedProductsList.length > 0) {
   <div className="w-full px-4 sm:px-6 lg:px-8">
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
       {/* About Us */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">About Us</h3>
-        <p className="text-gray-300 text-sm">
-          Your trusted e-commerce partner for quality products and exceptional service.
-        </p>
-      </div>
+      {/* About Us */}
+<div>
+  <h3 className="text-lg font-semibold mb-4">About Us</h3>
+  <a 
+    href="#"
+    onClick={(e) => {
+      e.preventDefault();
+      openPolicyModal('about');
+    }}
+    className="text-gray-300 text-sm hover:text-white transition-colors"
+  >
+    Learn more about us
+  </a>
+</div>
 
       {/* Customer Service */}
       <div>
         <h3 className="text-lg font-semibold mb-4">Customer Service</h3>
         <ul className="space-y-2 text-gray-300 text-sm">
           <li>
-            <button 
-              onClick={() => openPolicyModal('return')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('return');
+              }}
+              className="hover:text-white transition-colors"
             >
               Return Policy
-            </button>
+            </a>
           </li>
           <li>
-            <button 
-              onClick={() => openPolicyModal('refund')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('refund');
+              }}
+              className="hover:text-white transition-colors"
             >
               Refund Policy
-            </button>
+            </a>
           </li>
         </ul>
       </div>
@@ -3624,28 +3734,40 @@ if (justArrivedProductsList.length > 0) {
         <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
         <ul className="space-y-2 text-gray-300 text-sm">
           <li>
-            <button 
-              onClick={() => openPolicyModal('privacy')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('privacy');
+              }}
+              className="hover:text-white transition-colors"
             >
               Privacy Policy
-            </button>
+            </a>
           </li>
           <li>
-            <button 
-              onClick={() => openPolicyModal('terms')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('terms');
+              }}
+              className="hover:text-white transition-colors"
             >
               Terms and Conditions
-            </button>
+            </a>
           </li>
           <li>
-            <button 
-              onClick={() => openPolicyModal('shipping')}
-              className="hover:text-white transition-colors text-left"
+            <a 
+              href="#"
+              onClick={(e) => {
+                e.preventDefault();
+                openPolicyModal('shipping');
+              }}
+              className="hover:text-white transition-colors"
             >
               Shipping Policy
-            </button>
+            </a>
           </li>
         </ul>
       </div>

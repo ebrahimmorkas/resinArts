@@ -495,7 +495,7 @@ export default function AddProduct() {
   const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl focus:ring-blue-500`
   const secondaryButtonClass = `${buttonClass} bg-gradient-to-r from-gray-100 to-gray-200 hover:from-gray-200 hover:to-gray-300 text-gray-700 border border-gray-200 dark:border-gray-700 focus:ring-gray-500`
   const dangerButtonClass = `${buttonClass} bg-gradient-to-r from-red-500 to-red-600 hover:from-red-600 hover:to-red-700 text-white focus:ring-red-500`
-  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900`
+  const selectClass = `${inputClass} cursor-pointer appearance-none bg-white dark:bg-gray-900 text-gray-900 dark:text-white border-gray-300 dark:border-gray-600`;
 
   // Dynamic Category Dropdowns
   const handleCategorySelect = (level, categoryId) => {
@@ -512,7 +512,7 @@ export default function AddProduct() {
     const mainCategoryOptions = allCategoriesTree.filter((cat) => !cat.parentCategoryId && !cat.parent_category_id)
     dropdowns.push(
       <div key={`category-dropdown-0`} className="space-y-2">
-        <label htmlFor={`category-level-0`} className={labelClass}>
+        <label htmlFor={`category-level-0`} className={`${inputClass} dark:text-white`}>
           <Tag className="inline w-4 h-4 mr-2" />
           Main Category
         </label>
@@ -539,7 +539,7 @@ export default function AddProduct() {
     if (selectedCategoryIds.length > 0 && subCategoryOptions.length > 0) {
       dropdowns.push(
         <div key={`category-dropdown-sub`} className="space-y-2">
-          <label htmlFor={`category-level-sub`} className={labelClass}>
+          <label htmlFor={`category-level-sub`} className={`${inputClass} dark:text-white`}>
             <Layers className="inline w-4 h-4 mr-2" />
             Sub Category
           </label>
@@ -593,7 +593,7 @@ export default function AddProduct() {
               <div className="space-y-8">
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                   <div className="space-y-2">
-                    <label htmlFor="productName" className={labelClass}>
+                    <label htmlFor="productName" className={`${inputClass} dark:text-white`}>
                       Product Name *
                     </label>
                     <input
@@ -602,7 +602,7 @@ export default function AddProduct() {
                       value={productName}
                       onChange={(e) => setProductName(e.target.value)}
                       placeholder="Enter your product name"
-                      className={inputClass}
+                      className={`${inputClass} dark:text-gray-400`}
                     />
                   </div>
                   <div className="space-y-6">
@@ -622,7 +622,7 @@ export default function AddProduct() {
                 {/* Product Details */}
                 <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                   <div className="flex justify-between items-center">
-                    <h3 className="text-xl font-semibold text-gray-900">Product Specifications</h3>
+                    <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Product Specifications</h3>
                     <button
                       type="button"
                       className={secondaryButtonClass}
@@ -635,7 +635,7 @@ export default function AddProduct() {
                   {productDetails.map((detail, index) => (
                     <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div className="space-y-2">
-                        <label className={labelClass}>Specification</label>
+                        <label className={`${inputClass} dark:text-white`}>Specification</label>
                         <input
                           type="text"
                           value={detail.key}
@@ -643,12 +643,12 @@ export default function AddProduct() {
                             updateKeyValuePair(setProductDetails, productDetails, index, "key", e.target.value)
                           }
                           placeholder="e.g., Material, Weight, Color"
-                          className={inputClass}
+                          className={`${inputClass} dark:text-gray-400`}
                         />
                       </div>
                       <div className="space-y-2 flex gap-4 items-end">
                         <div className="flex-1">
-                          <label className={labelClass}>Value</label>
+                          <label className={`${inputClass} dark:text-white`}>Value</label>
                           <input
                             type="text"
                             value={detail.value}
@@ -656,12 +656,12 @@ export default function AddProduct() {
                               updateKeyValuePair(setProductDetails, productDetails, index, "value", e.target.value)
                             }
                             placeholder="e.g., Cotton, 500g, Blue"
-                            className={inputClass}
+                            className={`${inputClass} dark:text-gray-400`}
                           />
                         </div>
                         <button
                           type="button"
-                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                           onClick={() => removeKeyValuePair(setProductDetails, productDetails, index)}
                         >
                           <X className="w-4 h-4" />
@@ -689,7 +689,7 @@ export default function AddProduct() {
                   <>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                       <div className="space-y-2">
-                        <label htmlFor="stock" className={labelClass}>
+                        <label htmlFor="stock" className={`${inputClass} dark:text-white`}>
                           <Package className="inline w-4 h-4 mr-2" />
                           Stock Quantity
                         </label>
@@ -699,11 +699,11 @@ export default function AddProduct() {
                           value={stock}
                           onChange={(e) => setStock(e.target.value)}
                           placeholder="Available quantity"
-                          className={inputClass}
+                          className={`${inputClass} dark:text-gray-400`}
                         />
                       </div>
                       <div className="space-y-2">
-                        <label htmlFor="price" className={labelClass}>
+                        <label htmlFor="price" className={`${inputClass} dark:text-white`}>
                           <DollarSign className="inline w-4 h-4 mr-2" />
                           Price ($)
                         </label>
@@ -713,14 +713,14 @@ export default function AddProduct() {
                           value={price}
                           onChange={(e) => setPrice(e.target.value)}
                           placeholder="Product price"
-                          className={inputClass}
+                          className={`${inputClass} dark:text-gray-400`}
                         />
                       </div>
                     </div>
 
                     {/* Main Image Upload */}
                     <div className="space-y-4">
-                      <label htmlFor="mainImage" className={labelClass}>
+                      <label htmlFor="mainImage" className={`${inputClass} dark:text-white`}>
                         <ImageIcon className="inline w-4 h-4 mr-2" />
                         Product Main Image
                       </label>
@@ -758,7 +758,7 @@ export default function AddProduct() {
                     {/* Additional Images */}
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-semibold text-gray-900">Additional Images</h3>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Additional Images</h3>
                         <button
                           type="button"
                           className={secondaryButtonClass}
@@ -806,7 +806,7 @@ export default function AddProduct() {
                             </div>
                             <button
                               type="button"
-                              className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                              className="dark:text-white absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
                               onClick={() => removeImageField(setAdditionalImages, additionalImages, index)}
                             >
                               <X className="w-3 h-3" />
@@ -819,7 +819,7 @@ export default function AddProduct() {
                     {/* Bulk Pricing */}
                     <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                       <div className="flex justify-between items-center">
-                        <h3 className="text-xl font-semibold text-gray-900">Bulk Pricing Options</h3>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Bulk Pricing Options</h3>
                         <button
                           type="button"
                           className={secondaryButtonClass}
@@ -832,7 +832,7 @@ export default function AddProduct() {
                       {bulkPricing.map((bp, index) => (
                         <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                           <div className="space-y-2">
-                            <label className={labelClass}>Wholesale Price ($)</label>
+                            <label className={`${inputClass} dark:text-white`}>Wholesale Price ($)</label>
                             <input
                               type="number"
                               value={bp.wholesalePrice}
@@ -840,7 +840,7 @@ export default function AddProduct() {
                                 updateBulkPricingField(setBulkPricing, bulkPricing, index, "wholesalePrice", e.target.value)
                               }
                               placeholder="Bulk price"
-                              className={inputClass}
+                              className={`${inputClass} dark:text-gray-400`}
                             />
                             {price &&
                               bp.wholesalePrice &&
@@ -850,7 +850,7 @@ export default function AddProduct() {
                           </div>
                           <div className="space-y-2 flex gap-4 items-end">
                             <div className="flex-1">
-                              <label className={labelClass}>Minimum Quantity</label>
+                              <label className={`${inputClass} dark:text-white`}>Minimum Quantity</label>
                               <input
                                 type="number"
                                 value={bp.quantity}
@@ -858,12 +858,12 @@ export default function AddProduct() {
                                   updateBulkPricingField(setBulkPricing, bulkPricing, index, "quantity", e.target.value)
                                 }
                                 placeholder="Min qty"
-                                className={inputClass}
+                                className={`${inputClass} dark:text-gray-400`}
                               />
                             </div>
                             <button
                               type="button"
-                              className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                              className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                               onClick={() => removeBulkPricingField(setBulkPricing, bulkPricing, index)}
                             >
                               <X className="w-4 h-4" />
@@ -906,7 +906,7 @@ export default function AddProduct() {
                         </h3>
                         <button
                           type="button"
-                          className={dangerButtonClass}
+                          className={`${dangerButtonClass} dark:text-white`}
                           onClick={() => removeVariant(variantIndex)}
                         >
                           <X className="w-4 h-4" />
@@ -916,17 +916,17 @@ export default function AddProduct() {
 
                       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
                         <div className="space-y-2">
-                          <label className={labelClass}>Color/Variant Name</label>
+                          <label className={`${inputClass} dark:text-white`}>Color/Variant Name</label>
                           <input
                             type="text"
                             value={variant.colorName}
                             onChange={(e) => updateVariantField(variantIndex, "colorName", e.target.value)}
                             placeholder="e.g., Red, Blue, Large"
-                            className={inputClass}
+                            className={`${inputClass} dark:text-gray-400`}
                           />
                         </div>
                         <div className="space-y-4">
-                          <label className={labelClass}>Variant Image</label>
+                          <label className={`${inputClass} dark:text-white`}>Variant Image</label>
                           <div className="border-2 border-dashed border-gray-200 dark:border-gray-700 rounded-xl p-6 text-center hover:border-blue-400 transition-colors">
                             <input
                               id={`variant-image-${variantIndex}`}
@@ -976,7 +976,7 @@ export default function AddProduct() {
                       {/* Variant Optional Details */}
                       <div className="bg-white dark:bg-gray-900 rounded-xl p-6 border border-gray-100 space-y-6">
                         <div className="flex justify-between items-center">
-                          <h4 className="text-lg font-semibold text-gray-900">Variant Specifications</h4>
+                          <h4 className="text-lg font-semibold text-gray-900 dark:text-white">Variant Specifications</h4>
                           <button
                             type="button"
                             className={secondaryButtonClass}
@@ -994,7 +994,7 @@ export default function AddProduct() {
                         {variant.optionalDetails.map((detail, index) => (
                           <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                              <label className={labelClass}>Specification</label>
+                              <label className={`${inputClass} dark:text-white`}>Specification</label>
                               <input
                                 type="text"
                                 value={detail.key}
@@ -1004,12 +1004,12 @@ export default function AddProduct() {
                                   updateVariantField(variantIndex, "optionalDetails", newDetails)
                                 }}
                                 placeholder="e.g., Material"
-                                className={inputClass}
+                                className={`${inputClass} dark:text-gray-400`}
                               />
                             </div>
                             <div className="space-y-2 flex gap-4 items-end">
                               <div className="flex-1">
-                                <label className={labelClass}>Value</label>
+                                <label className={`${inputClass} dark:text-white`}>Value</label>
                                 <input
                                   type="text"
                                   value={detail.value}
@@ -1019,12 +1019,12 @@ export default function AddProduct() {
                                     updateVariantField(variantIndex, "optionalDetails", newDetails)
                                   }}
                                   placeholder="e.g., Cotton"
-                                  className={inputClass}
+                                  className={`${inputClass} dark:text-gray-400`}
                                 />
                               </div>
                               <button
                                 type="button"
-                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                 onClick={() => {
                                   const newDetails = variant.optionalDetails.filter((_, i) => i !== index)
                                   updateVariantField(variantIndex, "optionalDetails", newDetails)
@@ -1059,7 +1059,7 @@ export default function AddProduct() {
                               <h4 className="text-lg font-semibold -800 dark:text-gray-100">Size Configuration {mdIndex + 1}</h4>
                               <button
                                 type="button"
-                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-white"
                                 onClick={() => removeSizeSection(variantIndex, mdIndex)}
                               >
                                 <X className="w-4 h-4" />
@@ -1071,37 +1071,37 @@ export default function AddProduct() {
                               <h5 className="font-semibold -800 dark:text-gray-100">Dimensions</h5>
                               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Length</label>
+                                  <label className={`${inputClass} dark:text-white`}>Length</label>
                                   <input
                                     type="number"
                                     value={md.size.length}
                                     onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "length", e.target.value)}
                                     placeholder="0"
-                                    className={inputClass}
+                                    className={`${inputClass} dark:text-gray-400`}
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Width</label>
+                                  <label className={`${inputClass} dark:text-white`}>Width</label>
                                   <input
                                     type="number"
                                     value={md.size.breadth}
                                     onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "breadth", e.target.value)}
                                     placeholder="0"
-                                    className={inputClass}
+                                    className={`${inputClass} dark:text-gray-400`}
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Height</label>
+                                  <label className={`${inputClass} dark:text-white`}>Height</label>
                                   <input
                                     type="number"
                                     value={md.size.height}
                                     onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "height", e.target.value)}
                                     placeholder="0"
-                                    className={inputClass}
+                                    className={`${inputClass} dark:text-gray-400`}
                                   />
                                 </div>
                                 <div className="space-y-2">
-                                  <label className={labelClass}>Unit</label>
+                                  <label className={`${inputClass} dark:text-white`}>Unit</label>
                                   <select
                                     value={md.size.unit}
                                     onChange={(e) => updateSingleSizeField(variantIndex, mdIndex, "unit", e.target.value)}
@@ -1146,7 +1146,7 @@ export default function AddProduct() {
                               </div>
                               {getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
                                 <div className="space-y-2">
-                                  <label className={labelClass}>
+                                  <label className={`${inputClass} dark:text-white`}>
                                     Do you want to reuse additional images?
                                   </label>
                                   <select
@@ -1176,7 +1176,7 @@ export default function AddProduct() {
                               {md.reuseAdditionalImages === "yes" &&
                                 getReuseOptions(variantIndex, mdIndex, "images").length > 0 && (
                                   <div className="space-y-2">
-                                    <label className={labelClass}>
+                                    <label className={`${inputClass} dark:text-white`}>
                                       Select source
                                     </label>
                                     <select
@@ -1236,7 +1236,7 @@ export default function AddProduct() {
                                       </div>
                                       <button
                                         type="button"
-                                        className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+                                        className="absolute -top-2 -right-2 p-1.5 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors dark:text-white"
                                         onClick={() => {
                                           const newImages = md.additionalImages.filter((_, i) => i !== index)
                                           if (md.additionalImages[index]?.preview)
@@ -1274,7 +1274,7 @@ export default function AddProduct() {
                               </div>
                               {getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
                                 <div className="space-y-2">
-                                  <label className={labelClass}>
+                                  <label className={`${inputClass} dark:text-white`}>
                                     Do you want to reuse optional details?
                                   </label>
                                   <select
@@ -1304,7 +1304,7 @@ export default function AddProduct() {
                               {md.reuseOptionalDetails === "yes" &&
                                 getReuseOptions(variantIndex, mdIndex, "optionalDetails").length > 0 && (
                                   <div className="space-y-2">
-                                    <label className={labelClass}>
+                                    <label className={`${inputClass} dark:text-white`}>
                                       Select source
                                     </label>
                                     <select
@@ -1329,7 +1329,7 @@ export default function AddProduct() {
                                   {md.optionalDetails.map((detail, index) => (
                                     <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4">
                                       <div className="space-y-2">
-                                        <label className={labelClass}>Key</label>
+                                        <label className={`${inputClass} dark:text-white`}>Key</label>
                                         <input
                                           type="text"
                                           value={detail.key}
@@ -1339,12 +1339,12 @@ export default function AddProduct() {
                                             updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
                                           }}
                                           placeholder="e.g., Feature"
-                                          className={inputClass}
+                                          className={`${inputClass} dark:text-gray-400`}
                                         />
                                       </div>
                                       <div className="space-y-2 flex gap-4 items-end">
                                         <div className="flex-1">
-                                          <label className={labelClass}>Value</label>
+                                          <label className={`${inputClass} dark:text-white`}>Value</label>
                                           <input
                                             type="text"
                                             value={detail.value}
@@ -1354,12 +1354,12 @@ export default function AddProduct() {
                                               updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
                                             }}
                                             placeholder="e.g., Waterproof"
-                                            className={inputClass}
+                                            className={`${inputClass} dark:text-gray-400`}
                                           />
                                         </div>
                                         <button
                                           type="button"
-                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                           onClick={() => {
                                             const newDetails = md.optionalDetails.filter((_, i) => i !== index)
                                             updateSizeSectionField(variantIndex, mdIndex, "optionalDetails", newDetails)
@@ -1377,7 +1377,7 @@ export default function AddProduct() {
                             {/* Price & Stock for this specific Size Section (only if not common for variant) */}
                             {variant.moreDetails.length > 1 && variant.isPriceSame === "no" && (
                               <div className="space-y-2">
-                                <label className={labelClass}>
+                                <label className={`${inputClass} dark:text-white`}>
                                   Price ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x
                                   {md.size?.height || "?"})
                                 </label>
@@ -1386,13 +1386,13 @@ export default function AddProduct() {
                                   value={md.price}
                                   onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "price", e.target.value)}
                                   placeholder="Enter price"
-                                  className={inputClass}
+                                  className={`${inputClass} dark:text-gray-400`}
                                 />
                               </div>
                             )}
                             {variant.moreDetails.length > 1 && variant.isStockSame === "no" && (
                               <div className="space-y-2">
-                                <label className={labelClass}>
+                                <label className={`${inputClass} dark:text-white`}>
                                   Stock ({variant.colorName} - {md.size?.length || "?"}x{md.size?.breadth || "?"}x
                                   {md.size?.height || "?"})
                                 </label>
@@ -1401,7 +1401,7 @@ export default function AddProduct() {
                                   value={md.stock}
                                   onChange={(e) => updateSizeSectionField(variantIndex, mdIndex, "stock", e.target.value)}
                                   placeholder="Enter stock"
-                                  className={inputClass}
+                                  className={`${inputClass} dark:text-gray-400`}
                                 />
                               </div>
                             )}
@@ -1430,7 +1430,7 @@ export default function AddProduct() {
                                   {md.bulkPricingCombinations.map((bpc, index) => (
                                     <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                                       <div className="space-y-2">
-                                        <label className={labelClass}>Wholesale Price ($)</label>
+                                        <label className={`${inputClass} dark:text-white`}>Wholesale Price ($)</label>
                                         <input
                                           type="number"
                                           value={bpc.wholesalePrice}
@@ -1440,7 +1440,7 @@ export default function AddProduct() {
                                             updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
                                           }}
                                           placeholder="Enter wholesale price"
-                                          className={inputClass}
+                                          className={`${inputClass} dark:text-gray-400`}
                                         />
                                         {md.price &&
                                           bpc.wholesalePrice &&
@@ -1452,7 +1452,7 @@ export default function AddProduct() {
                                       </div>
                                       <div className="space-y-2 flex gap-4 items-end">
                                         <div className="flex-1">
-                                          <label className={labelClass}>Quantity</label>
+                                          <label className={`${inputClass} dark:text-white`}>Quantity</label>
                                           <input
                                             type="number"
                                             value={bpc.quantity}
@@ -1462,12 +1462,12 @@ export default function AddProduct() {
                                               updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
                                             }}
                                             placeholder="Enter quantity"
-                                            className={inputClass}
+                                            className={`${inputClass} dark:text-gray-400`}
                                           />
                                         </div>
                                         <button
                                           type="button"
-                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                          className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                           onClick={() => {
                                             const newBPC = md.bulkPricingCombinations.filter((_, i) => i !== index)
                                             updateSizeSectionField(variantIndex, mdIndex, "bulkPricingCombinations", newBPC)
@@ -1488,7 +1488,7 @@ export default function AddProduct() {
                       {variant.moreDetails.length > 1 && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <label className={labelClass}>Same price for all sizes?</label>
+                            <label className={`${inputClass} dark:text-white`}>Same price for all sizes?</label>
                             <select
                               value={variant.isPriceSame}
                               onChange={(e) => updateVariantField(variantIndex, "isPriceSame", e.target.value)}
@@ -1499,7 +1499,7 @@ export default function AddProduct() {
                             </select>
                           </div>
                           <div className="space-y-2">
-                            <label className={labelClass}>Same stock for all sizes?</label>
+                            <label className={`${inputClass} dark:text-white`}>Same stock for all sizes?</label>
                             <select
                               value={variant.isStockSame}
                               onChange={(e) => updateVariantField(variantIndex, "isStockSame", e.target.value)}
@@ -1516,23 +1516,23 @@ export default function AddProduct() {
                       {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                           <div className="space-y-2">
-                            <label className={labelClass}>Price ($)</label>
+                            <label className={`${inputClass} dark:text-white`}>Price ($)</label>
                             <input
                               type="number"
                               value={variant.commonPrice}
                               onChange={(e) => updateVariantField(variantIndex, "commonPrice", e.target.value)}
                               placeholder="Variant price"
-                              className={inputClass}
+                              className={`${inputClass} dark:text-gray-400`}
                             />
                           </div>
                           <div className="space-y-2">
-                            <label className={labelClass}>Stock</label>
+                            <label className={`${inputClass} dark:text-white`}>Stock</label>
                             <input
                               type="number"
                               value={variant.commonStock}
                               onChange={(e) => updateVariantField(variantIndex, "commonStock", e.target.value)}
                               placeholder="Stock quantity"
-                              className={inputClass}
+                              className={`${inputClass} dark:text-gray-400`}
                             />
                           </div>
                         </div>
@@ -1542,7 +1542,7 @@ export default function AddProduct() {
                       {(variant.moreDetails.length === 1 || variant.isPriceSame === "yes") && (
                         <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
                           <div className="flex justify-between items-center">
-                            <h4 className="text-xl font-semibold text-gray-900">Common Bulk Pricing Combinations</h4>
+                            <h4 className="text-xl font-semibold text-gray-900 dark:text-white">Common Bulk Pricing Combinations</h4>
                             <button
                               type="button"
                               className={secondaryButtonClass}
@@ -1560,7 +1560,7 @@ export default function AddProduct() {
                           {variant.commonBulkPricingCombinations.map((bpc, index) => (
                             <div key={index} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
                               <div className="space-y-2">
-                                <label className={labelClass}>Wholesale Price ($)</label>
+                                <label className={`${inputClass} dark:text-white`}>Wholesale Price ($)</label>
                                 <input
                                   type="number"
                                   value={bpc.wholesalePrice}
@@ -1570,7 +1570,7 @@ export default function AddProduct() {
                                     updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
                                   }}
                                   placeholder="Enter wholesale price"
-                                  className={inputClass}
+                                  className={`${inputClass} dark:text-gray-400`}
                                 />
                                 {variant.commonPrice &&
                                   bpc.wholesalePrice &&
@@ -1582,7 +1582,7 @@ export default function AddProduct() {
                               </div>
                               <div className="space-y-2 flex gap-4 items-end">
                                 <div className="flex-1">
-                                  <label className={labelClass}>Quantity</label>
+                                  <label className={`${inputClass} dark:text-white`}>Quantity</label>
                                   <input
                                     type="number"
                                     value={bpc.quantity}
@@ -1592,12 +1592,12 @@ export default function AddProduct() {
                                       updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
                                     }}
                                     placeholder="Enter quantity"
-                                    className={inputClass}
+                                    className={`${inputClass} dark:text-gray-400`}
                                   />
                                 </div>
                                 <button
                                   type="button"
-                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors"
+                                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
                                   onClick={() => {
                                     const newBPC = variant.commonBulkPricingCombinations.filter((_, i) => i !== index)
                                     updateVariantField(variantIndex, "commonBulkPricingCombinations", newBPC)
