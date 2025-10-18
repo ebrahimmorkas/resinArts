@@ -229,7 +229,7 @@ const AllBanners = () => {
         {/* Professional Header */}
         <div className="mb-8">
           <div className="flex items-center space-x-4 mb-4">
-            <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
+            <button className="dark:text-white inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors dark:text-white">
               <ArrowLeft className="w-4 h-4 mr-2" />
               Back
             </button>
@@ -255,7 +255,7 @@ const AllBanners = () => {
       {/* Professional Header */}
       <div className="mb-8">
         <div className="flex items-center space-x-4 mb-4">
-          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors">
+          <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-colors dark:text-white">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back
           </button>
@@ -269,8 +269,8 @@ const AllBanners = () => {
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">All Banners</h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">All Banners</h3>
+              <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">
                 Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} results
               </p>
             </div>
@@ -289,11 +289,11 @@ const AllBanners = () => {
               
               {/* Actions */}
               <div className="flex items-center space-x-2">
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white">
                   <Filter className="w-4 h-4 mr-2" />
                   Filter
                 </button>
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500 dark:text-white">
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </button>
@@ -327,36 +327,36 @@ const AllBanners = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                   <tr>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
+                    <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
                       Sr No.
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '160px' }}>
+                    <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '160px' }}>
                       Image
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
+                    <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                       Start Date
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
+                    <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                       End Date
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                    <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Status
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
+                    <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
                       Default
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                    <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                       Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                   {currentData.map((banner, index) => (
-                    <tr key={banner._id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
+                    <tr key={banner._id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors dark:hover:bg-gray-700">
+                      <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
                         {startIndex + index + 1}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '160px' }}>
+                      <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '160px' }}>
                         <div className="flex justify-center">
                           <img
                             src={banner.image}
@@ -365,16 +365,16 @@ const AllBanners = () => {
                           />
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '140px' }}>
+                      <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '140px' }}>
                         {formatDate(banner.startDate)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '140px' }}>
+                      <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '140px' }}>
                         {formatDate(banner.endDate)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
+                      <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
                         {getStatusBadge(banner.startDate, banner.endDate)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '100px' }}>
+                      <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '100px' }}>
                         <div className="flex items-center justify-center">
                           {updatingDefaultId === banner._id ? (
                             <svg className="animate-spin h-5 w-5 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -391,7 +391,7 @@ const AllBanners = () => {
                           )}
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
+                      <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
                         <div className="flex items-center justify-center space-x-2">
                           <button
                             onClick={() => openDeleteModal(banner)}
@@ -405,7 +405,7 @@ const AllBanners = () => {
                                 <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
                               </svg>
                             ) : (
-                              <Trash2 className="w-4 h-4" />
+                              <Trash2 className="w-4 h-4 dark:text-white" />
                             )}
                           </button>
                         </div>
@@ -424,19 +424,19 @@ const AllBanners = () => {
             <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
               {/* Items per page */}
               <div className="flex items-center space-x-2">
-                <span className="text-sm text-gray-700">Show</span>
+                <span className="text-sm text-gray-700 dark:text-gray-400">Show</span>
                 <select
-                  value={itemsPerPage}
-                  onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                  className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={25}>25</option>
-                  <option value={50}>50</option>
-                  <option value={100}>100</option>
-                </select>
-                <span className="text-sm text-gray-700">entries per page</span>
+  value={itemsPerPage}
+  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+  className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+>
+  <option value={5}>5</option>
+  <option value={10}>10</option>
+  <option value={25}>25</option>
+  <option value={50}>50</option>
+  <option value={100}>100</option>
+</select>
+                <span className="text-sm text-gray-700 dark:text-gray-400">entries per page</span>
               </div>
 
               {/* Pagination */}
