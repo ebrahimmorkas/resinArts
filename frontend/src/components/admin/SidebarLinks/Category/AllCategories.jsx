@@ -958,7 +958,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
         
         <div className="flex-1">
           <div 
-            className={`flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 dark:bg-gray-800 transition-colors ${isMainParent ? 'bg-blue-50' : ''} ${category.image && !isEditMode ? 'cursor-pointer' : ''}`}
+            className={`flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-white transition-colors ${isMainParent ? 'bg-blue-50 dark:text-white' : ''} ${category.image && !isEditMode ? 'cursor-pointer' : ''}`}
             onClick={() => !isEditMode && category.image && setImageModal({ isOpen: true, url: category.image })}
           >
             {showImageUpload && imagePreview && isUploading ? (
@@ -1195,7 +1195,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div>
-              <p className="text-sm text-gray-500">
+              <p className="text-sm text-gray-500 dark:text-gray-400">
                 Showing {filteredData.length > 0 ? startIndex + 1 : 0} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} results
               </p>
             </div>
@@ -1239,14 +1239,14 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 <div className="flex items-center space-x-2">
                   <button 
                     onClick={() => setFilterModal(true)}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    className="dark:text-gray-400 inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                   >
                     <Filter className="w-4 h-4 mr-2" />
                     Filter
                   </button>
                   <button 
                     onClick={handleExport}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+                    className="dark:text-gray-400 inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
                   >
                     <Download className="w-4 h-4 mr-2" />
                     Export
@@ -1274,7 +1274,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                     <tr>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '60px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '60px' }}>
                         <input
                           type="checkbox"
                           checked={selectedRows.length === currentData.length && currentData.length > 0}
@@ -1282,26 +1282,26 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                         />
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
                         Sr No.
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
                         Image
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '180px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '180px' }}>
                         Name
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                         Sub Categories
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '140px' }}>
                         Created At
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
   Status
 </th>
                       {selectedRows.length === 0 && (
-                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '220px' }}>
+                        <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '220px' }}>
                           Actions
                         </th>
                       )}
@@ -1318,8 +1318,8 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                       });
 
                       return (
-                        <tr key={categoryId} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '60px' }}>
+                        <tr key={categoryId} className="hover:bg-gray-50 hover:dark:text-gray-400 dark:bg-gray-800 transition-colors">
+                          <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '60px' }}>
                             <input
                               type="checkbox"
                               checked={selectedRows.includes(categoryId)}
@@ -1327,11 +1327,11 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                               className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                             />
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
+                          <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
                             {startIndex + index + 1}
                           </td>
                           <td 
-                            className="px-6 py-4 whitespace-nowrap text-sm text-center cursor-pointer" 
+                            className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center cursor-pointer" 
                             style={{ minWidth: '100px' }} 
                             onClick={() => item.image && setImageModal({ isOpen: true, url: item.image })}
                           >
@@ -1347,15 +1347,15 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                               </div>
                             )}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 font-medium" style={{ minWidth: '180px' }}>
+                          <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 font-medium" style={{ minWidth: '180px' }}>
                             {item.categoryName}
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '140px' }}>
+                          <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '140px' }}>
                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                               {subcategoryCount} {subcategoryCount === 1 ? 'subcategory' : 'subcategories'}
                             </span>
                           </td>
-                          <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
+                          <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center text-gray-500" style={{ minWidth: '140px' }}>
                             {createdDate}
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
@@ -1364,7 +1364,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       e.stopPropagation();
       handleToggleStatus(item._id, !item.isActive, item.categoryName);
     }}
-    className={`inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+    className={`dark:text-white inline-flex items-center px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
       item.isActive 
         ? 'bg-green-100 text-green-800 hover:bg-green-200' 
         : 'bg-red-100 text-red-800 hover:bg-red-200'
@@ -1404,7 +1404,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                                 </button>
                                 <button
                                   onClick={() => handleDeleteClick(item)}
-                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors dark:text-white"
                                   title="Delete"
                                 >
                                   <Trash2 className="w-4 h-4" />
@@ -1501,7 +1501,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                   <div className="flex-shrink-0 flex items-center justify-center h-10 w-10 rounded-full bg-blue-100">
                     <Filter className="h-5 w-5 text-blue-600" />
                   </div>
-                  <h3 className="text-lg leading-6 font-medium text-gray-900">
+                  <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
                     Filter Categories
                   </h3>
                 </div>
@@ -1516,7 +1516,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
             
             <div className="px-6 py-4 space-y-4 max-h-96 overflow-y-auto">
               <div>
-                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <label className="flex items-center text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                   <Calendar className="w-4 h-4 mr-2" />
                   Specific Creation Date
                 </label>
@@ -1524,18 +1524,18 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                   type="date"
                   value={filters.singleDate}
                   onChange={(e) => setFilters({...filters, singleDate: e.target.value, startDate: '', endDate: ''})}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                  className="dark:text-gray-400 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
 
               <div className="border-t pt-4">
-                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <label className="dark:text-gray-400 flex items-center text-sm font-medium text-gray-700 mb-2">
                   <Calendar className="w-4 h-4 mr-2" />
                   Date Range
                 </label>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block">Start Date</label>
+                    <label className="dark:text-gray-400 text-xs text-gray-500 mb-1 block">Start Date</label>
                     <input
                       type="date"
                       value={filters.startDate}
@@ -1544,12 +1544,12 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                     />
                   </div>
                   <div>
-                    <label className="text-xs text-gray-500 mb-1 block">End Date</label>
+                    <label className="dark:text-gray-400 text-xs text-gray-500 mb-1 block">End Date</label>
                     <input
                       type="date"
                       value={filters.endDate}
                       onChange={(e) => setFilters({...filters, endDate: e.target.value, singleDate: ''})}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      className="dark:text-gray-400 w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     />
                   </div>
                 </div>
@@ -1561,16 +1561,16 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                     type="checkbox"
                     checked={filters.noSubcategories}
                     onChange={(e) => setFilters({...filters, noSubcategories: e.target.checked, subcategoryCount: ''})}
-                    className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                    className="dark:text-gray-400 w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
                   />
-                  <span className="ml-2 text-sm font-medium text-gray-700">
+                  <span className="dark:text-gray-400 ml-2 text-sm font-medium text-gray-700">
                     Show only categories with no subcategories
                   </span>
                 </label>
               </div>
 
               <div className="border-t pt-4">
-                <label className="flex items-center text-sm font-medium text-gray-700 mb-2">
+                <label className="dark:text-gray-400 flex items-center text-sm font-medium text-gray-700 mb-2">
                   <Hash className="w-4 h-4 mr-2" />
                   Number of Subcategories
                 </label>
@@ -1596,7 +1596,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               <button
                 type="button"
                 onClick={clearFilters}
-                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="dark:text-white inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Clear Filters
               </button>
@@ -1718,26 +1718,26 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                     <FolderTree className="h-5 w-5 text-purple-600" />
                   </div>
                   <div>
-                    <h3 className="text-lg leading-6 font-medium text-gray-900">
+                    <h3 className="text-lg leading-6 font-medium text-gray-900 dark:text-white">
                       Category Hierarchy
                     </h3>
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
                       {hierarchyModal.category?.categoryName}
                     </p>
                   </div>
                 </div>
                 <button
                   onClick={() => setHierarchyModal({ isOpen: false, category: null })}
-                  className="rounded-md text-gray-400 hover:text-gray-500 focus:outline-none"
+                  className="rounded-md text-gray-400 hover:text-gray-50 focus:outline-none"
                 >
                   <X className="h-6 w-6" />
                 </button>
               </div>
             </div>
             
-            <div className="px-6 py-4 max-h-96 overflow-y-auto">
+            <div className="px-6 py-4 max-h-96 overflow-y-auto dark:hover:text-gray-300">
               {hierarchyModal.category && (
-                <div className="space-y-2">
+                <div className="space-y-2 dark:hover:text-gray-400">
                   {renderHierarchyTree(hierarchyModal.category, 0, false)}
                 </div>
               )}
@@ -1745,7 +1745,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               {(!hierarchyModal.category?.children || hierarchyModal.category.children.length === 0) && (
                 <div className="text-center py-8">
                   <FolderTree className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-500 text-sm">No subcategories found</p>
+                  <p className="text-gray-500 text-sm dark:text-gray-400">No subcategories found</p>
                 </div>
               )}
             </div>
@@ -1754,7 +1754,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               <button
                 type="button"
                 onClick={() => setHierarchyModal({ isOpen: false, category: null })}
-                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="dark:text-white inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
               >
                 Close
               </button>
