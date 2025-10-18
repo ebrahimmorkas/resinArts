@@ -243,6 +243,7 @@ const bulkUploadCategories = async (req, res) => {
 };
 
 // Update category name
+// Update category name
 const updateCategoryName = async (req, res) => {
   try {
     const { id } = req.params;
@@ -257,12 +258,76 @@ const updateCategoryName = async (req, res) => {
       return res.status(404).json({ message: 'Category not found' });
     }
 
+    const oldCategoryName = category.categoryName;
     category.categoryName = categoryName.trim();
     await category.save();
 
+    // Helper function to build category path
+    const buildCategoryPath = async (categoryId) => {
+      const cat = await Category.findById(categoryId);
+      if (!cat) return '';
+      
+      if (!cat.parent_category_id) {
+        return cat.categoryName;
+      }
+      
+      const parentPath = await buildCategoryPath(cat.parent_category_id);
+      return `${parentPath} > ${cat.categoryName}`;
+    };
+
+    // Function to get all descendant category IDs
+    const getAllDescendantIds = async (parentId) => {
+      const children = await Category.find({ parent_category_id: parentId });
+      let allIds = children.map(child => child._id);
+      
+      for (const child of children) {
+        const descendantIds = await getAllDescendantIds(child._id);
+        allIds = allIds.concat(descendantIds);
+      }
+      
+      return allIds;
+    };
+
+    // Get all descendant category IDs (including the current category)
+    const descendantIds = await getAllDescendantIds(id);
+    const allAffectedCategoryIds = [id, ...descendantIds];
+
+    // Find all products that have any of these categories as mainCategory or subCategory
+    const productsToUpdate = await Product.find({
+      $or: [
+        { mainCategory: { $in: allAffectedCategoryIds } },
+        { subCategory: { $in: allAffectedCategoryIds } }
+      ]
+    });
+
+    // Update categoryPath for each affected product
+    let updatedProductCount = 0;
+    for (const product of productsToUpdate) {
+      let newCategoryPath = '';
+      
+      // Build the category path based on mainCategory and subCategory
+      if (product.mainCategory) {
+        const mainCatPath = await buildCategoryPath(product.mainCategory);
+        newCategoryPath = mainCatPath;
+        
+        if (product.subCategory) {
+          const subCatPath = await buildCategoryPath(product.subCategory);
+          newCategoryPath = subCatPath; // Full path from root to subcategory
+        }
+      }
+      
+      // Update the product's categoryPath
+      if (product.categoryPath !== newCategoryPath) {
+        product.categoryPath = newCategoryPath;
+        await product.save();
+        updatedProductCount++;
+      }
+    }
+
     res.status(200).json({ 
-      message: 'Category updated successfully',
-      category 
+      message: 'Category and related products updated successfully',
+      category,
+      updatedProductsCount: updatedProductCount
     });
   } catch (error) {
     console.error('Error updating category name:', error);
