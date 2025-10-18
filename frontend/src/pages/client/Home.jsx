@@ -1019,10 +1019,26 @@ const getPolicyTitle = (type) => {
     return sortProductsByPrice(filtered);
   }, [filteredProductsList, selectedFilters]);
 
-  if (loadingDiscount || loadingCategories || loadingFreeCash) return <div>Loading...</div>
+  if (loadingDiscount || loadingCategories || loadingFreeCash) {
+  return (
+    <div className="fixed inset-0 bg-gray-100 dark:bg-gray-900 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-900/80 backdrop-blur-sm rounded-lg p-8 flex flex-col items-center gap-3">
+        <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-gray-600 dark:text-gray-400 text-lg font-medium">Loading products...</p>
+      </div>
+    </div>
+  );
+}
 
-  if (loadingDiscount || loadingCategories || loadingFreeCash) return <div>Loading...</div>
-  if (categoriesErrors || freeCashErrors) return <div>Error: {categoriesErrors || freeCashErrors}</div>
+if (categoriesErrors || freeCashErrors) {
+  return (
+    <div className="fixed inset-0 bg-gray-100 dark:bg-gray-900 flex items-center justify-center z-50">
+      <div className="bg-white dark:bg-gray-900/80 backdrop-blur-sm rounded-lg p-8 flex flex-col items-center gap-3">
+        <p className="text-red-600 dark:text-red-400 text-lg font-medium">Error: {categoriesErrors || freeCashErrors}</p>
+      </div>
+    </div>
+  );
+}
 
 // Sticky Category Navigation Bar Component
 const CategoryNavigationBar = () => {
