@@ -379,6 +379,7 @@ const addSubcategory = async (req, res) => {
 };
 
 // Delete category (recursive)
+// Delete category (recursive)
 const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
@@ -409,7 +410,7 @@ const deleteCategory = async (req, res) => {
     // Get all categories that will be deleted to extract image URLs
     const categoriesToDelete = await Category.find({ _id: { $in: allCategoryIds } });
 
-    // Delete images from Cloudinary
+    // Delete category images from Cloudinary
     for (const cat of categoriesToDelete) {
       if (cat.image) {
         try {
@@ -424,12 +425,81 @@ const deleteCategory = async (req, res) => {
       }
     }
 
+    // Find all products that have any of these categories as mainCategory or subCategory
+    const productsToDelete = await Product.find({
+      $or: [
+        { mainCategory: { $in: allCategoryIds } },
+        { subCategory: { $in: allCategoryIds } }
+      ]
+    });
+
+    // Delete product images from Cloudinary
+    const deleteFromCloudinary = async (imageUrl) => {
+      if (!imageUrl) return;
+      try {
+        const urlParts = imageUrl.split('/');
+        const uploadIndex = urlParts.indexOf('upload');
+        if (uploadIndex !== -1 && uploadIndex + 2 < urlParts.length) {
+          const pathAfterUpload = urlParts.slice(uploadIndex + 2).join('/');
+          const publicId = pathAfterUpload.substring(0, pathAfterUpload.lastIndexOf('.'));
+          await cloudinary.uploader.destroy(publicId);
+          console.log(`Deleted image: ${publicId}`);
+        }
+      } catch (error) {
+        console.error('Error deleting from Cloudinary:', error);
+      }
+    };
+
+    // Delete all images for each product
+    for (const product of productsToDelete) {
+      // Delete main product image
+      if (product.image) {
+        await deleteFromCloudinary(product.image);
+      }
+
+      // Delete additional images
+      if (product.additionalImages && product.additionalImages.length > 0) {
+        for (const img of product.additionalImages) {
+          await deleteFromCloudinary(img);
+        }
+      }
+
+      // Delete variant images
+      if (product.variants && product.variants.length > 0) {
+        for (const variant of product.variants) {
+          if (variant.variantImage) {
+            await deleteFromCloudinary(variant.variantImage);
+          }
+
+          // Delete moreDetails images
+          if (variant.moreDetails && variant.moreDetails.length > 0) {
+            for (const detail of variant.moreDetails) {
+              if (detail.additionalImages && detail.additionalImages.length > 0) {
+                for (const img of detail.additionalImages) {
+                  await deleteFromCloudinary(img);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Delete all products
+    const deletedProductsCount = await Product.deleteMany({
+      $or: [
+        { mainCategory: { $in: allCategoryIds } },
+        { subCategory: { $in: allCategoryIds } }
+      ]
+    });
+
     // Delete all categories (parent and all descendants)
     await Category.deleteMany({ _id: { $in: allCategoryIds } });
 
     res.status(200).json({ 
-      message: 'Category and all subcategories deleted successfully',
-      deletedCount: allCategoryIds.length
+      message: 'Category, subcategories, and related products deleted successfully',
+      deletedCategoriesCount: allCategoryIds.length,
+      deletedProductsCount: deletedProductsCount.deletedCount
     });
 
   } catch (error) {
