@@ -137,11 +137,11 @@ const AddAnnouncement = ({ onSuccess }) => {
               <div className="space-y-6">
                 {/* Announcement Text */}
                 <div className="space-y-2">
-                  <label className="block text-sm font-semibold text-gray-700">
+                  <label className="block text-sm font-semibold text-gray-700 dark:text-white">
                     Announcement Message
-                    <span className="text-red-500 ml-1">*</span>
+                    <span className="text-red-500 ml-1 dark:text-white">*</span>
                   </label>
-                  <div className="relative">
+                  <div className="relative dark:text-gray-400">
                     <textarea 
                       name="text" 
                       value={formData.text} 
@@ -160,7 +160,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                 {/* Date Range */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 sm:gap-6">
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-400">
                       Start Date
                       <span className="text-red-500 ml-1">*</span>
                     </label>
@@ -180,7 +180,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                   </div>
 
                   <div className="space-y-2">
-                    <label className="block text-sm font-semibold text-gray-700">
+                    <label className="block text-sm font-semibold text-gray-700 dark:text-gray-400">
                       End Date
                       <span className="text-red-500 ml-1">*</span>
                     </label>
@@ -201,7 +201,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                 </div>
 
                 {/* Default Checkbox */}
-                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100">
+                <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 border border-blue-100 dark:bg-gray-400">
                   <div className="flex items-start space-x-3">
                     <div className="flex items-center h-5">
                       <input 
@@ -216,7 +216,7 @@ const AddAnnouncement = ({ onSuccess }) => {
                       <label className="text-sm font-medium text-gray-900 cursor-pointer">
                         Set as Default Announcement
                       </label>
-                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1">
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-1 dark:text-black">
                         This announcement will be displayed as the primary notification
                       </p>
                     </div>
