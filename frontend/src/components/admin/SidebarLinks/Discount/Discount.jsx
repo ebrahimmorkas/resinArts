@@ -354,14 +354,14 @@ function Discount() {
                             <div className="space-y-6">
                                 {/* Date Range Section */}
                                 <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center dark:text-white">
                                         <Calendar className="w-5 h-5 mr-2 text-blue-600" />
                                         Date Range
                                     </h3>
                                     
                                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                                 Start Date (Optional)
                                             </label>
                                             <input
@@ -375,7 +375,7 @@ function Discount() {
                                         </div>
                                         
                                         <div>
-                                            <label className="block text-sm font-medium text-gray-700 mb-2">
+                                            <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                                 End Date *
                                             </label>
                                             <input
@@ -401,13 +401,13 @@ function Discount() {
 
                                 {/* Discount Section */}
                                 <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center dark:text-white">
                                         <Percent className="w-5 h-5 mr-2 text-green-600" />
                                         Discount Details
                                     </h3>
                                     
                                     <div>
-                                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                                        <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                             Discount Percentage *
                                         </label>
                                         <div className="relative">
@@ -425,13 +425,13 @@ function Discount() {
                                                 required
                                             />
                                             <div className="absolute inset-y-0 right-0 flex items-center pr-4">
-                                                <span className="text-gray-500 font-medium">%</span>
+                                                <span className="text-gray-500 font-medium dark:text-gray-400">%</span>
                                             </div>
                                         </div>
                                         {errors.discountPercentage && (
                                             <p className="mt-1 text-sm text-red-600">{errors.discountPercentage}</p>
                                         )}
-                                        <p className="mt-1 text-xs text-gray-500">Enter a value between 1 and 100</p>
+                                        <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">Enter a value between 1 and 100</p>
                                     </div>
                                 </div>
                             </div>
@@ -440,7 +440,7 @@ function Discount() {
                             <div className="space-y-6">
                                 {/* Category Selection */}
                                 <div className="bg-gray-50 dark:bg-gray-800 p-6 rounded-xl">
-                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                                    <h3 className="text-lg font-semibold text-gray-900 mb-4 flex items-center dark:text-white">
                                         <Tag className="w-5 h-5 mr-2 text-purple-600" />
                                         Category Selection
                                     </h3>
@@ -463,8 +463,8 @@ function Discount() {
                                                 }`}></div>
                                             </div>
                                             <div className="ml-3">
-                                                <span className="text-sm font-medium text-gray-900">Apply to All Products</span>
-                                                <p className="text-xs text-gray-500">Discount will apply to all products in your store</p>
+                                                <span className="text-sm font-medium text-gray-900 dark:text-gray-400">Apply to All Products</span>
+                                                <p className="text-xs text-gray-500 dark:text-gray-400">Discount will apply to all products in your store</p>
                                             </div>
                                         </label>
                                     </div>
@@ -474,7 +474,7 @@ function Discount() {
                                             {/* Breadcrumbs */}
                                             {categoryBreadcrumbs.length > 0 && (
                                                 <div className="p-4 bg-white dark:bg-gray-900 rounded-lg border-2 border-blue-100">
-                                                    <div className="text-sm font-medium text-gray-700 mb-2">Selected Category Path:</div>
+                                                    <div className="text-sm font-medium text-gray-700 mb-2 dark:text-white">Selected Category Path:</div>
                                                     <div className="flex flex-wrap items-center gap-1">
                                                         {categoryBreadcrumbs.map((category, index) => (
                                                             <span key={category.id} className="flex items-center">
@@ -496,43 +496,43 @@ function Discount() {
 
                                             {/* Main Category Select */}
                                             <div>
-                                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                                     Main Category *
                                                 </label>
                                                 <select
-                                                    value={selectedMainCategory}
-                                                    onChange={handleMainCategoryChange}
-                                                    className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
-                                                        errors.category ? 'border-red-300 bg-red-50' : 'border-gray-300'
-                                                    }`}
-                                                >
-                                                    <option value="">Select a main category</option>
-                                                    {mainCategories.map(mainCategory => (
-                                                        <option value={mainCategory._id} key={mainCategory._id}>
-                                                            {mainCategory.categoryName}
-                                                        </option>
-                                                    ))}
-                                                </select>
+  value={selectedMainCategory}
+  onChange={handleMainCategoryChange}
+  className={`w-full px-4 py-3 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700 ${
+    errors.category ? 'border-red-300 bg-red-50 dark:border-red-500 dark:bg-red-900/50' : 'border-gray-300 dark:border-gray-600'
+  }`}
+>
+  <option value="">Select a main category</option>
+  {mainCategories.map(mainCategory => (
+    <option value={mainCategory._id} key={mainCategory._id}>
+      {mainCategory.categoryName}
+    </option>
+  ))}
+</select>
                                             </div>
 
                                             {/* Sub Category Select */}
                                             {showSubCategories && (
                                                 <div>
-                                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                                    <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">
                                                         Sub Category
                                                     </label>
                                                     <select
-                                                        value={selectedSubCategory}
-                                                        onChange={handleSubCategoriesChange}
-                                                        className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors"
-                                                    >
-                                                        <option value="">Select a sub category</option>
-                                                        {subCategories.map(sub_category => (
-                                                            <option value={sub_category._id} key={sub_category._id}>
-                                                                {sub_category.categoryName}
-                                                            </option>
-                                                        ))}
-                                                    </select>
+  value={selectedSubCategory}
+  onChange={handleSubCategoriesChange}
+  className="w-full px-4 py-3 border border-gray-300 dark:border-gray-600 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700"
+>
+  <option value="">Select a sub category</option>
+  {subCategories.map(sub_category => (
+    <option value={sub_category._id} key={sub_category._id}>
+      {sub_category.categoryName}
+    </option>
+  ))}
+</select>
                                                 </div>
                                             )}
 
@@ -576,7 +576,7 @@ function Discount() {
                                         )}
                                         <div className="flex justify-between">
                                             <span className="text-blue-700">Discount:</span>
-                                            <span className="font-medium text-blue-900">
+                                            <span className="font-medium text-blue-900 dark:text-gray-400">
                                                 {formData.discountPercentage ? `${formData.discountPercentage}%` : 'Not set'}
                                             </span>
                                         </div>
