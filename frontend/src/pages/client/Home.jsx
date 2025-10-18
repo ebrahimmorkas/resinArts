@@ -1199,7 +1199,7 @@ const CategoryNavigationBar = () => {
               <img
   src={getOptimizedImageUrl(banner, { width: 1200, quality: 'auto' })}
   alt={`Banner ${index + 1}`}
-  className="w-full h-full object-cover"
+  className="w-full h-full object-contain"
   loading="eager"
   onError={(e) => {
     console.error('Image failed to load:', banner);
@@ -1365,7 +1365,7 @@ const CategoryNavigationBar = () => {
             <img
   src={getOptimizedImageUrl(currentImage, { width: 400 }) || "/placeholder.svg"}
   alt={product.name}
-  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300 cursor-pointer"
+  className="w-full h-64 object-contain group-hover:scale-105 transition-transform duration-300 cursor-pointer"
   loading="lazy"
 />
 
@@ -1408,38 +1408,28 @@ const CategoryNavigationBar = () => {
             </div>
           )}
 
-          <div className="absolute top-2 right-2 flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleShare(product, selectedVariant)
-              }}
-              className="p-1 rounded-full bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-blue-500 transition-colors"
-              title="Share product"
-            >
-              <Share2 className="w-4 h-4" />
-            </button>
-            <button
-              onClick={(e) => {
-                e.stopPropagation()
-                handleWhatsAppShare(product, selectedVariant)
-              }}
-              className="p-1 rounded-full bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-green-500 transition-colors"
-              title="Share on WhatsApp"
-            >
-              <MessageCircle className="w-4 h-4" />
-            </button>
-            <button
-              onClick={() => toggleWishlist(product._id)}
-              className={`p-1 rounded-full transition-colors ${
-                wishlist.includes(product._id)
-                  ? "bg-red-500 text-white"
-                  : "bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-red-500"
-              }`}
-            >
-              <Heart className={`w-4 h-4 ${wishlist.includes(product._id) ? "fill-current" : ""}`} />
-            </button>
-          </div>
+          <div className="absolute top-2 right-2 flex flex-col items-center gap-2">
+  <button
+    onClick={() => toggleWishlist(product._id)}
+    className={`p-1 rounded-full transition-colors ${
+      wishlist.includes(product._id)
+        ? "bg-red-500 text-white"
+        : "bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-red-500"
+    }`}
+  >
+    <Heart className={`w-4 h-4 ${wishlist.includes(product._id) ? "fill-current" : ""}`} />
+  </button>
+  <button
+    onClick={(e) => {
+      e.stopPropagation()
+      handleShare(product, selectedVariant)
+    }}
+    className="p-1 rounded-full bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-blue-500 transition-colors"
+    title="Share product"
+  >
+    <Share2 className="w-4 h-4" />
+  </button>
+</div>
         </div>
 
         <div className="p-4">
@@ -1527,7 +1517,7 @@ const CategoryNavigationBar = () => {
         <img
           src={getOptimizedImageUrl(variant.variantImage || product.image, { width: 100 }) || "/placeholder.svg"}
           alt={variant.colorName}
-          className="w-full h-full object-cover"
+          className="w-full h-full object-contain"
           loading="lazy"
         />
       </button>
@@ -1771,7 +1761,7 @@ const CategoryNavigationBar = () => {
               <img
                 src={selectedVariant?.variantImage || product.image || "/placeholder.svg"}
                 alt={product.name}
-                className="w-full h-96 lg:h-[500px] object-cover rounded-2xl"
+                className="w-full h-96 lg:h-[500px] object-contain rounded-2xl"
               />
               {hasDiscount && (
                 <div className="absolute top-4 left-4">
@@ -1796,7 +1786,7 @@ const CategoryNavigationBar = () => {
                     <img
   src={getOptimizedImageUrl(variant.variantImage, { width: 100 }) || "/placeholder.svg"}
   alt={variant.colorName}
-  className="w-full h-full object-cover"
+  className="w-full h-full object-contain"
   loading="lazy"
 />
                   </button>
@@ -2075,7 +2065,7 @@ const CategoryNavigationBar = () => {
                 <img
   src={getOptimizedImageUrl(currentImage, { width: 400 }) || "/placeholder.svg"}
   alt={`${product.name} - ${selectedVariant?.colorName || "default"} variant`}
-  className="w-full h-48 object-cover rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
+  className="w-full h-64 object-contain rounded-lg cursor-pointer hover:opacity-90 transition-opacity"
   style={{ maxHeight: '200px' }}
   onClick={() => setSelectedImage(currentImage)}
   loading="lazy"
@@ -2132,7 +2122,7 @@ const CategoryNavigationBar = () => {
                       <img
   src={getOptimizedImageUrl(variant.variantImage, { width: 100 }) || "/placeholder.svg"}
   alt={variant.colorName}
-  className="w-full h-full object-cover rounded-lg"
+  className="w-full h-full object-contain rounded-lg"
   loading="lazy"
 />
                       {isSelected && (
@@ -2492,7 +2482,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                 <img
   src={getOptimizedImageUrl(selectedVariant?.variantImage || product.image, { width: 600 }) || "/placeholder.svg"}
   alt={product.name}
-  className="w-full h-64 sm:h-80 lg:h-96 object-cover rounded-xl cursor-pointer"
+  className="w-full h-64 sm:h-80 lg:h-96 object-contain rounded-xl cursor-pointer"
   onClick={() => setSelectedImage(currentImage)}
   loading="lazy"
 />
@@ -2552,7 +2542,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                         <img
   src={getOptimizedImageUrl(variant.variantImage, { width: 100 }) || "/placeholder.svg"}
   alt={variant.colorName}
-  className="w-full h-full object-cover"
+  className="w-full h-full object-contain"
   loading="lazy"
 />
                       </button>
@@ -2574,7 +2564,7 @@ const ProductDetailsModal = ({ product, onClose }) => {
                         <img
   src={getOptimizedImageUrl(img, { width: 100 }) || "/placeholder.svg"}
   alt={`Additional ${index + 1}`}
-  className="w-full h-full object-cover"
+  className="w-full h-full object-contain"
   loading="lazy"
 />
                       </button>
@@ -2958,7 +2948,7 @@ const confirmClearCart = async () => {
                       <img
                         src={getOptimizedImageUrl(item.imageUrl, { width: 100 }) || "/placeholder.svg"}
                         alt={item.productName}
-                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-cover flex-shrink-0"
+                        className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-contain flex-shrink-0"
                         loading="lazy"
                       />
                       <div className="flex-1 min-w-0">
@@ -3220,7 +3210,7 @@ if (justArrivedProductsList.length > 0) {
                       <img
   src={getOptimizedImageUrl(result.image, { width: 100 }) || "/placeholder.svg"}
   alt={result.productName}
-  className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+  className="w-12 h-12 object-contain rounded-lg flex-shrink-0"
   loading="lazy"
 />
                       <div className="flex-1 text-left">
@@ -3376,7 +3366,7 @@ if (justArrivedProductsList.length > 0) {
                     <img
   src={getOptimizedImageUrl(result.image, { width: 100 }) || "/placeholder.svg"}
   alt={result.productName}
-  className="w-12 h-12 object-cover rounded-lg flex-shrink-0"
+  className="w-12 h-12 object-contain rounded-lg flex-shrink-0"
   loading="lazy"
 />
                     <div className="flex-1 text-left">
@@ -3447,19 +3437,23 @@ if (justArrivedProductsList.length > 0) {
           className="flex-shrink-0 text-center cursor-pointer group/item transition-all duration-200 dark:text-black"
         >
           <div
-            className={`w-20 h-20 sm:w-24 sm:h-24 bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center mb-2 group-hover/item:shadow-xl transition-all duration-300 overflow-hidden relative ${
-              selectedCategory === category.categoryName
-                ? "ring-4 ring-blue-500 shadow-xl scale-110"
-                : ""
-            }`}
-          >
+  className={`bg-white dark:bg-gray-900 rounded-full shadow-lg flex items-center justify-center mb-2 group-hover/item:shadow-xl transition-all duration-300 overflow-hidden relative ${
+    selectedCategory === category.categoryName
+      ? "ring-4 ring-blue-500 shadow-xl scale-110"
+      : ""
+  }`}
+  style={{
+    width: '104px',
+    height: '104px',
+  }}
+>
             <img
               src={
                 getOptimizedImageUrl(category.image, { width: 100 }) ||
                 "/placeholder.svg"
               }
               alt={`${category.categoryName} category`}
-              className="w-full h-full object-cover rounded-full"
+              className="w-full h-full object-contain rounded-full"
               loading="lazy"
             />
             {selectedCategory === category.categoryName && (
