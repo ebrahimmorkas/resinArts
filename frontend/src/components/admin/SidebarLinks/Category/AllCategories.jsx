@@ -958,7 +958,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
         
         <div className="flex-1">
           <div 
-            className={`flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-white transition-colors ${isMainParent ? 'bg-blue-50 dark:text-white' : ''} ${category.image && !isEditMode ? 'cursor-pointer' : ''}`}
+            className={`dark:hover:bg-gray-700 flex items-center gap-3 p-3 rounded-lg border border-blue-200 hover:bg-gray-50 dark:bg-gray-800 dark:text-white transition-colors ${isMainParent ? 'bg-blue-50' : ''} ${category.image && !isEditMode ? 'cursor-pointer' : ''}`}
             onClick={() => !isEditMode && category.image && setImageModal({ isOpen: true, url: category.image })}
           >
             {showImageUpload && imagePreview && isUploading ? (
@@ -975,7 +975,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               />
             ) : (
               <div className="w-12 h-12 bg-gray-200 rounded-md flex items-center justify-center">
-                <FolderTree className="w-6 h-6 text-gray-400" />
+                <FolderTree className="w-6 h-6 text-gray-400 dark:text-white" />
               </div>
             )}
 
@@ -1005,7 +1005,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 </button>
               </>
             ) : (
-              <p className="flex-1 font-medium text-gray-900">{category.categoryName}</p>
+              <p className="flex-1 font-medium text-gray-900 dark:text-gray-400">{category.categoryName}</p>
             )}
 
             {isEditMode && !isEditing && (
@@ -1026,7 +1026,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 </button>
                 <button
                   onClick={() => handleToggleStatus(categoryId, !category.isActive, category.categoryName)}
-                  className={`p-1.5 rounded-md transition-colors ${
+                  className={`dark:text-white p-1.5 rounded-md transition-colors ${
                     category.isActive 
                       ? 'text-green-600 hover:bg-green-50' 
                       : 'text-red-600 hover:bg-red-50'
@@ -1037,7 +1037,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 </button>
                 <button
                   onClick={() => handleDeleteFromEditModal(categoryId, category.categoryName)}
-                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                  className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors dark:text-white"
                   title="Delete"
                 >
                   <Trash2 className="w-4 h-4" />
@@ -1058,7 +1058,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 <button
                   onClick={() => handleRemoveImage(categoryId)}
                   disabled={loadingStates[`remove-image-${categoryId}`]}
-                  className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200 disabled:opacity-50"
+                  className="text-sm px-3 py-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors border border-red-200 disabled:opacity-50 dark:text-white"
                 >
                   {loadingStates[`remove-image-${categoryId}`] ? (
                     <Loader2 className="w-4 h-4 animate-spin inline" />
@@ -1215,21 +1215,21 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                 <div className="flex items-center space-x-2">
                     <button 
       onClick={() => handleBulkStatusToggle(true)}
-      className="inline-flex items-center px-3 py-2 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white dark:bg-gray-900 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors"
+      className="inline-flex items-center px-3 py-2 border border-green-300 rounded-md text-sm font-medium text-green-700 bg-white dark:bg-gray-900 hover:bg-green-50 focus:outline-none focus:ring-2 focus:ring-green-500 transition-colors dark:text-white"
     >
       <Power className="w-4 h-4 mr-2" />
       Activate ({selectedRows.length})
     </button>
     <button 
       onClick={() => handleBulkStatusToggle(false)}
-      className="inline-flex items-center px-3 py-2 border border-orange-300 rounded-md text-sm font-medium text-orange-700 bg-white dark:bg-gray-900 hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors"
+      className="inline-flex items-center px-3 py-2 border border-orange-300 rounded-md text-sm font-medium text-orange-700 bg-white dark:bg-gray-900 hover:bg-orange-50 focus:outline-none focus:ring-2 focus:ring-orange-500 transition-colors dark:text-white"
     >
       <PowerOff className="w-4 h-4 mr-2" />
       Deactivate ({selectedRows.length})
     </button>
                   <button 
                     onClick={handleBulkDelete}
-                    className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white dark:bg-gray-900 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors"
+                    className="inline-flex items-center px-3 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-white dark:bg-gray-900 hover:bg-red-50 focus:outline-none focus:ring-2 focus:ring-red-500 transition-colors dark:text-white"
                   >
                     <Trash2 className="w-4 h-4 mr-2" />
                     Delete ({selectedRows.length})
@@ -1318,7 +1318,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
                       });
 
                       return (
-                        <tr key={categoryId} className="hover:bg-gray-50 hover:dark:text-gray-400 dark:bg-gray-800 transition-colors">
+                        <tr key={categoryId} className="hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer dark:bg-gray-800 transition-colors">
                           <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '60px' }}>
                             <input
                               type="checkbox"
@@ -1423,18 +1423,18 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700">
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Show</span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="5">5</option>
-                    <option value="10">10</option>
-                    <option value="25">25</option>
-                    <option value="50">50</option>
-                  </select>
-                  <span className="text-sm text-gray-700">entries per page</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-400">Show</span>
+                 <select
+  value={itemsPerPage}
+  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+  className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm text-gray-900 dark:text-white bg-white dark:bg-gray-900 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+>
+  <option value="5">5</option>
+  <option value="10">10</option>
+  <option value="25">25</option>
+  <option value="50">50</option>
+</select>
+                  <span className="text-sm text-gray-700 dark:text-gray-400">entries per page</span>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -1737,7 +1737,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
             
             <div className="px-6 py-4 max-h-96 overflow-y-auto dark:hover:text-gray-300">
               {hierarchyModal.category && (
-                <div className="space-y-2 dark:hover:text-gray-400">
+                <div className="space-y-2">
                   {renderHierarchyTree(hierarchyModal.category, 0, false)}
                 </div>
               )}
@@ -1754,7 +1754,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               <button
                 type="button"
                 onClick={() => setHierarchyModal({ isOpen: false, category: null })}
-                className="dark:text-white inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="dark:text-white inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors dark:text-white"
               >
                 Close
               </button>
@@ -1799,7 +1799,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
               <button
                 type="button"
                 onClick={handleCloseEditModal}
-                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+                className="inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white dark:bg-gray-900 text-sm font-medium text-gray-700 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors dark:text-white"
               >
                 Close
               </button>
