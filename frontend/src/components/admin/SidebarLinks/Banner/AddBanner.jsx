@@ -117,8 +117,8 @@ const AddBanner = () => {
       
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-700">
-            Image <span className="text-red-500">*</span>
+          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-400">
+            Image <span className="text-red-500 dark:text-gray-400">*</span>
           </label>
           <div className="relative">
             <input
@@ -135,11 +135,11 @@ const AddBanner = () => {
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
           </div>
-          <p className="text-xs text-gray-500 mt-1">Upload an image file (JPG, PNG, GIF)</p>
+          <p className="text-xs text-gray-500 mt-1 dark:text-gray-400">Upload an image file (JPG, PNG, GIF)</p>
         </div>
         
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-700">
+          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-400">
             Start Date <span className="text-red-500">*</span>
           </label>
           <input
@@ -154,7 +154,7 @@ const AddBanner = () => {
         </div>
         
         <div>
-          <label className="block text-sm font-medium mb-1 text-gray-700">
+          <label className="block text-sm font-medium mb-1 text-gray-700 dark:text-gray-400">
             End Date <span className="text-red-500">*</span>
           </label>
           <input
@@ -179,11 +179,11 @@ const AddBanner = () => {
             disabled={loading}
             className="rounded border-gray-300 text-indigo-600 focus:ring-indigo-500 disabled:cursor-not-allowed"
           />
-          <label htmlFor="isDefault" className="text-sm font-medium text-gray-700">
+          <label htmlFor="isDefault" className="text-sm font-medium text-gray-700 dark:text-gray-400">
             Set as Default Banner
           </label>
         </div>
-        <p className="text-xs text-gray-500 ml-6">
+        <p className="text-xs text-gray-500 ml-6 dark:text-gray-400">
           Default banners are shown when no active banners are available. First banner is automatically set as default.
         </p>
         
