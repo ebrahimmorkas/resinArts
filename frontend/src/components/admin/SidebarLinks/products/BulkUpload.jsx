@@ -526,6 +526,7 @@ const [pendingUploadData, setPendingUploadData] = useState(null);
   
   // Category files
   const [categoryFile, setCategoryFile] = useState(null);
+  const [categoryZipFile, setCategoryZipFile] = useState(null);
   
   // Responses and progress
   const [productResponse, setProductResponse] = useState(null);
@@ -587,6 +588,14 @@ const [pendingUploadData, setPendingUploadData] = useState(null);
     setCategoryError(null);
     setCategoryProgress(null);
   };
+  
+  const handleCategoryZipChange = (e) => {
+  const file = e.target.files[0];
+  setCategoryZipFile(file || null);
+  setCategoryResponse(null);
+  setCategoryError(null);
+  setCategoryProgress(null);
+};
 
   const handleProductSubmit = async () => {
   if (!productExcelFile || !productZipFile) {
@@ -702,37 +711,38 @@ const handleOverrideProducts = async (selectedProductIds) => {
 };
 
   const handleCategorySubmit = async () => {
-    if (!categoryFile) {
-      showErrorModal('No File Selected', 'Please select a category file to upload.');
-      return;
-    }
+  if (!categoryFile || !categoryZipFile) {
+    showErrorModal('Missing Files', 'Please select both Excel file and images ZIP file.');
+    return;
+  }
 
-    const formData = new FormData();
-    formData.append('file', categoryFile);
+  const formData = new FormData();
+  formData.append('excelFile', categoryFile);
+  formData.append('imagesZip', categoryZipFile);
 
-    try {
-      const res = await axios.post('http://localhost:3000/api/category/bulk-upload', formData, {
-        withCredentials: true,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
-      setCategoryResponse(res.data);
-      setCategoryError(null);
-      setCategoryProgress(null);
-      showToast('Categories uploaded successfully!', 'success');
-    } catch (err) {
-      const errorMessage = err.response?.data?.message || 'Upload failed.';
-      setCategoryError(errorMessage);
-      setCategoryResponse(null);
-      setCategoryProgress(null);
-      showErrorModal(
-        'Category Upload Failed', 
-        errorMessage,
-        err.response?.data ? JSON.stringify(err.response.data, null, 2) : ''
-      );
-    }
-  };
+  try {
+    const res = await axios.post('http://localhost:3000/api/category/bulk-upload', formData, {
+      withCredentials: true,
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    setCategoryResponse(res.data);
+    setCategoryError(null);
+    setCategoryProgress(null);
+    showToast('Categories uploaded successfully!', 'success');
+  } catch (err) {
+    const errorMessage = err.response?.data?.message || 'Upload failed.';
+    setCategoryError(errorMessage);
+    setCategoryResponse(null);
+    setCategoryProgress(null);
+    showErrorModal(
+      'Category Upload Failed', 
+      errorMessage,
+      err.response?.data ? JSON.stringify(err.response.data, null, 2) : ''
+    );
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100">
@@ -775,18 +785,16 @@ const handleOverrideProducts = async (selectedProductIds) => {
           />
 
           {/* Category Upload */}
-          <UploadSection
-            title="Categories"
-            icon={Users}
-            file={categoryFile}
-            onFileChange={handleCategoryFileChange}
-            onSubmit={handleCategorySubmit}
-            progress={categoryProgress}
-            response={categoryResponse}
-            error={categoryError}
-            gradientFrom="from-purple-500"
-            gradientTo="to-purple-600"
-          />
+<ProductUploadSection
+  excelFile={categoryFile}
+  zipFile={categoryZipFile}
+  onExcelChange={handleCategoryFileChange}
+  onZipChange={handleCategoryZipChange}
+  onSubmit={handleCategorySubmit}
+  progress={categoryProgress}
+  response={categoryResponse}
+  error={categoryError}
+/>
         </div>
 
         {/* Help Section */}

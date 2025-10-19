@@ -12,7 +12,10 @@ router.get('/fetch-categories', fetchCategories); // Make public for guest brows
 // ADMIN ONLY ROUTES (Authentication + Authorization required)
 router.post('/add', authenticate, authorize(['admin']), ...addCategory);
 router.get('/all', authenticate, authorize(['admin']), getAllCategories);
-router.post('/bulk-upload', authenticate, authorize(['admin']), upload.single('file'), bulkUploadCategories);
+router.post('/bulk-upload', authenticate, authorize(['admin']), upload.fields([
+  { name: 'excelFile', maxCount: 1 },
+  { name: 'imagesZip', maxCount: 1 }
+]), bulkUploadCategories);
 router.delete('/delete-category/:id', authenticate, authorize(['admin']), deleteCategory);
 router.put('/update-category/:id', authenticate, authorize(['admin']), updateCategoryName);
 router.put('/update-category-image/:id', authenticate, authorize(['admin']), upload.single('image'), updateCategoryImage);
