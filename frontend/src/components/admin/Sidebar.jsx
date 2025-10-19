@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { 
   X, 
@@ -31,8 +31,10 @@ import {
   User,
   Tag,
 } from 'lucide-react';
+import { CompanySettingsContext } from '../../../Context/CompanySettingsContext';
 
 const Sidebar = ({ isOpen, onClose }) => {
+  const { companySettings, loadingSettings } = useContext(CompanySettingsContext) || {};
   const [expandedMenus, setExpandedMenus] = useState({});
   const location = useLocation();
 
@@ -298,7 +300,9 @@ const Sidebar = ({ isOpen, onClose }) => {
               <Store className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">Mould Market</h2>
+              <h2 className="text-xl font-bold text-gray-900">
+  {loadingSettings ? 'Loading...' : companySettings?.companyName || 'Online Shop'}
+</h2>
               <p className="text-sm text-gray-500">Admin Panel</p>
             </div>
           </div>
@@ -339,8 +343,12 @@ const Sidebar = ({ isOpen, onClose }) => {
               <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">Ebrahim Kanchwala</p>
-              <p className="text-xs text-gray-500">mouldmarket.com</p>
+              <p className="text-sm font-medium text-gray-900">
+  {loadingSettings ? 'Loading...' : companySettings?.adminName || 'Admin'}
+</p>
+<p className="text-xs text-gray-500">
+  {loadingSettings ? 'Loading...' : companySettings?.adminEmail || 'support@onlineshop.com'}
+</p>
             </div>
             <ChevronDown className="w-4 h-4 text-gray-400" />
           </div>
