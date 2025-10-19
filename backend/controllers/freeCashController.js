@@ -81,38 +81,261 @@ const addFreeCash = async (req, res) => {
 
         await newFreeCash.save();
 
-        // Send email based on conditions
         if (isAllProducts) {
-            if (endDate) {
-                await sendEmail(
-                    user.email,
-                    `Hurray! Free Cash ${amount}`,
-                    `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove} valid till ${endDate.toISOString().split('T')[0]}`,
-                );
-            } else {
-                await sendEmail(
-                    user.email,
-                    `Hurray! Free Cash ${amount}`,
-                    `Congrats, You have been provided the ${amount} free cash on all products valid above on order of ₹ ${validAbove}`,
-                );
-            }
-        } else {
-            const mainCategoryName = mainCategory ? mainCategory.categoryName : 'Unknown';
-            const subCategoryName = subCategory ? subCategory.categoryName : 'None';
-            if (endDate) {
-                await sendEmail(
-                    user.email,
-                    `Hurray! Free Cash ${amount}`,
-                    `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategoryName}${subCategory ? ` and Sub category: ${subCategoryName}` : ''} valid above on order of ₹ ${validAbove} valid till ${endDate.toISOString().split('T')[0]}`,
-                );
-            } else {
-                await sendEmail(
-                    user.email,
-                    `Hurray! Free Cash ${amount}`,
-                    `Congrats, You have been provided the ${amount} free cash on main category: ${mainCategoryName}${subCategory ? ` and Sub category: ${subCategoryName}` : ''} valid above on order of ₹ ${validAbove}`,
-                );
-            }
-        }
+    if (endDate) {
+        await sendEmail(
+            user.email,
+            `Free Cash Offer of ₹${amount} - ${companySettings?.companyName || 'Mould Market'}`,
+            `Dear ${user.name || user.email},
+
+We are delighted to offer you a special **Free Cash promotion**!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FREE CASH OFFER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Free Cash Amount: ₹${parseFloat(amount || 0).toFixed(2)}
+Applicable On: All Products
+Minimum Order Value: ₹${parseFloat(validAbove || 0).toFixed(2)}
+Valid Until: ${endDate.toISOString().split('T')[0]}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO USE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Shop for any products on our website
+2️⃣ Ensure your order value is ₹${parseFloat(validAbove || 0).toFixed(2)} or more
+3️⃣ The ₹${parseFloat(amount || 0).toFixed(2)} Free Cash will be automatically applied at checkout
+4️⃣ Complete your purchase before ${endDate.toISOString().split('T')[0]}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERMS AND CONDITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Valid for orders placed before the expiry date
+• Applicable only on orders above ₹${parseFloat(validAbove || 0).toFixed(2)}
+• Cannot be combined with other offers unless specified
+• Non-transferable and non-redeemable for cash
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We’re excited to bring you this exclusive offer to enhance your shopping experience. Don’t miss out!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`
+        );
+    } else {
+        await sendEmail(
+            user.email,
+            `Free Cash Offer of ₹${amount} - ${companySettings?.companyName || 'Mould Market'}`,
+            `Dear ${user.name || user.email},
+
+We are delighted to offer you a special **Free Cash promotion**!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FREE CASH OFFER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Free Cash Amount: ₹${parseFloat(amount || 0).toFixed(2)}
+Applicable On: All Products
+Minimum Order Value: ₹${parseFloat(validAbove || 0).toFixed(2)}
+Valid Until: No Expiry
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO USE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Shop for any products on our website
+2️⃣ Ensure your order value is ₹${parseFloat(validAbove || 0).toFixed(2)} or more
+3️⃣ The ₹${parseFloat(amount || 0).toFixed(2)} Free Cash will be automatically applied at checkout
+4️⃣ Complete your purchase at your convenience
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERMS AND CONDITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Applicable only on orders above ₹${parseFloat(validAbove || 0).toFixed(2)}
+• Cannot be combined with other offers unless specified
+• Non-transferable and non-redeemable for cash
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We’re excited to bring you this exclusive offer to enhance your shopping experience. Shop now and save!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`
+        );
+    }
+} else {
+    const mainCategoryName = mainCategory ? mainCategory.categoryName : 'Unknown';
+    const subCategoryName = subCategory ? subCategory.categoryName : 'None';
+    if (endDate) {
+        await sendEmail(
+            user.email,
+            `Free Cash Offer of ₹${amount} - ${companySettings?.companyName || 'Mould Market'}`,
+            `Dear ${user.name || user.email},
+
+We are delighted to offer you a special **Free Cash promotion**!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FREE CASH OFFER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Free Cash Amount: ₹${parseFloat(amount || 0).toFixed(2)}
+Applicable On: ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''}
+Minimum Order Value: ₹${parseFloat(validAbove || 0).toFixed(2)}
+Valid Until: ${endDate.toISOString().split('T')[0]}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO USE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Shop for products in ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''} category
+2️⃣ Ensure your order value is ₹${parseFloat(validAbove || 0).toFixed(2)} or more
+3️⃣ The ₹${parseFloat(amount || 0).toFixed(2)} Free Cash will be automatically applied at checkout
+4️⃣ Complete your purchase before ${endDate.toISOString().split('T')[0]}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERMS AND CONDITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Valid for orders placed before the expiry date
+• Applicable only on orders above ₹${parseFloat(validAbove || 0).toFixed(2)}
+• Restricted to ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''} category
+• Cannot be combined with other offers unless specified
+• Non-transferable and non-redeemable for cash
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We’re excited to bring you this exclusive offer to enhance your shopping experience. Don’t miss out!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`
+        );
+    } else {
+        await sendEmail(
+            user.email,
+            `Free Cash Offer of ₹${amount} - ${companySettings?.companyName || 'Mould Market'}`,
+            `Dear ${user.name || user.email},
+
+We are delighted to offer you a special **Free Cash promotion**!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FREE CASH OFFER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Free Cash Amount: ₹${parseFloat(amount || 0).toFixed(2)}
+Applicable On: ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''}
+Minimum Order Value: ₹${parseFloat(validAbove || 0).toFixed(2)}
+Valid Until: No Expiry
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO USE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Shop for products in ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''} category
+2️⃣ Ensure your order value is ₹${parseFloat(validAbove || 0).toFixed(2)} or more
+3️⃣ The ₹${parseFloat(amount || 0).toFixed(2)} Free Cash will be automatically applied at checkout
+4️⃣ Complete your purchase at your convenience
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERMS AND CONDITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Applicable only on orders above ₹${parseFloat(validAbove || 0).toFixed(2)}
+• Restricted to ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''} category
+• Cannot be combined with other offers unless specified
+• Non-transferable and non-redeemable for cash
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We’re excited to bring you this exclusive offer to enhance your shopping experience. Shop now and save!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`
+        );
+    }
+}
 
         return res.status(200).json({
             message: `Free cash generated successfully for ${user.first_name} ${user.last_name}`,
@@ -249,19 +472,261 @@ const bulkAddFreeCash = async (req, res) => {
                 } else {
                     const mainCategoryName = mainCategory ? mainCategory.categoryName : 'Unknown';
                     const subCategoryName = subCategory ? subCategory.categoryName : '';
-                    if (endDate) {
-                        await sendEmail(
-                            user.email,
-                            `Hurray! Free Cash ₹${amount}`,
-                            `Congrats, You have been provided ₹${amount} free cash on ${mainCategoryName}${subCategory ? ` > ${subCategoryName}` : ''} valid on orders above ₹${validAbove} valid till ${endDate.toISOString().split('T')[0]}`,
-                        );
-                    } else {
-                        await sendEmail(
-                            user.email,
-                            `Hurray! Free Cash ₹${amount}`,
-                            `Congrats, You have been provided ₹${amount} free cash on ${mainCategoryName}${subCategory ? ` > ${subCategoryName}` : ''} valid on orders above ₹${validAbove}`,
-                        );
-                    }
+                    if (isAllProducts) {
+    if (endDate) {
+        await sendEmail(
+            user.email,
+            `Free Cash Offer of ₹${amount} - ${companySettings?.companyName || 'Mould Market'}`,
+            `Dear ${user.name || user.email},
+
+We are delighted to offer you a special **Free Cash promotion**!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FREE CASH OFFER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Free Cash Amount: ₹${parseFloat(amount || 0).toFixed(2)}
+Applicable On: All Products
+Minimum Order Value: ₹${parseFloat(validAbove || 0).toFixed(2)}
+Valid Until: ${endDate.toISOString().split('T')[0]}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO USE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Shop for any products on our website
+2️⃣ Ensure your order value is ₹${parseFloat(validAbove || 0).toFixed(2)} or more
+3️⃣ The ₹${parseFloat(amount || 0).toFixed(2)} Free Cash will be automatically applied at checkout
+4️⃣ Complete your purchase before ${endDate.toISOString().split('T')[0]}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERMS AND CONDITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Valid for orders placed before the expiry date
+• Applicable only on orders above ₹${parseFloat(validAbove || 0).toFixed(2)}
+• Cannot be combined with other offers unless specified
+• Non-transferable and non-redeemable for cash
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We’re excited to bring you this exclusive offer to enhance your shopping experience. Don’t miss out!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`
+        );
+    } else {
+        await sendEmail(
+            user.email,
+            `Free Cash Offer of ₹${amount} - ${companySettings?.companyName || 'Mould Market'}`,
+            `Dear ${user.name || user.email},
+
+We are delighted to offer you a special **Free Cash promotion**!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FREE CASH OFFER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Free Cash Amount: ₹${parseFloat(amount || 0).toFixed(2)}
+Applicable On: All Products
+Minimum Order Value: ₹${parseFloat(validAbove || 0).toFixed(2)}
+Valid Until: No Expiry
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO USE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Shop for any products on our website
+2️⃣ Ensure your order value is ₹${parseFloat(validAbove || 0).toFixed(2)} or more
+3️⃣ The ₹${parseFloat(amount || 0).toFixed(2)} Free Cash will be automatically applied at checkout
+4️⃣ Complete your purchase at your convenience
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERMS AND CONDITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Applicable only on orders above ₹${parseFloat(validAbove || 0).toFixed(2)}
+• Cannot be combined with other offers unless specified
+• Non-transferable and non-redeemable for cash
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We’re excited to bring you this exclusive offer to enhance your shopping experience. Shop now and save!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`
+        );
+    }
+} else {
+    const mainCategoryName = mainCategory ? mainCategory.categoryName : 'Unknown';
+    const subCategoryName = subCategory ? subCategory.categoryName : 'None';
+    if (endDate) {
+        await sendEmail(
+            user.email,
+            `Free Cash Offer of ₹${amount} - ${companySettings?.companyName || 'Mould Market'}`,
+            `Dear ${user.name || user.email},
+
+We are delighted to offer you a special **Free Cash promotion**!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FREE CASH OFFER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Free Cash Amount: ₹${parseFloat(amount || 0).toFixed(2)}
+Applicable On: ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''}
+Minimum Order Value: ₹${parseFloat(validAbove || 0).toFixed(2)}
+Valid Until: ${endDate.toISOString().split('T')[0]}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO USE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Shop for products in ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''} category
+2️⃣ Ensure your order value is ₹${parseFloat(validAbove || 0).toFixed(2)} or more
+3️⃣ The ₹${parseFloat(amount || 0).toFixed(2)} Free Cash will be automatically applied at checkout
+4️⃣ Complete your purchase before ${endDate.toISOString().split('T')[0]}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERMS AND CONDITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Valid for orders placed before the expiry date
+• Applicable only on orders above ₹${parseFloat(validAbove || 0).toFixed(2)}
+• Restricted to ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''} category
+• Cannot be combined with other offers unless specified
+• Non-transferable and non-redeemable for cash
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We’re excited to bring you this exclusive offer to enhance your shopping experience. Don’t miss out!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`
+        );
+    } else {
+        await sendEmail(
+            user.email,
+            `Free Cash Offer of ₹${amount} - ${companySettings?.companyName || 'Mould Market'}`,
+            `Dear ${user.name || user.email},
+
+We are delighted to offer you a special **Free Cash promotion**!
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+FREE CASH OFFER DETAILS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Free Cash Amount: ₹${parseFloat(amount || 0).toFixed(2)}
+Applicable On: ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''}
+Minimum Order Value: ₹${parseFloat(validAbove || 0).toFixed(2)}
+Valid Until: No Expiry
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+HOW TO USE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Shop for products in ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''} category
+2️⃣ Ensure your order value is ₹${parseFloat(validAbove || 0).toFixed(2)} or more
+3️⃣ The ₹${parseFloat(amount || 0).toFixed(2)} Free Cash will be automatically applied at checkout
+4️⃣ Complete your purchase at your convenience
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TERMS AND CONDITIONS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+• Applicable only on orders above ₹${parseFloat(validAbove || 0).toFixed(2)}
+• Restricted to ${mainCategoryName}${subCategory ? `, ${subCategoryName}` : ''} category
+• Cannot be combined with other offers unless specified
+• Non-transferable and non-redeemable for cash
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We’re excited to bring you this exclusive offer to enhance your shopping experience. Shop now and save!
+
+Thank you for choosing ${companySettings?.companyName || 'Mould Market'}!
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`
+        );
+    }
+}
                 }
 
                 successfulUsers.push(user.email);
