@@ -60,7 +60,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       submenu: [
         { id: 'all-products', label: 'All Products', icon: List, href: '/admin/panel/products' },
         { id: 'add-product', label: 'Add Product', icon: Plus, href: '/admin/panel/products/add' },
-        { id: 'bulk-upload', label: 'Bulk Upload', icon: Package, href: '/admin/panel/products/b' },
+        { id: 'bulk-upload-products', label: 'Bulk Upload', icon: Package, href: '/admin/panel/products/bulk-upload' },
       ]
     },
     {
@@ -71,6 +71,7 @@ const Sidebar = ({ isOpen, onClose }) => {
       submenu: [
         { id: 'all-categories', label: 'All categories', icon: List, href: '/admin/panel/categories/all' },
         { id: 'add-category', label: 'Add Category', icon: Plus, href: '/admin/panel/categories/add' },
+        { id: 'bulk-upload-categories', label: 'Bulk Upload', icon: Package, href: '/admin/panel/categories/bulk-upload' },
       ]
     },
     {

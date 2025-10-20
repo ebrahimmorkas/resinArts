@@ -22,6 +22,8 @@ import BulkEditProducts from '../../components/admin/SidebarLinks/products/BulkE
 import CompanySettings from '../../components/admin/SidebarLinks/CompanySettings/CompanySettings';
 import AbandonedCart from '../../components/admin/SidebarLinks/AbandonedCart/AbandonedCart';
 import AdminProfileUpdate from './AdminProfileUpdate';
+import BulkUploadCategories from '../../components/admin/SidebarLinks/Category/BulkUploadCategories';
+import BulkUploadProducts from '../../components/admin/SidebarLinks/products/BulkUploadProducts';
 
 function AdminPanel() {
   // State to manage sidebar open/close - starts closed
@@ -58,7 +60,7 @@ function AdminPanel() {
               <Route path="products" element={<AllProducts />} />
               <Route path="products/add" element={<AddProduct />} />
               <Route path="products/edit/:id" element={<EditProduct />} />
-              <Route path="products/b" element={<BulkUpload />} />
+              <Route path="products/bulk-upload" element={<BulkUploadProducts />} />
               <Route path="products/bulk-edit/:ids" element={<BulkEditProducts />} />
               {/* End of product routes */}
 
@@ -89,6 +91,7 @@ function AdminPanel() {
               {/* Start of categories routes */}
               <Route path="categories/add" element={<AddCategory />} />
               <Route path="categories/all" element={<AllCategories />} />
+              <Route path="categories/bulk-upload" element={<BulkUploadCategories />} />
               {/* End of categories routes */}
 
               {/* Start of company settings routes */}
