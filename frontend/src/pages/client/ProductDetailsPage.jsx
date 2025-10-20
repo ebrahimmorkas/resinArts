@@ -281,11 +281,11 @@ export default function ProductDetailsPage() {
     setShowSearchResults(false)
   }
 
-  const handleSearchKeyPress = (e) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      navigate('/')
-    }
+ const handleSearchKeyPress = (e) => {
+  if (e.key === 'Enter' && searchQuery.trim()) {
+    navigate(`/?search=${encodeURIComponent(searchQuery)}`)
   }
+}
 
   const highlightMatchedText = (text, searchQuery) => {
     if (!searchQuery.trim()) return text

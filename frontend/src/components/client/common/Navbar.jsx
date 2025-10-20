@@ -43,7 +43,7 @@ export default function Navbar({
   return (
     <>
       {!loadingAnnouncement && !announcementError && announcement && (
-        <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center w-full">
+  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center w-full sticky top-0 z-50">
           <p className="text-sm font-medium">{announcement}</p>
         </div>
       )}

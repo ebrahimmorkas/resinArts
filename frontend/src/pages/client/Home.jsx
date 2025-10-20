@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useContext, useMemo, useCallback } from "react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
 import { CategoryContext } from "../../../Context/CategoryContext"
 import { FreeCashContext } from "../../../Context/FreeCashContext"
 import { CompanySettingsContext } from "../../../Context/CompanySettingsContext"
@@ -31,6 +31,7 @@ export default function Home() {
   // STEP 1: Get auth context FIRST (before any other hooks)
   const { user, loading: authLoading } = useContext(AuthContext);
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
 
   // STEP 2: Redirect admin to admin panel
   useEffect(() => {
@@ -134,7 +135,20 @@ const handleCartCheckout = async () => {
   const [selectedFilters, setSelectedFilters] = useState(["all"])
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [selectedProduct, setSelectedProduct] = useState(null)
-  const [searchQuery, setSearchQuery] = useState("")
+  const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "")
+  // Handle search from URL parameter
+useEffect(() => {
+  const searchFromUrl = searchParams.get('search');
+  if (searchFromUrl) {
+    setSearchQuery(searchFromUrl);
+    setShowSearchSection(true);
+    // Remove the search param from URL after reading it
+    setTimeout(() => {
+      searchParams.delete('search');
+      setSearchParams(searchParams, { replace: true });
+    }, 100);
+  }
+}, []);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [selectedCategoryPath, setSelectedCategoryPath] = useState([])
   const [wishlist, setWishlist] = useState([])
