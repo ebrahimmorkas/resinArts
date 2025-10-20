@@ -270,6 +270,15 @@ export default function BulkUploadCategories() {
               <Info className="w-4 h-4" />
               <span>Excel + ZIP format</span>
             </div>
+            <div className="flex items-center space-x-4">
+    <button
+      onClick={() => window.open('http://localhost:3000/categories_sample.xlsx', '_blank')}
+      className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-all duration-200 text-sm font-medium"
+    >
+      <FileSpreadsheet className="w-5 h-5 mr-2" />
+      Download Sample
+    </button>
+  </div>
           </div>
         </div>
       </div>

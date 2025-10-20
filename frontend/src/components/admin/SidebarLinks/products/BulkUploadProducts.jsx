@@ -371,7 +371,7 @@ const handleOverrideProducts = async (selectedProductIds) => {
     className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-all duration-200 text-sm font-medium"
   >
     <FileSpreadsheet className="w-5 h-5 mr-2" />
-    Download Sample Excel
+    Download Sample
   </button>
 </div>
           </div>
