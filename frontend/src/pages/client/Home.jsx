@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useContext, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useRef, useContext, useMemo, useCallback, memo } from "react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
@@ -203,8 +203,50 @@ const scrollToTop = () => {
   })
 }
 
- const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
-  const { products, loading, error } = contextData
+// Infinite scroll observer
+const observerTarget = useRef(null);
+
+const contextData = useContext(ProductContext) || { 
+  products: [], 
+  loading: false, 
+  error: null,
+  loadMoreProducts: () => {},
+  hasMore: false,
+  loadingMore: false,
+  totalCount: 0
+}
+const { 
+  products, 
+  loading, 
+  error, 
+  loadMoreProducts, 
+  hasMore, 
+  loadingMore,
+  totalCount 
+} = contextData
+
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    entries => {
+      if (entries[0].isIntersecting && hasMore && !loadingMore) {
+        loadMoreProducts();
+      }
+    },
+    { threshold: 0.5 }
+  );
+
+  if (observerTarget.current) {
+    observer.observe(observerTarget.current);
+  }
+
+  return () => {
+    if (observerTarget.current) {
+      observer.unobserve(observerTarget.current);
+    }
+  };
+}, [hasMore, loadingMore, loadMoreProducts]);
+
+ 
   // console.log("Products from context:", contextData)
   // Memoize expensive computations
   // console.log("Products from context:", contextData)
@@ -236,7 +278,17 @@ useEffect(() => {
   return () => clearTimeout(timer);
 }, [searchQuery]);
 
-// Perform search with debounced query
+const formatSize = (sizeObj) => {
+    if (!sizeObj) return "N/A"
+    if (typeof sizeObj === "string") return sizeObj
+    if (sizeObj.length && sizeObj.breadth && sizeObj.height) {
+      const unit = sizeObj.unit || "cm"
+      return `${sizeObj.length} × ${sizeObj.breadth} × ${sizeObj.height} ${unit}`
+    }
+    return "N/A"
+  }
+
+// Perform search with debounced query using backend API
 useEffect(() => {
   if (!debouncedSearchQuery.trim()) {
     setSearchResults([]);
@@ -244,91 +296,49 @@ useEffect(() => {
     return;
   }
 
-  setIsSearching(true);
-  const searchTerms = debouncedSearchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
-  const results = [];
-
-  const activeProducts = products.filter(product => {
-    if (product.isActive === false) return false;
+  const performSearch = async () => {
+    setIsSearching(true);
     
-    const mainCat = categories.find(cat => cat._id.toString() === product.mainCategory?.toString());
-    const subCat = product.subCategory ? categories.find(cat => cat._id.toString() === product.subCategory?.toString()) : null;
-    
-    if (mainCat && mainCat.isActive === false) return false;
-    if (subCat && subCat.isActive === false) return false;
-    
-    return true;
-  });
-
-  activeProducts.forEach((product) => {
-    const productNameLower = product.name.toLowerCase();
-    const productNameMatch = searchTerms.every(term => productNameLower.includes(term));
-    
-    if (product.hasVariants && product.variants) {
-      product.variants.filter(v => v.isActive !== false).forEach((variant) => {
-        const fullName = `${product.name} ${variant.colorName}`.toLowerCase();
-        const variantMatch = searchTerms.every(term => fullName.includes(term));
+    try {
+      const response = await axios.get(
+        `http://localhost:3000/api/product/search?query=${encodeURIComponent(debouncedSearchQuery)}`,
+        { withCredentials: true }
+      );
+      
+      const backendResults = response.data.results || [];
+      
+      // Format results to match your existing structure
+      const formattedResults = backendResults.map(result => {
+        const sizeString = result.sizeDetail ? formatSize(result.sizeDetail.size) : null;
         
-        if (variant.moreDetails && variant.moreDetails.length > 0) {
-          variant.moreDetails.filter(md => md.isActive !== false).forEach((sizeDetail) => {
-            const sizeString = formatSize(sizeDetail.size);
-            const fullNameWithSize = `${product.name} ${variant.colorName} ${sizeString}`.toLowerCase();
-            const sizeMatch = searchTerms.every(term => fullNameWithSize.includes(term));
-            
-            if (productNameMatch || variantMatch || sizeMatch) {
-              results.push({
-                productId: product._id,
-                productName: product.name,
-                variantId: variant._id,
-                colorName: variant.colorName,
-                sizeDetail: sizeDetail,
-                sizeString: sizeString,
-                image: variant.variantImage || product.image,
-                price: getDisplayPrice(product, variant, sizeDetail),
-                stock: sizeDetail.stock,
-                fullDisplayName: `${product.name} - ${variant.colorName} - ${sizeString}`
-              });
-            }
-          });
-        } else {
-          if (productNameMatch || variantMatch) {
-            results.push({
-              productId: product._id,
-              productName: product.name,
-              variantId: variant._id,
-              colorName: variant.colorName,
-              sizeDetail: null,
-              sizeString: null,
-              image: variant.variantImage || product.image,
-              price: getDisplayPrice(product, variant, null),
-              stock: variant.commonStock,
-              fullDisplayName: `${product.name} - ${variant.colorName}`
-            });
-          }
-        }
+        return {
+          productId: result.productId,
+          productName: result.productName,
+          variantId: result.variantId,
+          colorName: result.colorName,
+          sizeDetail: result.sizeDetail,
+          sizeString: sizeString,
+          image: result.image,
+          price: result.price,
+          stock: result.stock,
+          fullDisplayName: result.colorName 
+            ? `${result.productName} - ${result.colorName}${sizeString ? ` - ${sizeString}` : ''}`
+            : result.productName
+        };
       });
-    } else {
-      if (productNameMatch) {
-        results.push({
-          productId: product._id,
-          productName: product.name,
-          variantId: null,
-          colorName: null,
-          sizeDetail: null,
-          sizeString: null,
-          image: product.image,
-          price: getDisplayPrice(product, null, null),
-          stock: product.stock,
-          fullDisplayName: product.name
-        });
-      }
+      
+      setSearchResults(formattedResults);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
     }
-  });
+  };
 
-  setSearchResults(results);
-  setShowSearchResults(true);
-  setIsSearching(false);
-}, [debouncedSearchQuery, products, categories]);
+  performSearch();
+}, [debouncedSearchQuery]);
 
 // Function that will listen the event -> clicking of enter key
 const handleSearchKeyPress = (e) => {
@@ -428,35 +438,25 @@ const handleSearchResultClick = (result) => {
   setSearchQuery("")
 }
 
-const getFilteredProducts = () => {
-  // Log initial product and category data for debugging
-  // console.log("Products:", products);
-  // console.log("Categories:", categories);
-
-  // Filter out inactive products and products with inactive categories
+const getFilteredProducts = useMemo(() => {
+  // Memoize this expensive filtering operation
   let activeProducts = products.filter(product => {
     // Check if product is active
     if (product.isActive === false) {
-      // console.log(`Filtered out inactive product: ${product.name} (${product._id})`);
       return false;
     }
 
     // Find the mainCategory and subCategory
-    const mainCat = categories.find(cat => cat._id.toString() === product.mainCategory?.toString());
-    const subCat = product.subCategory ? categories.find(cat => cat._id.toString() === product.subCategory?.toString()) : null;
-
-    // Log category details for debugging
-    // console.log(`Product: ${product.name}, Main Category:`, mainCat, `Sub Category:`, subCat);
+    const mainCat = categories.find(cat => cat._id.toString() === product.mainCategory?._id?.toString() || cat._id.toString() === product.mainCategory?.toString());
+    const subCat = product.subCategory ? categories.find(cat => cat._id.toString() === product.subCategory?._id?.toString() || cat._id.toString() === product.subCategory?.toString()) : null;
 
     // Filter out if mainCategory is inactive
     if (mainCat && mainCat.isActive === false) {
-      // console.log(`Filtered out product ${product.name} due to inactive mainCategory: ${mainCat.categoryName}`);
       return false;
     }
 
     // Filter out if subCategory is inactive
     if (subCat && subCat.isActive === false) {
-      // console.log(`Filtered out product ${product.name} due to inactive subCategory: ${subCat.categoryName}`);
       return false;
     }
 
@@ -480,7 +480,7 @@ const getFilteredProducts = () => {
 
     return nameMatch || variantMatch;
   });
-};
+}, [products, categories, searchQuery]); // Only recalculate when these change
 
   // Close dropdowns of search when clicking outside
   useEffect(() => {
@@ -569,16 +569,6 @@ const getFilteredProducts = () => {
       return variant.commonStock === 0;
     }
     return product.stock === 0;
-  }
-
-  const formatSize = (sizeObj) => {
-    if (!sizeObj) return "N/A"
-    if (typeof sizeObj === "string") return sizeObj
-    if (sizeObj.length && sizeObj.breadth && sizeObj.height) {
-      const unit = sizeObj.unit || "cm"
-      return `${sizeObj.length} × ${sizeObj.breadth} × ${sizeObj.height} ${unit}`
-    }
-    return "N/A"
   }
 
   const getOriginalPrice = (product, variant = null, sizeDetail = null) => {
@@ -1025,11 +1015,12 @@ const getPolicyTitle = (type) => {
   };
 
   // Memoize expensive computations - MOVED HERE AFTER ALL FUNCTIONS ARE DEFINED
-  const filteredProductsList = useMemo(() => getFilteredProducts(), [products, categories, searchQuery]);
-  const justArrivedProductsList = useMemo(() => {
-    const filtered = filteredProductsList.filter((product) => isNew(product) && !isOutOfStock(product));
-    return sortProductsByPrice(filtered);
-  }, [filteredProductsList, selectedFilters]);
+  const filteredProductsList = getFilteredProducts; // Already memoized above
+
+const justArrivedProductsList = useMemo(() => {
+  const filtered = filteredProductsList.filter((product) => isNew(product) && !isOutOfStock(product));
+  return sortProductsByPrice(filtered);
+}, [filteredProductsList, selectedFilters]);
   const restockedProductsList = useMemo(() => {
     const filtered = filteredProductsList.filter((product) => !isOutOfStock(product) && (
       isRecentlyRestocked(product) ||
@@ -1279,7 +1270,7 @@ const CategoryNavigationBar = () => {
     );
   };
 
-  const ProductCard = ({ product, forcedBadge = null }) => {
+  const ProductCard = React.memo(({ product, forcedBadge = null }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
     const [selectedVariant, setSelectedVariant] = useState(
   product.variants?.find(v => v.isActive !== false) || null
@@ -1396,11 +1387,12 @@ const CategoryNavigationBar = () => {
 >
         <div className="relative">
           <div className="relative">
-            <img
-  src={getOptimizedImageUrl(currentImage, { width: 400 }) || "/placeholder.svg"}
+           <img
+  src={getOptimizedImageUrl(currentImage, { width: 400, quality: 60 }) || "/placeholder.svg"}
   alt={product.name}
   className="w-full h-64 object-contain group-hover:scale-105 transition-transform duration-300 cursor-pointer"
   loading="lazy"
+  decoding="async"
 />
 
             {currentImages.length > 1 && (
@@ -1717,7 +1709,11 @@ const CategoryNavigationBar = () => {
         </div>
       </div>
     )
-  }
+  }, (prevProps, nextProps) => {
+  // Only re-render if product or forcedBadge actually changed
+  return prevProps.product._id === nextProps.product._id && 
+         prevProps.forcedBadge === nextProps.forcedBadge;
+});
 
   
 
@@ -2385,35 +2381,35 @@ const CategoryNavigationBar = () => {
 
 // CartModal was here
 
-  const getJustArrivedProducts = () => {
-    const filteredProducts =getFilteredProducts().filter((product) => isNew(product) && !isOutOfStock(product));
-    return sortProductsByPrice(filteredProducts);
-  }
+const getJustArrivedProducts = () => {
+  const filteredProducts = getFilteredProducts.filter((product) => isNew(product) && !isOutOfStock(product));
+  return sortProductsByPrice(filteredProducts);
+}
 
-  const getRestockedProducts = () => {
-    const filteredProducts =getFilteredProducts().filter((product) => !isOutOfStock(product) && (
-        isRecentlyRestocked(product) ||
-        product.variants?.some((variant) =>
-          variant.moreDetails?.some((sizeDetail) => isRecentlyRestocked(product, variant, sizeDetail)),
-        )
-      ));
-    return sortProductsByPrice(filteredProducts);
-  }
+const getRestockedProducts = () => {
+  const filteredProducts = getFilteredProducts.filter((product) => !isOutOfStock(product) && (
+      isRecentlyRestocked(product) ||
+      product.variants?.some((variant) =>
+        variant.moreDetails?.some((sizeDetail) => isRecentlyRestocked(product, variant, sizeDetail)),
+      )
+    ));
+  return sortProductsByPrice(filteredProducts);
+}
 
-  const getRevisedRatesProducts = () => {
-    const filteredProducts =getFilteredProducts().filter((product) => !isOutOfStock(product) && (
-        isDiscountActive(product) ||
-        product.variants?.some((variant) =>
-          variant.moreDetails?.some((sizeDetail) => isDiscountActive(product, variant, sizeDetail)),
-        )
-      ));
-    return sortProductsByPrice(filteredProducts);
-  }
+const getRevisedRatesProducts = () => {
+  const filteredProducts = getFilteredProducts.filter((product) => !isOutOfStock(product) && (
+      isDiscountActive(product) ||
+      product.variants?.some((variant) =>
+        variant.moreDetails?.some((sizeDetail) => isDiscountActive(product, variant, sizeDetail)),
+      )
+    ));
+  return sortProductsByPrice(filteredProducts);
+}
 
-  const getOutOfStockProducts = () => {
-    const filteredProducts =getFilteredProducts().filter(isOutOfStock);
-    return sortProductsByPrice(filteredProducts);
-  }
+const getOutOfStockProducts = () => {
+  const filteredProducts = getFilteredProducts.filter(isOutOfStock);
+  return sortProductsByPrice(filteredProducts);
+}
 
   const filterOptions = [
     { key: "all", label: "All Products" },
@@ -2609,7 +2605,7 @@ if (justArrivedProductsList.length > 0) {
           </div>
         </section>
         <CategoryNavigationBar />
-            {showSearchSection && searchQuery && (
+           {showSearchSection && searchQuery && (
   <section className="mb-12" id="search-results-section">
     <div className="flex items-center justify-between mb-6">
       <h2 className="text-2xl font-bold -800 dark:text-black">
@@ -2623,7 +2619,7 @@ if (justArrivedProductsList.length > 0) {
         Clear Search
       </button>
     </div>
-    {getFilteredProducts().length > 0 ? (
+    {getFilteredProducts.length > 0 ? (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
         {sortProductsByPrice(filteredProductsList).map((product) => (
           <ProductCard key={`search-${product._id}`} product={product} />
@@ -2653,13 +2649,19 @@ if (justArrivedProductsList.length > 0) {
       const allRelevantCategoryIds = getAllDescendantCategoryIds(currentCategoryId, buildCategoryTree(categories));
       
       const categoryProducts = sortProductsByPrice(
-        getFilteredProducts().filter((product) => {
-          const productMainCat = typeof product.mainCategory === 'object' ? product.mainCategory._id : product.mainCategory;
-          const productSubCat = typeof product.subCategory === 'object' ? product.subCategory._id : product.subCategory;
-          
-          return allRelevantCategoryIds.includes(productMainCat) || allRelevantCategoryIds.includes(productSubCat);
-        })
-      );
+  getFilteredProducts.filter((product) => {
+    // Handle MongoDB ObjectId format
+    const productMainCat = product.mainCategory?.$oid || 
+                          product.mainCategory?._id || 
+                          product.mainCategory;
+    const productSubCat = product.subCategory?.$oid || 
+                         product.subCategory?._id || 
+                         product.subCategory;
+    
+    return (productMainCat && allRelevantCategoryIds.includes(productMainCat)) || 
+           (productSubCat && allRelevantCategoryIds.includes(productSubCat));
+  })
+);
       
       return categoryProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
@@ -2737,13 +2739,34 @@ if (justArrivedProductsList.length > 0) {
           </section>
         )}
 
-        <section>
-  <h2 className="text-2xl font-bold -800 dark:text-black mb-6">All Products</h2>
+        <section id="all-products-section">
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="text-2xl font-bold -800 dark:text-black">All Products</h2>
+    <span className="text-sm text-gray-600 dark:text-gray-400">
+      Showing {filteredProductsList.length} of {totalCount} products
+    </span>
+  </div>
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
     {sortProductsByPrice(filteredProductsList).map((product) => (
       <ProductCard key={product._id} product={product} />
     ))}
   </div>
+  
+  {/* Infinite scroll trigger */}
+  {hasMore && (
+    <div ref={observerTarget} className="flex justify-center py-8">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-gray-600 dark:text-gray-400">Loading more products...</p>
+      </div>
+    </div>
+  )}
+  
+  {!hasMore && filteredProductsList.length > 0 && (
+    <div className="text-center py-8">
+      <p className="text-gray-600 dark:text-gray-400">You've reached the end! 🎉</p>
+    </div>
+  )}
 </section>
       </div>
 
