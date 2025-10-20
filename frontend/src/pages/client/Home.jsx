@@ -137,16 +137,25 @@ const handleCartCheckout = async () => {
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "")
   // Handle search from URL parameter
+// Handle search from URL parameter
 useEffect(() => {
   const searchFromUrl = searchParams.get('search');
   if (searchFromUrl) {
     setSearchQuery(searchFromUrl);
     setShowSearchSection(true);
-    // Remove the search param from URL after reading it
+    setShowSearchResults(false); // Close the dropdown
+    
+    // Remove the search param from URL and scroll to results
     setTimeout(() => {
       searchParams.delete('search');
       setSearchParams(searchParams, { replace: true });
-    }, 100);
+      
+      // Scroll to search results section
+      document.getElementById('search-results-section')?.scrollIntoView({ 
+        behavior: 'smooth',
+        block: 'start'
+      });
+    }, 300); // Increased timeout to ensure DOM is ready
   }
 }, []);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
