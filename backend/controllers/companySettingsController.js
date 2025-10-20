@@ -239,7 +239,8 @@ exports.getContactInfo = async (req, res) => {
         adminState: settings.adminState,
         adminPincode: settings.adminPincode,
         instagramId: settings.instagramId,
-        facebookId: settings.facebookId
+        facebookId: settings.facebookId,
+        adminName: settings.adminName,
       }
     });
   } catch (error) {

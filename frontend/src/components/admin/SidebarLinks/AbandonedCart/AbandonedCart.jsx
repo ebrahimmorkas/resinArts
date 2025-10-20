@@ -141,11 +141,11 @@ const AbandonedCart = () => {
           <div className="flex flex-col space-y-4">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
               <div>
-                <h3 className="text-lg font-medium text-gray-900">Abandoned Carts</h3>
-                <p className="text-sm text-gray-500 mt-1">Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length}</p>
+                <h3 className="text-lg font-medium text-gray-900 dark:text-white">Abandoned Carts</h3>
+                <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length}</p>
               </div>
               {selectedRows.length > 0 && (
-                <button onClick={openDeleteMultipleModal} className="inline-flex items-center px-4 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100">
+                <button onClick={openDeleteMultipleModal} className="inline-flex items-center px-4 py-2 border border-red-300 rounded-md text-sm font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:text-white">
                   <Trash2 className="w-4 h-4 mr-2" />Delete Selected ({selectedRows.length})
                 </button>
               )}
@@ -171,15 +171,15 @@ const AbandonedCart = () => {
             <table className="min-w-full divide-y divide-gray-200">
               <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                 <tr>
-                  <th className="px-6 py-3 text-center bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'60px'}}><input type="checkbox" checked={currentData.length > 0 && selectedRows.length === currentData.length} onChange={handleSelectAll} className="w-4 h-4 text-blue-600 rounded" /></th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'80px'}}>Sr No.</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'150px'}}>Name</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'200px'}}>Email</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'140px'}}>WhatsApp</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'140px'}}>Phone</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'120px'}}>Items</th>
-                  <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'140px'}}>Time</th>
-                  {selectedRows.length === 0 && <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'180px'}}>Actions</th>}
+                  <th className="dark:text-white px-6 py-3 text-center bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'60px'}}><input type="checkbox" checked={currentData.length > 0 && selectedRows.length === currentData.length} onChange={handleSelectAll} className="w-4 h-4 text-blue-600 rounded" /></th>
+                  <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'80px'}}>Sr No.</th>
+                  <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'150px'}}>Name</th>
+                  <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'200px'}}>Email</th>
+                  <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'140px'}}>WhatsApp</th>
+                  <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'140px'}}>Phone</th>
+                  <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'120px'}}>Items</th>
+                  <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'140px'}}>Time</th>
+                  {selectedRows.length === 0 && <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase bg-gray-50 dark:bg-gray-800 border-b" style={{minWidth:'180px'}}>Actions</th>}
                 </tr>
               </thead>
               <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
@@ -189,21 +189,21 @@ const AbandonedCart = () => {
                   currentData.map((item, index) => {
                     const timeElapsed = Math.floor((Date.now() - new Date(item.createdAt || item.last_updated).getTime()) / 60000);
                     return (
-                      <tr key={item._id} className="hover:bg-gray-50 dark:bg-gray-800">
-                        <td className="px-6 py-4 text-center"><input type="checkbox" checked={selectedRows.includes(item._id)} onChange={() => handleSelectRow(item._id)} className="w-4 h-4 text-blue-600 rounded" /></td>
-                        <td className="px-6 py-4 text-sm text-center text-gray-900">{startIndex + index + 1}</td>
-                        <td className="px-6 py-4 text-sm text-center text-gray-900">{item.user_name}</td>
-                        <td className="px-6 py-4 text-sm text-center text-gray-500">{item.email}</td>
-                        <td className="px-6 py-4 text-sm text-center text-gray-500">{item.whatsapp_number || 'N/A'}</td>
-                        <td className="px-6 py-4 text-sm text-center text-gray-500">{item.phone_number || 'N/A'}</td>
-                        <td className="px-6 py-4 text-sm text-center"><span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{item.cart_items.length} items</span></td>
-                        <td className="px-6 py-4 text-sm text-center"><span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${timeElapsed < 15 ? 'bg-green-100 text-green-800' : timeElapsed < 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{timeElapsed < 60 ? `${timeElapsed}m` : `${Math.floor(timeElapsed / 60)}h ${timeElapsed % 60}m`}</span></td>
+                      <tr key={item._id} className="hover:bg-gray-50 dark:bg-gray-800 dark:hover:bg-gray-700">
+                        <td className="dark:text-gray-400 px-6 py-4 text-center"><input type="checkbox" checked={selectedRows.includes(item._id)} onChange={() => handleSelectRow(item._id)} className="w-4 h-4 text-blue-600 rounded" /></td>
+                        <td className="dark:text-gray-400 px-6 py-4 text-sm text-center text-gray-900">{startIndex + index + 1}</td>
+                        <td className="dark:text-gray-400 px-6 py-4 text-sm text-center text-gray-900">{item.user_name}</td>
+                        <td className="dark:text-gray-400 px-6 py-4 text-sm text-center text-gray-500">{item.email}</td>
+                        <td className="dark:text-gray-400 px-6 py-4 text-sm text-center text-gray-500">{item.whatsapp_number || 'N/A'}</td>
+                        <td className="dark:text-gray-400 px-6 py-4 text-sm text-center text-gray-500">{item.phone_number || 'N/A'}</td>
+                        <td className="dark:text-gray-400 px-6 py-4 text-sm text-center"><span className="px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">{item.cart_items.length} items</span></td>
+                        <td className="dark:text-gray-400 px-6 py-4 text-sm text-center"><span className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${timeElapsed < 15 ? 'bg-green-100 text-green-800' : timeElapsed < 60 ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'}`}>{timeElapsed < 60 ? `${timeElapsed}m` : `${Math.floor(timeElapsed / 60)}h ${timeElapsed % 60}m`}</span></td>
                         {selectedRows.length === 0 && (
                           <td className="px-6 py-4 text-sm text-center">
                             <div className="flex items-center justify-center space-x-2">
                               <button onClick={() => handleView(item._id)} className="p-1.5 text-blue-600 hover:bg-blue-50 rounded-md" title="View"><Eye className="w-4 h-4" /></button>
                               <button onClick={() => handleSendReminder(item._id)} disabled={sendingEmail === item._id} className="p-1.5 text-green-600 hover:bg-green-50 rounded-md disabled:opacity-50" title="Email"><Mail className="w-4 h-4" /></button>
-                              <button onClick={() => openDeleteModal(item._id)} className="p-1.5 text-red-600 hover:bg-red-50 rounded-md" title="Delete"><Trash2 className="w-4 h-4" /></button>
+                              <button onClick={() => openDeleteModal(item._id)} className="dark:text-white p-1.5 text-red-600 hover:bg-red-50 rounded-md" title="Delete"><Trash2 className="w-4 h-4" /></button>
                             </div>
                           </td>
                         )}
@@ -218,11 +218,11 @@ const AbandonedCart = () => {
         <div className="px-6 py-4 border-t">
           <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
             <div className="flex items-center space-x-2">
-              <span className="text-sm text-gray-700">Show</span>
-              <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="border rounded-md px-3 py-1 text-sm">
+              <span className="text-sm text-gray-700 dark:text-gray-400">Show</span>
+              <select value={itemsPerPage} onChange={(e) => setItemsPerPage(Number(e.target.value))} className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors">
                 <option value={5}>5</option><option value={10}>10</option><option value={25}>25</option><option value={50}>50</option>
               </select>
-              <span className="text-sm text-gray-700">per page</span>
+              <span className="text-sm text-gray-700 dark:text-gray-400">per page</span>
             </div>
             <div className="flex items-center space-x-2">
               <button onClick={() => setCurrentPage(p => Math.max(p - 1, 1))} disabled={currentPage === 1} className="inline-flex items-center px-3 py-2 border rounded-md text-sm disabled:opacity-50">
@@ -275,7 +275,7 @@ const AbandonedCart = () => {
                   </div>
                 ))}
               </div>
-              <div className="mt-6 p-4 bg-blue-50 rounded-lg"><div className="flex justify-between"><span className="font-semibold">Cart Total:</span><span className="text-lg font-bold text-blue-600">₹{calculateCartTotal(selectedCart.cart_items).toFixed(2)}</span></div></div>
+              <div className="mt-6 p-4 bg-blue-50 rounded-lg"><div className="flex justify-between"><span className="font-semibold dark:text-black">Cart Total:</span><span className="text-lg font-bold text-blue-600">₹{calculateCartTotal(selectedCart.cart_items).toFixed(2)}</span></div></div>
             </div>
             <div className="px-6 py-4 border-t flex justify-end"><button onClick={() => setShowModal(false)} className="px-4 py-2 bg-gray-600 text-white rounded-md hover:bg-gray-700">Close</button></div>
           </div>

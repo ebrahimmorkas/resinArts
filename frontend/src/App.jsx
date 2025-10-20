@@ -11,6 +11,7 @@ import ProtectedRoute from './protectedRoutes';
 import UpdateUser from './pages/client/UpdateUser';
 import ForgotPassword from './pages/client/ForgotPassword';
 import ResetPassword from './pages/client/ResetPassword';
+import ProductDetailsPage from './pages/client/ProductDetailsPage';
 
 function App() {
   return (
@@ -32,6 +33,8 @@ function App() {
         
         {/* Home route - PUBLIC (no protection) */}
         <Route path='/' element={<Home />} />
+        {/* Product details route - PUBLIC */}
+<Route path='/product/:productId' element={<ProductDetailsPage />} />
         
         {/* User-specific routes - protected */}
         <Route path='/user/update-profile' element={

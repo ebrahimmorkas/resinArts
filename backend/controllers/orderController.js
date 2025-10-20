@@ -1371,10 +1371,115 @@ const editOrder = async (req, res) => {
                     );
 
                     try {
-                        sendEmail(user.email, `Updation of order ${order._id}`, `Your total price is ${updatedProduct.total_price}`);
-                    } catch (error) {
-                        console.log("Problem in sending email");
-                    } finally {
+    const companySettings = await CompanySettings.getSingleton();
+    const orderDetailsText = products
+        .map((item, index) => {
+            let itemDetails = `${index + 1}. ${item.product_name}`;
+            if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+            if (item.size) itemDetails += ` - Size: ${item.size}`;
+            itemDetails += `\n   Quantity: ${item.quantity}`;
+            itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
+            itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
+            return itemDetails;
+        })
+        .join('\n\n');
+
+    const emailSubject = `Order #${order._id} Updated - ${companySettings?.companyName || 'Mould Market'}`;
+    const emailText = `Dear ${user.name || user.email},
+
+Your order #${order._id} has been successfully updated by our team.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER UPDATE NOTIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ${order._id}
+Update Date: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Status: ${updatedProduct.status}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+UPDATED ORDER SUMMARY
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ORDER ITEMS:
+${orderDetailsText}
+
+PRICING SUMMARY:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Subtotal: ₹${parseFloat(updatedProduct.price || 0).toFixed(2)}
+Shipping Cost: ₹${parseFloat(updatedProduct.shipping_price || 0).toFixed(2)}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+New Total Amount: ₹${parseFloat(updatedProduct.total_price || 0).toFixed(2)}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+REASON FOR UPDATE
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+The order was updated to reflect changes in:
+• Product quantities
+• Item selection
+• Pricing adjustments
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+PAYMENT IMPACT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${
+  parseFloat(updatedProduct.total_price || 0) > parseFloat(order.total_price || 0)
+    ? `• Additional payment of ₹${parseFloat(updatedProduct.total_price - order.total_price).toFixed(2)} is required
+• Please contact us to complete the additional payment`
+    : parseFloat(updatedProduct.total_price || 0) < parseFloat(order.total_price || 0)
+    ? `• Refund of ₹${parseFloat(order.total_price - updatedProduct.total_price).toFixed(2)} will be processed within 5-7 business days
+• Refund will be credited to your original payment method`
+    : `• No additional payment or refund required
+• Your existing payment covers the updated total`
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${
+  parseFloat(updatedProduct.total_price || 0) > parseFloat(order.total_price || 0)
+    ? `1️⃣ Contact us via WhatsApp or phone to complete additional payment
+2️⃣ Share payment proof for verification
+3️⃣ Once verified, your order processing continues`
+    : `1️⃣ Your order continues processing with updated details
+2️⃣ No action required from your side
+3️⃣ You will receive further updates on your order status`
+}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+OUR COMMITMENT
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+We apologize for any inconvenience and are committed to ensuring your satisfaction. Please reach out with any questions.
+
+Thank you for your continued trust in ${companySettings?.companyName || 'Mould Market'}!
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`;
+
+    await sendEmail(user.email, emailSubject, emailText);
+} catch (error) {
+    console.log("Error in sending email:", error);
+} finally {
                         return res.status(200).json({ message: "Product edited successfully" });
                     }
                 } catch (error) {

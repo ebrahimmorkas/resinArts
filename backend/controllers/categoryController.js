@@ -49,7 +49,7 @@ const storage = multer.memoryStorage();
 
 const fileFilter = (req, file, cb) => {
   // Check file extensions
-  const allowedExtensions = ['.xlsx', '.csv', '.jpg', '.jpeg', '.png'];
+  const allowedExtensions = ['.xlsx', '.csv', '.jpg', '.jpeg', '.png', '.zip'];
   const fileExtension = path.extname(file.originalname).toLowerCase();
   
   if (allowedExtensions.includes(fileExtension)) {
@@ -94,21 +94,70 @@ const uploadImageToCloudinary = async (imagePath, folder = 'categories') => {
   }
 };
 
-// Controller for bulk category upload
 const bulkUploadCategories = async (req, res) => {
+  let tempDir = null;
+
   try {
-    if (!req.file) {
+    console.log('=== BULK UPLOAD CATEGORIES STARTED ===');
+    
+    // Check if files are uploaded
+    if (!req.files || !req.files.excelFile || !req.files.imagesZip) {
+      console.log('Missing files:', req.files);
       return res.status(400).json({
         success: false,
-        message: 'No file uploaded. Please upload an Excel (.xlsx) or CSV file.'
+        message: 'Please upload both Excel file and images ZIP file.'
       });
     }
 
-    // Parse Excel/CSV file
-    const workbook = xlsx.read(req.file.buffer, { type: 'buffer' });
+    const excelFile = req.files.excelFile[0];
+    const zipFile = req.files.imagesZip[0];
+
+    console.log('Excel file:', excelFile.originalname, excelFile.size, 'bytes');
+    console.log('ZIP file:', zipFile.originalname, zipFile.size, 'bytes');
+
+    // Extract ZIP file to temporary directory
+    const AdmZip = require('adm-zip');
+    tempDir = path.join(__dirname, '../temp', `category_upload_${Date.now()}`);
+    
+    console.log('Creating temp directory:', tempDir);
+    
+    // Create temp directory if it doesn't exist
+    if (!fs.existsSync(path.join(__dirname, '../temp'))) {
+      fs.mkdirSync(path.join(__dirname, '../temp'), { recursive: true });
+    }
+    
+    try {
+      const zip = new AdmZip(zipFile.buffer);
+      const zipEntries = zip.getEntries();
+      
+      console.log(`ZIP contains ${zipEntries.length} entries`);
+      
+      // Log all entries in the ZIP
+      zipEntries.forEach((entry, index) => {
+        console.log(`Entry ${index + 1}: ${entry.entryName} (isDirectory: ${entry.isDirectory})`);
+      });
+      
+      // Extract all files
+      zip.extractAllTo(tempDir, true);
+      console.log('Extraction completed to:', tempDir);
+      
+      // Verify extraction by listing files
+      const extractedFiles = fs.readdirSync(tempDir, { recursive: true });
+      console.log('Extracted files:', extractedFiles);
+      
+    } catch (zipError) {
+      console.error('ZIP extraction error:', zipError);
+      throw new Error(`Failed to extract ZIP file: ${zipError.message}`);
+    }
+
+    // Parse Excel file
+    console.log('Parsing Excel file...');
+    const workbook = xlsx.read(excelFile.buffer, { type: 'buffer' });
     const sheetName = workbook.SheetNames[0];
     const worksheet = workbook.Sheets[sheetName];
     const jsonData = xlsx.utils.sheet_to_json(worksheet);
+
+    console.log(`Excel parsed: ${jsonData.length} rows found`);
 
     if (jsonData.length === 0) {
       return res.status(400).json({
@@ -128,12 +177,57 @@ const bulkUploadCategories = async (req, res) => {
     // Sort by level to ensure parent categories are created first
     const sortedData = jsonData.sort((a, b) => (a.level || 0) - (b.level || 0));
 
+    // Helper function to find image in extracted folder (supports both nested and root paths)
+    const findImageInTemp = (imagePath) => {
+      if (!imagePath || imagePath.trim() === '') return null;
+      
+      const cleanImagePath = imagePath.trim();
+      
+      // Try direct path first (supports nested folders like cat1/cat1.jpg)
+      const directPath = path.join(tempDir, cleanImagePath);
+      if (fs.existsSync(directPath)) {
+        console.log(`Found image (direct): ${cleanImagePath}`);
+        return directPath;
+      }
+      
+      // If direct path fails, try searching by filename only in all subdirectories
+      const filename = path.basename(cleanImagePath);
+      const findInDir = (dir) => {
+        try {
+          const files = fs.readdirSync(dir);
+          for (const file of files) {
+            const fullPath = path.join(dir, file);
+            const stat = fs.statSync(fullPath);
+            
+            if (stat.isDirectory()) {
+              const found = findInDir(fullPath);
+              if (found) return found;
+            } else if (file.toLowerCase() === filename.toLowerCase()) {
+              console.log(`Found image (recursive search): ${filename} at ${fullPath}`);
+              return fullPath;
+            }
+          }
+        } catch (err) {
+          console.error(`Error reading directory ${dir}:`, err);
+        }
+        return null;
+      };
+      
+      const foundPath = findInDir(tempDir);
+      if (!foundPath) {
+        console.warn(`Image not found: ${cleanImagePath}`);
+      }
+      return foundPath;
+    };
+
     // Process categories
     for (let i = 0; i < sortedData.length; i++) {
       const row = sortedData[i];
       
       try {
         const { categoryPath, categoryName, image, level, description } = row;
+
+        console.log(`\n=== Processing category: ${categoryName} ===`);
 
         // Validate required fields
         if (!categoryPath || !categoryName) {
@@ -148,7 +242,7 @@ const bulkUploadCategories = async (req, res) => {
         if (pathSegments.length > 1) {
           const parentPath = pathSegments.slice(0, -1).join(' > ');
           
-          // Find parent category by reconstructing its path
+          // Find parent category by name
           const parentCategory = await Category.findOne({ 
             categoryName: pathSegments[pathSegments.length - 2] 
           });
@@ -157,6 +251,7 @@ const bulkUploadCategories = async (req, res) => {
             throw new Error(`Parent category not found for path: ${parentPath}`);
           }
           parentCategoryId = parentCategory._id;
+          console.log(`Found parent category: ${parentCategory.categoryName}`);
         }
 
         // Check for duplicates (same name under same parent)
@@ -168,23 +263,33 @@ const bulkUploadCategories = async (req, res) => {
         if (existingCategory) {
           // For root categories, skip duplicates
           if (level === 0 || level === '0') {
+            console.log(`Category already exists: ${categoryName}`);
             results.failed.push({
               row: i + 1,
               data: row,
               error: `Root category '${categoryName}' already exists`
             });
+            results.failCount++;
             continue;
           }
-          // For sub-categories, allow duplicates under different parents
         }
 
         // Handle image upload
         let imageUrl = '';
         if (image && image.trim() !== '') {
           try {
-            imageUrl = await uploadImageToCloudinary(image.trim(), 'categories');
+            console.log(`Looking for image: ${image}`);
+            const imagePath = findImageInTemp(image);
+            if (imagePath) {
+              imageUrl = await uploadImageToCloudinary(imagePath, 'categories');
+              console.log(`Image uploaded: ${imageUrl}`);
+            } else {
+              console.warn(`Image not found in ZIP: ${image}`);
+              // Don't throw error, just continue without image
+            }
           } catch (imageError) {
-            throw new Error(`Image upload failed: ${imageError.message}`);
+            console.error(`Image upload error: ${imageError.message}`);
+            // Don't throw error for image upload failure, continue without image
           }
         }
 
@@ -196,6 +301,7 @@ const bulkUploadCategories = async (req, res) => {
         });
 
         await newCategory.save();
+        console.log(`Category saved successfully: ${newCategory._id}`);
 
         results.successful.push({
           row: i + 1,
@@ -208,6 +314,7 @@ const bulkUploadCategories = async (req, res) => {
         results.successCount++;
 
       } catch (error) {
+        console.error(`Error processing category at row ${i + 1}:`, error);
         results.failed.push({
           row: i + 1,
           data: row,
@@ -216,7 +323,7 @@ const bulkUploadCategories = async (req, res) => {
         results.failCount++;
       }
 
-      // Send progress update (optional - for real-time updates)
+      // Send progress update
       if (req.io) {
         req.io.emit('categoryUploadProgress', {
           processed: i + 1,
@@ -227,6 +334,16 @@ const bulkUploadCategories = async (req, res) => {
       }
     }
 
+    // Clean up temp directory
+    if (tempDir && fs.existsSync(tempDir)) {
+      console.log('Cleaning up temp directory...');
+      fs.rmSync(tempDir, { recursive: true, force: true });
+      console.log('Temporary files cleaned up');
+    }
+
+    console.log('=== BULK UPLOAD CATEGORIES COMPLETED ===');
+    console.log(`Success: ${results.successCount}, Failed: ${results.failCount}`);
+
     return res.status(200).json({
       success: true,
       message: `Category upload completed. ${results.successCount} successful, ${results.failCount} failed.`,
@@ -234,6 +351,19 @@ const bulkUploadCategories = async (req, res) => {
     });
 
   } catch (error) {
+    console.error('=== BULK UPLOAD CATEGORIES ERROR ===');
+    console.error(error);
+    
+    // Clean up temp directory in case of error
+    if (tempDir && fs.existsSync(tempDir)) {
+      try {
+        fs.rmSync(tempDir, { recursive: true, force: true });
+        console.log('Temp directory cleaned up after error');
+      } catch (cleanupError) {
+        console.error('Error cleaning up temp directory:', cleanupError);
+      }
+    }
+    
     return res.status(500).json({
       success: false,
       message: 'Server error during category upload',
@@ -257,12 +387,76 @@ const updateCategoryName = async (req, res) => {
       return res.status(404).json({ message: 'Category not found' });
     }
 
+    const oldCategoryName = category.categoryName;
     category.categoryName = categoryName.trim();
     await category.save();
 
+    // Helper function to build category path
+    const buildCategoryPath = async (categoryId) => {
+      const cat = await Category.findById(categoryId);
+      if (!cat) return '';
+      
+      if (!cat.parent_category_id) {
+        return cat.categoryName;
+      }
+      
+      const parentPath = await buildCategoryPath(cat.parent_category_id);
+      return `${parentPath} > ${cat.categoryName}`;
+    };
+
+    // Function to get all descendant category IDs
+    const getAllDescendantIds = async (parentId) => {
+      const children = await Category.find({ parent_category_id: parentId });
+      let allIds = children.map(child => child._id);
+      
+      for (const child of children) {
+        const descendantIds = await getAllDescendantIds(child._id);
+        allIds = allIds.concat(descendantIds);
+      }
+      
+      return allIds;
+    };
+
+    // Get all descendant category IDs (including the current category)
+    const descendantIds = await getAllDescendantIds(id);
+    const allAffectedCategoryIds = [id, ...descendantIds];
+
+    // Find all products that have any of these categories as mainCategory or subCategory
+    const productsToUpdate = await Product.find({
+      $or: [
+        { mainCategory: { $in: allAffectedCategoryIds } },
+        { subCategory: { $in: allAffectedCategoryIds } }
+      ]
+    });
+
+    // Update categoryPath for each affected product
+    let updatedProductCount = 0;
+    for (const product of productsToUpdate) {
+      let newCategoryPath = '';
+      
+      // Build the category path based on mainCategory and subCategory
+      if (product.mainCategory) {
+        const mainCatPath = await buildCategoryPath(product.mainCategory);
+        newCategoryPath = mainCatPath;
+        
+        if (product.subCategory) {
+          const subCatPath = await buildCategoryPath(product.subCategory);
+          newCategoryPath = subCatPath; // Full path from root to subcategory
+        }
+      }
+      
+      // Update the product's categoryPath
+      if (product.categoryPath !== newCategoryPath) {
+        product.categoryPath = newCategoryPath;
+        await product.save();
+        updatedProductCount++;
+      }
+    }
+
     res.status(200).json({ 
-      message: 'Category updated successfully',
-      category 
+      message: 'Category and related products updated successfully',
+      category,
+      updatedProductsCount: updatedProductCount
     });
   } catch (error) {
     console.error('Error updating category name:', error);
@@ -379,6 +573,7 @@ const addSubcategory = async (req, res) => {
 };
 
 // Delete category (recursive)
+// Delete category (recursive)
 const deleteCategory = async (req, res) => {
   try {
     const { id } = req.params;
@@ -409,7 +604,7 @@ const deleteCategory = async (req, res) => {
     // Get all categories that will be deleted to extract image URLs
     const categoriesToDelete = await Category.find({ _id: { $in: allCategoryIds } });
 
-    // Delete images from Cloudinary
+    // Delete category images from Cloudinary
     for (const cat of categoriesToDelete) {
       if (cat.image) {
         try {
@@ -424,12 +619,81 @@ const deleteCategory = async (req, res) => {
       }
     }
 
+    // Find all products that have any of these categories as mainCategory or subCategory
+    const productsToDelete = await Product.find({
+      $or: [
+        { mainCategory: { $in: allCategoryIds } },
+        { subCategory: { $in: allCategoryIds } }
+      ]
+    });
+
+    // Delete product images from Cloudinary
+    const deleteFromCloudinary = async (imageUrl) => {
+      if (!imageUrl) return;
+      try {
+        const urlParts = imageUrl.split('/');
+        const uploadIndex = urlParts.indexOf('upload');
+        if (uploadIndex !== -1 && uploadIndex + 2 < urlParts.length) {
+          const pathAfterUpload = urlParts.slice(uploadIndex + 2).join('/');
+          const publicId = pathAfterUpload.substring(0, pathAfterUpload.lastIndexOf('.'));
+          await cloudinary.uploader.destroy(publicId);
+          console.log(`Deleted image: ${publicId}`);
+        }
+      } catch (error) {
+        console.error('Error deleting from Cloudinary:', error);
+      }
+    };
+
+    // Delete all images for each product
+    for (const product of productsToDelete) {
+      // Delete main product image
+      if (product.image) {
+        await deleteFromCloudinary(product.image);
+      }
+
+      // Delete additional images
+      if (product.additionalImages && product.additionalImages.length > 0) {
+        for (const img of product.additionalImages) {
+          await deleteFromCloudinary(img);
+        }
+      }
+
+      // Delete variant images
+      if (product.variants && product.variants.length > 0) {
+        for (const variant of product.variants) {
+          if (variant.variantImage) {
+            await deleteFromCloudinary(variant.variantImage);
+          }
+
+          // Delete moreDetails images
+          if (variant.moreDetails && variant.moreDetails.length > 0) {
+            for (const detail of variant.moreDetails) {
+              if (detail.additionalImages && detail.additionalImages.length > 0) {
+                for (const img of detail.additionalImages) {
+                  await deleteFromCloudinary(img);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+    // Delete all products
+    const deletedProductsCount = await Product.deleteMany({
+      $or: [
+        { mainCategory: { $in: allCategoryIds } },
+        { subCategory: { $in: allCategoryIds } }
+      ]
+    });
+
     // Delete all categories (parent and all descendants)
     await Category.deleteMany({ _id: { $in: allCategoryIds } });
 
     res.status(200).json({ 
-      message: 'Category and all subcategories deleted successfully',
-      deletedCount: allCategoryIds.length
+      message: 'Category, subcategories, and related products deleted successfully',
+      deletedCategoriesCount: allCategoryIds.length,
+      deletedProductsCount: deletedProductsCount.deletedCount
     });
 
   } catch (error) {

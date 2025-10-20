@@ -392,8 +392,8 @@ const AllAnnouncements = () => {
       );
     }
     return (
-      <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 -800 dark:text-gray-100 border border-gray-200 dark:border-gray-700">
-        <StarOff className="w-3 h-3 mr-1" />
+      <span className="dark:text-black inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 -800 border border-gray-200 dark:border-gray-700">
+        <StarOff className="w-3 h-3 mr-1 dark:text-black" />
         Regular
       </span>
     );
@@ -415,8 +415,8 @@ const AllAnnouncements = () => {
         <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between space-y-3 sm:space-y-0">
             <div>
-              <h3 className="text-lg font-medium text-gray-900">Manage Your Announcements</h3>
-              <p className="text-sm text-gray-500 mt-1">
+              <h3 className="text-lg font-medium text-gray-900 dark:text-white">Manage Your Announcements</h3>
+              <p className="text-sm text-gray-500 mt-1 dark:text-gray-400">
                 Showing {startIndex + 1} to {Math.min(endIndex, filteredData.length)} of {filteredData.length} results
               </p>
             </div>
@@ -435,11 +435,11 @@ const AllAnnouncements = () => {
               
               {/* Actions */}
               <div className="flex items-center space-x-2">
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button className="dark:text-white inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
                   <Filter className="w-4 h-4 mr-2" />
                   Filter
                 </button>
-                <button className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
+                <button className="dark:text-white inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 focus:outline-none focus:ring-1 focus:ring-blue-500">
                   <Download className="w-4 h-4 mr-2" />
                   Export
                 </button>
@@ -469,46 +469,46 @@ const AllAnnouncements = () => {
                 <table className="min-w-full divide-y divide-gray-200">
                   <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
                     <tr>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '80px' }}>
                         Sr No.
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '300px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '300px' }}>
                         Announcement Text
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                         Start Date
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                         End Date
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
                         Type
                       </th>
-                      <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '150px' }}>
+                      <th className="dark:text-white px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '150px' }}>
                         Actions
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                     {currentData.map((ann, index) => (
-                      <tr key={ann._id} className="hover:bg-gray-50 dark:bg-gray-800 transition-colors">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
+                      <tr key={ann._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 transition-colors">
+                        <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '80px' }}>
                           {startIndex + index + 1}
                         </td>
-                        <td className="px-6 py-4 text-sm text-center text-gray-900" style={{ minWidth: '300px' }}>
+                        <td className="dark:text-gray-400 px-6 py-4 text-sm text-center text-gray-900" style={{ minWidth: '300px' }}>
                           <div className="max-w-xs mx-auto">
                             <div className="truncate" title={ann.text}>
                               {ann.text}
                             </div>
                           </div>
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
+                        <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
                           {new Date(ann.startDate).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
+                        <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900" style={{ minWidth: '120px' }}>
                           {new Date(ann.endDate).toLocaleDateString()}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
+                        <td className="dark:text-gray-400 px-6 py-4 whitespace-nowrap text-sm text-center" style={{ minWidth: '120px' }}>
                           <div className="flex justify-center">
                             {getDefaultBadge(ann.isDefault)}
                           </div>
@@ -524,7 +524,7 @@ const AllAnnouncements = () => {
                             </button>
                             <button
                               onClick={() => handleDelete(ann)}
-                              className="p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
+                              className="dark:text-white p-1.5 text-red-600 hover:bg-red-50 rounded-md transition-colors"
                               title="Delete"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -544,7 +544,7 @@ const AllAnnouncements = () => {
                     ))}
                     {currentData.length === 0 && (
                       <tr>
-                        <td colSpan="6" className="px-6 py-12 text-center text-gray-500">
+                        <td colSpan="6" className="px-6 py-12 text-center text-gray-500 dark:text-gray-400">
                           {searchTerm ? 'No announcements found matching your search.' : 'No announcements found'}
                         </td>
                       </tr>
@@ -559,19 +559,19 @@ const AllAnnouncements = () => {
               <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
                 {/* Items per page */}
                 <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Show</span>
+                  <span className="text-sm text-gray-700 dark:text-gray-400">Show</span>
                   <select
-                    value={itemsPerPage}
-                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                    className="border border-gray-300 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                  <span className="text-sm text-gray-700">entries per page</span>
+  value={itemsPerPage}
+  onChange={(e) => setItemsPerPage(Number(e.target.value))}
+  className="border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 dark:text-gray-400 dark:bg-gray-800 dark:hover:bg-gray-700 transition-colors"
+>
+  <option value={5}>5</option>
+  <option value={10}>10</option>
+  <option value={25}>25</option>
+  <option value={50}>50</option>
+  <option value={100}>100</option>
+</select>
+                  <span className="text-sm text-gray-700 dark:text-gray-400">entries per page</span>
                 </div>
 
                 {/* Pagination */}
@@ -579,10 +579,9 @@ const AllAnnouncements = () => {
                   <button
                     onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
                     disabled={currentPage === 1}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="dark:text-gray-400 inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <ChevronLeft className="w-4 h-4 mr-1" />
-                    Previous
                   </button>
 
                   <div className="flex items-center space-x-1">
@@ -617,9 +616,8 @@ const AllAnnouncements = () => {
                   <button
                     onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
                     disabled={currentPage === totalPages}
-                    className="inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="dark:text-gray-400 inline-flex items-center px-3 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-500 bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    Next
                     <ChevronRight className="w-4 h-4 ml-1" />
                   </button>
                 </div>

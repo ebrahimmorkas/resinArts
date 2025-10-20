@@ -4,6 +4,7 @@ import { AuthContext } from '../../../Context/AuthContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import io from 'socket.io-client';
+import { CompanySettingsContext } from '../../../Context/CompanySettingsContext';
 
 const Navbar = ({ onMenuClick, isSidebarOpen }) => {
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -15,6 +16,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
   const prevNotificationsOpenRef = useRef(false);
   const { user, setUser } = useContext(AuthContext);
   const navigate = useNavigate();
+  const { companySettings, loadingSettings } = useContext(CompanySettingsContext) || {};
 
   useEffect(() => {
     if (!user || user.role !== 'admin') return;
@@ -227,9 +229,15 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
 
               <div className="flex items-center space-x-3">
                 <div className="w-8 h-8 bg-gradient-to-r from-purple-500 to-blue-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <span className="text-white font-bold text-sm">M</span>
+                  {loadingSettings ? (
+      <span className="text-white font-bold text-sm">M</span>
+    ) : companySettings?.companyLogo ? (
+      <img src={companySettings.companyLogo} alt="Company Logo" className="w-full h-full object-contain rounded-lg" />
+    ) : (
+      <span className="text-white font-bold text-sm">OS</span>
+    )}
                 </div>
-                <div className="text-xl font-bold text-gray-900 hidden sm:block">Mould Market</div>
+                {loadingSettings ? 'Loading...' : companySettings?.companyName || 'Online Shop'}
               </div>
             </div>
 
@@ -270,7 +278,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                       <User className="w-4 h-4 text-gray-600" />
                     </div>
                     <div className="hidden sm:block text-left">
-                      <div className="text-sm font-medium text-gray-900">Ebrahim Kanchwala</div>
+                      <div className="text-sm font-medium text-gray-900">{loadingSettings ? 'Loading...' : companySettings?.adminName || 'Admin'}</div>
                       <div className="text-xs text-gray-500">Administrator</div>
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-400" />
@@ -279,8 +287,8 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                   {profileDropdownOpen && (
                     <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                       <div className="px-4 py-2 border-b border-gray-200">
-                        <p className="text-sm font-medium text-gray-900">Ebrahim Kanchwala</p>
-                        <p className="text-xs text-gray-500">mouldmarket.com</p>
+                        <div className="text-sm font-medium text-gray-900">{loadingSettings ? 'Loading...' : companySettings?.adminName || 'Admin'}</div>
+                        {/* <div className="text-sm font-medium text-gray-900">{loadingSettings ? 'Loading...' : companySettings?.adminEmail || 'support@support.com'}</div> */}
                       </div>
                       <div className="py-1">
                         <a href="/admin/panel/profile/update" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">

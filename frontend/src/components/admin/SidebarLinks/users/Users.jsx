@@ -148,7 +148,7 @@ function CashModal({
             <button
               type="submit"
               disabled={!cashForm.amount || parseFloat(cashForm.amount) <= 0}
-              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              className="px-4 py-2 bg-green-600 hover:bg-green-700 text-green-400 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               Pay Cash
             </button>
@@ -188,8 +188,8 @@ function ConfirmModal({ show, onClose, onConfirm, title, message, type = "danger
             onClick={onConfirm}
             className={`px-4 py-2 rounded-lg font-medium transition-colors ${
               type === "danger"
-                ? "bg-red-600 hover:bg-red-700 text-white"
-                : "bg-yellow-600 hover:bg-yellow-700 text-white"
+                ? "bg-red-600 hover:bg-red-700 text-red-500"
+                : "bg-yellow-600 hover:bg-yellow-700 text-red-500"
             }`}
           >
             Confirm
@@ -233,7 +233,7 @@ function PasswordModal({ show, onClose, onConfirm, newPassword, setNewPassword }
           <button
             onClick={onConfirm}
             disabled={!newPassword}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-blue-600 rounded-lg font-medium transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
           >
             Change Password
           </button>
@@ -288,7 +288,7 @@ function EmailModal({ show, onClose, onSubmit, emailForm, setEmailForm }) {
             </button>
             <button 
               type="submit" 
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-green-600 rounded-lg font-medium transition-colors"
             >
               Send Email
             </button>
@@ -436,7 +436,7 @@ function AddUserModal({ show, onClose, onSubmit, userForm, setUserForm }) {
             </button>
             <button 
               type="submit" 
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors"
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-blue-600 rounded-lg font-medium transition-colors"
             >
               Add User
             </button>
@@ -793,22 +793,6 @@ export default function Users() {
     }
   };
 
-  const handleSampleDownload = async () => {
-    try {
-      const res = await axios.get('https://api.simplyrks.cloud/api/user/sample', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'sample_customers.xlsx');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success("Sample downloaded successfully");
-    } catch (error) {
-      toast.error("Error downloading sample");
-    }
-  };
-
   const handleAddUser = async (e) => {
     e.preventDefault();
     try {
@@ -1011,18 +995,18 @@ export default function Users() {
               <p className="text-gray-600 dark:text-gray-400">Manage and monitor user accounts</p>
             </div>
             <div className="flex items-center gap-3">
-              <button onClick={() => setShowAddUserModal(true)} className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium transition-colors">
+              <button onClick={() => setShowAddUserModal(true)} className="inline-flex items-center px-4 py-2 bg-blue-600 hover:bg-blue-700 text-blue-600 rounded-lg font-medium transition-colors">
                 <UserPlus className="w-4 h-4 mr-2" />Add User
               </button>
-              <button onClick={handleImport} className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors">
+              <button onClick={handleImport} className="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-blue-600 rounded-lg font-medium transition-colors">
                 <Upload className="w-4 h-4 mr-2" />Import
               </button>
-              <button onClick={handleExport} className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-medium transition-colors">
+              <button onClick={handleExport} className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-gren-600 rounded-lg font-medium transition-colors">
                 <Download className="w-4 h-4 mr-2" />Export
               </button>
-              <button onClick={handleSampleDownload} className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded-lg font-medium transition-colors">
-                <FileDown className="w-4 h-4 mr-2" />Sample
-              </button>
+              <button onClick={() => window.open('https://api.simplyrks.cloud/users_sample.xlsx', '_blank')} className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-all duration-200 text-sm font-medium">
+          <FileDown className="w-4 h-4 mr-2" />Download Sample
+        </button>
               <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                 <UsersIcon className="w-4 h-4" /><span>{filteredUsers.length} users</span>
               </div>
@@ -1134,7 +1118,7 @@ export default function Users() {
                     <div className="flex gap-2 mt-4">
                       <button
                         onClick={applyFilter}
-                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg font-medium transition-colors"
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 text-green-600 py-2 px-4 rounded-lg font-medium transition-colors"
                       >
                         Apply Filter
                       </button>
@@ -1155,18 +1139,18 @@ export default function Users() {
               <div className="flex items-center justify-between">
                 <span className="text-blue-800 dark:text-blue-300 font-medium">{selectedUsers.length} users selected</span>
                 <div className="flex gap-2">
-                  <button onClick={handleBulkDelete} className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg text-sm font-medium transition-colors">
+                  <button onClick={handleBulkDelete} className="inline-flex items-center px-3 py-2 bg-red-600 hover:bg-red-700 text-red-600 rounded-lg text-sm font-medium transition-colors">
                     <Trash2 className="w-4 h-4 mr-2" />Delete Selected
                   </button>
-                  <button onClick={handleBulkSendCash} className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors">
+                  <button onClick={handleBulkSendCash} className="inline-flex items-center px-3 py-2 bg-green-600 hover:bg-green-700 text-green-500 rounded-lg text-sm font-medium transition-colors">
                     <DollarSign className="w-4 h-4 mr-2" />Pay Cash
                   </button>
-                  <button onClick={handleBulkSendEmail} className="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                  <button onClick={handleBulkSendEmail} className="inline-flex items-center px-3 py-2 bg-blue-600 hover:bg-blue-700 text-green-600 rounded-lg text-sm font-medium transition-colors">
                     <Send className="w-4 h-4 mr-2" />Send Email
                   </button>
                   <button
                     onClick={handleBulkRevokeCash}
-                    className="inline-flex items-center px-3 py-2 bg-orange-600 hover:bg-orange-700 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="inline-flex items-center px-3 py-2 bg-orange-600 hover:bg-orange-700 text-red-600 rounded-lg text-sm font-medium transition-colors"
                   >
                     <RefreshCw className="w-4 h-4 mr-2" />
                     Revoke Cash

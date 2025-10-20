@@ -20,7 +20,7 @@ const SubCategoryItem = ({ subCategory, path, level = 0, handleSubCategoryChange
           <button
             type="button"
             onClick={() => removeSubCategory(path)}
-            className="p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
+            className="dark:text-white p-1.5 text-red-500 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors duration-200"
             title="Remove sub category"
           >
             <Trash2 size={16} />
@@ -29,7 +29,7 @@ const SubCategoryItem = ({ subCategory, path, level = 0, handleSubCategoryChange
 
         <div className="space-y-3">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Sub Category Name *</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1 dark:text-gray-400">Sub Category Name *</label>
             <input
               type="text"
               name={getSubCategoryNameAttribute(path)}
@@ -349,7 +349,7 @@ const AddCategory = () => {
 
             <div className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category Name *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Category Name *</label>
                 <input
                   type="text"
                   name="category.name"
@@ -364,7 +364,7 @@ const AddCategory = () => {
                 )}
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Category Image *</label>
+                <label className="block text-sm font-medium text-gray-700 mb-2 dark:text-gray-400">Category Image *</label>
                 <input
                   type="file"
                   name="category.image"
@@ -390,7 +390,7 @@ const AddCategory = () => {
                   disabled={isSubmitting}
                 >
                   <Plus size={16} className="text-yellow-300" />
-                  <span className="text-yellow-300 font-bold">Add Sub Category</span>
+                  <span className="text-yellow-300 font-bold dark:text-white">Add Sub Category</span>
                 </button>
               </div>
             </div>
@@ -428,7 +428,7 @@ const AddCategory = () => {
 
               <div className="bg-white dark:bg-gray-900 p-4 rounded-lg shadow-sm">
                 <div className="mb-3 flex items-center gap-4">
-                  <h3 className="text-lg font-semibold -800 dark:text-gray-100">{categoryData.name || "Category Name"}</h3>
+                  <h3 className="text-lg font-semibold -800 dark:text-gray-100 dark:text-gray-400">{categoryData.name || "Category Name"}</h3>
                   {imagePreview && (
                     <img src={imagePreview} alt="Category Preview" className="h-16 w-16 object-cover rounded-lg" />
                   )}
@@ -436,7 +436,7 @@ const AddCategory = () => {
 
                 {subCategories.filter((sub) => sub.name.trim()).length > 0 && (
                   <div>
-                    <h4 className="text-sm font-medium text-gray-700 mb-2">Sub Categories:</h4>
+                    <h4 className="text-sm font-medium text-gray-700 mb-2 dark:text-white">Sub Categories:</h4>
                     <div className="space-y-1">
                       {renderPreviewCategories(subCategories.filter((sub) => sub.name.trim()))}
                     </div>
@@ -446,19 +446,19 @@ const AddCategory = () => {
             </div>
           )}
 
-          <div className="flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
+          <div className="dark:text-white flex justify-end gap-3 pt-4 border-t border-gray-200 dark:border-gray-700">
             <button
               type="button"
               onClick={handleCancel}
               className="inline-flex items-center gap-2 px-4 py-2 border border-gray-300 text-gray-700 rounded-lg hover:bg-gray-50 dark:bg-gray-800 transition-colors duration-200 font-medium"
               disabled={isSubmitting}
             >
-              <X size={16} />
-              <span>Cancel</span>
+              <X className="dark:text-white" size={16} />
+              <span className="dark:text-white">Cancel</span>
             </button>
             <button
               type="submit"
-              className="inline-flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
+              className="dark:text-white inline-flex items-center gap-2 px-6 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors duration-200 font-medium shadow-md hover:shadow-lg"
               disabled={isSubmitting}
             >
               <Save size={16} />
