@@ -793,22 +793,6 @@ export default function Users() {
     }
   };
 
-  const handleSampleDownload = async () => {
-    try {
-      const res = await axios.get('http://localhost:3000/api/user/sample', { responseType: 'blob' });
-      const url = window.URL.createObjectURL(new Blob([res.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', 'sample_customers.xlsx');
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-      toast.success("Sample downloaded successfully");
-    } catch (error) {
-      toast.error("Error downloading sample");
-    }
-  };
-
   const handleAddUser = async (e) => {
     e.preventDefault();
     try {
@@ -1020,9 +1004,9 @@ export default function Users() {
               <button onClick={handleExport} className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-gren-600 rounded-lg font-medium transition-colors">
                 <Download className="w-4 h-4 mr-2" />Export
               </button>
-              <button onClick={handleSampleDownload} className="inline-flex items-center px-4 py-2 bg-gray-600 hover:bg-gray-700 text-blue-500 rounded-lg font-medium transition-colors">
-                <FileDown className="w-4 h-4 mr-2" />Sample
-              </button>
+              <button onClick={() => window.open('http://localhost:3000/users_sample.xlsx', '_blank')} className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-all duration-200 text-sm font-medium">
+          <FileDown className="w-4 h-4 mr-2" />Download Sample
+        </button>
               <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">
                 <UsersIcon className="w-4 h-4" /><span>{filteredUsers.length} users</span>
               </div>
