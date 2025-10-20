@@ -27,6 +27,8 @@ const { Server } = require('socket.io');
 const compression = require('compression');
 
 const app = express();
+// Serve static files from the public directory
+app.use(express.static('public'));
 const server = http.createServer(app);
 const io = new Server(server, {
   cors: {
