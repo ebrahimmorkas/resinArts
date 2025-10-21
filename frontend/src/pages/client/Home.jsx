@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext, useMemo, useCallback, memo } from "react"
+import React, { useState, useEffect, useRef, useContext, useMemo, useCallback, memo, lazy, Suspense } from "react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
@@ -11,7 +11,7 @@ import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Navbar from "../../components/client/common/Navbar"
-import CartModal from "../../components/client/common/CartModal"
+const CartModal = lazy(() => import("../../components/client/common/CartModal"))
 // Keep all other imports like icons, etc.
 import {
   ChevronDown, ChevronLeft, ChevronRight, X, Plus, Minus, Eye, Check, Heart, Palette, Trash2, Package, Share2, MessageCircle, Star, Shield, Truck, Instagram, Facebook, ArrowUp,
@@ -90,6 +90,8 @@ const handleCartCheckout = async () => {
       navigate('/auth/login');
       return;
     }
+
+    console.log('Cart Items being sent to checkout:', JSON.stringify(cartItems, null, 2));
 
     // Send cart data directly without transformation
     const res = await axios.post(
@@ -224,6 +226,11 @@ const {
   loadingMore,
   totalCount 
 } = contextData
+
+// Memoize context values to prevent unnecessary re-renders
+const memoizedCartItems = useMemo(() => cartItems, [cartItems]);
+const memoizedCategories = useMemo(() => categories, [categories]);
+const memoizedProducts = useMemo(() => products, [products]);
 
 useEffect(() => {
   const observer = new IntersectionObserver(
@@ -480,7 +487,7 @@ const getFilteredProducts = useMemo(() => {
 
     return nameMatch || variantMatch;
   });
-}, [products, categories, searchQuery]); // Only recalculate when these change
+}, [memoizedProducts, memoizedCategories, searchQuery]); // Only recalculate when these change
 
   // Close dropdowns of search when clicking outside
   useEffect(() => {
@@ -810,6 +817,11 @@ const handleLogout = async () => {
 
   const variant = product.variants?.find((v) => v.colorName === colorName);
   const sizeDetail = variant?.moreDetails?.find((md) => formatSize(md.size) === sizeString);
+
+  console.log('Variant found:', variant);
+  console.log('Variant ID:', variant?._id);
+  console.log('SizeDetail found:', sizeDetail);
+  console.log('SizeDetail ID:', sizeDetail?._id);
 
   const originalPrice = getOriginalPrice(product, variant, sizeDetail);
   const displayPrice = getDisplayPrice(product, variant, sizeDetail);
@@ -1196,7 +1208,7 @@ const CategoryNavigationBar = () => {
   );
 };
 
-  const BannerCarousel = () => {
+  const BannerCarousel = React.memo(() => {
     const { banners, loadingBanner, Bannerserror } = useContext(BannerContext);
     const [currentBanner, setCurrentBanner] = useState(0);
 
@@ -1268,7 +1280,7 @@ const CategoryNavigationBar = () => {
         )}
       </div>
     );
-  };
+  });
 
   const ProductCard = React.memo(({ product, forcedBadge = null }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
@@ -1709,10 +1721,17 @@ const CategoryNavigationBar = () => {
         </div>
       </div>
     )
-  }, (prevProps, nextProps) => {
-  // Only re-render if product or forcedBadge actually changed
-  return prevProps.product._id === nextProps.product._id && 
-         prevProps.forcedBadge === nextProps.forcedBadge;
+ }, (prevProps, nextProps) => {
+  // Return true to PREVENT re-render (props are equal)
+  // Return false to ALLOW re-render (props changed)
+  
+  if (prevProps.product._id !== nextProps.product._id) return false;
+  if (prevProps.forcedBadge?.text !== nextProps.forcedBadge?.text) return false;
+  if (prevProps.product.name !== nextProps.product.name) return false;
+  if (prevProps.product.price !== nextProps.product.price) return false;
+  
+  // Don't re-render for other changes
+  return true;
 });
 
   
@@ -2448,10 +2467,14 @@ if (justArrivedProductsList.length > 0) {
       handleSearchKeyPress={handleSearchKeyPress}
     />
 
+    {isCartOpen && (
+  <Suspense fallback={<div />}>
     <CartModal
       getBulkPricing={getBulkPricing}
       getEffectiveUnitPrice={getEffectiveUnitPrice}
     />
+  </Suspense>
+)}
 
       <BannerCarousel />
 

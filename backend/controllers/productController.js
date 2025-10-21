@@ -1488,7 +1488,7 @@ const fetchProducts = async (req, res) => {
 
     // Only select essential fields for listing
     const products = await Product.find({ isActive: true })
-      .select('name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive')
+      .select('name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing')
       .populate('mainCategory', 'categoryName isActive')
       .populate('subCategory', 'categoryName isActive')
       .lean()

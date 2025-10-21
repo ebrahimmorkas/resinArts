@@ -90,4 +90,7 @@ const productSchema = mongoose.Schema(
 )
 
 productSchema.index({ name: 'text', 'variants.colorName': 'text' });
+productSchema.index({ isActive: 1, mainCategory: 1, subCategory: 1 });
+productSchema.index({ createdAt: -1 });
+productSchema.index({ lastRestockedAt: -1 });
 module.exports = mongoose.model("Product", productSchema)
