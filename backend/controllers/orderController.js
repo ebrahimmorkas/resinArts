@@ -14,21 +14,22 @@ const calculateShippingPrice = async (user, itemsTotal, companySettings) => {
     // Check if free shipping is enabled and threshold is met
     if (companySettings.shippingPriceSettings.freeShipping && 
         itemsTotal >= companySettings.shippingPriceSettings.freeShippingAboveAmount) {
-      return { shippingPrice: 0, isPending: false };
+      return { shippingPrice: 0, isPending: false, needsManualEntry: false };
     }
 
     // Check if same for all products (common shipping price) - this should be checked BEFORE isManual
     if (companySettings.shippingPriceSettings.sameForAll && companySettings.shippingPriceSettings.commonShippingPrice !== undefined) {
       return { 
         shippingPrice: companySettings.shippingPriceSettings.commonShippingPrice, 
-        isPending: false 
+        isPending: false,
+        needsManualEntry: false
       };
     }
 
     // Check if manual pricing is enabled
     if (companySettings.shippingPriceSettings.isManual) {
       // When isManual is true and sameForAll is false, require manual entry
-      return { shippingPrice: null, isPending: true };
+      return { shippingPrice: null, isPending: true, needsManualEntry: true };
     }
 
     // Location-based shipping (when isManual: false and sameForAll: false)
@@ -45,7 +46,7 @@ const calculateShippingPrice = async (user, itemsTotal, companySettings) => {
 
     // Validate user location is not empty
     if (!userLocation || userLocation.trim() === '') {
-      return { shippingPrice: null, isPending: true };
+      return { shippingPrice: null, isPending: true, needsManualEntry: true };
     }
 
     // Find matching shipping price in the list
@@ -54,14 +55,14 @@ const calculateShippingPrice = async (user, itemsTotal, companySettings) => {
     );
 
     if (shippingEntry) {
-      return { shippingPrice: shippingEntry.price, isPending: false };
+      return { shippingPrice: shippingEntry.price, isPending: false, needsManualEntry: false };
     } else {
       // Location not found in list - require manual entry
-      return { shippingPrice: null, isPending: true };
+      return { shippingPrice: null, isPending: true, needsManualEntry: true };
     }
   } catch (error) {
     console.error('Error calculating shipping price:', error);
-    return { shippingPrice: null, isPending: true };
+    return { shippingPrice: null, isPending: true, needsManualEntry: true };
   }
 };
 
@@ -1337,12 +1338,14 @@ ${companySettings?.adminEmail || ''}`;
 };
 
 // Function to edit the order that is quantity and price
+// Function to edit the order that is quantity and price
 const editOrder = async (req, res) => {
     try {
         const { products } = req.body;
         const { orderId } = req.params;
         const order = await findOrder(orderId);
         const user = await findUser(order.user_id);
+        
         if (order) {
             if (user) {
                 const prices = [];
@@ -1354,38 +1357,93 @@ const editOrder = async (req, res) => {
                         prices.push(prod.total);
                     }
                 }
-                const price = prices.reduce((accumulator, current) => accumulator + current, 0);
-                const totalPrice = price + order.shipping_price;
+                
+                const newPrice = prices.reduce((accumulator, current) => accumulator + current, 0);
+                const oldPrice = order.price;
+                const oldShippingPrice = order.shipping_price;
+                const oldTotalPrice = order.total_price;
+                
+                // Get company settings for shipping calculation
+                const companySettings = await CompanySettings.getSingleton();
+                const { shippingPrice, isPending, needsManualEntry } = await calculateShippingPrice(user, newPrice, companySettings);
+                
+                let newShippingPrice = oldShippingPrice;
+                let newTotalPrice = oldTotalPrice;
+                let shouldUpdateStatus = false;
+                
+                // Check if shipping needs recalculation
+                if (isPending || needsManualEntry) {
+                    // Manual entry required
+                    return res.status(200).json({
+                        message: "Order updated. Manual shipping price entry required.",
+                        requiresManualShipping: true,
+                        order: {
+                            _id: order._id,
+                            price: newPrice,
+                            shipping_price: "Pending",
+                            total_price: "Pending"
+                        }
+                    });
+                } else {
+                    // Shipping price can be calculated automatically
+                    newShippingPrice = shippingPrice;
+                    newTotalPrice = newPrice + newShippingPrice;
+                    
+                    // If order was pending, change to accepted
+                    if (order.status === "Pending") {
+                        shouldUpdateStatus = true;
+                    }
+                }
+                
                 try {
+                    const updateData = {
+                        orderedProducts: products,
+                        price: newPrice,
+                        shipping_price: newShippingPrice,
+                        total_price: newTotalPrice,
+                        updatedAt: new Date()
+                    };
+                    
+                    if (shouldUpdateStatus) {
+                        updateData.status = "Accepted";
+                    }
+                    
                     const updatedProduct = await Order.findByIdAndUpdate(
                         order._id,
-                        {
-                            orderedProducts: products,
-                            price: price,
-                            total_price: totalPrice
-                        },
+                        updateData,
                         {
                             new: true,
                             runValidators: true
                         }
                     );
+                    
+                    // Emit Socket.IO event for real-time update
+                    const io = req.app.get('io');
+                    if (io) {
+                        io.to('admin_room').emit('shippingPriceUpdated', {
+                            _id: updatedProduct._id,
+                            shipping_price: updatedProduct.shipping_price,
+                            total_price: updatedProduct.total_price,
+                            status: updatedProduct.status,
+                        });
+                    }
 
                     try {
-    const companySettings = await CompanySettings.getSingleton();
-    const orderDetailsText = products
-        .map((item, index) => {
-            let itemDetails = `${index + 1}. ${item.product_name}`;
-            if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
-            if (item.size) itemDetails += ` - Size: ${item.size}`;
-            itemDetails += `\n   Quantity: ${item.quantity}`;
-            itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
-            itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
-            return itemDetails;
-        })
-        .join('\n\n');
+                        const companySettings = await CompanySettings.getSingleton();
+                        const orderDetailsText = products
+                            .map((item, index) => {
+                                let itemDetails = `${index + 1}. ${item.product_name}`;
+                                if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+                                if (item.size) itemDetails += ` - Size: ${item.size}`;
+                                itemDetails += `\n   Quantity: ${item.quantity}`;
+                                itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
+                                itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
+                                return itemDetails;
+                            })
+                            .join('\n\n');
 
-    const emailSubject = `Order #${order._id} Updated - ${companySettings?.companyName || 'Mould Market'}`;
-    const emailText = `Dear ${user.name || user.email},
+                        const emailSubject = `Order #${order._id} Updated - ${companySettings?.companyName || 'Mould Market'}`;
+                        const emailText = `Dear ${user.name || user.email},
 
 Your order #${order._id} has been successfully updated by our team.
 
@@ -1406,9 +1464,13 @@ ${orderDetailsText}
 
 PRICING SUMMARY:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-Subtotal: ₹${parseFloat(updatedProduct.price || 0).toFixed(2)}
-Shipping Cost: ₹${parseFloat(updatedProduct.shipping_price || 0).toFixed(2)}
+Previous Subtotal: ₹${parseFloat(oldPrice || 0).toFixed(2)}
+Updated Subtotal: ₹${parseFloat(updatedProduct.price || 0).toFixed(2)}
+
+Previous Shipping Cost: ₹${parseFloat(oldShippingPrice || 0).toFixed(2)}
+Updated Shipping Cost: ${updatedProduct.shipping_price === 0 ? 'Free' : `₹${parseFloat(updatedProduct.shipping_price || 0).toFixed(2)}`}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Previous Total Amount: ₹${parseFloat(oldTotalPrice || 0).toFixed(2)}
 New Total Amount: ₹${parseFloat(updatedProduct.total_price || 0).toFixed(2)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
@@ -1416,31 +1478,40 @@ REASON FOR UPDATE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 The order was updated to reflect changes in:
-• Product quantities
-• Item selection
-• Pricing adjustments
+- Product quantities
+- Item selection
+- Pricing adjustments
+${newShippingPrice !== oldShippingPrice ? '• Shipping price recalculation' : ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 PAYMENT IMPACT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${
-  parseFloat(updatedProduct.total_price || 0) > parseFloat(order.total_price || 0)
-    ? `• Additional payment of ₹${parseFloat(updatedProduct.total_price - order.total_price).toFixed(2)} is required
-• Please contact us to complete the additional payment`
-    : parseFloat(updatedProduct.total_price || 0) < parseFloat(order.total_price || 0)
-    ? `• Refund of ₹${parseFloat(order.total_price - updatedProduct.total_price).toFixed(2)} will be processed within 5-7 business days
-• Refund will be credited to your original payment method`
+  parseFloat(updatedProduct.total_price || 0) > parseFloat(oldTotalPrice || 0)
+    ? `• Additional payment of ₹${parseFloat(updatedProduct.total_price - oldTotalPrice).toFixed(2)} is required
+- Please contact us to complete the additional payment`
+    : parseFloat(updatedProduct.total_price || 0) < parseFloat(oldTotalPrice || 0)
+    ? `• Refund of ₹${parseFloat(oldTotalPrice - updatedProduct.total_price).toFixed(2)} will be processed within 5-7 business days
+- Refund will be credited to your original payment method`
     : `• No additional payment or refund required
-• Your existing payment covers the updated total`
+- Your existing payment covers the updated total`
 }
+
+${newShippingPrice === 0 && oldShippingPrice > 0 ? `
+🎉 GOOD NEWS: Your order now qualifies for FREE SHIPPING!
+Your order total has reached the free shipping threshold.` : ''}
+
+${newShippingPrice > 0 && oldShippingPrice === 0 ? `
+⚠️ SHIPPING CHARGES APPLIED
+Due to the updated order value, standard shipping charges now apply.` : ''}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 NEXT STEPS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${
-  parseFloat(updatedProduct.total_price || 0) > parseFloat(order.total_price || 0)
+  parseFloat(updatedProduct.total_price || 0) > parseFloat(oldTotalPrice || 0)
     ? `1️⃣ Contact us via WhatsApp or phone to complete additional payment
 2️⃣ Share payment proof for verification
 3️⃣ Once verified, your order processing continues`
@@ -1476,11 +1547,15 @@ ${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNum
 ${companySettings?.adminEmail || ''}
 ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`;
 
-    await sendEmail(user.email, emailSubject, emailText);
-} catch (error) {
-    console.log("Error in sending email:", error);
-} finally {
-                        return res.status(200).json({ message: "Product edited successfully" });
+                        await sendEmail(user.email, emailSubject, emailText);
+                    } catch (error) {
+                        console.log("Error in sending email:", error);
+                    } finally {
+                        return res.status(200).json({ 
+                            message: "Product edited successfully",
+                            order: updatedProduct,
+                            shippingRecalculated: newShippingPrice !== oldShippingPrice
+                        });
                     }
                 } catch (error) {
                     return res.status(400).json({ message: `Problem while updating the order ${error}` });
