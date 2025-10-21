@@ -1337,7 +1337,28 @@ ${companySettings?.adminEmail || ''}`;
   }
 };
 
-// Function to edit the order that is quantity and price
+// Helper function to calculate price based on quantity and bulk pricing
+const calculatePriceWithBulkDiscount = (quantity, basePrice, bulkPricingArray) => {
+    if (!bulkPricingArray || bulkPricingArray.length === 0) {
+        // No bulk pricing, return base price * quantity
+        return basePrice * quantity;
+    }
+
+    // Sort bulk pricing by quantity in descending order to find the best applicable tier
+    const sortedBulkPricing = [...bulkPricingArray].sort((a, b) => b.quantity - a.quantity);
+    
+    // Find the applicable bulk pricing tier
+    const applicableTier = sortedBulkPricing.find(tier => quantity >= tier.quantity);
+    
+    if (applicableTier) {
+        // Apply bulk price
+        return applicableTier.wholesalePrice * quantity;
+    } else {
+        // Quantity doesn't meet any bulk pricing threshold, use base price
+        return basePrice * quantity;
+    }
+};
+
 // Function to edit the order that is quantity and price
 const editOrder = async (req, res) => {
     try {
@@ -1349,14 +1370,52 @@ const editOrder = async (req, res) => {
         if (order) {
             if (user) {
                 const prices = [];
-                for (const prod of products) {
-                    const product = await findProduct(prod.product_id);
-                    if (!product) {
-                        return res.status(400).json({ message: "Product not found" });
-                    } else {
-                        prices.push(prod.total);
-                    }
-                }
+for (const prod of products) {
+    const product = await findProduct(prod.product_id);
+    if (!product) {
+        return res.status(400).json({ message: "Product not found" });
+    }
+    
+    let itemTotal = 0;
+    let basePrice = 0;
+    let bulkPricing = [];
+    
+    // Check if product has variants
+    if (product.hasVariants && prod.variant_id && prod.size_id) {
+        // Product with variants - find the specific variant and size
+        const variant = product.variants.find(v => v._id.toString() === prod.variant_id.toString());
+        
+        if (!variant) {
+            return res.status(400).json({ message: `Variant not found for product: ${product.name}` });
+        }
+        
+        const sizeDetail = variant.moreDetails.find(md => md._id.toString() === prod.size_id.toString());
+        
+        if (!sizeDetail) {
+            return res.status(400).json({ message: `Size not found for variant: ${variant.colorName}` });
+        }
+        
+        basePrice = sizeDetail.price;
+        bulkPricing = sizeDetail.bulkPricingCombinations || [];
+        
+    } else if (!product.hasVariants) {
+        // Product without variants
+        basePrice = product.price;
+        bulkPricing = product.bulkPricing || [];
+        
+    } else {
+        return res.status(400).json({ message: `Invalid product configuration for: ${product.name}` });
+    }
+    
+    // Calculate the item total with bulk pricing logic
+    itemTotal = calculatePriceWithBulkDiscount(prod.quantity, basePrice, bulkPricing);
+    
+    // Update the product's total in the array (for database storage)
+    prod.total = itemTotal;
+    prod.price = basePrice; // Store the base unit price
+    
+    prices.push(itemTotal);
+}
                 
                 const newPrice = prices.reduce((accumulator, current) => accumulator + current, 0);
                 const oldPrice = order.price;
