@@ -11,6 +11,7 @@ import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Navbar from "../../components/client/common/Navbar"
+import Footer from "../../components/client/common/Footer";
 const CartModal = lazy(() => import("../../components/client/common/CartModal"))
 // Keep all other imports like icons, etc.
 import {
@@ -2793,151 +2794,7 @@ if (justArrivedProductsList.length > 0) {
 </section>
       </div>
 
-      <footer className="bg-gray-800 text-white py-8 mt-auto">
-  <div className="w-full px-4 sm:px-6 lg:px-8">
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-      {/* About Us */}
-      {/* About Us */}
-<div>
-  <h3 className="text-lg font-semibold mb-4">About Us</h3>
-  <a 
-    href="#"
-    onClick={(e) => {
-      e.preventDefault();
-      openPolicyModal('about');
-    }}
-    className="text-gray-300 text-sm hover:text-white transition-colors"
-  >
-    Learn more about us
-  </a>
-</div>
-
-      {/* Customer Service */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Customer Service</h3>
-        <ul className="space-y-2 text-gray-300 text-sm">
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('return');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Return Policy
-            </a>
-          </li>
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('refund');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Refund Policy
-            </a>
-          </li>
-        </ul>
-      </div>
-
-      {/* Quick Links */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-        <ul className="space-y-2 text-gray-300 text-sm">
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('privacy');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Privacy Policy
-            </a>
-          </li>
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('terms');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Terms and Conditions
-            </a>
-          </li>
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('shipping');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Shipping Policy
-            </a>
-          </li>
-        </ul>
-      </div>
-
-      {/* Follow Us */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Follow Us</h3>
-        <div className="flex space-x-4">
-          {companySettings?.instagramId && (
-            <a 
-              href={`https://instagram.com/${companySettings.instagramId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-300 hover:text-pink-500 transition-colors"
-              title="Follow us on Instagram"
-            >
-              <Instagram className="w-6 h-6" />
-            </a>
-          )}
-          {companySettings?.facebookId && (
-            <a 
-              href={`https://facebook.com/${companySettings.facebookId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-300 hover:text-blue-500 transition-colors"
-              title="Follow us on Facebook"
-            >
-              <Facebook className="w-6 h-6" />
-            </a>
-          )}
-          {companySettings?.adminWhatsappNumber && (
-            <a 
-              href={`https://wa.me/${companySettings.adminWhatsappNumber.replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-300 hover:text-green-500 transition-colors"
-              title="Chat on WhatsApp"
-            >
-              <MessageCircle className="w-6 h-6" />
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-
-    {/* Copyright */}
-    <div className="border-t border-gray-700 mt-8 pt-8 text-center space-y-2">
-      <p className="text-gray-300 text-sm">
-        © 2024 {companySettings?.companyName || 'Our Company'}. All rights reserved.
-      </p>
-      <p className="text-gray-400 text-xs">
-        Designed and Developed by Ebrahim Mustafa Morkas
-      </p>
-    </div>
-  </div>
-</footer>
+      <Footer openPolicyModal={openPolicyModal} />
 
       {/* {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />} */}
       {selectedVariantProduct && (
@@ -2954,7 +2811,7 @@ if (justArrivedProductsList.length > 0) {
     <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
       {/* Modal Header */}
       <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 rounded-t-2xl z-10">
-        <h2 className="text-2xl font-bold text-gray-900">
+        <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
           {getPolicyTitle(policyModal.type)}
         </h2>
         <button
@@ -2968,7 +2825,7 @@ if (justArrivedProductsList.length > 0) {
       {/* Modal Content */}
       <div className="flex-1 overflow-y-auto p-6">
         <div 
-          className="prose prose-sm sm:prose lg:prose-lg max-w-none text-gray-700"
+          className="prose prose-sm sm:prose lg:prose-lg max-w-none text-gray-700 dark:text-gray-400"
           dangerouslySetInnerHTML={{ __html: policyModal.content }}
         />
       </div>
@@ -2977,7 +2834,7 @@ if (justArrivedProductsList.length > 0) {
       <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-b-2xl sticky bottom-0">
         <button
           onClick={closePolicyModal}
-          className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-black rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2"
+          className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-black rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2 dark:text-white"
         >
           <X className="w-5 h-5" />
           Close
