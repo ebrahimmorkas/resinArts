@@ -1424,7 +1424,7 @@ const CategoryNavigationBar = () => {
   }}
   className={`p-1 rounded-full transition-colors ${
     isFavorite(product._id)
-      ? "bg-red-500 text-white"
+      ? "bg-red-500 text-blue-600"
       : "bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-red-500"
   }`}
 >

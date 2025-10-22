@@ -285,7 +285,7 @@ const FavoritesPage = () => {
                       <div className="space-y-2" onClick={(e) => e.stopPropagation()}>
                         <button
                           onClick={() => handleAddToCart(product)}
-                          className="w-full bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+                          className="w-full bg-blue-600 hover:bg-blue-700 text-green-600 py-2 px-4 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
                         >
                           <ShoppingCart className="w-4 h-4" />
                           {product.hasVariants ? 'View Options' : 'Add to Cart'}
