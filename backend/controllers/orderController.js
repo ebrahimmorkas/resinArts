@@ -1359,150 +1359,229 @@ const calculatePriceWithBulkDiscount = (quantity, basePrice, bulkPricingArray) =
     }
 };
 
-// Function to edit the order that is quantity and price
-const editOrder = async (req, res) => {
-    try {
-        const { products } = req.body;
-        const { orderId } = req.params;
-        const order = await findOrder(orderId);
-        const user = await findUser(order.user_id);
-        
-        if (order) {
-            if (user) {
-                const prices = [];
-for (const prod of products) {
-    const product = await findProduct(prod.product_id);
-    if (!product) {
-        return res.status(400).json({ message: "Product not found" });
+// Function to reject order when all products have zero quantity
+const rejectZeroQuantityOrder = async (req, res) => {
+  try {
+    const { orderId, email } = req.body;
+    
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(400).json({ message: "Order not found" });
     }
     
-    let itemTotal = 0;
-    let basePrice = 0;
-    let bulkPricing = [];
+    const user = await findUser(order.user_id);
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
     
-    // Check if product has variants
-    if (product.hasVariants && prod.variant_id && prod.size_id) {
-        // Product with variants - find the specific variant and size
+    // Update order status to Rejected
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        status: 'Rejected',
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+    
+    // Emit Socket.IO event
+    const io = req.app.get('io');
+    if (io) {
+      io.to('admin_room').emit('shippingPriceUpdated', {
+        _id: updatedOrder._id,
+        shipping_price: updatedOrder.shipping_price,
+        total_price: updatedOrder.total_price,
+        status: updatedOrder.status,
+      });
+    }
+    
+    // Send rejection email
+    try {
+      const companySettings = await CompanySettings.getSingleton();
+      
+      const emailSubject = `Order #${orderId} - Rejected`;
+      const emailText = `Dear ${user.name || user.email},
+
+We regret to inform you that your order #${orderId} has been **REJECTED** due to unavailability of the requested items.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+ORDER REJECTION NOTIFICATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+Order ID: ${orderId}
+Order Date: ${new Date(order.createdAt).toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Rejection Date: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
+Current Status: REJECTED
+
+After careful review, we were unable to fulfill your order due to stock unavailability. We sincerely apologize for this inconvenience.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+NEXT STEPS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1️⃣ Your order has been cancelled and no charges have been applied
+2️⃣ You can place a new order at any time
+3️⃣ Check product availability before placing future orders
+4️⃣ Contact us if you need clarification about this rejection
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
+📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
+
+We apologize for any inconvenience and look forward to serving you in the future.
+
+Best regards,
+The Customer Service Team
+
+---
+${companySettings?.companyName || 'Mould Market'}`;
+      
+      await sendEmail(email, emailSubject, emailText);
+      console.log("Rejection email sent successfully");
+    } catch (error) {
+      console.log("Error sending rejection email:", error);
+    }
+    
+    return res.status(200).json({ message: "Order rejected successfully", order: updatedOrder });
+  } catch (error) {
+    console.error("Error rejecting order:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
+
+// Function to confirm order update after confirmation modal
+const confirmOrderUpdate = async (req, res) => {
+  try {
+    const { orderId, products, confirmedShippingPrice, email } = req.body;
+    
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(400).json({ message: "Order not found" });
+    }
+    
+    const user = await findUser(order.user_id);
+    if (!user) {
+      return res.status(400).json({ message: "User not found" });
+    }
+    
+    // Recalculate prices with bulk pricing
+    const prices = [];
+    for (const prod of products) {
+      const product = await findProduct(prod.product_id);
+      if (!product) {
+        return res.status(400).json({ message: "Product not found" });
+      }
+      
+      let itemTotal = 0;
+      let basePrice = 0;
+      let bulkPricing = [];
+      
+      if (product.hasVariants && prod.variant_id && prod.size_id) {
         const variant = product.variants.find(v => v._id.toString() === prod.variant_id.toString());
-        
         if (!variant) {
-            return res.status(400).json({ message: `Variant not found for product: ${product.name}` });
+          return res.status(400).json({ message: `Variant not found for product: ${product.name}` });
         }
         
         const sizeDetail = variant.moreDetails.find(md => md._id.toString() === prod.size_id.toString());
-        
         if (!sizeDetail) {
-            return res.status(400).json({ message: `Size not found for variant: ${variant.colorName}` });
+          return res.status(400).json({ message: `Size not found for variant: ${variant.colorName}` });
         }
         
         basePrice = sizeDetail.price;
         bulkPricing = sizeDetail.bulkPricingCombinations || [];
-        
-    } else if (!product.hasVariants) {
-        // Product without variants
+      } else if (!product.hasVariants) {
         basePrice = product.price;
         bulkPricing = product.bulkPricing || [];
-        
-    } else {
+      } else {
         return res.status(400).json({ message: `Invalid product configuration for: ${product.name}` });
+      }
+      
+      itemTotal = calculatePriceWithBulkDiscount(prod.quantity, basePrice, bulkPricing);
+      prod.total = itemTotal;
+      prod.price = basePrice;
+      prices.push(itemTotal);
     }
     
-    // Calculate the item total with bulk pricing logic
-    itemTotal = calculatePriceWithBulkDiscount(prod.quantity, basePrice, bulkPricing);
+    const newPrice = prices.reduce((acc, curr) => acc + curr, 0);
+    const newShippingPrice = confirmedShippingPrice;
+    const newTotalPrice = newPrice + newShippingPrice;
     
-    // Update the product's total in the array (for database storage)
-    prod.total = itemTotal;
-    prod.price = basePrice; // Store the base unit price
+    const oldPrice = order.price;
+    const oldShippingPrice = order.shipping_price;
+    const oldTotalPrice = order.total_price === 'Pending' ? 0 : parseFloat(order.total_price);
     
-    prices.push(itemTotal);
-}
-                
-                const newPrice = prices.reduce((accumulator, current) => accumulator + current, 0);
-                const oldPrice = order.price;
-                const oldShippingPrice = order.shipping_price;
-                const oldTotalPrice = order.total_price;
-                
-                // Get company settings for shipping calculation
-                const companySettings = await CompanySettings.getSingleton();
-                const { shippingPrice, isPending, needsManualEntry } = await calculateShippingPrice(user, newPrice, companySettings);
-                
-                let newShippingPrice = oldShippingPrice;
-                let newTotalPrice = oldTotalPrice;
-                let shouldUpdateStatus = false;
-                
-                // Check if shipping needs recalculation
-                if (isPending || needsManualEntry) {
-                    // Manual entry required
-                    return res.status(200).json({
-                        message: "Order updated. Manual shipping price entry required.",
-                        requiresManualShipping: true,
-                        order: {
-                            _id: order._id,
-                            price: newPrice,
-                            shipping_price: "Pending",
-                            total_price: "Pending"
-                        }
-                    });
-                } else {
-                    // Shipping price can be calculated automatically
-                    newShippingPrice = shippingPrice;
-                    newTotalPrice = newPrice + newShippingPrice;
-                    
-                    // If order was pending, change to accepted
-                    if (order.status === "Pending") {
-                        shouldUpdateStatus = true;
-                    }
-                }
-                
-                try {
-                    const updateData = {
-                        orderedProducts: products,
-                        price: newPrice,
-                        shipping_price: newShippingPrice,
-                        total_price: newTotalPrice,
-                        updatedAt: new Date()
-                    };
-                    
-                    if (shouldUpdateStatus) {
-                        updateData.status = "Accepted";
-                    }
-                    
-                    const updatedProduct = await Order.findByIdAndUpdate(
-                        order._id,
-                        updateData,
-                        {
-                            new: true,
-                            runValidators: true
-                        }
-                    );
-                    
-                    // Emit Socket.IO event for real-time update
-                    const io = req.app.get('io');
-                    if (io) {
-                        io.to('admin_room').emit('shippingPriceUpdated', {
-                            _id: updatedProduct._id,
-                            shipping_price: updatedProduct.shipping_price,
-                            total_price: updatedProduct.total_price,
-                            status: updatedProduct.status,
-                        });
-                    }
-
-                    try {
-                        const companySettings = await CompanySettings.getSingleton();
-                        const orderDetailsText = products
-                            .map((item, index) => {
-                                let itemDetails = `${index + 1}. ${item.product_name}`;
-                                if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
-                                if (item.size) itemDetails += ` - Size: ${item.size}`;
-                                itemDetails += `\n   Quantity: ${item.quantity}`;
-                                itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
-                                itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
-                                return itemDetails;
-                            })
-                            .join('\n\n');
-
-                        const emailSubject = `Order #${order._id} Updated - ${companySettings?.companyName || 'Mould Market'}`;
-                        const emailText = `Dear ${user.name || user.email},
+    // Update order
+    const updatedOrder = await Order.findByIdAndUpdate(
+      orderId,
+      {
+        orderedProducts: products,
+        price: newPrice,
+        shipping_price: newShippingPrice,
+        total_price: newTotalPrice,
+        updatedAt: new Date()
+      },
+      { new: true, runValidators: true }
+    );
+    
+    // Emit Socket.IO event
+    const io = req.app.get('io');
+    if (io) {
+      io.to('admin_room').emit('shippingPriceUpdated', {
+        _id: updatedOrder._id,
+        shipping_price: updatedOrder.shipping_price,
+        total_price: updatedOrder.total_price,
+        status: updatedOrder.status,
+      });
+    }
+    
+    // Send email
+    try {
+      const companySettings = await CompanySettings.getSingleton();
+      const orderDetailsText = products
+        .map((item, index) => {
+          let itemDetails = `${index + 1}. ${item.product_name}`;
+          if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+          if (item.size) itemDetails += ` - Size: ${item.size}`;
+          itemDetails += `\n   Quantity: ${item.quantity}`;
+          itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
+          itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
+          return itemDetails;
+        })
+        .join('\n\n');
+      
+      const priceDifference = newTotalPrice - oldTotalPrice;
+      const isConfirmedOrder = order.status === 'Confirm';
+      
+      let paymentImpactText = '';
+      
+      if (isConfirmedOrder) {
+        // Order is already confirmed (paid)
+        if (priceDifference > 0) {
+          // Additional payment required
+          paymentImpactText = `• Additional payment of ₹${parseFloat(priceDifference).toFixed(2)} is required
+- Please contact us to complete the additional payment`;
+        } else if (priceDifference < 0) {
+          // Refund will be processed
+          paymentImpactText = `• Refund of ₹${parseFloat(Math.abs(priceDifference)).toFixed(2)} will be processed within 5-7 business days
+- Refund will be credited to your original payment method`;
+        } else {
+          paymentImpactText = `• No additional payment or refund required
+- Your existing payment covers the updated total`;
+        }
+      } else {
+        // Order is in Accepted/Pending status
+        paymentImpactText = `• Total payment of ₹${parseFloat(newTotalPrice).toFixed(2)} is required
+- Please contact us to complete the payment`;
+      }
+      
+      const emailSubject = `Order #${order._id} Updated - ${companySettings?.companyName || 'Mould Market'}`;
+      const emailText = `Dear ${user.name || user.email},
 
 Your order #${order._id} has been successfully updated by our team.
 
@@ -1512,7 +1591,7 @@ ORDER UPDATE NOTIFICATION
 
 Order ID: ${order._id}
 Update Date: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}
-Status: ${updatedProduct.status}
+Status: ${updatedOrder.status}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 UPDATED ORDER SUMMARY
@@ -1524,13 +1603,13 @@ ${orderDetailsText}
 PRICING SUMMARY:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Previous Subtotal: ₹${parseFloat(oldPrice || 0).toFixed(2)}
-Updated Subtotal: ₹${parseFloat(updatedProduct.price || 0).toFixed(2)}
+Updated Subtotal: ₹${parseFloat(updatedOrder.price || 0).toFixed(2)}
 
 Previous Shipping Cost: ₹${parseFloat(oldShippingPrice || 0).toFixed(2)}
-Updated Shipping Cost: ${updatedProduct.shipping_price === 0 ? 'Free' : `₹${parseFloat(updatedProduct.shipping_price || 0).toFixed(2)}`}
+Updated Shipping Cost: ${updatedOrder.shipping_price === 0 ? 'Free' : `₹${parseFloat(updatedOrder.shipping_price || 0).toFixed(2)}`}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 Previous Total Amount: ₹${parseFloat(oldTotalPrice || 0).toFixed(2)}
-New Total Amount: ₹${parseFloat(updatedProduct.total_price || 0).toFixed(2)}
+New Total Amount: ₹${parseFloat(updatedOrder.total_price || 0).toFixed(2)}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 REASON FOR UPDATE
@@ -1546,16 +1625,7 @@ ${newShippingPrice !== oldShippingPrice ? '• Shipping price recalculation' : '
 PAYMENT IMPACT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-${
-  parseFloat(updatedProduct.total_price || 0) > parseFloat(oldTotalPrice || 0)
-    ? `• Additional payment of ₹${parseFloat(updatedProduct.total_price - oldTotalPrice).toFixed(2)} is required
-- Please contact us to complete the additional payment`
-    : parseFloat(updatedProduct.total_price || 0) < parseFloat(oldTotalPrice || 0)
-    ? `• Refund of ₹${parseFloat(oldTotalPrice - updatedProduct.total_price).toFixed(2)} will be processed within 5-7 business days
-- Refund will be credited to your original payment method`
-    : `• No additional payment or refund required
-- Your existing payment covers the updated total`
-}
+${paymentImpactText}
 
 ${newShippingPrice === 0 && oldShippingPrice > 0 ? `
 🎉 GOOD NEWS: Your order now qualifies for FREE SHIPPING!
@@ -1570,12 +1640,16 @@ NEXT STEPS
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ${
-  parseFloat(updatedProduct.total_price || 0) > parseFloat(oldTotalPrice || 0)
+  isConfirmedOrder && priceDifference > 0
     ? `1️⃣ Contact us via WhatsApp or phone to complete additional payment
 2️⃣ Share payment proof for verification
 3️⃣ Once verified, your order processing continues`
+    : isConfirmedOrder && priceDifference < 0
+    ? `1️⃣ Refund will be processed automatically within 5-7 business days
+2️⃣ Your order continues processing with updated details
+3️⃣ You will receive further updates on your order status`
     : `1️⃣ Your order continues processing with updated details
-2️⃣ No action required from your side
+2️⃣ ${isConfirmedOrder ? 'No action required from your side' : 'Complete payment to proceed with the order'}
 3️⃣ You will receive further updates on your order status`
 }
 
@@ -1605,19 +1679,129 @@ ${companySettings?.companyName || 'Mould Market'}
 ${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
 ${companySettings?.adminEmail || ''}
 ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`;
+      
+      await sendEmail(email, emailSubject, emailText);
+      console.log("Order update email sent successfully");
+    } catch (error) {
+      console.log("Error sending email:", error);
+    }
+    
+    return res.status(200).json({ 
+      message: "Order updated successfully",
+      order: updatedOrder
+    });
+  } catch (error) {
+    console.error("Error confirming order update:", error);
+    return res.status(500).json({ message: "Internal server error" });
+  }
+};
 
-                        await sendEmail(user.email, emailSubject, emailText);
-                    } catch (error) {
-                        console.log("Error in sending email:", error);
-                    } finally {
-                        return res.status(200).json({ 
-                            message: "Product edited successfully",
-                            order: updatedProduct,
-                            shippingRecalculated: newShippingPrice !== oldShippingPrice
-                        });
+
+// Function to edit the order that is quantity and price
+const editOrder = async (req, res) => {
+    try {
+        const { products } = req.body;
+        const { orderId } = req.params;
+        const order = await findOrder(orderId);
+        const user = await findUser(order.user_id);
+        
+        if (order) {
+            if (user) {
+                const prices = [];
+                for (const prod of products) {
+                    const product = await findProduct(prod.product_id);
+                    if (!product) {
+                        return res.status(400).json({ message: "Product not found" });
                     }
-                } catch (error) {
-                    return res.status(400).json({ message: `Problem while updating the order ${error}` });
+                    
+                    let itemTotal = 0;
+                    let basePrice = 0;
+                    let bulkPricing = [];
+                    
+                    // Check if product has variants
+                    if (product.hasVariants && prod.variant_id && prod.size_id) {
+                        // Product with variants - find the specific variant and size
+                        const variant = product.variants.find(v => v._id.toString() === prod.variant_id.toString());
+                        
+                        if (!variant) {
+                            return res.status(400).json({ message: `Variant not found for product: ${product.name}` });
+                        }
+                        
+                        const sizeDetail = variant.moreDetails.find(md => md._id.toString() === prod.size_id.toString());
+                        
+                        if (!sizeDetail) {
+                            return res.status(400).json({ message: `Size not found for variant: ${variant.colorName}` });
+                        }
+                        
+                        basePrice = sizeDetail.price;
+                        bulkPricing = sizeDetail.bulkPricingCombinations || [];
+                        
+                    } else if (!product.hasVariants) {
+                        // Product without variants
+                        basePrice = product.price;
+                        bulkPricing = product.bulkPricing || [];
+                        
+                    } else {
+                        return res.status(400).json({ message: `Invalid product configuration for: ${product.name}` });
+                    }
+                    
+                    // Calculate the item total with bulk pricing logic
+                    itemTotal = calculatePriceWithBulkDiscount(prod.quantity, basePrice, bulkPricing);
+                    
+                    // Update the product's total in the array (for database storage)
+                    prod.total = itemTotal;
+                    prod.price = basePrice; // Store the base unit price
+                    
+                    prices.push(itemTotal);
+                }
+                
+                const newPrice = prices.reduce((accumulator, current) => accumulator + current, 0);
+                const oldPrice = order.price;
+                const oldShippingPrice = order.shipping_price;
+                const oldTotalPrice = order.total_price;
+                
+                // Get company settings for shipping calculation
+                const companySettings = await CompanySettings.getSingleton();
+                const { shippingPrice, isPending, needsManualEntry } = await calculateShippingPrice(user, newPrice, companySettings);
+                
+                let newShippingPrice = oldShippingPrice;
+                let newTotalPrice = oldTotalPrice;
+                
+                // Check if shipping needs recalculation
+                if (isPending || needsManualEntry) {
+                    // Manual entry required - show confirmation modal with pending shipping
+                    return res.status(200).json({
+                        message: "Order update requires confirmation",
+                        requiresConfirmation: true,
+                        newPrice: newPrice,
+                        newShippingPrice: "Pending",
+                        newTotalPrice: "Pending",
+                        order: {
+                            _id: order._id,
+                            price: newPrice,
+                            shipping_price: "Pending",
+                            total_price: "Pending"
+                        }
+                    });
+                } else {
+                    // Shipping price can be calculated automatically
+                    newShippingPrice = shippingPrice;
+                    newTotalPrice = newPrice + newShippingPrice;
+                    
+                    // Always show confirmation modal for edits
+                    return res.status(200).json({
+                        message: "Order update requires confirmation",
+                        requiresConfirmation: true,
+                        newPrice: newPrice,
+                        newShippingPrice: newShippingPrice,
+                        newTotalPrice: newTotalPrice,
+                        order: {
+                            _id: order._id,
+                            price: newPrice,
+                            shipping_price: newShippingPrice,
+                            total_price: newTotalPrice
+                        }
+                    });
                 }
             } else {
                 return res.status(400).json({ message: "User not found" });
@@ -1626,9 +1810,10 @@ ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`;
             return res.status(400).json({ message: "Order not found" });
         }
     } catch (error) {
+        console.error("Error in editOrder:", error);
         return res.status(500).json({ message: "Internal server error" });
     }
-}
+};
 
 const isFreeCashEligible = (product, cartData, freeCash) => {
     if (!freeCash) return false;
@@ -1833,5 +2018,7 @@ module.exports = {
     handleStatusChange,
     editOrder,
     isFreeCashEligible,
-    sendAcceptEmailWhenShippingPriceAddedAutomatically
+    sendAcceptEmailWhenShippingPriceAddedAutomatically,
+    rejectZeroQuantityOrder,
+    confirmOrderUpdate,
 };

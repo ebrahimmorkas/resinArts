@@ -2,11 +2,13 @@ import React, { useState } from "react";
 import { X } from "lucide-react";
 import axios from 'axios';
 import ShippingPriceModal from "./ShippingPriceModal";
+import ConfirmationModal from "./ConfirmationModal";
 
 function EditOrderModal({ onClose, order }) {
   const [products, setProducts] = useState(order.orderedProducts);
   const [showShippingModal, setShowShippingModal] = useState(false);
   const [pendingOrderUpdate, setPendingOrderUpdate] = useState(null);
+  const [showConfirmationModal, setShowConfirmationModal] = useState(false);
 
   // update product quantity directly in state
   const handleQuantityChange = (index, value) => {
@@ -23,47 +25,174 @@ function EditOrderModal({ onClose, order }) {
 
   // submit handler (send whole updated products array)
   const handleEditOrder = async (e) => {
-    e.preventDefault();
-    console.log("Updated Products:", products);
-    
+  e.preventDefault();
+  console.log("Updated Products:", products);
+  
+  // Check if all products have 0 quantity
+  const allZeroQuantity = products.every(prod => prod.quantity === 0);
+  
+  if (allZeroQuantity && products.length > 0) {
+    // All products have 0 quantity - reject the order
     try {
       const res = await axios.post(
-        `http://localhost:3000/api/order/edit-order/${order._id}`, 
-        { products }, 
+        'http://localhost:3000/api/order/reject-zero-quantity-order',
+        { orderId: order._id, email: order.email },
         { withCredentials: true }
       );
       
       if (res.status === 200) {
-        if (res.data.requiresManualShipping) {
-          // Manual shipping entry required
-          console.log("Manual shipping price entry required");
-          setPendingOrderUpdate(res.data.order);
-          setShowShippingModal(true);
-        } else {
-          // Order updated successfully
-          console.log("Product Updated");
-          if (res.data.shippingRecalculated) {
-            console.log("Shipping price was automatically recalculated");
-          }
-          onClose();
-        }
-      } else {
-        console.log("Problem in updating");
+        console.log("Order rejected due to zero quantity");
+        alert("Order has been rejected as all products have zero quantity.");
+        onClose();
       }
     } catch (error) {
-      console.error("Error updating order:", error);
-      alert("Failed to update order. Please try again.");
+      console.error("Error rejecting order:", error);
+      alert("Failed to reject order. Please try again.");
     }
-  };
+    return;
+  }
+  
+  try {
+    const res = await axios.post(
+      `http://localhost:3000/api/order/edit-order/${order._id}`, 
+      { products }, 
+      { withCredentials: true }
+    );
+    
+    if (res.status === 200) {
+      if (res.data.requiresManualShipping) {
+        // Manual shipping entry required
+        console.log("Manual shipping price entry required");
+        setPendingOrderUpdate(res.data.order);
+        setShowShippingModal(true);
+      } else if (res.data.requiresConfirmation) {
+        // Show confirmation modal
+        console.log("Confirmation required");
+        setPendingOrderUpdate(res.data);
+        setShowConfirmationModal(true);
+      } else {
+        // Order updated successfully
+        console.log("Product Updated");
+        if (res.data.shippingRecalculated) {
+          console.log("Shipping price was automatically recalculated");
+        }
+        onClose();
+      }
+    } else {
+      console.log("Problem in updating");
+    }
+  } catch (error) {
+    console.error("Error updating order:", error);
+    alert("Failed to update order. Please try again.");
+  }
+};
 
   const handleShippingModalClose = (success) => {
-    setShowShippingModal(false);
-    if (success) {
-      // Shipping price was successfully added
+  setShowShippingModal(false);
+  if (success) {
+    // Shipping price was successfully added
+    setPendingOrderUpdate(null);
+    onClose();
+  } else if (showConfirmationModal) {
+    // Came from confirmation modal, go back
+    handleShippingModalCloseFromConfirmation(success);
+  } else {
+    setPendingOrderUpdate(null);
+  }
+};
+
+  const handleConfirmationConfirm = async () => {
+  try {
+    const res = await axios.post(
+      `http://localhost:3000/api/order/confirm-order-update`,
+      {
+        orderId: order._id,
+        products: products,
+        confirmedShippingPrice: pendingOrderUpdate.newShippingPrice,
+        email: order.email
+      },
+      { withCredentials: true }
+    );
+    
+    if (res.status === 200) {
+      console.log("Order confirmed and updated");
+      setShowConfirmationModal(false);
+      setPendingOrderUpdate(null);
       onClose();
     }
+  } catch (error) {
+    console.error("Error confirming order:", error);
+    alert("Failed to confirm order update. Please try again.");
+  }
+};
+
+const handleEditShippingFromConfirmation = async (action, value) => {
+  if (action === 'free') {
+    // Set shipping to 0 immediately
+    try {
+      const res = await axios.post(
+        `http://localhost:3000/api/order/confirm-order-update`,
+        {
+          orderId: order._id,
+          products: products,
+          confirmedShippingPrice: 0,
+          email: order.email
+        },
+        { withCredentials: true }
+      );
+      
+      if (res.status === 200) {
+        console.log("Order updated with free shipping");
+        setShowConfirmationModal(false);
+        setPendingOrderUpdate(null);
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error setting free shipping:", error);
+      alert("Failed to set free shipping. Please try again.");
+    }
+  } else if (action === 'reuse') {
+    // Reuse old shipping price
+    try {
+      const res = await axios.post(
+        `http://localhost:3000/api/order/confirm-order-update`,
+        {
+          orderId: order._id,
+          products: products,
+          confirmedShippingPrice: value,
+          email: order.email
+        },
+        { withCredentials: true }
+      );
+      
+      if (res.status === 200) {
+        console.log("Order updated with reused shipping price");
+        setShowConfirmationModal(false);
+        setPendingOrderUpdate(null);
+        onClose();
+      }
+    } catch (error) {
+      console.error("Error reusing shipping price:", error);
+      alert("Failed to reuse shipping price. Please try again.");
+    }
+  } else if (action === 'edit') {
+    // Open shipping price modal
+    setShowConfirmationModal(false);
+    setShowShippingModal(true);
+  }
+};
+
+const handleShippingModalCloseFromConfirmation = (success) => {
+  setShowShippingModal(false);
+  if (success) {
+    // Shipping price was successfully updated
     setPendingOrderUpdate(null);
-  };
+    onClose();
+  } else {
+    // User cancelled, go back to confirmation modal
+    setShowConfirmationModal(true);
+  }
+};
 
   return (
     <>
@@ -129,6 +258,29 @@ function EditOrderModal({ onClose, order }) {
           currentShippingPrice={0}
         />
       )}
+
+      {showConfirmationModal && pendingOrderUpdate && (
+  <ConfirmationModal
+    isOpen={showConfirmationModal}
+    onClose={() => {
+      setShowConfirmationModal(false);
+      setPendingOrderUpdate(null);
+    }}
+    onConfirm={handleConfirmationConfirm}
+    orderData={{
+      products: products,
+      newPrice: pendingOrderUpdate.newPrice,
+      newShippingPrice: pendingOrderUpdate.newShippingPrice,
+      newTotalPrice: pendingOrderUpdate.newTotalPrice
+    }}
+    oldOrderData={{
+      oldPrice: order.price,
+      oldShippingPrice: order.shipping_price,
+      oldTotalPrice: order.total_price
+    }}
+    onEditShipping={handleEditShippingFromConfirmation}
+  />
+)}
     </>
   );
 }
