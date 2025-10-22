@@ -162,24 +162,19 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-            <button
+<div className="flex flex-wrap gap-3">
+  <button
   onClick={async () => {
     try {
       setOrderId(order._id);
 
-      // Show ShippingPriceModal only if total_price is "Pending" (pending shipping)
       if (order.total_price === "Pending") {
         setPendingAcceptOrderId(order._id);
         setShowShippingPriceModal(true);
       } else {
-        // Update local state immediately for better UX
         onStatusChange(order._id, "Accepted");
-        
-        // Call backend to persist status change
         await handleStatusChangeBackend("Accepted", order._id);
 
-        // Call endpoint to send acceptance email
         const res = await axios.post(
           'http://localhost:3000/api/order/sendAcceptEmailWhenShippingPriceAddedAutomatically',
           {
@@ -192,13 +187,12 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       }
     } catch (error) {
       console.error('Error accepting order:', error.response?.data || error.message);
-      // Revert local state on error
       onStatusChange(order._id, "Pending");
     }
   }}
   className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
   disabled={
-    order.status === "Accepted" ||
+    (order.status !== "Pending" && order.status !== "Rejected") ||
     !productMappedWithOrderId ||
     order.orderedProducts.some((product, index) => {
       const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
@@ -211,94 +205,130 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       return stock === undefined || stock < product.quantity;
     })
       ? "Cannot accept order: Insufficient stock for one or more products"
-      : order.status === "Accepted"
-      ? "Order already accepted"
+      : (order.status !== "Pending" && order.status !== "Rejected")
+      ? "Can only accept Pending or Rejected orders"
       : "Accept order"
   }
 >
   <Check className="h-4 w-4 mr-2" />
   Accept
 </button>
-              <button
-                onClick={() => {
-                  onStatusChange(order._id, "Rejected");
-                  handleStatusChangeBackend("Rejected", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-red-600 text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "Rejected"}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Reject
-              </button>
-              <button
-                onClick={() => {
-                  onStatusChange(order._id, "Confirm");
-                  handleStatusChangeBackend("Confirm", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-blue-600white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "Confirm"}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Confirm
-              </button>
-              {/*<button
-                onClick={() => {
-                  onStatusChange(order._id, "In Progress");
-                  handleStatusChangeBackend("In Progress", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-orange-600 text-white text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "In Progress"}
-              > 
-                <Clock className="h-4 w-4 mr-2" />
-                In Progress
-              </button> */}
-              <button
-                onClick={() => {
-                  onStatusChange(order._id, "Dispatched");
-                  handleStatusChangeBackend("Dispatched", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-green-600 text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "Dispatched"}
-              >
-                <Truck className="h-4 w-4 mr-2" />
-                Dispatch
-              </button>
-              <button
-                onClick={() => {
-                  onStatusChange(order._id, "Completed");
-                  handleStatusChangeBackend("Completed", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-purple-600 text-green-600 text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "Completed"}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Complete
-              </button>
-{order.status === "Accepted" && (
+
+  <button
+    onClick={() => {
+      onStatusChange(order._id, "Rejected");
+      handleStatusChangeBackend("Rejected", order._id);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-red-600 text-red-600 text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={!(order.status === "Pending" || order.status === "Accepted" || order.status === "Confirm")}
+    title={
+      !(order.status === "Pending" || order.status === "Accepted" || order.status === "Confirm")
+        ? "Can only reject Pending, Accepted, or Confirm orders"
+        : "Reject order"
+    }
+  >
+    <X className="h-4 w-4 mr-2" />
+    Reject
+  </button>
+
+  <button
+  onClick={() => {
+    onStatusChange(order._id, "Confirm");
+    handleStatusChangeBackend("Confirm", order._id);
+  }}
+  className="inline-flex items-center px-4 py-2 bg-blue-600 text-blue-600white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={
+    order.status !== "Accepted" ||
+    !productMappedWithOrderId ||
+    order.orderedProducts.some((product, index) => {
+      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+      return stock === undefined || stock < product.quantity;
+    })
+  }
+  title={
+    order.status !== "Accepted"
+      ? "Can only confirm Accepted orders"
+      : order.orderedProducts.some((product, index) => {
+          const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+          return stock === undefined || stock < product.quantity;
+        })
+      ? "Cannot confirm order: Insufficient stock for one or more products"
+      : "Confirm order"
+  }
+>
+  <CheckCircle className="h-4 w-4 mr-2" />
+  Confirm
+</button>
+
+  <button
+    onClick={() => {
+      onStatusChange(order._id, "Dispatched");
+      handleStatusChangeBackend("Dispatched", order._id);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-indigo-600 text-green-600 text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={order.status !== "Confirm"}
+    title={
+      order.status !== "Confirm"
+        ? "Can only dispatch Confirm orders"
+        : "Dispatch order"
+    }
+  >
+    <Truck className="h-4 w-4 mr-2" />
+    Dispatch
+  </button>
+
+  <button
+    onClick={() => {
+      onStatusChange(order._id, "Completed");
+      handleStatusChangeBackend("Completed", order._id);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-purple-600 text-green-600 text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={order.status !== "Dispatched"}
+    title={
+      order.status !== "Dispatched"
+        ? "Can only complete Dispatched orders"
+        : "Complete order"
+    }
+  >
+    <CheckCircle className="h-4 w-4 mr-2" />
+    Complete
+  </button>
+
   <button
     onClick={() => {
       setOrderId(order._id);
       setShowShippingPriceModal(true);
       setIsEditShippingPrice(true);
     }}
-    className="inline-flex items-center px-4 py-2 bg-yellow-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
-    disabled={isLoading}
+    className="inline-flex items-center px-4 py-2 bg-yellow-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={!(order.status === "Accepted" || order.status === "Confirm") || isLoading}
+    title={
+      !(order.status === "Accepted" || order.status === "Confirm")
+        ? "Can only edit shipping for Accepted or Confirm orders"
+        : `Edit Shipping (${order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price}`})`
+    }
   >
     <DollarSign className="h-4 w-4 mr-2" />
     Edit Shipping ({order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price}`})
   </button>
-)}
-              <button
-                onClick={() => {
-                  handleEdit(order);
-                  setOrderId(order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-gray-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Edit
-              </button>
-            </div>
+
+  <button
+    onClick={() => {
+      handleEdit(order);
+      setOrderId(order._id);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-gray-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={!(order.status === "Pending" || order.status === "Accepted" || order.status === "Rejected" || order.status === "Confirm")}
+    title={
+      !(order.status === "Pending" || order.status === "Accepted" || order.status === "Rejected" || order.status === "Confirm")
+        ? "Can only edit Pending, Accepted, Rejected, or Confirm orders"
+        : "Edit order"
+    }
+  >
+    <User className="h-4 w-4 mr-2" />
+    Edit
+  </button>
+</div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
