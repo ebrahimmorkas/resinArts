@@ -212,7 +212,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
 
   return (
     <>
-      <nav className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-40 shadow-sm">
+      <nav className="bg-white border-b border-gray-200 fixed top-0 left-0 right-0 z-40 shadow-sm dark:bg-gray-700">
         <div className="max-w-full mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
@@ -243,7 +243,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
 
             <div className="hidden md:flex flex-1 max-w-md mx-8 justify-center">
               <div className="text-center">
-                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent">Admin Panel</h1>
+                <h1 className="text-2xl font-bold bg-gradient-to-r from-purple-600 to-blue-600 bg-clip-text text-transparent dark:text-gray-400">Admin Panel</h1>
               </div>
             </div>
 
@@ -278,23 +278,23 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                       <User className="w-4 h-4 text-gray-600" />
                     </div>
                     <div className="hidden sm:block text-left">
-                      <div className="text-sm font-medium text-gray-900">{loadingSettings ? 'Loading...' : companySettings?.adminName || 'Admin'}</div>
-                      <div className="text-xs text-gray-500">Administrator</div>
+                      <div className="text-sm font-medium text-gray-900 dark:text-white">{loadingSettings ? 'Loading...' : companySettings?.adminName || 'Admin'}</div>
+                      <div className="text-xs text-gray-500 dark:text-gray-400">Administrator</div>
                     </div>
                     <ChevronDown className="w-4 h-4 text-gray-400" />
                   </button>
 
                   {profileDropdownOpen && (
-                    <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                    <div className="dark:bg-gray-700 absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                       <div className="px-4 py-2 border-b border-gray-200">
-                        <div className="text-sm font-medium text-gray-900">{loadingSettings ? 'Loading...' : companySettings?.adminName || 'Admin'}</div>
+                        <div className="text-sm font-medium text-gray-900 dark:text-white">{loadingSettings ? 'Loading...' : companySettings?.adminName || 'Admin'}</div>
                         {/* <div className="text-sm font-medium text-gray-900">{loadingSettings ? 'Loading...' : companySettings?.adminEmail || 'support@support.com'}</div> */}
                       </div>
                       <div className="py-1">
-                        <a href="/admin/panel/profile/update" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                        <a href="/admin/panel/profile/update" className=" flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
                           <UserCircle className="w-4 h-4 mr-3" />Profile Settings
                         </a>
-                        <a href="/admin/panel/settings/account" className="flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
+                        <a href="/admin/panel/settings/account" className="dark:text-gray-400 flex items-center px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors duration-200">
                           <User className="w-4 h-4 mr-3" />Account Settings
                         </a>
                         <div className="border-t border-gray-200 my-1"></div>
@@ -323,7 +323,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
           <div className="fixed top-0 right-0 h-full w-96 bg-white shadow-2xl border-l border-gray-200 z-50 transform transition-transform duration-300 ease-in-out">
             <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-gray-50">
               <h3 className="text-lg font-semibold text-gray-900">Notifications ({notifications.length})</h3>
-              <button onClick={() => setNotificationsOpen(false)} className="p-2 rounded-lg hover:bg-gray-200 transition-colors duration-200">
+              <button onClick={() => setNotificationsOpen(false)} className="dark:text-white p-2 rounded-lg hover:bg-gray-200 transition-colors duration-200">
                 <X className="w-5 h-5 text-gray-500" />
               </button>
             </div>
@@ -349,7 +349,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                     >
                       <button
                         onClick={(e) => { e.stopPropagation(); deleteNotification(notification.id); }}
-                        className="absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors duration-200 flex items-center justify-center shadow-md z-10"
+                        className="dark:text-white absolute top-2 right-2 w-8 h-8 rounded-full bg-red-500 text-white hover:bg-red-600 transition-colors duration-200 flex items-center justify-center shadow-md z-10"
                         title="Delete notification"
                       >
                         <X className="w-4 h-4" />
@@ -439,7 +439,7 @@ const Navbar = ({ onMenuClick, isSidebarOpen }) => {
                 <p className="text-sm text-gray-500">{selectedCart.user_name}</p>
               </div>
               <button onClick={() => setShowCartModal(false)}>
-                <X className="w-6 h-6" />
+                <X className="w-6 h-6 dark:text-white" />
               </button>
             </div>
             <div className="px-6 py-4 overflow-y-auto flex-1">
