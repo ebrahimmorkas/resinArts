@@ -12,6 +12,7 @@ import UpdateUser from './pages/client/UpdateUser';
 import ForgotPassword from './pages/client/ForgotPassword';
 import ResetPassword from './pages/client/ResetPassword';
 import ProductDetailsPage from './pages/client/ProductDetailsPage';
+import FavoritesPage from './pages/client/FavoritesPage';
 
 function App() {
   return (
@@ -40,6 +41,12 @@ function App() {
         <Route path='/user/update-profile' element={
           <ProtectedRoute allowedRole="user">
             <UpdateUser />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/favorites" element={
+          <ProtectedRoute allowedRole="user">
+            <FavoritesPage />
           </ProtectedRoute>
         } />
         

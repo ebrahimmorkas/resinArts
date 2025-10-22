@@ -9,6 +9,7 @@ import { BannerProvider } from '../Context/BannerContext';
 import { AnnouncementProvider } from '../Context/AnnouncementContext';
 import { FreeCashProvider } from '../Context/FreeCashContext';
 import { CompanySettingsProvider } from '../Context/CompanySettingsContext';
+import { FavoritesProvider } from '../Context/FavoritesContext';
 
 const ConditionalProvider = ({children}) => {
     const { user, loading } = useContext(AuthContext);
@@ -51,7 +52,9 @@ const ConditionalProvider = ({children}) => {
                             <AnnouncementProvider>
                                 <FreeCashProvider>
                                     <CartProvider>
-                                        {children}
+                                        <FavoritesProvider>
+                                            {children}
+                                        </FavoritesProvider>
                                     </CartProvider>
                                 </FreeCashProvider>
                             </AnnouncementProvider>

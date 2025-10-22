@@ -7,6 +7,7 @@ import { FreeCashContext } from "../../../Context/FreeCashContext"
 import { CompanySettingsContext } from "../../../Context/CompanySettingsContext"
 import { DiscountContext } from "../../../Context/DiscountContext"
 import { BannerContext } from "../../../Context/BannerContext"
+import { useFavorites } from "../../../Context/FavoritesContext"
 import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -163,7 +164,6 @@ useEffect(() => {
 }, []);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [selectedCategoryPath, setSelectedCategoryPath] = useState([])
-  const [wishlist, setWishlist] = useState([])
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
@@ -265,6 +265,9 @@ useEffect(() => {
   const revisedRatesRef = useRef(null)
   const outOfStockRef = useRef(null)
   const { setUser } = useContext(AuthContext)
+
+  // Context for favorites
+  const { toggleFavorite, isFavorite } = useFavorites()
 
 const handleSearch = useCallback((query) => {
   setSearchQuery(query)
@@ -925,9 +928,22 @@ const scrollCategories = (direction) => {
   setCategoriesScrollPosition(newPosition);
 };
 
-  const toggleWishlist = (productId) => {
-    setWishlist((prev) => (prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]))
+  const handleToggleFavorite = async (productId) => {
+  const result = await toggleFavorite(productId);
+  if (!result.success && result.message) {
+    const { toast } = await import('react-toastify');
+    toast.error(result.message, {
+      position: "top-right",
+      autoClose: 2000,
+    });
+    
+    if (result.message.includes('login')) {
+      setTimeout(() => {
+        navigate('/auth/login');
+      }, 2000);
+    }
   }
+};
 
   const handleShare = async (product, variant = null) => {
     const productUrl = `${window.location.origin}/product/${product._id}${variant ? `?variant=${variant.colorName}` : ""}`
@@ -1402,15 +1418,18 @@ const CategoryNavigationBar = () => {
 
           <div className="absolute top-2 right-2 flex flex-col items-center gap-2">
   <button
-    onClick={() => toggleWishlist(product._id)}
-    className={`p-1 rounded-full transition-colors ${
-      wishlist.includes(product._id)
-        ? "bg-red-500 text-white"
-        : "bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-red-500"
-    }`}
-  >
-    <Heart className={`w-4 h-4 ${wishlist.includes(product._id) ? "fill-current" : ""}`} />
-  </button>
+  onClick={(e) => {
+    e.stopPropagation();
+    handleToggleFavorite(product._id);
+  }}
+  className={`p-1 rounded-full transition-colors ${
+    isFavorite(product._id)
+      ? "bg-red-500 text-white"
+      : "bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-red-500"
+  }`}
+>
+  <Heart className={`w-4 h-4 ${isFavorite(product._id) ? "fill-current" : ""}`} />
+</button>
   <button
     onClick={(e) => {
       e.stopPropagation()
