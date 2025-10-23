@@ -144,7 +144,7 @@ const handleEditShippingFromConfirmation = async (action, value) => {
         `http://localhost:3000/api/order/confirm-order-update`,
         {
           orderId: order._id,
-          products: products,
+          products: products,  // ← This sends updated quantities
           confirmedShippingPrice: 0,
           email: order.email,
           currentStatus: order.status
@@ -169,7 +169,7 @@ const handleEditShippingFromConfirmation = async (action, value) => {
         `http://localhost:3000/api/order/confirm-order-update`,
         {
           orderId: order._id,
-          products: products,
+          products: products,  // ← This sends updated quantities
           confirmedShippingPrice: value,
           email: order.email,
           currentStatus: order.status
@@ -281,6 +281,9 @@ const handleShippingModalCloseFromConfirmation = (success) => {
     email={order.email}
     isEditMode={isEditShippingMode || (pendingOrderUpdate.newShippingPrice !== 'Pending')}
     currentShippingPrice={isEditShippingMode ? pendingOrderUpdate.newShippingPrice : 0}
+    fromConfirmationModal={true}
+    updatedProducts={products}
+    currentOrderStatus={order.status}
   />
 )}
 

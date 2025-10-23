@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { X, DollarSign } from "lucide-react"
 import axios from "axios";
 
-function ShippingPriceModal({onClose, orderId, email, isEditMode = false, currentShippingPrice = 0}) {
+function ShippingPriceModal({onClose, orderId, email, isEditMode = false, currentShippingPrice = 0, fromConfirmationModal = false, updatedProducts = null, currentOrderStatus = null}) {
     const [shippingPriceValue, setShippingPriceValue] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
@@ -34,12 +34,26 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
         }
         
         try {
-            const res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {
-                shippingPriceValue: priceValue,
-                orderId,
-                email,
-                isEdit: isEditMode
-            }, { withCredentials: true });
+            let res;
+            
+            // If called from ConfirmationModal, use confirm-order-update endpoint
+            if (fromConfirmationModal && updatedProducts) {
+                res = await axios.post("http://localhost:3000/api/order/confirm-order-update", {
+                    orderId,
+                    products: updatedProducts,
+                    confirmedShippingPrice: priceValue,
+                    email,
+                    currentStatus: currentOrderStatus
+                }, { withCredentials: true });
+            } else {
+                // Normal flow - just update shipping price
+                res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {
+                    shippingPriceValue: priceValue,
+                    orderId,
+                    email,
+                    isEdit: isEditMode
+                }, { withCredentials: true });
+            }
             
             if (res.status === 200) {
                 console.log(isEditMode ? "Shipping price updated successfully" : "Shipping price added successfully");
