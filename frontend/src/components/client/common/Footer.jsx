@@ -18,9 +18,9 @@ export default function Footer() {
   // Developer dummy data
   const developerInfo = {
     name: "Ebrahim Mustafa Morkas",
-    email: "ebrahim.morkas@example.com",
-    phone: "+91 98765 43210",
-    whatsapp: "+919876543210",
+    email: "morkasebrahim3@gmail.com",
+    phone: "+91 8097744371",
+    whatsapp: "+91 8097744371",
     portfolio: "https://ebrahimmorkas.dev"
   };
 
