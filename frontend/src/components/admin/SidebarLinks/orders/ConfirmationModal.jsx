@@ -14,9 +14,27 @@ function ConfirmationModal({
   const { products, newPrice, newShippingPrice, newTotalPrice } = orderData;
   const { oldPrice, oldShippingPrice, oldTotalPrice } = oldOrderData;
 
-  const priceDifference = newTotalPrice - oldTotalPrice;
-  const isIncrease = priceDifference > 0;
-  const isDecrease = priceDifference < 0;
+  // Handle pending shipping price
+  const isShippingPending = newShippingPrice === 'Pending' || newShippingPrice === 'Pending';
+  const isOldTotalPending = oldTotalPrice === 'Pending';
+  
+  // Calculate price difference only if both are numbers
+  let priceDifference = 0;
+  let isIncrease = false;
+  let isDecrease = false;
+  
+  if (!isShippingPending && !isOldTotalPending) {
+    const oldTotal = typeof oldTotalPrice === 'string' && oldTotalPrice !== 'Pending' 
+      ? parseFloat(oldTotalPrice) 
+      : parseFloat(oldTotalPrice || 0);
+    const newTotal = typeof newTotalPrice === 'string' && newTotalPrice !== 'Pending'
+      ? parseFloat(newTotalPrice)
+      : parseFloat(newTotalPrice || 0);
+    
+    priceDifference = newTotal - oldTotal;
+    isIncrease = priceDifference > 0;
+    isDecrease = priceDifference < 0;
+  }
 
   const getShippingDisplay = () => {
     if (newShippingPrice === 'Pending') {
@@ -28,7 +46,10 @@ function ConfirmationModal({
     }
   };
 
-  const showReuse = oldShippingPrice !== null && oldShippingPrice !== undefined && oldShippingPrice !== 'Pending';
+  const showReuse = oldShippingPrice !== null && 
+                     oldShippingPrice !== undefined && 
+                     oldShippingPrice !== 'Pending' &&
+                     !isShippingPending;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -46,8 +67,8 @@ function ConfirmationModal({
 
         {/* Content */}
         <div className="p-6 space-y-6">
-          {/* Price Change Alert */}
-          {priceDifference !== 0 && (
+          {/* Price Change Alert - Only show if not pending */}
+          {!isShippingPending && priceDifference !== 0 && (
             <div className={`p-4 rounded-lg border-2 ${
               isIncrease 
                 ? 'bg-orange-50 dark:bg-orange-900/20 border-orange-300 dark:border-orange-700' 
@@ -73,6 +94,23 @@ function ConfirmationModal({
                       : 'text-green-900 dark:text-green-200'
                   }`}>
                     {isIncrease ? '+' : '-'}₹{Math.abs(priceDifference).toFixed(2)}
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Pending Shipping Alert */}
+          {isShippingPending && (
+            <div className="p-4 rounded-lg border-2 bg-yellow-50 dark:bg-yellow-900/20 border-yellow-300 dark:border-yellow-700">
+              <div className="flex items-center space-x-3">
+                <AlertCircle className="h-6 w-6 text-yellow-600 dark:text-yellow-400" />
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-yellow-800 dark:text-yellow-300">
+                    Shipping Price Required
+                  </p>
+                  <p className="text-sm text-yellow-700 dark:text-yellow-400 mt-1">
+                    Manual shipping price entry will be required after confirming changes.
                   </p>
                 </div>
               </div>
@@ -171,8 +209,8 @@ function ConfirmationModal({
             </div>
           </div>
 
-          {/* Shipping Actions */}
-          {newShippingPrice !== 'Pending' && (
+          {/* Shipping Actions - Only show if shipping is NOT pending */}
+          {!isShippingPending && (
             <div className="flex flex-wrap gap-3">
               {showReuse && (
                 <button

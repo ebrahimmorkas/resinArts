@@ -25,6 +25,14 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
     if (!isNaN(priceValue) && priceValue >= 0) {
         setIsLoading(true);
         setErrorMessage("");
+        
+        // Validate orderId
+        if (!orderId) {
+            setErrorMessage("Order ID is missing. Please try again.");
+            setIsLoading(false);
+            return;
+        }
+        
         try {
             const res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {
                 shippingPriceValue: priceValue,
@@ -41,19 +49,19 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
                 setErrorMessage("Failed to update shipping price. Please try again.");
             }
         } catch (error) {
-        console.log("Error:", error.message);
-        if (error.response && error.response.status === 400 && error.response.data.message.includes("Insufficient stock")) {
-            setErrorMessage(error.response.data.message);
-        } else {
-            setErrorMessage("Failed to update shipping price. Please try again.");
+            console.log("Error:", error.message);
+            if (error.response && error.response.status === 400 && error.response.data.message.includes("Insufficient stock")) {
+                setErrorMessage(error.response.data.message);
+            } else {
+                setErrorMessage(error.response?.data?.message || "Failed to update shipping price. Please try again.");
+            }
+        } finally {
+            setIsLoading(false);
         }
-    } finally {
-        setIsLoading(false);
+    } else {
+        setErrorMessage("Please enter a valid shipping price (0 or greater)");
     }
-} else {
-    setErrorMessage("Please enter a valid shipping price (0 or greater)");
-}
-    }
+};
 
     const modalTitle = isEditMode ? "Edit Shipping Price" : "Add Shipping Price";
     const buttonText = isEditMode ? "Update Shipping Price" : "Add Shipping Price";
@@ -113,7 +121,7 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
                                 onChange={(e) => setShippingPriceValue(e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                                 placeholder="Enter shipping price"
-                                min="1"
+                                min="0"
                                 step="0.01"
                                 disabled={isLoading}
                                 required

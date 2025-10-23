@@ -1458,7 +1458,7 @@ ${companySettings?.companyName || 'Mould Market'}`;
 // Function to confirm order update after confirmation modal
 const confirmOrderUpdate = async (req, res) => {
   try {
-    const { orderId, products, confirmedShippingPrice, email } = req.body;
+    const { orderId, products, confirmedShippingPrice, email, currentStatus } = req.body;
     
     const order = await Order.findById(orderId);
     if (!order) {
@@ -1516,16 +1516,24 @@ const confirmOrderUpdate = async (req, res) => {
     const oldShippingPrice = order.shipping_price;
     const oldTotalPrice = order.total_price === 'Pending' ? 0 : parseFloat(order.total_price);
     
+    // Determine if status should change to Accepted
+    const updateData = {
+      orderedProducts: products,
+      price: newPrice,
+      shipping_price: newShippingPrice,
+      total_price: newTotalPrice,
+      updatedAt: new Date()
+    };
+    
+    // Change status to Accepted if currently Pending
+    if (currentStatus === 'Pending') {
+      updateData.status = 'Accepted';
+    }
+    
     // Update order
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
-      {
-        orderedProducts: products,
-        price: newPrice,
-        shipping_price: newShippingPrice,
-        total_price: newTotalPrice,
-        updatedAt: new Date()
-      },
+      updateData,
       { new: true, runValidators: true }
     );
     
@@ -1556,7 +1564,7 @@ const confirmOrderUpdate = async (req, res) => {
         .join('\n\n');
       
       const priceDifference = newTotalPrice - oldTotalPrice;
-      const isConfirmedOrder = order.status === 'Confirm';
+      const isConfirmedOrder = updatedOrder.status === 'Confirm';
       
       let paymentImpactText = '';
       
@@ -1662,38 +1670,32 @@ ${companySettings?.companyName || 'Mould Market'}
 📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
 📱 WhatsApp: ${companySettings?.adminWhatsappNumber || 'Contact us'}
 📍 Address: ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}
-
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 OUR COMMITMENT
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
 We apologize for any inconvenience and are committed to ensuring your satisfaction. Please reach out with any questions.
-
 Thank you for your continued trust in ${companySettings?.companyName || 'Mould Market'}!
-
 Best regards,
 The Customer Service Team
 
----
 ${companySettings?.companyName || 'Mould Market'}
 ${companySettings?.adminPhoneNumber || ''} | ${companySettings?.adminWhatsappNumber || ''}
 ${companySettings?.adminEmail || ''}
 ${companySettings?.adminAddress || ''}, ${companySettings?.adminCity || ''}`;
-      
-      await sendEmail(email, emailSubject, emailText);
-      console.log("Order update email sent successfully");
-    } catch (error) {
-      console.log("Error sending email:", error);
-    }
-    
-    return res.status(200).json({ 
-      message: "Order updated successfully",
-      order: updatedOrder
-    });
-  } catch (error) {
-    console.error("Error confirming order update:", error);
-    return res.status(500).json({ message: "Internal server error" });
-  }
+  await sendEmail(email, emailSubject, emailText);
+  console.log("Order update email sent successfully");
+} catch (error) {
+  console.log("Error sending email:", error);
+}
+
+return res.status(200).json({ 
+  message: "Order updated successfully",
+  order: updatedOrder
+});
+} catch (error) {
+console.error("Error confirming order update:", error);
+return res.status(500).json({ message: "Internal server error" });
+}
 };
 
 

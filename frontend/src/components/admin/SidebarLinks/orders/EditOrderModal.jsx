@@ -9,6 +9,7 @@ function EditOrderModal({ onClose, order }) {
   const [showShippingModal, setShowShippingModal] = useState(false);
   const [pendingOrderUpdate, setPendingOrderUpdate] = useState(null);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
+  const [isEditShippingMode, setIsEditShippingMode] = useState(false);
 
   // update product quantity directly in state
   const handleQuantityChange = (index, value) => {
@@ -101,7 +102,15 @@ function EditOrderModal({ onClose, order }) {
   }
 };
 
-  const handleConfirmationConfirm = async () => {
+const handleConfirmationConfirm = async () => {
+  // Check if shipping is pending - if yes, open shipping modal
+  if (pendingOrderUpdate.newShippingPrice === 'Pending') {
+    setShowConfirmationModal(false);
+    setShowShippingModal(true);
+    return;
+  }
+  
+  // Otherwise proceed with confirmation
   try {
     const res = await axios.post(
       `http://localhost:3000/api/order/confirm-order-update`,
@@ -109,7 +118,8 @@ function EditOrderModal({ onClose, order }) {
         orderId: order._id,
         products: products,
         confirmedShippingPrice: pendingOrderUpdate.newShippingPrice,
-        email: order.email
+        email: order.email,
+        currentStatus: order.status
       },
       { withCredentials: true }
     );
@@ -136,7 +146,8 @@ const handleEditShippingFromConfirmation = async (action, value) => {
           orderId: order._id,
           products: products,
           confirmedShippingPrice: 0,
-          email: order.email
+          email: order.email,
+          currentStatus: order.status
         },
         { withCredentials: true }
       );
@@ -160,7 +171,8 @@ const handleEditShippingFromConfirmation = async (action, value) => {
           orderId: order._id,
           products: products,
           confirmedShippingPrice: value,
-          email: order.email
+          email: order.email,
+          currentStatus: order.status
         },
         { withCredentials: true }
       );
@@ -176,8 +188,9 @@ const handleEditShippingFromConfirmation = async (action, value) => {
       alert("Failed to reuse shipping price. Please try again.");
     }
   } else if (action === 'edit') {
-    // Open shipping price modal
+    // Open shipping price modal in EDIT mode
     setShowConfirmationModal(false);
+    setIsEditShippingMode(true);
     setShowShippingModal(true);
   }
 };
@@ -250,14 +263,26 @@ const handleShippingModalCloseFromConfirmation = (success) => {
 
       {/* Shipping Price Modal - appears if manual entry is required */}
       {showShippingModal && pendingOrderUpdate && (
-        <ShippingPriceModal
-          onClose={handleShippingModalClose}
-          orderId={pendingOrderUpdate._id}
-          email={order.email}
-          isEditMode={false}
-          currentShippingPrice={0}
-        />
-      )}
+  <ShippingPriceModal
+    onClose={(success) => {
+      setShowShippingModal(false);
+      setIsEditShippingMode(false);
+      if (success) {
+        setPendingOrderUpdate(null);
+        onClose();
+      } else if (showConfirmationModal || pendingOrderUpdate.newShippingPrice === 'Pending') {
+        // Go back to confirmation modal
+        setShowConfirmationModal(true);
+      } else {
+        setPendingOrderUpdate(null);
+      }
+    }}
+    orderId={order._id}
+    email={order.email}
+    isEditMode={isEditShippingMode || (pendingOrderUpdate.newShippingPrice !== 'Pending')}
+    currentShippingPrice={isEditShippingMode ? pendingOrderUpdate.newShippingPrice : 0}
+  />
+)}
 
       {showConfirmationModal && pendingOrderUpdate && (
   <ConfirmationModal
