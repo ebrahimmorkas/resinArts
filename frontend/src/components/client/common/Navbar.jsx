@@ -148,9 +148,9 @@ export default function Navbar({
                                 <span className="text-sm font-semibold text-blue-600">
                                   ₹{result.price.toFixed(2)}
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {/* <span className="text-xs text-gray-500 dark:text-gray-400">
                                   Stock: {result.stock}
-                                </span>
+                                </span> */}
                               </div>
                             </div>
                           </button>
@@ -312,9 +312,9 @@ export default function Navbar({
                               <span className="text-sm font-semibold text-blue-600">
                                 ₹{result.price.toFixed(2)}
                               </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {/* <span className="text-xs text-gray-500 dark:text-gray-400">
                                 Stock: {result.stock}
-                              </span>
+                              </span> */}
                             </div>
                           </div>
                         </button>
