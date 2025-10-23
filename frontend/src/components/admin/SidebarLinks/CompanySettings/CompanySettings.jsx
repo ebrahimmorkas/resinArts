@@ -50,6 +50,12 @@ const CompanySettings = () => {
     shippingPrices: [],
     freeShipping: false,
     freeShippingAboveAmount: 0
+  },
+    autoDeleteOrders: {
+    enabled: false,
+    deleteStatus: 'Completed',
+    deleteAfterUnit: 'months',
+    deleteAfterValue: 1
   }
   });
   const [editingIndex, setEditingIndex] = useState(null);
@@ -493,6 +499,7 @@ const handleExcelUpload = async (e) => {
   formDataToSend.append('receiveLowStockEmail', formData.receiveLowStockEmail);
   formDataToSend.append('receiveOutOfStockEmail', formData.receiveOutOfStockEmail);
   formDataToSend.append('shippingPriceSettings', JSON.stringify(formData.shippingPriceSettings));
+  formDataToSend.append('autoDeleteOrders', JSON.stringify(formData.autoDeleteOrders));
 
   if (logoFile) {
     formDataToSend.append('logo', logoFile);
@@ -1218,6 +1225,205 @@ const handleExcelUpload = async (e) => {
             </div>
           )}
         </div>
+      </div>
+    </div>
+  )
+},
+{
+  title: 'Deleting Orders',
+  content: (
+    <div className="p-4">
+      <div className="space-y-4">
+        {/* Auto Delete Toggle */}
+        <div className="flex items-center justify-between p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+          <div className="flex-1">
+            <label htmlFor="autoDeleteEnabled" className="text-sm font-medium text-gray-700 dark:text-white cursor-pointer">
+              Delete orders automatically
+            </label>
+            <p className="text-xs text-gray-500 dark:text-white mt-1">
+              Automatically delete orders after a specified time period based on order status
+            </p>
+          </div>
+          <div className="ml-4">
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                id="autoDeleteEnabled"
+                checked={formData.autoDeleteOrders?.enabled || false}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    autoDeleteOrders: {
+                      ...prev.autoDeleteOrders,
+                      enabled: e.target.checked
+                    }
+                  }));
+                }}
+                className="sr-only peer"
+              />
+              <div className="w-11 h-6 bg-gray-200 dark:bg-gray-700 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-red-300 dark:peer-focus:ring-red-600 rounded-full peer peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 dark:border-gray-600 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 dark:peer-checked:bg-red-500"></div>
+            </label>
+          </div>
+        </div>
+
+        {/* Auto Delete Options */}
+        {formData.autoDeleteOrders?.enabled && (
+          <div className="space-y-4 pt-4 border-t border-gray-200 dark:border-gray-700">
+            {/* Status Dropdown */}
+            <div className="p-4 bg-red-50 dark:bg-red-900 rounded-lg border border-red-200 dark:border-red-700">
+              <label className="text-sm font-medium text-gray-700 dark:text-white block mb-2">
+                Status for deleting orders
+              </label>
+              <select
+                value={formData.autoDeleteOrders?.deleteStatus || 'Completed'}
+                onChange={(e) => {
+                  setFormData(prev => ({
+                    ...prev,
+                    autoDeleteOrders: {
+                      ...prev.autoDeleteOrders,
+                      deleteStatus: e.target.value
+                    }
+                  }));
+                }}
+                className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-transparent text-gray-700 dark:text-white bg-white dark:bg-gray-900"
+              >
+                <option value="Confirm">Confirm</option>
+                <option value="Dispatched">Dispatched</option>
+                <option value="Completed">Completed</option>
+              </select>
+              <p className="text-xs text-gray-500 dark:text-white mt-2">
+                Orders with this status will be automatically deleted
+              </p>
+            </div>
+
+            {/* Delete After Time */}
+            <div className="p-4 bg-red-50 dark:bg-red-900 rounded-lg border border-red-200 dark:border-red-700">
+              <label className="text-sm font-medium text-gray-700 dark:text-white block mb-2">
+                Delete after
+              </label>
+              <div className="grid grid-cols-2 gap-3">
+                {/* Time Unit Dropdown */}
+                <select
+                  value={formData.autoDeleteOrders?.deleteAfterUnit || 'months'}
+                  onChange={(e) => {
+                    const newUnit = e.target.value;
+                    let maxValue = 1;
+                    
+                    // Set max value based on unit
+                    switch(newUnit) {
+                      case 'minutes':
+                        maxValue = 60;
+                        break;
+                      case 'hours':
+                        maxValue = 24;
+                        break;
+                      case 'days':
+                        maxValue = 30;
+                        break;
+                      case 'weeks':
+                        maxValue = 52;
+                        break;
+                      case 'months':
+                        maxValue = 12;
+                        break;
+                      case 'years':
+                        maxValue = 5;
+                        break;
+                      default:
+                        maxValue = 1;
+                    }
+                    
+                    setFormData(prev => ({
+                      ...prev,
+                      autoDeleteOrders: {
+                        ...prev.autoDeleteOrders,
+                        deleteAfterUnit: newUnit,
+                        deleteAfterValue: Math.min(prev.autoDeleteOrders?.deleteAfterValue || 1, maxValue)
+                      }
+                    }));
+                  }}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-transparent text-gray-700 dark:text-white bg-white dark:bg-gray-900"
+                >
+                  <option value="minutes">Minutes</option>
+                  <option value="hours">Hours</option>
+                  <option value="days">Days</option>
+                  <option value="weeks">Weeks</option>
+                  <option value="months">Months</option>
+                  <option value="years">Years</option>
+                </select>
+
+                {/* Value Dropdown */}
+                <select
+                  value={formData.autoDeleteOrders?.deleteAfterValue || 1}
+                  onChange={(e) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      autoDeleteOrders: {
+                        ...prev.autoDeleteOrders,
+                        deleteAfterValue: parseInt(e.target.value)
+                      }
+                    }));
+                  }}
+                  className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-transparent text-gray-700 dark:text-white bg-white dark:bg-gray-900"
+                >
+                  {(() => {
+                    const unit = formData.autoDeleteOrders?.deleteAfterUnit || 'months';
+                    let max = 1;
+                    
+                    switch(unit) {
+                      case 'minutes':
+                        max = 60;
+                        break;
+                      case 'hours':
+                        max = 24;
+                        break;
+                      case 'days':
+                        max = 30;
+                        break;
+                      case 'weeks':
+                        max = 52;
+                        break;
+                      case 'months':
+                        max = 12;
+                        break;
+                      case 'years':
+                        max = 5;
+                        break;
+                      default:
+                        max = 1;
+                    }
+                    
+                    return Array.from({ length: max }, (_, i) => (
+                      <option key={i + 1} value={i + 1}>
+                        {i + 1}
+                      </option>
+                    ));
+                  })()}
+                </select>
+              </div>
+              <p className="text-xs text-gray-500 dark:text-white mt-2">
+                Orders will be permanently deleted after {formData.autoDeleteOrders?.deleteAfterValue || 1} {formData.autoDeleteOrders?.deleteAfterUnit || 'months'}
+              </p>
+            </div>
+
+            {/* Warning Message */}
+            <div className="p-4 bg-yellow-50 dark:bg-yellow-900 rounded-lg border border-yellow-200 dark:border-yellow-700">
+              <div className="flex items-start gap-2">
+                <svg className="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                </svg>
+                <div>
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                    Warning: Orders will be permanently deleted
+                  </p>
+                  <p className="text-xs text-yellow-700 dark:text-yellow-300 mt-1">
+                    This action cannot be undone. Make sure to backup important order data regularly.
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   )

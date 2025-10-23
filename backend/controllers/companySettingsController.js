@@ -28,7 +28,7 @@ const deleteFromCloudinary = async (publicId) => {
 };
 
 // Get company settings
-exports.getCompanySettings = async (req, res) => {
+const getCompanySettings = async (req, res) => {
   try {
     const settings = await CompanySettings.getSingleton();
     
@@ -47,7 +47,7 @@ exports.getCompanySettings = async (req, res) => {
 
 // Update company settings
 // Update company settings
-exports.updateCompanySettings = async (req, res) => {
+const updateCompanySettings = async (req, res) => {
   try {
     const {
       adminName,
@@ -71,7 +71,8 @@ exports.updateCompanySettings = async (req, res) => {
       lowStockAlertThreshold,
       receiveLowStockEmail,
       receiveOutOfStockEmail,
-      shippingPriceSettings
+      shippingPriceSettings,
+      autoDeleteOrders
     } = req.body;
 
     if (!adminName || !adminEmail) {
@@ -83,44 +84,50 @@ exports.updateCompanySettings = async (req, res) => {
 
     let settings = await CompanySettings.findOne();
     const parsedShippingSettings = shippingPriceSettings ? JSON.parse(shippingPriceSettings) : {
-  isManual: true,
-  sameForAll: false,
-  commonShippingPrice: 0,
-  shippingType: 'city',
-  shippingPrices: [],
-  cityPrices: [],
-  statePrices: [],
-  zipCodePrices: [],
-  freeShipping: false,
-  freeShippingAboveAmount: 0
-};
-   if (!settings) {
-  settings = new CompanySettings({
-    adminName,
-    adminWhatsappNumber,
-    adminPhoneNumber,
-    adminAddress,
-    adminCity,
-    adminState,
-    adminPincode,
-    adminEmail,
-    companyName,
-    instagramId,
-    facebookId,
-    privacyPolicy,
-    returnPolicy,
-    shippingPolicy,
-    refundPolicy,
-    termsAndConditions,
-    aboutUs,
-    receiveOrderEmails,
-    lowStockAlertThreshold: lowStockAlertThreshold ? parseInt(lowStockAlertThreshold) : 10,
-    receiveLowStockEmail,
-    receiveOutOfStockEmail,
-    shippingPriceSettings: parsedShippingSettings
-  });
-  await settings.save();
-} else {
+      isManual: true,
+      sameForAll: false,
+      commonShippingPrice: 0,
+      shippingType: 'city',
+      shippingPrices: [],
+      freeShipping: false,
+      freeShippingAboveAmount: 0
+    };
+
+    const parsedAutoDeleteSettings = autoDeleteOrders ? JSON.parse(autoDeleteOrders) : {
+      enabled: false,
+      deleteStatus: 'Completed',
+      deleteAfterUnit: 'months',
+      deleteAfterValue: 1
+    };
+
+    if (!settings) {
+      settings = new CompanySettings({
+        adminName,
+        adminWhatsappNumber,
+        adminPhoneNumber,
+        adminAddress,
+        adminCity,
+        adminState,
+        adminPincode,
+        adminEmail,
+        companyName,
+        instagramId,
+        facebookId,
+        privacyPolicy,
+        returnPolicy,
+        shippingPolicy,
+        refundPolicy,
+        termsAndConditions,
+        aboutUs,
+        receiveOrderEmails,
+        lowStockAlertThreshold: lowStockAlertThreshold ? parseInt(lowStockAlertThreshold) : 10,
+        receiveLowStockEmail,
+        receiveOutOfStockEmail,
+        shippingPriceSettings: parsedShippingSettings,
+        autoDeleteOrders: parsedAutoDeleteSettings
+      });
+      await settings.save();
+    } else {
       settings.adminName = adminName;
       settings.adminWhatsappNumber = adminWhatsappNumber;
       settings.adminPhoneNumber = adminPhoneNumber;
@@ -142,23 +149,34 @@ exports.updateCompanySettings = async (req, res) => {
       settings.lowStockAlertThreshold = lowStockAlertThreshold;
       settings.receiveLowStockEmail = receiveLowStockEmail;
       settings.receiveOutOfStockEmail = receiveOutOfStockEmail;
-     if (shippingPriceSettings) {
-  const parsedShipping = JSON.parse(shippingPriceSettings);
-  settings.shippingPriceSettings = {
-    isManual: parsedShipping.isManual !== undefined ? parsedShipping.isManual : true,
-    sameForAll: parsedShipping.sameForAll !== undefined ? parsedShipping.sameForAll : false,
-    commonShippingPrice: parsedShipping.commonShippingPrice || 0,
-    shippingType: parsedShipping.shippingType || 'city',
-    shippingPrices: Array.isArray(parsedShipping.shippingPrices) ? parsedShipping.shippingPrices : [],
-    cityPrices: Array.isArray(parsedShipping.cityPrices) ? parsedShipping.cityPrices : [],
-    statePrices: Array.isArray(parsedShipping.statePrices) ? parsedShipping.statePrices : [],
-    zipCodePrices: Array.isArray(parsedShipping.zipCodePrices) ? parsedShipping.zipCodePrices : [],
-    freeShipping: parsedShipping.freeShipping !== undefined ? parsedShipping.freeShipping : false,
-    freeShippingAboveAmount: parsedShipping.freeShippingAboveAmount || 0
-  };
-}
+      
+      if (shippingPriceSettings) {
+        const parsedShipping = JSON.parse(shippingPriceSettings);
+        settings.shippingPriceSettings = {
+          isManual: parsedShipping.isManual !== undefined ? parsedShipping.isManual : true,
+          sameForAll: parsedShipping.sameForAll !== undefined ? parsedShipping.sameForAll : false,
+          commonShippingPrice: parsedShipping.commonShippingPrice || 0,
+          shippingType: parsedShipping.shippingType || 'city',
+          shippingPrices: Array.isArray(parsedShipping.shippingPrices) ? parsedShipping.shippingPrices : [],
+          cityPrices: Array.isArray(parsedShipping.cityPrices) ? parsedShipping.cityPrices : [],
+          statePrices: Array.isArray(parsedShipping.statePrices) ? parsedShipping.statePrices : [],
+          zipCodePrices: Array.isArray(parsedShipping.zipCodePrices) ? parsedShipping.zipCodePrices : [],
+          freeShipping: parsedShipping.freeShipping !== undefined ? parsedShipping.freeShipping : false,
+          freeShippingAboveAmount: parsedShipping.freeShippingAboveAmount || 0
+        };
+      }
 
-await settings.save();
+      if (autoDeleteOrders) {
+        const parsedAutoDelete = JSON.parse(autoDeleteOrders);
+        settings.autoDeleteOrders = {
+          enabled: parsedAutoDelete.enabled !== undefined ? parsedAutoDelete.enabled : false,
+          deleteStatus: parsedAutoDelete.deleteStatus || 'Completed',
+          deleteAfterUnit: parsedAutoDelete.deleteAfterUnit || 'months',
+          deleteAfterValue: parsedAutoDelete.deleteAfterValue || 1
+        };
+      }
+
+      await settings.save();
     }
 
     if (req.file) {
@@ -183,7 +201,7 @@ await settings.save();
 
     await settings.save();
 
-     res.status(200).json({
+    res.status(200).json({
       success: true,
       message: 'Company settings updated successfully',
       data: settings
@@ -197,7 +215,7 @@ await settings.save();
   }
 };
 // Get public policies (for displaying on website - no authentication required)
-exports.getPublicPolicies = async (req, res) => {
+const getPublicPolicies = async (req, res) => {
   try {
     const settings = await CompanySettings.getSingleton();
     
@@ -222,7 +240,7 @@ exports.getPublicPolicies = async (req, res) => {
 };
 
 // Get contact information (public - for footer, contact page, etc.)
-exports.getContactInfo = async (req, res) => {
+const getContactInfo = async (req, res) => {
   try {
     const settings = await CompanySettings.getSingleton();
     
@@ -251,3 +269,10 @@ exports.getContactInfo = async (req, res) => {
     });
   }
 };
+
+module.exports = {
+  getCompanySettings,
+  updateCompanySettings,
+  getPublicPolicies,
+  getContactInfo
+}
