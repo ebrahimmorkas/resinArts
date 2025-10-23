@@ -1,9 +1,13 @@
 const transporter = require("../config/email");
+const CompanySettings = require("../models/CompanySettings");
 
 async function sendEmail(to, subject, text) {
   try {
+    // Fetch company settings
+    const settings = await CompanySettings.getSingleton();
+    
     const mailOptions = {
-      from: `"Mould Market" <${process.env.EMAIL_USER}>`, // sender name + email
+      from: `"${settings.companyName}" <${settings.adminEmail}>`, // Use company name and email from settings
       to,
       subject,
       text, // plain text only
