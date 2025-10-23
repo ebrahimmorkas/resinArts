@@ -13,8 +13,11 @@ import ForgotPassword from './pages/client/ForgotPassword';
 import ResetPassword from './pages/client/ResetPassword';
 import ProductDetailsPage from './pages/client/ProductDetailsPage';
 import FavoritesPage from './pages/client/FavoritesPage';
+import useCompanySettings from '../hooks/useCompanySettings';
 
 function App() {
+  useCompanySettings();
+
   return (
       <Routes>
         {/* Routes for login and signup */}

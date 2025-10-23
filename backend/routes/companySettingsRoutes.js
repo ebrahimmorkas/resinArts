@@ -18,10 +18,11 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/ico'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'), false);
+      cb(new Error('Only PNG, JPEG, JPG, and ICO files are allowed!'), false);
     }
   }
 });
