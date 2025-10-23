@@ -1,4 +1,4 @@
-import { useState, useContext } from "react"
+import { useState, useContext, useEffect, useRef } from "react"
 import { Link, useNavigate } from 'react-router-dom'
 import { Search, User, ShoppingCart, ChevronDown, X, Settings, Package, LogOut, Heart } from "lucide-react"
 import axios from "axios"
@@ -28,6 +28,23 @@ export default function Navbar({
   const { announcement, loadingAnnouncement, announcementError } = useContext(AnnouncementContext)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const navigate = useNavigate()
+  const profileDropdownRef = useRef(null)
+
+  useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+      setIsProfileOpen(false)
+    }
+  }
+
+  if (isProfileOpen) {
+    document.addEventListener('mousedown', handleClickOutside)
+  }
+
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside)
+  }
+}, [isProfileOpen])
 
   const handleLogout = async () => {
     try {
@@ -151,7 +168,7 @@ export default function Navbar({
 
             {/* Profile and Cart */}
             <div className="flex items-center space-x-4">
-              <div className="relative profile-dropdown">
+              <div className="relative profile-dropdown" ref={profileDropdownRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors duration-200 dark:text-white"
