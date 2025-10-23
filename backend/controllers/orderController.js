@@ -636,16 +636,18 @@ const shippingPriceUpdate = async (req, res) => {
     });
 
     // Emit Socket.IO event
-    const io = req.app.get('io');
-    if (io) {
-      console.log('Emitting shippingPriceUpdated event for order:', updatedOrder._id);
-      io.to('admin_room').emit('shippingPriceUpdated', {
-        _id: updatedOrder._id,
-        shipping_price: updatedOrder.shipping_price,
-        total_price: updatedOrder.total_price,
-        status: updatedOrder.status,
-      });
-    } else {
+const io = req.app.get('io');
+if (io) {
+  console.log('Emitting orderUpdated event for order:', updatedOrder._id);
+  io.to('admin_room').emit('orderUpdated', {
+    _id: updatedOrder._id,
+    orderedProducts: updatedOrder.orderedProducts,
+    price: updatedOrder.price,
+    shipping_price: updatedOrder.shipping_price,
+    total_price: updatedOrder.total_price,
+    status: updatedOrder.status,
+  });
+} else {
       console.error('Socket.IO not initialized');
     }
 
@@ -1384,16 +1386,19 @@ const rejectZeroQuantityOrder = async (req, res) => {
       { new: true, runValidators: true }
     );
     
-    // Emit Socket.IO event
-    const io = req.app.get('io');
-    if (io) {
-      io.to('admin_room').emit('shippingPriceUpdated', {
-        _id: updatedOrder._id,
-        shipping_price: updatedOrder.shipping_price,
-        total_price: updatedOrder.total_price,
-        status: updatedOrder.status,
-      });
-    }
+// Emit Socket.IO event
+const io = req.app.get('io');
+if (io) {
+  console.log('Emitting orderUpdated event for order:', updatedOrder._id);
+  io.to('admin_room').emit('orderUpdated', {
+    _id: updatedOrder._id,
+    orderedProducts: updatedOrder.orderedProducts,
+    price: updatedOrder.price,
+    shipping_price: updatedOrder.shipping_price,
+    total_price: updatedOrder.total_price,
+    status: updatedOrder.status,
+  });
+}
     
     // Send rejection email
     try {
@@ -1538,15 +1543,17 @@ const confirmOrderUpdate = async (req, res) => {
     );
     
     // Emit Socket.IO event
-    const io = req.app.get('io');
-    if (io) {
-      io.to('admin_room').emit('shippingPriceUpdated', {
-        _id: updatedOrder._id,
-        shipping_price: updatedOrder.shipping_price,
-        total_price: updatedOrder.total_price,
-        status: updatedOrder.status,
-      });
-    }
+const io = req.app.get('io');
+if (io) {
+  io.to('admin_room').emit('orderUpdated', {
+    _id: updatedOrder._id,
+    orderedProducts: updatedOrder.orderedProducts,
+    price: updatedOrder.price,
+    shipping_price: updatedOrder.shipping_price,
+    total_price: updatedOrder.total_price,
+    status: updatedOrder.status,
+  });
+}
     
     // Send email
     try {

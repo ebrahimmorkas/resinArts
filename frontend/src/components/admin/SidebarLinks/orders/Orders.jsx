@@ -962,6 +962,41 @@ pdfContent.innerHTML = `
       }
     });
 
+    socket.on('orderUpdated', (updatedOrder) => {
+  console.log('Order updated:', updatedOrder);
+  if (updatedOrder && updatedOrder._id) {
+    setOrders((prevOrders) => {
+      const updatedOrders = prevOrders.map((order) =>
+        order._id === updatedOrder._id
+          ? { 
+              ...order, 
+              orderedProducts: updatedOrder.orderedProducts,
+              price: updatedOrder.price,
+              shipping_price: updatedOrder.shipping_price, 
+              total_price: updatedOrder.total_price, 
+              status: updatedOrder.status 
+            }
+          : order
+      );
+      return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    });
+    
+    // Update selected order in modal if it's open
+    if (selectedOrder && selectedOrder._id === updatedOrder._id) {
+      setSelectedOrder((prev) => ({
+        ...prev,
+        orderedProducts: updatedOrder.orderedProducts,
+        price: updatedOrder.price,
+        shipping_price: updatedOrder.shipping_price,
+        total_price: updatedOrder.total_price,
+        status: updatedOrder.status,
+      }));
+    }
+  } else {
+    console.error('Invalid order update received:', updatedOrder);
+  }
+});
+
     socket.on('connect_error', (error) => {
       console.error('Socket.IO connection error:', error);
     });
