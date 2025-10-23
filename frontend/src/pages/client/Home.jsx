@@ -1682,7 +1682,7 @@ const CategoryNavigationBar = () => {
 
         <button
           onClick={handleAddToCartWithQuantity}
-          disabled={hasVariants && (!selectedVariant || !selectedSizeDetail) || currentStock === 0}
+          disabled={hasVariants && (!selectedVariant || !selectedSizeDetail)}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200"
         >
           Add {addQuantity} to Cart
