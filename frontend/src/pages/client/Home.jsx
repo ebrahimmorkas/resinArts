@@ -1668,7 +1668,7 @@ const CategoryNavigationBar = () => {
             e.stopPropagation();
             handleRemoveFromCart(cartKey);
           }}
-          className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+          className="dark:text-white w-full bg-red-600 hover:bg-red-700 text-red-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
         >
           <Trash2 className="w-4 h-4" />
           Remove from Cart
@@ -2334,7 +2334,7 @@ const CategoryNavigationBar = () => {
 
       <button
         onClick={() => handleRemoveFromCart(cartKey)}
-        className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-3 px-6 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+        className="dark:text-white w-full bg-red-600 hover:bg-red-700 text-red-600 py-3 px-6 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
       >
         <Trash2 className="w-4 h-4" />
         Remove from Cart
