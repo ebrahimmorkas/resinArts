@@ -64,13 +64,13 @@ function BulkResultModal({ isOpen, onClose, results, operation }) {
                   Successfully Processed ({successCount})
                 </h3>
               </div>
-              <div className="space-y-1">
-                {results[successKey]?.map((item, index) => (
-                  <div key={index} className="text-sm text-green-800 dark:text-green-300">
-                    Order #{item.orderNumber}
-                  </div>
-                ))}
-              </div>
+             <div className="space-y-1">
+  {results[successKey]?.map((item, index) => (
+    <div key={index} className="text-sm text-green-800 dark:text-green-300 break-all">
+      Order ID: {item.orderId}
+    </div>
+  ))}
+</div>
             </div>
           )}
 
@@ -84,12 +84,13 @@ function BulkResultModal({ isOpen, onClose, results, operation }) {
                 </h3>
               </div>
               <div className="space-y-1">
-                {results.insufficientStock.map((item, index) => (
-                  <div key={index} className="text-sm text-red-800 dark:text-red-300">
-                    Order #{item.orderNumber} - {item.userName}
-                  </div>
-                ))}
-              </div>
+  {results.insufficientStock.map((item, index) => (
+    <div key={index} className="text-sm text-red-800 dark:text-red-300">
+      <div className="font-medium break-all">Order ID: {item.orderId}</div>
+      <div className="text-xs">Customer: {item.userName}</div>
+    </div>
+  ))}
+</div>
               <p className="text-xs text-red-700 dark:text-red-400 mt-2">
                 These orders could not be processed due to insufficient stock.
               </p>
@@ -106,13 +107,14 @@ function BulkResultModal({ isOpen, onClose, results, operation }) {
                 </h3>
               </div>
               <div className="space-y-1">
-                {results.invalidStatus.map((item, index) => (
-                  <div key={index} className="text-sm text-orange-800 dark:text-orange-300">
-                    Order #{item.orderId.toString().substring(0, 8)} - Current Status: {item.currentStatus}
-                    <div className="text-xs text-orange-700 dark:text-orange-400">{item.reason}</div>
-                  </div>
-                ))}
-              </div>
+  {results.invalidStatus.map((item, index) => (
+    <div key={index} className="text-sm text-orange-800 dark:text-orange-300">
+      <div className="font-medium break-all">Order ID: {item.orderId}</div>
+      <div className="text-xs">Current Status: {item.currentStatus}</div>
+      <div className="text-xs text-orange-700 dark:text-orange-400">{item.reason}</div>
+    </div>
+  ))}
+</div>
             </div>
           )}
 
@@ -126,12 +128,13 @@ function BulkResultModal({ isOpen, onClose, results, operation }) {
                 </h3>
               </div>
               <div className="space-y-1">
-                {results.shippingPending.map((item, index) => (
-                  <div key={index} className="text-sm text-blue-800 dark:text-blue-300">
-                    Order #{item.orderNumber} - {item.userName}
-                  </div>
-                ))}
-              </div>
+  {results.shippingPending.map((item, index) => (
+    <div key={index} className="text-sm text-blue-800 dark:text-blue-300">
+      <div className="font-medium break-all">Order ID: {item.orderId}</div>
+      <div className="text-xs">Customer: {item.userName}</div>
+    </div>
+  ))}
+</div>
               <p className="text-xs text-blue-700 dark:text-blue-400 mt-2">
                 These orders require manual shipping price entry. Please update shipping price individually.
               </p>
@@ -148,12 +151,13 @@ function BulkResultModal({ isOpen, onClose, results, operation }) {
                 </h3>
               </div>
               <div className="space-y-1">
-                {results.sufficientStock.map((item, index) => (
-                  <div key={index} className="text-sm text-purple-800 dark:text-purple-300">
-                    Order #{item.orderNumber} - {item.userName} (Status: {item.status})
-                  </div>
-                ))}
-              </div>
+  {results.sufficientStock.map((item, index) => (
+    <div key={index} className="text-sm text-purple-800 dark:text-purple-300">
+      <div className="font-medium break-all">Order ID: {item.orderId}</div>
+      <div className="text-xs">Customer: {item.userName} | Status: {item.status}</div>
+    </div>
+  ))}
+</div>
               <p className="text-xs text-purple-700 dark:text-purple-400 mt-2">
                 These orders have sufficient stock. Please confirm which ones to reject.
               </p>

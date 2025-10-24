@@ -128,17 +128,15 @@ function BulkDeleteSelectionModal({ isOpen, onClose, onConfirm, ordersByStatus }
                           className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2"
                         />
                         <div className="ml-3 flex-1">
-                          <div className="flex items-center justify-between">
-                            <span className="text-sm font-medium text-gray-900 dark:text-white">
-                              {order.userName}
-                            </span>
-                            <span className="text-xs text-gray-500 dark:text-gray-400">
-                              #{order.orderNumber}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            {order.email}
-                          </span>
+                         <div className="text-sm font-medium text-gray-900 dark:text-white mb-1">
+  {order.userName}
+</div>
+<div className="text-xs text-gray-500 dark:text-gray-400 break-all mb-1">
+  Order ID: {order.orderId}
+</div>
+<div className="text-xs text-gray-500 dark:text-gray-400">
+  {order.email}
+</div>
                         </div>
                       </label>
                     ))}
