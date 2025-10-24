@@ -757,7 +757,7 @@ export default function ProductDetailsPage() {
                   <button
                     onClick={handleAddToCartFromModal}
                     disabled={currentStock === 0 || (product.hasVariants && (!selectedVariant || !selectedSize))}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
                   >
                     <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
                     {currentStock === 0 ? "Out of Stock" : `Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}

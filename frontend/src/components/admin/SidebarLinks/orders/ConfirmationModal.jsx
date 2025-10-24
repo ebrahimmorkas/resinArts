@@ -60,7 +60,7 @@ function ConfirmationModal({
             <AlertCircle className="h-6 w-6 text-white" />
             <h2 className="text-2xl font-bold text-white">Confirm Order Changes</h2>
           </div>
-          <button onClick={onClose} className="text-white hover:text-gray-200 transition-colors">
+          <button onClick={onClose} className="text-black hover:text-gray-200 transition-colors">
             <X className="h-6 w-6" />
           </button>
         </div>
@@ -215,20 +215,20 @@ function ConfirmationModal({
               {showReuse && (
                 <button
                   onClick={() => onEditShipping('reuse', oldShippingPrice)}
-                  className="flex-1 min-w-[150px] px-4 py-2 bg-gray-600 text-white text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
+                  className="flex-1 min-w-[150px] px-4 py-2 bg-gray-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
                 >
                   Reuse Old Shipping (₹{oldShippingPrice === 0 ? '0' : parseFloat(oldShippingPrice).toFixed(2)})
                 </button>
               )}
               <button
                 onClick={() => onEditShipping('free')}
-                className="flex-1 min-w-[150px] px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
+                className="flex-1 min-w-[150px] px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors"
               >
                 Free Shipping
               </button>
               <button
                 onClick={() => onEditShipping('edit')}
-                className="flex-1 min-w-[150px] px-4 py-2 bg-yellow-600 text-white text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
+                className="flex-1 min-w-[150px] px-4 py-2 bg-yellow-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
               >
                 Edit Shipping Price
               </button>
@@ -247,7 +247,7 @@ function ConfirmationModal({
             </button>
             <button
               onClick={onConfirm}
-              className="flex-1 px-6 py-3 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex-1 px-6 py-3 bg-blue-600 text-green-600 text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
             >
               Confirm Changes
             </button>

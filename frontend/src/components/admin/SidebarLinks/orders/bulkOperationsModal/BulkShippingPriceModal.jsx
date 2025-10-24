@@ -68,7 +68,7 @@ function BulkShippingPriceModal({ isOpen, onClose, onConfirm, orderCount }) {
           <div className="flex gap-3">
             <button
               type="submit"
-              className="flex-1 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+              className="flex-1 px-4 py-2 bg-blue-600 text-green-600 text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
             >
               Update Shipping Price
             </button>
