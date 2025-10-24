@@ -1024,12 +1024,18 @@ const handleStatusChange = async (req, res) => {
       }
     }
 
+    // Update order with status, payment_status, and updatedAt (if status is Confirm, Dispatched, or Completed)
+    const updateFields = {
+      status: status,
+      payment_status: paymentStatus,
+    };
+    if (["Confirm", "Dispatched", "Completed"].includes(status)) {
+      updateFields.updatedAt = new Date();
+    }
+
     const updatedOrder = await Order.findByIdAndUpdate(
       orderId,
-      {
-        status: status,
-        payment_status: paymentStatus,
-      },
+      updateFields,
       {
         new: true,
         runValidators: true,
@@ -2020,6 +2026,844 @@ ${companySettings?.adminEmail || ''}`;
   }
 };
 
+// Bulk actions controller functions:
+// Bulk Accept Orders
+const bulkAccept = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'Order IDs array is required' });
+    }
+
+    const orders = await Order.find({ _id: { $in: orderIds } });
+    const companySettings = await CompanySettings.getSingleton();
+    
+    const results = {
+      accepted: [],
+      insufficientStock: [],
+      invalidStatus: [],
+      shippingPending: []
+    };
+
+    for (const order of orders) {
+      // Only accept Pending orders
+      if (order.status !== 'Pending') {
+        results.invalidStatus.push({
+          orderId: order._id,
+          currentStatus: order.status,
+          reason: 'Can only accept Pending orders'
+        });
+        continue;
+      }
+
+      // Check stock for all products
+      let hasInsufficientStock = false;
+      for (const item of order.orderedProducts) {
+        const product = await Product.findById(item.product_id);
+        if (!product) {
+          hasInsufficientStock = true;
+          break;
+        }
+
+        if (!item.variant_id) {
+          if (product.stock < item.quantity) {
+            hasInsufficientStock = true;
+            break;
+          }
+        } else {
+          const variant = product.variants.id(item.variant_id);
+          if (!variant) {
+            hasInsufficientStock = true;
+            break;
+          }
+          const sizeDetail = variant.moreDetails.id(item.size_id);
+          if (!sizeDetail || sizeDetail.stock < item.quantity) {
+            hasInsufficientStock = true;
+            break;
+          }
+        }
+      }
+
+      if (hasInsufficientStock) {
+        results.insufficientStock.push({
+          orderId: order._id,
+          orderNumber: order._id.toString().substring(0, 8),
+          userName: order.user_name
+        });
+        continue;
+      }
+
+      // Calculate shipping price
+      const user = await User.findById(order.user_id);
+      const { shippingPrice, isPending } = await calculateShippingPrice(user, order.price, companySettings);
+
+      if (isPending) {
+        results.shippingPending.push({
+          orderId: order._id,
+          orderNumber: order._id.toString().substring(0, 8),
+          userName: order.user_name,
+          email: order.email
+        });
+        continue;
+      }
+
+      // Update order
+      order.status = 'Accepted';
+      order.shipping_price = shippingPrice || 0;
+      order.total_price = order.price + (shippingPrice || 0);
+      order.updatedAt = new Date();
+      await order.save();
+
+      results.accepted.push({
+        orderId: order._id,
+        orderNumber: order._id.toString().substring(0, 8)
+      });
+
+      // Send email
+      try {
+        const orderDetailsText = order.orderedProducts
+          .map((item, index) => {
+            let itemDetails = `${index + 1}. ${item.product_name}`;
+            if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+            if (item.size) itemDetails += ` - Size: ${item.size}`;
+            itemDetails += `\n   Quantity: ${item.quantity}`;
+            itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
+            itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
+            return itemDetails;
+          })
+          .join('\n\n');
+
+        const emailSubject = `Payment Required - Order #${order._id} Accepted`;
+        const emailText = `Dear ${order.user_name},
+
+Thank you for your order with ${companySettings?.companyName || 'Mould Market'}!
+
+We are pleased to confirm that your order #${order._id} has been **ACCEPTED** by our team and is ready for processing.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+IMPORTANT: PAYMENT REQUIRED
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+To confirm your order and proceed with processing, please complete the payment of the total amount:
+
+TOTAL AMOUNT DUE: ₹${parseFloat(order.total_price || 0).toFixed(2)}
+
+ORDER DETAILS:
+${orderDetailsText}
+
+PRICING SUMMARY:
+Subtotal: ₹${parseFloat(order.price || 0).toFixed(2)}
+Shipping Cost: ₹${parseFloat(order.shipping_price || 0).toFixed(2)}
+TOTAL AMOUNT: ₹${parseFloat(order.total_price || 0).toFixed(2)}
+
+Please contact us to complete the payment.
+
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminEmail || ''}
+${companySettings?.adminPhoneNumber || ''}`;
+
+        await sendEmail(order.email, emailSubject, emailText);
+      } catch (emailError) {
+        console.error('Error sending acceptance email:', emailError);
+      }
+    }
+
+    // Emit Socket.IO events for accepted orders
+    const io = req.app.get('io');
+    if (io && results.accepted.length > 0) {
+      for (const accepted of results.accepted) {
+        const updatedOrder = await Order.findById(accepted.orderId);
+        io.to('admin_room').emit('shippingPriceUpdated', {
+          _id: updatedOrder._id,
+          shipping_price: updatedOrder.shipping_price,
+          total_price: updatedOrder.total_price,
+          status: updatedOrder.status,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${results.accepted.length} order(s) accepted successfully`,
+      results
+    });
+  } catch (error) {
+    console.error('Bulk accept error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Bulk Reject Orders
+const bulkReject = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'Order IDs array is required' });
+    }
+
+    const orders = await Order.find({ _id: { $in: orderIds } });
+    const companySettings = await CompanySettings.getSingleton();
+    
+    const results = {
+      rejected: [],
+      insufficientStock: [],
+      sufficientStock: [],
+      invalidStatus: []
+    };
+
+    for (const order of orders) {
+      // Can reject Pending, Accepted, or Confirm orders
+      if (!['Pending', 'Accepted', 'Confirm'].includes(order.status)) {
+        results.invalidStatus.push({
+          orderId: order._id,
+          currentStatus: order.status,
+          reason: 'Can only reject Pending, Accepted, or Confirm orders'
+        });
+        continue;
+      }
+
+      // For Confirm status, directly add to rejected (already paid, no stock check needed)
+      if (order.status === 'Confirm') {
+        order.status = 'Rejected';
+        order.updatedAt = new Date();
+        await order.save();
+
+        results.rejected.push({
+          orderId: order._id,
+          orderNumber: order._id.toString().substring(0, 8)
+        });
+
+        // Send rejection email
+        try {
+          await sendRejectionEmail(order, companySettings);
+        } catch (emailError) {
+          console.error('Error sending rejection email:', emailError);
+        }
+        continue;
+      }
+
+      // For Pending and Accepted, check stock
+      let hasInsufficientStock = false;
+      for (const item of order.orderedProducts) {
+        const product = await Product.findById(item.product_id);
+        if (!product) {
+          hasInsufficientStock = true;
+          break;
+        }
+
+        if (!item.variant_id) {
+          if (product.stock < item.quantity) {
+            hasInsufficientStock = true;
+            break;
+          }
+        } else {
+          const variant = product.variants.id(item.variant_id);
+          if (!variant) {
+            hasInsufficientStock = true;
+            break;
+          }
+          const sizeDetail = variant.moreDetails.id(item.size_id);
+          if (!sizeDetail || sizeDetail.stock < item.quantity) {
+            hasInsufficientStock = true;
+            break;
+          }
+        }
+      }
+
+      if (hasInsufficientStock) {
+        // Auto-reject orders with insufficient stock
+        order.status = 'Rejected';
+        order.updatedAt = new Date();
+        await order.save();
+
+        results.insufficientStock.push({
+          orderId: order._id,
+          orderNumber: order._id.toString().substring(0, 8),
+          userName: order.user_name
+        });
+
+        try {
+          await sendRejectionEmail(order, companySettings);
+        } catch (emailError) {
+          console.error('Error sending rejection email:', emailError);
+        }
+      } else {
+        // Orders with sufficient stock - user needs to confirm
+        results.sufficientStock.push({
+          orderId: order._id,
+          orderNumber: order._id.toString().substring(0, 8),
+          userName: order.user_name,
+          email: order.email,
+          status: order.status
+        });
+      }
+    }
+
+    // Emit Socket.IO events
+    const io = req.app.get('io');
+    if (io && (results.rejected.length > 0 || results.insufficientStock.length > 0)) {
+      const allRejected = [...results.rejected, ...results.insufficientStock];
+      for (const rejected of allRejected) {
+        const updatedOrder = await Order.findById(rejected.orderId);
+        io.to('admin_room').emit('shippingPriceUpdated', {
+          _id: updatedOrder._id,
+          shipping_price: updatedOrder.shipping_price,
+          total_price: updatedOrder.total_price,
+          status: updatedOrder.status,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${results.rejected.length + results.insufficientStock.length} order(s) rejected`,
+      results
+    });
+  } catch (error) {
+    console.error('Bulk reject error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Helper function for rejection email
+const sendRejectionEmail = async (order, companySettings) => {
+  const emailSubject = `Order #${order._id} - Status Updated to Rejected`;
+  const emailText = `Dear ${order.user_name},
+
+We regret to inform you that your order #${order._id} has been **REJECTED**.
+
+We sincerely apologize for this inconvenience. Your order could not be processed due to inventory constraints or other limitations.
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+CONTACT US
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+${companySettings?.companyName || 'Mould Market'}
+📧 Email: ${companySettings?.adminEmail || 'support@company.com'}
+📞 Phone: ${companySettings?.adminPhoneNumber || 'Contact us'}
+
+Thank you for your understanding.
+The Customer Service Team`;
+
+  await sendEmail(order.email, emailSubject, emailText);
+};
+
+// Bulk Confirm Orders
+const bulkConfirm = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'Order IDs array is required' });
+    }
+
+    const orders = await Order.find({ _id: { $in: orderIds } });
+    const companySettings = await CompanySettings.getSingleton();
+    const lowStockThreshold = companySettings.lowStockAlertThreshold || 10;
+    
+    const results = {
+      confirmed: [],
+      insufficientStock: [],
+      invalidStatus: []
+    };
+
+    for (const order of orders) {
+      if (order.status !== 'Accepted') {
+        results.invalidStatus.push({
+          orderId: order._id,
+          currentStatus: order.status,
+          reason: 'Can only confirm Accepted orders'
+        });
+        continue;
+      }
+
+      // Check and deduct stock
+      let hasInsufficientStock = false;
+      for (const item of order.orderedProducts) {
+        const product = await Product.findById(item.product_id);
+        if (!product) {
+          hasInsufficientStock = true;
+          break;
+        }
+
+        if (!item.variant_id) {
+          if (product.stock < item.quantity) {
+            hasInsufficientStock = true;
+            break;
+          }
+        } else {
+          const variant = product.variants.id(item.variant_id);
+          if (!variant) {
+            hasInsufficientStock = true;
+            break;
+          }
+          const sizeDetail = variant.moreDetails.id(item.size_id);
+          if (!sizeDetail || sizeDetail.stock < item.quantity) {
+            hasInsufficientStock = true;
+            break;
+          }
+        }
+      }
+
+      if (hasInsufficientStock) {
+        results.insufficientStock.push({
+          orderId: order._id,
+          orderNumber: order._id.toString().substring(0, 8),
+          userName: order.user_name
+        });
+        continue;
+      }
+
+      // Deduct stock and create notifications
+      for (const item of order.orderedProducts) {
+        const product = await Product.findById(item.product_id);
+        const itemKey = getItemKey(item.product_id, item.variant_id, item.size_id);
+        let stockLevel = 0;
+        let itemName = product.name;
+
+        if (!item.variant_id) {
+          product.stock -= item.quantity;
+          stockLevel = product.stock;
+        } else {
+          const variant = product.variants.id(item.variant_id);
+          const sizeDetail = variant.moreDetails.id(item.size_id);
+          sizeDetail.stock -= item.quantity;
+          stockLevel = sizeDetail.stock;
+          itemName += item.variant_name ? ` (${item.variant_name}` : '';
+          itemName += item.size ? `, Size ${item.size})` : ')';
+        }
+
+        await product.save();
+
+        // Check for low stock/out of stock notifications
+        const notified = notifiedItems.get(itemKey) || { lowStockNotified: false, outOfStockNotified: false };
+
+        if (stockLevel === 0 && !notified.outOfStockNotified) {
+          const notification = new Notification({
+            title: 'Out of Stock Alert',
+            message: `Out of Stock Alert: ${itemName} is out of stock (Product ID: ${item.product_id})`,
+            recipient: 'admin',
+            productId: item.product_id,
+            type: 'outOfStock',
+          });
+          await notification.save();
+
+          const io = req.app.get('io');
+          io.to('admin_room').emit('newOrderNotification', {
+            id: notification._id,
+            title: notification.title,
+            message: notification.message,
+            time: notification.time,
+            unread: notification.unread,
+            productId: notification.productId,
+            type: notification.type,
+          });
+
+          if (companySettings.receiveOutOfStockEmail && companySettings.adminEmail) {
+            try {
+              await sendEmail(
+                companySettings.adminEmail,
+                `Out of Stock Alert: ${itemName}`,
+                `The following item is out of stock:\n\n${itemName}\nProduct ID: ${item.product_id}\n\nPlease restock the item.\n\n--\n${companySettings.companyName || 'Mould Market'}`
+              );
+            } catch (emailError) {
+              console.error('Error sending out of stock email:', emailError);
+            }
+          }
+
+          notifiedItems.set(itemKey, { ...notified, outOfStockNotified: true });
+        } else if (stockLevel > 0 && stockLevel < lowStockThreshold && !notified.lowStockNotified) {
+          const notification = new Notification({
+            title: 'Low Stock Alert',
+            message: `Low Stock Alert: ${itemName} has ${stockLevel} units remaining (Product ID: ${item.product_id})`,
+            recipient: 'admin',
+            productId: item.product_id,
+            type: 'lowStock',
+          });
+          await notification.save();
+
+          const io = req.app.get('io');
+          io.to('admin_room').emit('newOrderNotification', {
+            id: notification._id,
+            title: notification.title,
+            message: notification.message,
+            time: notification.time,
+            unread: notification.unread,
+            productId: notification.productId,
+            type: notification.type,
+          });
+
+          if (companySettings.receiveLowStockEmail && companySettings.adminEmail) {
+            try {
+              await sendEmail(
+                companySettings.adminEmail,
+                `Low Stock Alert: ${itemName}`,
+                `The following item is low on stock:\n\n${itemName}\nRemaining Stock: ${stockLevel} units\nProduct ID: ${item.product_id}\n\nPlease consider restocking.\n\n--\n${companySettings.companyName || 'Mould Market'}`
+              );
+            } catch (emailError) {
+              console.error('Error sending low stock email:', emailError);
+            }
+          }
+
+          notifiedItems.set(itemKey, { ...notified, lowStockNotified: true });
+        } else if (stockLevel >= lowStockThreshold) {
+          notifiedItems.set(itemKey, { lowStockNotified: false, outOfStockNotified: false });
+        }
+      }
+
+      // Update order status
+      order.status = 'Confirm';
+      order.payment_status = 'Paid';
+      order.updatedAt = new Date();
+      await order.save();
+
+      results.confirmed.push({
+        orderId: order._id,
+        orderNumber: order._id.toString().substring(0, 8)
+      });
+
+      // Send email
+      try {
+        const orderDetailsText = order.orderedProducts
+          .map((item, index) => {
+            let itemDetails = `${index + 1}. ${item.product_name}`;
+            if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
+            if (item.size) itemDetails += ` - Size: ${item.size}`;
+            itemDetails += `\n   Quantity: ${item.quantity}`;
+            return itemDetails;
+          })
+          .join('\n\n');
+
+        const emailSubject = `Order #${order._id} - Confirmed & Payment Received`;
+        const emailText = `Dear ${order.user_name},
+
+Excellent news! Your order #${order._id} has been **CONFIRMED** and payment has been successfully received.
+
+ORDER ITEMS:
+${orderDetailsText}
+
+Your order is now being processed and will be dispatched soon.
+
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminEmail || ''}`;
+
+        await sendEmail(order.email, emailSubject, emailText);
+      } catch (emailError) {
+        console.error('Error sending confirmation email:', emailError);
+      }
+    }
+
+    // Emit Socket.IO events
+    const io = req.app.get('io');
+    if (io && results.confirmed.length > 0) {
+      for (const confirmed of results.confirmed) {
+        const updatedOrder = await Order.findById(confirmed.orderId);
+        io.to('admin_room').emit('shippingPriceUpdated', {
+          _id: updatedOrder._id,
+          shipping_price: updatedOrder.shipping_price,
+          total_price: updatedOrder.total_price,
+          status: updatedOrder.status,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${results.confirmed.length} order(s) confirmed successfully`,
+      results
+    });
+  } catch (error) {
+    console.error('Bulk confirm error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Bulk Dispatch Orders
+const bulkDispatch = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'Order IDs array is required' });
+    }
+
+    const orders = await Order.find({ _id: { $in: orderIds } });
+    const companySettings = await CompanySettings.getSingleton();
+    
+    const results = {
+      dispatched: [],
+      invalidStatus: []
+    };
+
+    for (const order of orders) {
+      if (order.status !== 'Confirm') {
+        results.invalidStatus.push({
+          orderId: order._id,
+          currentStatus: order.status,
+          reason: 'Can only dispatch Confirm orders'
+        });
+        continue;
+      }
+
+      order.status = 'Dispatched';
+      order.updatedAt = new Date();
+      await order.save();
+
+      results.dispatched.push({
+        orderId: order._id,
+        orderNumber: order._id.toString().substring(0, 8)
+      });
+
+      // Send email
+      try {
+        const emailSubject = `Order #${order._id} - Dispatched & On Its Way!`;
+        const emailText = `Dear ${order.user_name},
+
+Great news! Your order #${order._id} has been **DISPATCHED** and is on its way to you.
+
+Expected Delivery: 3-7 business days from dispatch
+
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminEmail || ''}`;
+
+        await sendEmail(order.email, emailSubject, emailText);
+      } catch (emailError) {
+        console.error('Error sending dispatch email:', emailError);
+      }
+    }
+
+    // Emit Socket.IO events
+    const io = req.app.get('io');
+    if (io && results.dispatched.length > 0) {
+      for (const dispatched of results.dispatched) {
+        const updatedOrder = await Order.findById(dispatched.orderId);
+        io.to('admin_room').emit('shippingPriceUpdated', {
+          _id: updatedOrder._id,
+          shipping_price: updatedOrder.shipping_price,
+          total_price: updatedOrder.total_price,
+          status: updatedOrder.status,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${results.dispatched.length} order(s) dispatched successfully`,
+      results
+    });
+  } catch (error) {
+    console.error('Bulk dispatch error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Bulk Complete Orders
+const bulkComplete = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'Order IDs array is required' });
+    }
+
+    const orders = await Order.find({ _id: { $in: orderIds } });
+    
+    const results = {
+      completed: [],
+      invalidStatus: []
+    };
+
+    for (const order of orders) {
+      if (order.status !== 'Dispatched') {
+        results.invalidStatus.push({
+          orderId: order._id,
+          currentStatus: order.status,
+          reason: 'Can only complete Dispatched orders'
+        });
+        continue;
+      }
+
+      order.status = 'Completed';
+      order.updatedAt = new Date();
+      await order.save();
+
+      results.completed.push({
+        orderId: order._id,
+        orderNumber: order._id.toString().substring(0, 8)
+      });
+    }
+
+    // Emit Socket.IO events
+    const io = req.app.get('io');
+    if (io && results.completed.length > 0) {
+      for (const completed of results.completed) {
+        const updatedOrder = await Order.findById(completed.orderId);
+        io.to('admin_room').emit('shippingPriceUpdated', {
+          _id: updatedOrder._id,
+          shipping_price: updatedOrder.shipping_price,
+          total_price: updatedOrder.total_price,
+          status: updatedOrder.status,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${results.completed.length} order(s) completed successfully`,
+      results
+    });
+  } catch (error) {
+    console.error('Bulk complete error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Bulk Delete Orders
+const bulkDelete = async (req, res) => {
+  try {
+    const { orderIds } = req.body;
+    
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'Order IDs array is required' });
+    }
+
+    const orders = await Order.find({ _id: { $in: orderIds } });
+    
+    const results = {
+      deleted: [],
+      failed: []
+    };
+
+    for (const order of orders) {
+      try {
+        await Order.findByIdAndDelete(order._id);
+        results.deleted.push({
+          orderId: order._id,
+          orderNumber: order._id.toString().substring(0, 8)
+        });
+      } catch (error) {
+        results.failed.push({
+          orderId: order._id,
+          reason: error.message
+        });
+      }
+    }
+
+    // Emit Socket.IO events
+    const io = req.app.get('io');
+    if (io && results.deleted.length > 0) {
+      for (const deleted of results.deleted) {
+        io.to('admin_room').emit('orderDeleted', { orderId: deleted.orderId });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${results.deleted.length} order(s) deleted successfully`,
+      results
+    });
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
+// Bulk Update Shipping Price
+const bulkUpdateShippingPrice = async (req, res) => {
+  try {
+    const { orderIds, shippingPrice } = req.body;
+    
+    if (!orderIds || !Array.isArray(orderIds) || orderIds.length === 0) {
+      return res.status(400).json({ message: 'Order IDs array is required' });
+    }
+
+    if (shippingPrice === undefined || isNaN(shippingPrice) || parseFloat(shippingPrice) < 0) {
+      return res.status(400).json({ message: 'Valid shipping price (>= 0) is required' });
+    }
+
+    const orders = await Order.find({ _id: { $in: orderIds } });
+    
+    const results = {
+      updated: [],
+      invalidStatus: []
+    };
+
+    for (const order of orders) {
+      // Can update shipping for Accepted, Confirm, or Rejected orders with existing shipping price
+      const canUpdate = 
+        order.status === 'Accepted' || 
+        order.status === 'Confirm' ||
+        (order.status === 'Rejected' && order.shipping_price > 0);
+
+      if (!canUpdate) {
+        results.invalidStatus.push({
+          orderId: order._id,
+          currentStatus: order.status,
+          reason: 'Can only update shipping for Accepted, Confirm, or Rejected (with existing shipping) orders'
+        });
+        continue;
+      }
+
+      const oldShippingPrice = order.shipping_price;
+      order.shipping_price = parseFloat(shippingPrice);
+      order.total_price = order.price + parseFloat(shippingPrice);
+      order.updatedAt = new Date();
+      await order.save();
+
+      results.updated.push({
+        orderId: order._id,
+        orderNumber: order._id.toString().substring(0, 8),
+        oldShippingPrice,
+        newShippingPrice: order.shipping_price
+      });
+
+      // Send email
+      try {
+        const companySettings = await CompanySettings.getSingleton();
+        const emailSubject = `Shipping Cost Updated - Order #${order._id}`;
+        const emailText = `Dear ${order.user_name},
+
+The shipping cost for your order #${order._id} has been updated.
+
+Previous Shipping Cost: ₹${parseFloat(oldShippingPrice || 0).toFixed(2)}
+Updated Shipping Cost: ₹${parseFloat(order.shipping_price || 0).toFixed(2)}
+New Total Amount: ₹${parseFloat(order.total_price || 0).toFixed(2)}
+
+${companySettings?.companyName || 'Mould Market'}
+${companySettings?.adminEmail || ''}`;
+
+        await sendEmail(order.email, emailSubject, emailText);
+      } catch (emailError) {
+        console.error('Error sending shipping update email:', emailError);
+      }
+    }
+
+    // Emit Socket.IO events
+    const io = req.app.get('io');
+    if (io && results.updated.length > 0) {
+      for (const updated of results.updated) {
+        const updatedOrder = await Order.findById(updated.orderId);
+        io.to('admin_room').emit('shippingPriceUpdated', {
+          _id: updatedOrder._id,
+          shipping_price: updatedOrder.shipping_price,
+          total_price: updatedOrder.total_price,
+          status: updatedOrder.status,
+        });
+      }
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: `${results.updated.length} order(s) shipping price updated successfully`,
+      results
+    });
+  } catch (error) {
+    console.error('Bulk update shipping price error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
 module.exports = {
     placeOrder,
     fetchOrders,
@@ -2030,4 +2874,12 @@ module.exports = {
     sendAcceptEmailWhenShippingPriceAddedAutomatically,
     rejectZeroQuantityOrder,
     confirmOrderUpdate,
+    // Bulk actions
+    bulkAccept,
+    bulkReject,
+    bulkConfirm,
+    bulkDispatch,
+    bulkComplete,
+    bulkDelete,
+    bulkUpdateShippingPrice
 };
