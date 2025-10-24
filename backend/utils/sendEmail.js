@@ -1,7 +1,7 @@
 const transporter = require("../config/email");
 const CompanySettings = require("../models/CompanySettings");
 
-async function sendEmail(to, subject, text) {
+async function sendEmail(to, subject, text, attachments = []) {
   try {
     // Fetch company settings
     const settings = await CompanySettings.getSingleton();
@@ -11,6 +11,7 @@ async function sendEmail(to, subject, text) {
       to,
       subject,
       text, // plain text only
+      attachments: attachments // array of attachments
     };
 
     const info = await transporter.sendMail(mailOptions);
