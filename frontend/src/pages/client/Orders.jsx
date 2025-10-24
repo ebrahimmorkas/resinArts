@@ -22,6 +22,8 @@ import {
   AlertCircle,
   RotateCcw,
 } from "lucide-react"
+import Navbar from "../../components/client/common/Navbar"
+import Footer from "../../components/client/common/Footer"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
 import { CompanySettingsContext } from "../../../Context/CompanySettingsContext"
@@ -265,6 +267,11 @@ export default function Orders() {
   const [customYear, setCustomYear] = useState("");
   const [customStartYear, setCustomStartYear] = useState("");
   const [customEndYear, setCustomEndYear] = useState("");
+  // Search functionality states for Navbar
+// const [searchQuery, setSearchQuery] = useState("")
+const [searchResults, setSearchResults] = useState([])
+const [showSearchResults, setShowSearchResults] = useState(false)
+const [isSearching, setIsSearching] = useState(false)
   // const [isAutoSwitching, setIsAutoSwitching] = useState(false);
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -643,6 +650,37 @@ const filteredOrders = useMemo(() => {
     );
   };
 
+  // Search handlers for Navbar
+const handleSearchChange = (query) => {
+  setSearchQuery(query)
+  // Orders page doesn't need search functionality, so we keep it simple
+  setSearchResults([])
+  setShowSearchResults(false)
+}
+
+const handleSearchResultClick = () => {
+  // No-op for orders page
+  setShowSearchResults(false)
+}
+
+const handleClearSearch = () => {
+  setSearchQuery("")
+  setSearchResults([])
+  setShowSearchResults(false)
+}
+
+const highlightMatchedText = (text, query) => {
+  // Simple highlight function
+  return text
+}
+
+const handleSearchKeyPress = (e) => {
+  // No-op for orders page
+  if (e.key === 'Enter') {
+    setShowSearchResults(false)
+  }
+}
+
   const OrderDetailsModal = ({ order, onClose }) => {
     if (!order) return null;
     return (
@@ -776,6 +814,19 @@ const filteredOrders = useMemo(() => {
 }
 
   return (
+    <>
+      <Navbar
+        searchQuery={searchQuery}
+        setSearchQuery={handleSearchChange}
+        searchResults={searchResults}
+        showSearchResults={showSearchResults}
+        setShowSearchResults={setShowSearchResults}
+        isSearching={isSearching}
+        onSearchResultClick={handleSearchResultClick}
+        onClearSearch={handleClearSearch}
+        highlightMatchedText={highlightMatchedText}
+        handleSearchKeyPress={handleSearchKeyPress}
+      />
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 p-6">
       <div className="max-w-7xl mx-auto">
         {/* Professional Header */}
@@ -1136,6 +1187,9 @@ const filteredOrders = useMemo(() => {
       </div>
       
       <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
-    </div>
+      </div>
+      
+      <Footer />
+    </>
   );
 }
