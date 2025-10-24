@@ -718,7 +718,7 @@ export default function ProductDetailsPage() {
 
                   <button
                     onClick={() => removeFromCart(cartKey)}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+                    className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors dark:text-white"
                   >
                     <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
                     Remove from Cart

@@ -1602,32 +1602,66 @@ const CategoryNavigationBar = () => {
     const itemInCart = cartKey ? cartItems[cartKey] : null;
     
     return itemInCart ? (
-      // Item is in cart - show quantity controls and remove button
-      <>
-        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">In Cart:</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUpdateQuantity(cartKey, -1);
-              }}
-              className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
-            >
-              <Minus className="w-3 h-3" />
-            </button>
-            <span className="w-12 text-center font-semibold">{itemInCart.quantity}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUpdateQuantity(cartKey, 1);
-              }}
-              className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
+  // Item is in cart - show quantity controls and remove button
+  <>
+    <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+      <span className="text-sm text-gray-600 dark:text-gray-400">In Cart:</span>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleUpdateQuantity(cartKey, -1);
+          }}
+          className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+        >
+          <Minus className="w-3 h-3" />
+        </button>
+        <input
+          type="number"
+          value={itemInCart.quantity}
+          onChange={(e) => {
+            e.stopPropagation();
+            const val = e.target.value;
+            if (val === '') {
+              // Temporarily allow empty for editing
+              return;
+            }
+            const num = Number.parseInt(val);
+            if (!isNaN(num) && num >= 1) {
+              const diff = num - itemInCart.quantity;
+              if (diff !== 0) {
+                handleUpdateQuantity(cartKey, diff);
+              }
+            }
+          }}
+          onBlur={(e) => {
+            if (e.target.value === '' || e.target.value === '0') {
+              // If empty or 0, reset to 1
+              const diff = 1 - itemInCart.quantity;
+              if (diff !== 0) {
+                handleUpdateQuantity(cartKey, diff);
+              }
+            }
+          }}
+          onKeyPress={(e) => {
+            if (e.key === 'Enter') {
+              e.target.blur();
+            }
+          }}
+          onClick={(e) => e.stopPropagation()}
+          className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm font-semibold"
+        />
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleUpdateQuantity(cartKey, 1);
+          }}
+          className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+        >
+          <Plus className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
 
         <button
           onClick={(e) => {
@@ -1652,13 +1686,35 @@ const CategoryNavigationBar = () => {
             >
               <Minus className="w-3 h-3" />
             </button>
-            <input
-              type="number"
-              min="1"
-              // value={addQuantity}
-              onChange={(e) => setAddQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
-              className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
-            />
+           <input
+  type="number"
+  value={addQuantity}
+  onChange={(e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setAddQuantity('');
+    } else {
+      const num = Number.parseInt(val);
+      if (!isNaN(num) && num >= 1) {
+        setAddQuantity(num);
+      }
+    }
+  }}
+  onBlur={(e) => {
+    if (e.target.value === '' || e.target.value === '0') {
+      setAddQuantity(1);
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      if (e.target.value === '' || e.target.value === '0') {
+        setAddQuantity(1);
+      }
+      handleAddToCartWithQuantity();
+    }
+  }}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
+/>
             <button
               onClick={() => setAddQuantity(addQuantity + 1)}
               className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
@@ -2238,7 +2294,35 @@ const CategoryNavigationBar = () => {
           >
             <Minus className="w-3 h-3" />
           </button>
-          <span className="w-12 text-center font-semibold">{itemInCart.quantity}</span>
+          <input
+  type="number"
+  value={itemInCart.quantity}
+  onChange={(e) => {
+    const val = e.target.value;
+    if (val === '') return;
+    const num = Number.parseInt(val);
+    if (!isNaN(num) && num >= 1) {
+      const diff = num - itemInCart.quantity;
+      if (diff !== 0) {
+        handleUpdateQuantity(cartKey, diff);
+      }
+    }
+  }}
+  onBlur={(e) => {
+    if (e.target.value === '' || e.target.value === '0') {
+      const diff = 1 - itemInCart.quantity;
+      if (diff !== 0) {
+        handleUpdateQuantity(cartKey, diff);
+      }
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  }}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm font-semibold"
+/>
           <button
             onClick={() => handleUpdateQuantity(cartKey, 1)}
             className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
@@ -2267,13 +2351,35 @@ const CategoryNavigationBar = () => {
           >
             <Minus className="w-3 h-3" />
           </button>
-          <input
-            type="number"
-            min="1"
-            // value={localQuantityToAdd}
-            onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
-            className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
-          />
+        <input
+  type="number"
+  value={localQuantityToAdd}
+  onChange={(e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setLocalQuantityToAdd('');
+    } else {
+      const num = Number.parseInt(val);
+      if (!isNaN(num) && num >= 1) {
+        setLocalQuantityToAdd(num);
+      }
+    }
+  }}
+  onBlur={(e) => {
+    if (e.target.value === '' || e.target.value === '0') {
+      setLocalQuantityToAdd(1);
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      if (e.target.value === '' || e.target.value === '0') {
+        setLocalQuantityToAdd(1);
+      }
+      handleAddToCartFromModal();
+    }
+  }}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
+/>
           <button
             onClick={() => setLocalQuantityToAdd(localQuantityToAdd + 1)}
             className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
@@ -2308,12 +2414,34 @@ const CategoryNavigationBar = () => {
                   <Minus className="w-3 h-3" />
                 </button>
                 <input
-                  type="number"
-                  min="1"
-                  // value={localQuantityToAdd}
-                  onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
-                  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
-                />
+  type="number"
+  value={localQuantityToAdd}
+  onChange={(e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setLocalQuantityToAdd('');
+    } else {
+      const num = Number.parseInt(val);
+      if (!isNaN(num) && num >= 1) {
+        setLocalQuantityToAdd(num);
+      }
+    }
+  }}
+  onBlur={(e) => {
+    if (e.target.value === '' || e.target.value === '0') {
+      setLocalQuantityToAdd(1);
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      if (e.target.value === '' || e.target.value === '0') {
+        setLocalQuantityToAdd(1);
+      }
+      handleAddToCartFromModal();
+    }
+  }}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
+/>
                 <button
                   onClick={() => setLocalQuantityToAdd(localQuantityToAdd + 1)}
                   className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
