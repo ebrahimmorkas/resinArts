@@ -324,24 +324,55 @@ export default function CartModal({
                             <Trash2 className="h-4 w-4" />
                           </button>
                           <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg p-1 dark:bg-gray-700">
-                            <button
-                              onClick={() => handleUpdateQuantity(cartKey, -1)}
-                              className="p-1 hover:bg-white rounded transition-colors"
-                              disabled={cartLoading}
-                            >
-                              <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
-                            </button>
-                            <span className="font-semibold text-sm sm:text-base min-w-[24px] text-center">
-                              {item.quantity}
-                            </span>
-                            <button
-                              onClick={() => handleUpdateQuantity(cartKey, 1)}
-                              className="p-1 hover:bg-white rounded transition-colors"
-                              disabled={cartLoading}
-                            >
-                              <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-                            </button>
-                          </div>
+  <button
+    onClick={() => handleUpdateQuantity(cartKey, -1)}
+    className="p-1 hover:bg-white rounded transition-colors dark:hover:bg-gray-600"
+    disabled={cartLoading}
+  >
+    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+  </button>
+  <input
+    type="number"
+    value={item.quantity}
+    onChange={(e) => {
+      const val = e.target.value;
+      if (val === '') {
+        // Temporarily allow empty for editing
+        return;
+      }
+      const num = Number.parseInt(val);
+      if (!isNaN(num) && num >= 1) {
+        const diff = num - item.quantity;
+        if (diff !== 0) {
+          handleUpdateQuantity(cartKey, diff);
+        }
+      }
+    }}
+    onBlur={(e) => {
+      if (e.target.value === '' || e.target.value === '0') {
+        // If empty or 0, reset to 1
+        const diff = 1 - item.quantity;
+        if (diff !== 0) {
+          handleUpdateQuantity(cartKey, diff);
+        }
+      }
+    }}
+    onKeyPress={(e) => {
+      if (e.key === 'Enter') {
+        e.target.blur();
+      }
+    }}
+    disabled={cartLoading}
+    className="font-semibold text-sm sm:text-base w-12 sm:w-14 text-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+  />
+  <button
+    onClick={() => handleUpdateQuantity(cartKey, 1)}
+    className="p-1 hover:bg-white rounded transition-colors dark:hover:bg-gray-600"
+    disabled={cartLoading}
+  >
+    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+  </button>
+</div>
                         </div>
                       </div>
                     </div>
