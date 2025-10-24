@@ -1,5 +1,6 @@
 const CompanySettings = require('../models/CompanySettings');
 const { cloudinary } = require("../utils/cloudinary");
+const { restartOrderDeletionCron } = require('../utils/orderDeletionCron');
 
 /**
  * Delete image from Cloudinary
@@ -200,6 +201,11 @@ const updateCompanySettings = async (req, res) => {
     }
 
     await settings.save();
+
+    // Restart cron job if auto delete settings changed
+if (autoDeleteOrders) {
+    await restartOrderDeletionCron();
+}
 
     res.status(200).json({
       success: true,

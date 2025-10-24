@@ -2,7 +2,7 @@ const authenticate = require('../middlewares/authenticate');
 const authorize = require('../middlewares/authorize');
 const express = require('express');
 const router = express.Router();
-const {placeOrder, fetchOrders, shippingPriceUpdate, handleStatusChange, editOrder, sendAcceptEmailWhenShippingPriceAddedAutomatically, rejectZeroQuantityOrder, confirmOrderUpdate, bulkAccept, bulkReject, bulkConfirm, bulkDispatch, bulkComplete, bulkDelete, bulkUpdateShippingPrice} = require('../controllers/orderController');
+const { placeOrder, fetchOrders, shippingPriceUpdate, handleStatusChange, editOrder, sendAcceptEmailWhenShippingPriceAddedAutomatically, rejectZeroQuantityOrder, confirmOrderUpdate, bulkAccept, bulkReject, bulkConfirm, bulkDispatch, bulkComplete, bulkDelete, bulkUpdateShippingPrice, automaticDelete } = require('../controllers/orderController');
 
 router.post('/place-order', authenticate, authorize(['user']), placeOrder);
 router.get('/all', authenticate, authorize(['admin']), fetchOrders);
@@ -20,5 +20,7 @@ router.post('/bulk-dispatch', authenticate, authorize(['admin']), bulkDispatch);
 router.post('/bulk-complete', authenticate, authorize(['admin']), bulkComplete);
 router.post('/bulk-delete', authenticate, authorize(['admin']), bulkDelete);
 router.post('/bulk-update-shipping', authenticate, authorize(['admin']), bulkUpdateShippingPrice);
+// Cron job
+router.delete('/automatic-delete', authenticate, authorize(['admin']), automaticDelete);
 
 module.exports = router;

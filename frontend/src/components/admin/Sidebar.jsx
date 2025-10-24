@@ -178,10 +178,10 @@ const Sidebar = ({ isOpen, onClose }) => {
     },
   ];
 
-  const bottomMenuItems = [
-    { id: 'help', label: 'Help & Support', icon: HelpCircle, href: '/admin/panel/help' },
-    { id: 'logout', label: 'Logout', icon: LogOut, href: '/logout', danger: true },
-  ];
+  // const bottomMenuItems = [
+  //   { id: 'help', label: 'Help & Support', icon: HelpCircle, href: '/admin/panel/help' },
+  //   { id: 'logout', label: 'Logout', icon: LogOut, href: '/logout', danger: true },
+  // ];
 
   const MenuItem = ({ item, level = 0 }) => {
     const hasSubmenu = item.submenu && item.submenu.length > 0;
@@ -301,10 +301,10 @@ const Sidebar = ({ isOpen, onClose }) => {
               <Store className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
   {loadingSettings ? 'Loading...' : companySettings?.companyName || 'Online Shop'}
 </h2>
-              <p className="text-sm text-gray-500">Admin Panel</p>
+              <p className="text-sm text-gray-500 dark:text-gray">Admin Panel</p>
             </div>
           </div>
           <button
@@ -326,7 +326,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           </nav>
         </div>
 
-        {/* Bottom Menu Items */}
+        {/* Bottom Menu Items
         <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
           <nav className="p-2">
             <div className="space-y-1">
@@ -335,7 +335,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               ))}
             </div>
           </nav>
-        </div>
+        </div> */}
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
@@ -344,10 +344,10 @@ const Sidebar = ({ isOpen, onClose }) => {
               <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
   {loadingSettings ? 'Loading...' : companySettings?.adminName || 'Admin'}
 </p>
-<p className="text-xs text-gray-500">
+<p className="text-xs text-gray-500 dark:text-gray-400">
   {loadingSettings ? 'Loading...' : companySettings?.adminEmail || 'support@onlineshop.com'}
 </p>
             </div>

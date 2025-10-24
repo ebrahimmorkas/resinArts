@@ -70,7 +70,7 @@ const orderSchema = mongoose.Schema({
     orderedProducts: [orderedProductSchema],
     status: {
         type: String,
-        enum: ["Accepted", "Rejected", "In-Progress", "Dispatched", "Completed", "Pending", "Confirm"],
+        enum: ["Accepted", "Rejected", "Dispatched", "Completed", "Pending", "Confirm"],
         required: true,
         default: "Pending",
     },

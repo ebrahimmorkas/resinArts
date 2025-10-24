@@ -8,6 +8,7 @@ const Discount = require('../models/Discount');
 const { removeAbandonedCartByUserId } = require('./abandonedCartController');
 const Notification = require('../models/Notification');
 const AbandonedCart = require('../models/AbandonedCart');
+const { checkAndDeleteOrders } = require('../utils/orderDeletionCron');
 
 const calculateShippingPrice = async (user, itemsTotal, companySettings) => {
   try {
@@ -2864,6 +2865,25 @@ ${companySettings?.adminEmail || ''}`;
     return res.status(500).json({ message: 'Internal server error' });
   }
 };
+
+// Manual trigger for automatic order deletion
+const automaticDelete = async (req, res) => {
+    try {
+        await checkAndDeleteOrders();
+        
+        res.status(200).json({
+            success: true,
+            message: 'Automatic order deletion process completed. Check admin email for details.'
+        });
+    } catch (error) {
+        console.error('Error in manual order deletion trigger:', error);
+        res.status(500).json({
+            success: false,
+            message: 'Failed to trigger automatic order deletion',
+            error: error.message
+        });
+    }
+};
 module.exports = {
     placeOrder,
     fetchOrders,
@@ -2881,5 +2901,7 @@ module.exports = {
     bulkDispatch,
     bulkComplete,
     bulkDelete,
-    bulkUpdateShippingPrice
+    bulkUpdateShippingPrice,
+    // Cron job
+    automaticDelete
 };
