@@ -1262,10 +1262,13 @@ const CategoryNavigationBar = () => {
 )
     const [addQuantity, setAddQuantity] = useState(1)
     const [showDetails, setShowDetails] = useState(false)
+    const [localQuantity, setLocalQuantity] = useState({})
 
     // Use ref to store initial selections to prevent resets
     const initialVariantRef = useRef(product.variants?.[0] || null)
     const initialSizeDetailRef = useRef(selectedVariant?.moreDetails?.[0] || null)
+    const inputRef = useRef(null)
+
 
     useEffect(() => {
   if (selectedVariant && selectedVariant.moreDetails) {
@@ -1617,40 +1620,55 @@ const CategoryNavigationBar = () => {
           <Minus className="w-3 h-3" />
         </button>
         <input
-          type="number"
-          value={itemInCart.quantity}
-          onChange={(e) => {
-            e.stopPropagation();
-            const val = e.target.value;
-            if (val === '') {
-              // Temporarily allow empty for editing
-              return;
-            }
-            const num = Number.parseInt(val);
-            if (!isNaN(num) && num >= 1) {
-              const diff = num - itemInCart.quantity;
-              if (diff !== 0) {
-                handleUpdateQuantity(cartKey, diff);
-              }
-            }
-          }}
-          onBlur={(e) => {
-            if (e.target.value === '' || e.target.value === '0') {
-              // If empty or 0, reset to 1
-              const diff = 1 - itemInCart.quantity;
-              if (diff !== 0) {
-                handleUpdateQuantity(cartKey, diff);
-              }
-            }
-          }}
-          onKeyPress={(e) => {
-            if (e.key === 'Enter') {
-              e.target.blur();
-            }
-          }}
-          onClick={(e) => e.stopPropagation()}
-          className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm font-semibold"
-        />
+  ref={inputRef}
+  type="number"
+  value={localQuantity[cartKey] !== undefined ? localQuantity[cartKey] : itemInCart.quantity}
+  onChange={(e) => {
+    e.stopPropagation();
+    const val = e.target.value;
+    setLocalQuantity(prev => ({ ...prev, [cartKey]: val }));
+  }}
+  onBlur={(e) => {
+    const val = e.target.value;
+    const num = Number.parseInt(val);
+    
+    if (val === '' || val === '0' || isNaN(num) || num < 1) {
+      // Reset to 1
+      const diff = 1 - itemInCart.quantity;
+      if (diff !== 0) {
+        handleUpdateQuantity(cartKey, diff);
+      }
+      setLocalQuantity(prev => {
+        const newState = { ...prev };
+        delete newState[cartKey];
+        return newState;
+      });
+    } else if (num !== itemInCart.quantity) {
+      // Update quantity
+      const diff = num - itemInCart.quantity;
+      handleUpdateQuantity(cartKey, diff);
+      setLocalQuantity(prev => {
+        const newState = { ...prev };
+        delete newState[cartKey];
+        return newState;
+      });
+    } else {
+      // Same value, just clear local state
+      setLocalQuantity(prev => {
+        const newState = { ...prev };
+        delete newState[cartKey];
+        return newState;
+      });
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  }}
+  onClick={(e) => e.stopPropagation()}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm font-semibold"
+/>
         <button
           onClick={(e) => {
             e.stopPropagation();
