@@ -1,21 +1,30 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, ChevronDown, ChevronUp, AlertTriangle } from 'lucide-react';
 
 function BulkDeleteSelectionModal({ isOpen, onClose, onConfirm, ordersByStatus }) {
-  const [expandedStatuses, setExpandedStatuses] = useState(
-    Object.keys(ordersByStatus).reduce((acc, status) => {
-      acc[status] = true;
-      return acc;
-    }, {})
-  );
-  const [selectedOrders, setSelectedOrders] = useState(
-    Object.values(ordersByStatus)
-      .flat()
-      .reduce((acc, order) => {
-        acc[order.orderId] = true;
+  const [expandedStatuses, setExpandedStatuses] = useState({});
+  const [selectedOrders, setSelectedOrders] = useState({});
+
+  // Reset state when modal opens or ordersByStatus changes
+  React.useEffect(() => {
+    if (isOpen && Object.keys(ordersByStatus).length > 0) {
+      // Initialize expanded statuses
+      const initialExpanded = Object.keys(ordersByStatus).reduce((acc, status) => {
+        acc[status] = true;
         return acc;
-      }, {})
-  );
+      }, {});
+      setExpandedStatuses(initialExpanded);
+
+      // Initialize selected orders (all checked by default)
+      const initialSelection = Object.values(ordersByStatus)
+        .flat()
+        .reduce((acc, order) => {
+          acc[order.orderId] = true;
+          return acc;
+        }, {});
+      setSelectedOrders(initialSelection);
+    }
+  }, [isOpen, ordersByStatus]);
 
   if (!isOpen) return null;
 
@@ -33,23 +42,23 @@ function BulkDeleteSelectionModal({ isOpen, onClose, onConfirm, ordersByStatus }
     }));
   };
 
-  const toggleAll = () => {
-    const allSelected = Object.keys(selectedOrders).every(id => selectedOrders[id]);
-    const newSelection = {};
-    Object.values(ordersByStatus)
-      .flat()
-      .forEach(order => {
-        newSelection[order.orderId] = !allSelected;
-      });
-    setSelectedOrders(newSelection);
-  };
+const toggleAll = () => {
+  const allOrders = Object.values(ordersByStatus).flat();
+  const allSelected = allOrders.every(order => selectedOrders[order.orderId]);
+  const newSelection = {};
+  allOrders.forEach(order => {
+    newSelection[order.orderId] = !allSelected;
+  });
+  setSelectedOrders(newSelection);
+};
 
   const handleConfirm = () => {
     const selectedOrderIds = Object.keys(selectedOrders).filter(id => selectedOrders[id]);
     onConfirm(selectedOrderIds);
   };
 
-  const allSelected = Object.keys(selectedOrders).every(id => selectedOrders[id]);
+  const allOrders = Object.values(ordersByStatus).flat();
+const allSelected = allOrders.every(order => selectedOrders[order.orderId]);
   const selectedCount = Object.values(selectedOrders).filter(Boolean).length;
 
   return (
@@ -99,19 +108,37 @@ function BulkDeleteSelectionModal({ isOpen, onClose, onConfirm, ordersByStatus }
             {Object.keys(ordersByStatus).map((status) => (
               <div key={status} className="border border-gray-200 dark:border-gray-700 rounded-lg overflow-hidden">
                 {/* Status Header */}
-                <button
-                  onClick={() => toggleStatus(status)}
-                  className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <span className="text-sm font-semibold text-gray-900 dark:text-white">
-                    {status} ({ordersByStatus[status].length})
-                  </span>
-                  {expandedStatuses[status] ? (
-                    <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  ) : (
-                    <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
-                  )}
-                </button>
+<div className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 dark:bg-gray-800">
+  <div className="flex items-center space-x-3 flex-1">
+    <input
+      type="checkbox"
+      checked={ordersByStatus[status].every(order => selectedOrders[order.orderId])}
+      onChange={(e) => {
+        e.stopPropagation();
+        const newSelection = { ...selectedOrders };
+        ordersByStatus[status].forEach(order => {
+          newSelection[order.orderId] = e.target.checked;
+        });
+        setSelectedOrders(newSelection);
+      }}
+      onClick={(e) => e.stopPropagation()}
+      className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2"
+    />
+    <span className="text-sm font-semibold text-gray-900 dark:text-white">
+      {status} ({ordersByStatus[status].length})
+    </span>
+  </div>
+  <button
+    onClick={() => toggleStatus(status)}
+    className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded transition-colors"
+  >
+    {expandedStatuses[status] ? (
+      <ChevronUp className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+    ) : (
+      <ChevronDown className="w-4 h-4 text-gray-600 dark:text-gray-400" />
+    )}
+  </button>
+</div>
 
                 {/* Orders List */}
                 {expandedStatuses[status] && (
