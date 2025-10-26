@@ -2884,6 +2884,40 @@ const automaticDelete = async (req, res) => {
         });
     }
 };
+
+// Delete Single Order
+const deleteSingleOrder = async (req, res) => {
+  try {
+    const { orderId } = req.params;
+    
+    if (!orderId) {
+      return res.status(400).json({ message: 'Order ID is required' });
+    }
+
+    const order = await Order.findById(orderId);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    await Order.findByIdAndDelete(orderId);
+
+    // Emit Socket.IO event
+    const io = req.app.get('io');
+    if (io) {
+      io.to('admin_room').emit('orderDeleted', { orderId });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: 'Order deleted successfully',
+      orderId
+    });
+  } catch (error) {
+    console.error('Delete single order error:', error);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+
 module.exports = {
     placeOrder,
     fetchOrders,
@@ -2894,6 +2928,7 @@ module.exports = {
     sendAcceptEmailWhenShippingPriceAddedAutomatically,
     rejectZeroQuantityOrder,
     confirmOrderUpdate,
+    deleteSingleOrder,
     // Bulk actions
     bulkAccept,
     bulkReject,

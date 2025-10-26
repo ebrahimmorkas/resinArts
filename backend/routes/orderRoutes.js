@@ -2,7 +2,7 @@ const authenticate = require('../middlewares/authenticate');
 const authorize = require('../middlewares/authorize');
 const express = require('express');
 const router = express.Router();
-const { placeOrder, fetchOrders, shippingPriceUpdate, handleStatusChange, editOrder, sendAcceptEmailWhenShippingPriceAddedAutomatically, rejectZeroQuantityOrder, confirmOrderUpdate, bulkAccept, bulkReject, bulkConfirm, bulkDispatch, bulkComplete, bulkDelete, bulkUpdateShippingPrice, automaticDelete } = require('../controllers/orderController');
+const { placeOrder, fetchOrders, shippingPriceUpdate, handleStatusChange, editOrder, sendAcceptEmailWhenShippingPriceAddedAutomatically, rejectZeroQuantityOrder, confirmOrderUpdate, bulkAccept, bulkReject, bulkConfirm, bulkDispatch, bulkComplete, bulkDelete, bulkUpdateShippingPrice, automaticDelete, deleteSingleOrder } = require('../controllers/orderController');
 
 router.post('/place-order', authenticate, authorize(['user']), placeOrder);
 router.get('/all', authenticate, authorize(['admin']), fetchOrders);
@@ -12,6 +12,7 @@ router.post('/edit-order/:orderId', authenticate, authorize(['admin']), editOrde
 router.post('/sendAcceptEmailWhenShippingPriceAddedAutomatically', authenticate, authorize(['admin']), sendAcceptEmailWhenShippingPriceAddedAutomatically );
 router.post('/reject-zero-quantity-order', authenticate, authorize(['admin']), rejectZeroQuantityOrder);
 router.post('/confirm-order-update', authenticate, authorize(['admin']), confirmOrderUpdate);
+router.delete('/delete/:orderId', authenticate, authorize(['admin']), deleteSingleOrder);
 // Bulk actions routes
 router.post('/bulk-accept', authenticate, authorize(['admin']), bulkAccept);
 router.post('/bulk-reject', authenticate, authorize(['admin']), bulkReject);
