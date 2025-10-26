@@ -350,7 +350,7 @@ const VariantSelectionModal = ({ product, onClose, onConfirm, alreadyAddedVarian
               <button
                 onClick={handleConfirm}
                 disabled={!selectedVariant || !selectedSize}
-                className="flex-1 px-4 py-2 bg-blue-600 text-green-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                className="dark:text-gray-400 flex-1 px-4 py-2 bg-blue-600 text-green-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
               >
                 Confirm Selection
               </button>
@@ -884,7 +884,7 @@ if (selectedCategoryIds.length > 0) {
                 <button
                   onClick={handleAddQuantity}
                   disabled={selectedProducts.length === 0}
-                  className="px-6 py-2 bg-blue-600 text-blue-900 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
+                  className="px-6 py-2 dark:text-gray-400 bg-blue-600 text-blue-900 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors font-medium flex items-center gap-2"
                 >
                   <Plus className="h-5 w-5" />
                   Add Quantity

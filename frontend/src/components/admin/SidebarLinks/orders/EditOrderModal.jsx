@@ -298,8 +298,8 @@ const validateProductStock = async (product) => {
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto">
+        <div className="bg-white dark:bg-gray-900 rounded-xl shadow-2xl max-w-md w-full my-8 max-h-[calc(100vh-4rem)]">
           {/* Modal Header */}
           <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 px-6 py-4 flex justify-between items-center rounded-t-xl">
             <h2 className="text-2xl font-bold text-gray-900 dark:text-white">Edit the order</h2>
@@ -309,7 +309,7 @@ const validateProductStock = async (product) => {
           </div>
 
           {/* Start of modal content */}
-          <form onSubmit={handleEditOrder} className="p-6">
+          <form onSubmit={handleEditOrder} className="p-6 overflow-y-auto max-h-[calc(100vh-12rem)]">
             {products.map((product, index) => (
   <div key={index} className="mb-4 border-b pb-2 dark:border-gray-700">
     <div className="flex items-start justify-between">
