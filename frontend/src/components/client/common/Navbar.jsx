@@ -1,6 +1,6 @@
-import { useState, useContext } from "react"
+import { useState, useContext, useEffect, useRef } from "react"
 import { Link, useNavigate } from 'react-router-dom'
-import { Search, User, ShoppingCart, ChevronDown, X, Settings, Package, LogOut } from "lucide-react"
+import { Search, User, ShoppingCart, ChevronDown, X, Settings, Package, LogOut, Heart } from "lucide-react"
 import axios from "axios"
 import { AuthContext } from "../../../../Context/AuthContext"
 import { useCart } from "../../../../Context/CartContext"
@@ -28,6 +28,23 @@ export default function Navbar({
   const { announcement, loadingAnnouncement, announcementError } = useContext(AnnouncementContext)
   const [isProfileOpen, setIsProfileOpen] = useState(false)
   const navigate = useNavigate()
+  const profileDropdownRef = useRef(null)
+
+  useEffect(() => {
+  const handleClickOutside = (event) => {
+    if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target)) {
+      setIsProfileOpen(false)
+    }
+  }
+
+  if (isProfileOpen) {
+    document.addEventListener('mousedown', handleClickOutside)
+  }
+
+  return () => {
+    document.removeEventListener('mousedown', handleClickOutside)
+  }
+}, [isProfileOpen])
 
   const handleLogout = async () => {
     try {
@@ -131,9 +148,9 @@ export default function Navbar({
                                 <span className="text-sm font-semibold text-blue-600">
                                   ₹{result.price.toFixed(2)}
                                 </span>
-                                <span className="text-xs text-gray-500 dark:text-gray-400">
+                                {/* <span className="text-xs text-gray-500 dark:text-gray-400">
                                   Stock: {result.stock}
-                                </span>
+                                </span> */}
                               </div>
                             </div>
                           </button>
@@ -151,7 +168,7 @@ export default function Navbar({
 
             {/* Profile and Cart */}
             <div className="flex items-center space-x-4">
-              <div className="relative profile-dropdown">
+              <div className="relative profile-dropdown" ref={profileDropdownRef}>
                 <button
                   onClick={() => setIsProfileOpen(!isProfileOpen)}
                   className="flex items-center space-x-1 text-gray-700 hover:text-blue-600 transition-colors duration-200 dark:text-white"
@@ -172,8 +189,16 @@ export default function Navbar({
                           Edit Profile
                         </Link>
                         <Link
+  to="/favorites" 
+  className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+  onClick={() => setIsProfileOpen(false)}
+>
+  <Heart className="w-4 h-4" />
+  My Favorites
+</Link>
+                        <Link
                           to={`/orders/${user.id}`}
-                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors"
+                          className="flex items-center gap-3 px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 transition-colors dark:text-gra-400"
                           onClick={() => setIsProfileOpen(false)}
                         >
                           <Package className="w-4 h-4" />
@@ -287,9 +312,9 @@ export default function Navbar({
                               <span className="text-sm font-semibold text-blue-600">
                                 ₹{result.price.toFixed(2)}
                               </span>
-                              <span className="text-xs text-gray-500 dark:text-gray-400">
+                              {/* <span className="text-xs text-gray-500 dark:text-gray-400">
                                 Stock: {result.stock}
-                              </span>
+                              </span> */}
                             </div>
                           </div>
                         </button>

@@ -50,13 +50,12 @@ const Sidebar = ({ isOpen, onClose }) => {
       id: 'dashboard',
       label: 'Dashboard',
       icon: Home,
-      href: '/admin/panel/dashboard',
+      href: '/admin/panel',
     },
     {
       id: 'products',
       label: 'Products',
       icon: Package,
-      badge: '24',
       submenu: [
         { id: 'all-products', label: 'All Products', icon: List, href: '/admin/panel/products' },
         { id: 'add-product', label: 'Add Product', icon: Plus, href: '/admin/panel/products/add' },
@@ -67,7 +66,6 @@ const Sidebar = ({ isOpen, onClose }) => {
       id: 'categories',
       label: 'Categories',
       icon: Package,
-      badge: '24',
       submenu: [
         { id: 'all-categories', label: 'All categories', icon: List, href: '/admin/panel/categories/all' },
         { id: 'add-category', label: 'Add Category', icon: Plus, href: '/admin/panel/categories/add' },
@@ -78,8 +76,6 @@ const Sidebar = ({ isOpen, onClose }) => {
       id: 'orders',
       label: 'Orders',
       icon: ShoppingCart,
-      badge: '8',
-      badgeColor: 'bg-red-500',
       submenu: [
         { id: 'all-orders', label: 'All Orders', icon: List, href: '/admin/panel/orders' },
         { id: 'pending-orders', label: 'Pending Orders', icon: Clock, href: '/admin/panel/orders/pending' },
@@ -90,7 +86,6 @@ const Sidebar = ({ isOpen, onClose }) => {
       id: 'customers',
       label: 'Customers',
       icon: Users,
-      badge: '156',
       href: '/admin/panel/customers'
     },
     {
@@ -134,54 +129,53 @@ const Sidebar = ({ isOpen, onClose }) => {
       icon: ShoppingCart,
       href: '/admin/panel/abandoned-cart',
     },
-    {
-      id: 'analytics',
-      label: 'Analytics',
-      icon: BarChart3,
-      submenu: [
-        { id: 'sales-report', label: 'Sales Report', icon: TrendingUp, href: '/admin/panel/analytics/sales' },
-        { id: 'revenue', label: 'Revenue', icon: DollarSign, href: '/admin/panel/analytics/revenue' },
-        { id: 'product-performance', label: 'Product Performance', icon: Eye, href: '/admin/panel/analytics/products' },
-        { id: 'customer-insights', label: 'Customer Insights', icon: Users, href: '/admin/panel/analytics/customers' },
-      ]
-    },
-    {
-      id: 'shipping',
-      label: 'Shipping',
-      icon: Truck,
-      submenu: [
-        { id: 'shipping-zones', label: 'Shipping Zones', icon: Map, href: '/admin/panel/shipping/zones' },
-        { id: 'shipping-rates', label: 'Shipping Rates', icon: DollarSign, href: '/admin/panel/shipping/rates' },
-        { id: 'tracking', label: 'Tracking', icon: Eye, href: '/admin/panel/shipping/tracking' },
-      ]
-    },
-    {
-      id: 'payments',
-      label: 'Payments',
-      icon: CreditCard,
-      submenu: [
-        { id: 'transactions', label: 'Transactions', icon: List, href: '/admin/panel/payments/transactions' },
-        { id: 'payouts', label: 'Payouts', icon: DollarSign, href: '/admin/panel/payments/payouts' },
-        { id: 'payment-methods', label: 'Payment Methods', icon: CreditCard, href: '/admin/panel/payments/methods' },
-      ]
-    },
-   
-    {
-      id: 'settings',
-      label: 'Settings',
-      icon: Settings,
-      submenu: [
-        { id: 'account-settings', label: 'Account Settings', icon: User, href: '/admin/panel/settings/account' },
-        { id: 'notifications', label: 'Notifications', icon: Bell, href: '/admin/panel/settings/notifications' },
-        { id: 'security', label: 'Security', icon: Shield, href: '/admin/panel/settings/security' },
-      ]
-    },
+    // {
+    //   id: 'analytics',
+    //   label: 'Analytics',
+    //   icon: BarChart3,
+    //   submenu: [
+    //     { id: 'sales-report', label: 'Sales Report', icon: TrendingUp, href: '/admin/panel/analytics/sales' },
+    //     { id: 'revenue', label: 'Revenue', icon: DollarSign, href: '/admin/panel/analytics/revenue' },
+    //     { id: 'product-performance', label: 'Product Performance', icon: Eye, href: '/admin/panel/analytics/products' },
+    //     { id: 'customer-insights', label: 'Customer Insights', icon: Users, href: '/admin/panel/analytics/customers' },
+    //   ]
+    // },
+    // {
+    //   id: 'shipping',
+    //   label: 'Shipping',
+    //   icon: Truck,
+    //   submenu: [
+    //     { id: 'shipping-zones', label: 'Shipping Zones', icon: Map, href: '/admin/panel/shipping/zones' },
+    //     { id: 'shipping-rates', label: 'Shipping Rates', icon: DollarSign, href: '/admin/panel/shipping/rates' },
+    //     { id: 'tracking', label: 'Tracking', icon: Eye, href: '/admin/panel/shipping/tracking' },
+    //   ]
+    // },
+    // {
+    //   id: 'payments',
+    //   label: 'Payments',
+    //   icon: CreditCard,
+    //   submenu: [
+    //     { id: 'transactions', label: 'Transactions', icon: List, href: '/admin/panel/payments/transactions' },
+    //     { id: 'payouts', label: 'Payouts', icon: DollarSign, href: '/admin/panel/payments/payouts' },
+    //     { id: 'payment-methods', label: 'Payment Methods', icon: CreditCard, href: '/admin/panel/payments/methods' },
+    //   ]
+    // },
+    // {
+    //   id: 'settings',
+    //   label: 'Settings',
+    //   icon: Settings,
+    //   submenu: [
+    //     { id: 'account-settings', label: 'Account Settings', icon: User, href: '/admin/panel/settings/account' },
+    //     { id: 'notifications', label: 'Notifications', icon: Bell, href: '/admin/panel/settings/notifications' },
+    //     { id: 'security', label: 'Security', icon: Shield, href: '/admin/panel/settings/security' },
+    //   ]
+    // },
   ];
 
-  const bottomMenuItems = [
-    { id: 'help', label: 'Help & Support', icon: HelpCircle, href: '/admin/panel/help' },
-    { id: 'logout', label: 'Logout', icon: LogOut, href: '/logout', danger: true },
-  ];
+  // const bottomMenuItems = [
+  //   { id: 'help', label: 'Help & Support', icon: HelpCircle, href: '/admin/panel/help' },
+  //   { id: 'logout', label: 'Logout', icon: LogOut, href: '/logout', danger: true },
+  // ];
 
   const MenuItem = ({ item, level = 0 }) => {
     const hasSubmenu = item.submenu && item.submenu.length > 0;
@@ -197,7 +191,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           <NavLink
             to={item.href}
             end
-            className={`flex items-center justify-between w-full px-3 py-2 text-left transition-all duration-200 ${
+            className={`dark:text-gray-400 flex items-center justify-between w-full px-3 py-2 text-left transition-all duration-200 ${
               level > 0 ? 'pl-8 py-2' : ''
             } ${
               item.danger 
@@ -232,7 +226,7 @@ const Sidebar = ({ isOpen, onClose }) => {
     return (
       <div className="w-full">
         <div
-          className={`flex items-center justify-between w-full px-3 py-2 text-left transition-all duration-200 ${
+          className={`dark:text-gray-400 flex items-center justify-between w-full px-3 py-2 text-left transition-all duration-200 ${
             level > 0 ? 'pl-8 py-2' : ''
           } ${
             item.danger 
@@ -301,10 +295,10 @@ const Sidebar = ({ isOpen, onClose }) => {
               <Store className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-xl font-bold text-gray-900">
+              <h2 className="text-xl font-bold text-gray-900 dark:text-white">
   {loadingSettings ? 'Loading...' : companySettings?.companyName || 'Online Shop'}
 </h2>
-              <p className="text-sm text-gray-500">Admin Panel</p>
+              <p className="text-sm text-gray-500 dark:text-gray">Admin Panel</p>
             </div>
           </div>
           <button
@@ -326,7 +320,7 @@ const Sidebar = ({ isOpen, onClose }) => {
           </nav>
         </div>
 
-        {/* Bottom Menu Items */}
+        {/* Bottom Menu Items
         <div className="border-t border-gray-200 dark:border-gray-700 bg-white dark:bg-gray-900 flex-shrink-0">
           <nav className="p-2">
             <div className="space-y-1">
@@ -335,7 +329,7 @@ const Sidebar = ({ isOpen, onClose }) => {
               ))}
             </div>
           </nav>
-        </div>
+        </div> */}
 
         {/* Footer */}
         <div className="p-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 flex-shrink-0">
@@ -344,10 +338,10 @@ const Sidebar = ({ isOpen, onClose }) => {
               <User className="w-5 h-5 text-gray-600 dark:text-gray-400" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900">
+              <p className="text-sm font-medium text-gray-900 dark:text-white">
   {loadingSettings ? 'Loading...' : companySettings?.adminName || 'Admin'}
 </p>
-<p className="text-xs text-gray-500">
+<p className="text-xs text-gray-500 dark:text-gray-400">
   {loadingSettings ? 'Loading...' : companySettings?.adminEmail || 'support@onlineshop.com'}
 </p>
             </div>

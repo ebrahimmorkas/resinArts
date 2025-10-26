@@ -172,7 +172,28 @@ shippingPriceSettings: {
     type: Number,
     default: 0
   }
-}
+},
+ autoDeleteOrders: {
+    enabled: {
+      type: Boolean,
+      default: false
+    },
+    deleteStatus: {
+      type: String,
+      enum: ['Confirm', 'Dispatched', 'Completed'],
+      default: 'Completed'
+    },
+    deleteAfterUnit: {
+      type: String,
+      enum: ['minutes', 'hours', 'days', 'weeks', 'months', 'years'],
+      default: 'months'
+    },
+    deleteAfterValue: {
+      type: Number,
+      default: 1,
+      min: 1
+    }
+  }
 }, {
   timestamps: true
 });

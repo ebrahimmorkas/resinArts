@@ -25,6 +25,7 @@ const { startAbandonedCartCron } = require('./utils/abandonedCartCron');
 const http = require('http');
 const { Server } = require('socket.io');
 const compression = require('compression');
+const { startOrderDeletionCron } = require('./utils/orderDeletionCron');
 
 const app = express();
 // Serve static files from the public directory
@@ -93,6 +94,7 @@ mongoose
   .connect(process.env.MONGO_URI)
   .then(() => {
     startAbandonedCartCron(io);
+    startOrderDeletionCron();
     console.log('Connected to MongoDB');
   })
   .catch((err) => {
@@ -116,6 +118,7 @@ app.use('/api/user', authenticate, userRoutes);
 app.use('/api/free-cash', authenticate, freeCashRoutes);
 app.use('/api/abandoned-cart', authenticate, abandonedCartRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/favourites', authenticate, authorize(['user']), require('./routes/favoritesRoutes'));
 
 // Authenticated user info
 app.get('/api/auth/me', authenticate, async (req, res) => {

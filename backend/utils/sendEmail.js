@@ -1,12 +1,17 @@
 const transporter = require("../config/email");
+const CompanySettings = require("../models/CompanySettings");
 
-async function sendEmail(to, subject, text) {
+async function sendEmail(to, subject, text, attachments = []) {
   try {
+    // Fetch company settings
+    const settings = await CompanySettings.getSingleton();
+    
     const mailOptions = {
-      from: `"Mould Market" <${process.env.EMAIL_USER}>`, // sender name + email
+      from: `"${settings.companyName}" <${settings.adminEmail}>`, // Use company name and email from settings
       to,
       subject,
       text, // plain text only
+      attachments: attachments // array of attachments
     };
 
     const info = await transporter.sendMail(mailOptions);

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef, useContext, useMemo, useCallback } from "react"
+import React, { useState, useEffect, useRef, useContext, useMemo, useCallback, memo, lazy, Suspense } from "react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
@@ -7,11 +7,13 @@ import { FreeCashContext } from "../../../Context/FreeCashContext"
 import { CompanySettingsContext } from "../../../Context/CompanySettingsContext"
 import { DiscountContext } from "../../../Context/DiscountContext"
 import { BannerContext } from "../../../Context/BannerContext"
+import { useFavorites } from "../../../Context/FavoritesContext"
 import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Navbar from "../../components/client/common/Navbar"
-import CartModal from "../../components/client/common/CartModal"
+import Footer from "../../components/client/common/Footer";
+const CartModal = lazy(() => import("../../components/client/common/CartModal"))
 // Keep all other imports like icons, etc.
 import {
   ChevronDown, ChevronLeft, ChevronRight, X, Plus, Minus, Eye, Check, Heart, Palette, Trash2, Package, Share2, MessageCircle, Star, Shield, Truck, Instagram, Facebook, ArrowUp,
@@ -91,6 +93,8 @@ const handleCartCheckout = async () => {
       return;
     }
 
+    console.log('Cart Items being sent to checkout:', JSON.stringify(cartItems, null, 2));
+
     // Send cart data directly without transformation
     const res = await axios.post(
       'https://api.simplyrks.cloud/api/order/place-order', 
@@ -160,7 +164,6 @@ useEffect(() => {
 }, []);
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState("")
   const [selectedCategoryPath, setSelectedCategoryPath] = useState([])
-  const [wishlist, setWishlist] = useState([])
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
@@ -172,7 +175,6 @@ useEffect(() => {
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
   const [showSearchSection, setShowSearchSection] = useState(false)
-  const [policyModal, setPolicyModal] = useState({ isOpen: false, type: '', content: '' })
   const [showScrollTop, setShowScrollTop] = useState(false)
   const [recentSearches, setRecentSearches] = useState([])
   const [isProcessing, setIsProcessing] = useState(false);
@@ -203,8 +205,55 @@ const scrollToTop = () => {
   })
 }
 
- const contextData = useContext(ProductContext) || { products: [], loading: false, error: null }
-  const { products, loading, error } = contextData
+// Infinite scroll observer
+const observerTarget = useRef(null);
+
+const contextData = useContext(ProductContext) || { 
+  products: [], 
+  loading: false, 
+  error: null,
+  loadMoreProducts: () => {},
+  hasMore: false,
+  loadingMore: false,
+  totalCount: 0
+}
+const { 
+  products, 
+  loading, 
+  error, 
+  loadMoreProducts, 
+  hasMore, 
+  loadingMore,
+  totalCount 
+} = contextData
+
+// Memoize context values to prevent unnecessary re-renders
+const memoizedCartItems = useMemo(() => cartItems, [cartItems]);
+const memoizedCategories = useMemo(() => categories, [categories]);
+const memoizedProducts = useMemo(() => products, [products]);
+
+useEffect(() => {
+  const observer = new IntersectionObserver(
+    entries => {
+      if (entries[0].isIntersecting && hasMore && !loadingMore) {
+        loadMoreProducts();
+      }
+    },
+    { threshold: 0.5 }
+  );
+
+  if (observerTarget.current) {
+    observer.observe(observerTarget.current);
+  }
+
+  return () => {
+    if (observerTarget.current) {
+      observer.unobserve(observerTarget.current);
+    }
+  };
+}, [hasMore, loadingMore, loadMoreProducts]);
+
+ 
   // console.log("Products from context:", contextData)
   // Memoize expensive computations
   // console.log("Products from context:", contextData)
@@ -216,6 +265,9 @@ const scrollToTop = () => {
   const revisedRatesRef = useRef(null)
   const outOfStockRef = useRef(null)
   const { setUser } = useContext(AuthContext)
+
+  // Context for favorites
+  const { toggleFavorite, isFavorite } = useFavorites()
 
 const handleSearch = useCallback((query) => {
   setSearchQuery(query)
@@ -236,7 +288,17 @@ useEffect(() => {
   return () => clearTimeout(timer);
 }, [searchQuery]);
 
-// Perform search with debounced query
+const formatSize = (sizeObj) => {
+    if (!sizeObj) return "N/A"
+    if (typeof sizeObj === "string") return sizeObj
+    if (sizeObj.length && sizeObj.breadth && sizeObj.height) {
+      const unit = sizeObj.unit || "cm"
+      return `${sizeObj.length} × ${sizeObj.breadth} × ${sizeObj.height} ${unit}`
+    }
+    return "N/A"
+  }
+
+// Perform search with debounced query using backend API
 useEffect(() => {
   if (!debouncedSearchQuery.trim()) {
     setSearchResults([]);
@@ -244,91 +306,49 @@ useEffect(() => {
     return;
   }
 
-  setIsSearching(true);
-  const searchTerms = debouncedSearchQuery.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
-  const results = [];
-
-  const activeProducts = products.filter(product => {
-    if (product.isActive === false) return false;
+  const performSearch = async () => {
+    setIsSearching(true);
     
-    const mainCat = categories.find(cat => cat._id.toString() === product.mainCategory?.toString());
-    const subCat = product.subCategory ? categories.find(cat => cat._id.toString() === product.subCategory?.toString()) : null;
-    
-    if (mainCat && mainCat.isActive === false) return false;
-    if (subCat && subCat.isActive === false) return false;
-    
-    return true;
-  });
-
-  activeProducts.forEach((product) => {
-    const productNameLower = product.name.toLowerCase();
-    const productNameMatch = searchTerms.every(term => productNameLower.includes(term));
-    
-    if (product.hasVariants && product.variants) {
-      product.variants.filter(v => v.isActive !== false).forEach((variant) => {
-        const fullName = `${product.name} ${variant.colorName}`.toLowerCase();
-        const variantMatch = searchTerms.every(term => fullName.includes(term));
+    try {
+      const response = await axios.get(
+        `https://api.simplyrks.cloud/api/product/search?query=${encodeURIComponent(debouncedSearchQuery)}`,
+        { withCredentials: true }
+      );
+      
+      const backendResults = response.data.results || [];
+      
+      // Format results to match your existing structure
+      const formattedResults = backendResults.map(result => {
+        const sizeString = result.sizeDetail ? formatSize(result.sizeDetail.size) : null;
         
-        if (variant.moreDetails && variant.moreDetails.length > 0) {
-          variant.moreDetails.filter(md => md.isActive !== false).forEach((sizeDetail) => {
-            const sizeString = formatSize(sizeDetail.size);
-            const fullNameWithSize = `${product.name} ${variant.colorName} ${sizeString}`.toLowerCase();
-            const sizeMatch = searchTerms.every(term => fullNameWithSize.includes(term));
-            
-            if (productNameMatch || variantMatch || sizeMatch) {
-              results.push({
-                productId: product._id,
-                productName: product.name,
-                variantId: variant._id,
-                colorName: variant.colorName,
-                sizeDetail: sizeDetail,
-                sizeString: sizeString,
-                image: variant.variantImage || product.image,
-                price: getDisplayPrice(product, variant, sizeDetail),
-                stock: sizeDetail.stock,
-                fullDisplayName: `${product.name} - ${variant.colorName} - ${sizeString}`
-              });
-            }
-          });
-        } else {
-          if (productNameMatch || variantMatch) {
-            results.push({
-              productId: product._id,
-              productName: product.name,
-              variantId: variant._id,
-              colorName: variant.colorName,
-              sizeDetail: null,
-              sizeString: null,
-              image: variant.variantImage || product.image,
-              price: getDisplayPrice(product, variant, null),
-              stock: variant.commonStock,
-              fullDisplayName: `${product.name} - ${variant.colorName}`
-            });
-          }
-        }
+        return {
+          productId: result.productId,
+          productName: result.productName,
+          variantId: result.variantId,
+          colorName: result.colorName,
+          sizeDetail: result.sizeDetail,
+          sizeString: sizeString,
+          image: result.image,
+          price: result.price,
+          stock: result.stock,
+          fullDisplayName: result.colorName 
+            ? `${result.productName} - ${result.colorName}${sizeString ? ` - ${sizeString}` : ''}`
+            : result.productName
+        };
       });
-    } else {
-      if (productNameMatch) {
-        results.push({
-          productId: product._id,
-          productName: product.name,
-          variantId: null,
-          colorName: null,
-          sizeDetail: null,
-          sizeString: null,
-          image: product.image,
-          price: getDisplayPrice(product, null, null),
-          stock: product.stock,
-          fullDisplayName: product.name
-        });
-      }
+      
+      setSearchResults(formattedResults);
+      setShowSearchResults(true);
+    } catch (error) {
+      console.error("Search error:", error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
     }
-  });
+  };
 
-  setSearchResults(results);
-  setShowSearchResults(true);
-  setIsSearching(false);
-}, [debouncedSearchQuery, products, categories]);
+  performSearch();
+}, [debouncedSearchQuery]);
 
 // Function that will listen the event -> clicking of enter key
 const handleSearchKeyPress = (e) => {
@@ -428,35 +448,25 @@ const handleSearchResultClick = (result) => {
   setSearchQuery("")
 }
 
-const getFilteredProducts = () => {
-  // Log initial product and category data for debugging
-  // console.log("Products:", products);
-  // console.log("Categories:", categories);
-
-  // Filter out inactive products and products with inactive categories
+const getFilteredProducts = useMemo(() => {
+  // Memoize this expensive filtering operation
   let activeProducts = products.filter(product => {
     // Check if product is active
     if (product.isActive === false) {
-      // console.log(`Filtered out inactive product: ${product.name} (${product._id})`);
       return false;
     }
 
     // Find the mainCategory and subCategory
-    const mainCat = categories.find(cat => cat._id.toString() === product.mainCategory?.toString());
-    const subCat = product.subCategory ? categories.find(cat => cat._id.toString() === product.subCategory?.toString()) : null;
-
-    // Log category details for debugging
-    // console.log(`Product: ${product.name}, Main Category:`, mainCat, `Sub Category:`, subCat);
+    const mainCat = categories.find(cat => cat._id.toString() === product.mainCategory?._id?.toString() || cat._id.toString() === product.mainCategory?.toString());
+    const subCat = product.subCategory ? categories.find(cat => cat._id.toString() === product.subCategory?._id?.toString() || cat._id.toString() === product.subCategory?.toString()) : null;
 
     // Filter out if mainCategory is inactive
     if (mainCat && mainCat.isActive === false) {
-      // console.log(`Filtered out product ${product.name} due to inactive mainCategory: ${mainCat.categoryName}`);
       return false;
     }
 
     // Filter out if subCategory is inactive
     if (subCat && subCat.isActive === false) {
-      // console.log(`Filtered out product ${product.name} due to inactive subCategory: ${subCat.categoryName}`);
       return false;
     }
 
@@ -480,7 +490,7 @@ const getFilteredProducts = () => {
 
     return nameMatch || variantMatch;
   });
-};
+}, [memoizedProducts, memoizedCategories, searchQuery]); // Only recalculate when these change
 
   // Close dropdowns of search when clicking outside
   useEffect(() => {
@@ -569,16 +579,6 @@ const getFilteredProducts = () => {
       return variant.commonStock === 0;
     }
     return product.stock === 0;
-  }
-
-  const formatSize = (sizeObj) => {
-    if (!sizeObj) return "N/A"
-    if (typeof sizeObj === "string") return sizeObj
-    if (sizeObj.length && sizeObj.breadth && sizeObj.height) {
-      const unit = sizeObj.unit || "cm"
-      return `${sizeObj.length} × ${sizeObj.breadth} × ${sizeObj.height} ${unit}`
-    }
-    return "N/A"
   }
 
   const getOriginalPrice = (product, variant = null, sizeDetail = null) => {
@@ -821,6 +821,11 @@ const handleLogout = async () => {
   const variant = product.variants?.find((v) => v.colorName === colorName);
   const sizeDetail = variant?.moreDetails?.find((md) => formatSize(md.size) === sizeString);
 
+  console.log('Variant found:', variant);
+  console.log('Variant ID:', variant?._id);
+  console.log('SizeDetail found:', sizeDetail);
+  console.log('SizeDetail ID:', sizeDetail?._id);
+
   const originalPrice = getOriginalPrice(product, variant, sizeDetail);
   const displayPrice = getDisplayPrice(product, variant, sizeDetail);
 
@@ -923,9 +928,22 @@ const scrollCategories = (direction) => {
   setCategoriesScrollPosition(newPosition);
 };
 
-  const toggleWishlist = (productId) => {
-    setWishlist((prev) => (prev.includes(productId) ? prev.filter((id) => id !== productId) : [...prev, productId]))
+  const handleToggleFavorite = async (productId) => {
+  const result = await toggleFavorite(productId);
+  if (!result.success && result.message) {
+    const { toast } = await import('react-toastify');
+    toast.error(result.message, {
+      position: "top-right",
+      autoClose: 2000,
+    });
+    
+    if (result.message.includes('login')) {
+      setTimeout(() => {
+        navigate('/auth/login');
+      }, 2000);
+    }
   }
+};
 
   const handleShare = async (product, variant = null) => {
     const productUrl = `${window.location.origin}/product/${product._id}${variant ? `?variant=${variant.colorName}` : ""}`
@@ -957,52 +975,6 @@ const scrollCategories = (direction) => {
     window.open(whatsappUrl, "_blank")
   }
 
-const openPolicyModal = (type) => {
-  if (!companySettings) return;
-  
-  let content = '';
-  switch(type) {
-    case 'privacy':
-      content = companySettings.privacyPolicy || 'Privacy Policy content not available.';
-      break;
-    case 'terms':
-      content = companySettings.termsAndConditions || 'Terms and Conditions not available.';
-      break;
-    case 'shipping':
-      content = companySettings.shippingPolicy || 'Shipping Policy not available.';
-      break;
-    case 'return':
-      content = companySettings.returnPolicy || 'Return Policy not available.';
-      break;
-    case 'refund':
-      content = companySettings.refundPolicy || 'Refund Policy not available.';
-      break;
-      case 'about':
-  content = companySettings?.aboutUs || 'About us not available.';
-  break;
-    default:
-      content = 'Content not available.';
-  }
-  
-  setPolicyModal({ isOpen: true, type, content });
-};
-
-const closePolicyModal = () => {
-  setPolicyModal({ isOpen: false, type: '', content: '' });
-};
-
-const getPolicyTitle = (type) => {
-  switch(type) {
-    case 'privacy': return 'Privacy Policy';
-    case 'terms': return 'Terms and Conditions';
-    case 'shipping': return 'Shipping Policy';
-    case 'return': return 'Return Policy';
-    case 'refund': return 'Refund Policy';
-    case 'about': return 'About Us';
-    default: return 'Policy';
-  }
-};
-
   // Filter main categories (those without a parent_category_id)
   const mainCategories = useMemo(
   () => categories.filter(category => 
@@ -1025,11 +997,12 @@ const getPolicyTitle = (type) => {
   };
 
   // Memoize expensive computations - MOVED HERE AFTER ALL FUNCTIONS ARE DEFINED
-  const filteredProductsList = useMemo(() => getFilteredProducts(), [products, categories, searchQuery]);
-  const justArrivedProductsList = useMemo(() => {
-    const filtered = filteredProductsList.filter((product) => isNew(product) && !isOutOfStock(product));
-    return sortProductsByPrice(filtered);
-  }, [filteredProductsList, selectedFilters]);
+  const filteredProductsList = getFilteredProducts; // Already memoized above
+
+const justArrivedProductsList = useMemo(() => {
+  const filtered = filteredProductsList.filter((product) => isNew(product) && !isOutOfStock(product));
+  return sortProductsByPrice(filtered);
+}, [filteredProductsList, selectedFilters]);
   const restockedProductsList = useMemo(() => {
     const filtered = filteredProductsList.filter((product) => !isOutOfStock(product) && (
       isRecentlyRestocked(product) ||
@@ -1205,7 +1178,7 @@ const CategoryNavigationBar = () => {
   );
 };
 
-  const BannerCarousel = () => {
+  const BannerCarousel = React.memo(() => {
     const { banners, loadingBanner, Bannerserror } = useContext(BannerContext);
     const [currentBanner, setCurrentBanner] = useState(0);
 
@@ -1277,9 +1250,9 @@ const CategoryNavigationBar = () => {
         )}
       </div>
     );
-  };
+  });
 
-  const ProductCard = ({ product, forcedBadge = null }) => {
+  const ProductCard = React.memo(({ product, forcedBadge = null }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
     const [selectedVariant, setSelectedVariant] = useState(
   product.variants?.find(v => v.isActive !== false) || null
@@ -1289,10 +1262,13 @@ const CategoryNavigationBar = () => {
 )
     const [addQuantity, setAddQuantity] = useState(1)
     const [showDetails, setShowDetails] = useState(false)
+    const [localQuantity, setLocalQuantity] = useState({})
 
     // Use ref to store initial selections to prevent resets
     const initialVariantRef = useRef(product.variants?.[0] || null)
     const initialSizeDetailRef = useRef(selectedVariant?.moreDetails?.[0] || null)
+    const inputRef = useRef(null)
+
 
     useEffect(() => {
   if (selectedVariant && selectedVariant.moreDetails) {
@@ -1396,11 +1372,12 @@ const CategoryNavigationBar = () => {
 >
         <div className="relative">
           <div className="relative">
-            <img
-  src={getOptimizedImageUrl(currentImage, { width: 400 }) || "/placeholder.svg"}
+           <img
+  src={getOptimizedImageUrl(currentImage, { width: 400, quality: 60 }) || "/placeholder.svg"}
   alt={product.name}
   className="w-full h-64 object-contain group-hover:scale-105 transition-transform duration-300 cursor-pointer"
   loading="lazy"
+  decoding="async"
 />
 
             {currentImages.length > 1 && (
@@ -1444,15 +1421,18 @@ const CategoryNavigationBar = () => {
 
           <div className="absolute top-2 right-2 flex flex-col items-center gap-2">
   <button
-    onClick={() => toggleWishlist(product._id)}
-    className={`p-1 rounded-full transition-colors ${
-      wishlist.includes(product._id)
-        ? "bg-red-500 text-white"
-        : "bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-red-500"
-    }`}
-  >
-    <Heart className={`w-4 h-4 ${wishlist.includes(product._id) ? "fill-current" : ""}`} />
-  </button>
+  onClick={(e) => {
+    e.stopPropagation();
+    handleToggleFavorite(product._id);
+  }}
+  className={`p-1 rounded-full transition-colors ${
+    isFavorite(product._id)
+      ? "bg-red-500 text-blue-600"
+      : "bg-white dark:bg-gray-900/90 text-gray-600 dark:text-gray-400 hover:text-red-500"
+  }`}
+>
+  <Heart className={`w-4 h-4 ${isFavorite(product._id) ? "fill-current" : ""}`} />
+</button>
   <button
     onClick={(e) => {
       e.stopPropagation()
@@ -1625,39 +1605,88 @@ const CategoryNavigationBar = () => {
     const itemInCart = cartKey ? cartItems[cartKey] : null;
     
     return itemInCart ? (
-      // Item is in cart - show quantity controls and remove button
-      <>
-        <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
-          <span className="text-sm text-gray-600 dark:text-gray-400">In Cart:</span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUpdateQuantity(cartKey, -1);
-              }}
-              className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
-            >
-              <Minus className="w-3 h-3" />
-            </button>
-            <span className="w-12 text-center font-semibold">{itemInCart.quantity}</span>
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleUpdateQuantity(cartKey, 1);
-              }}
-              className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
-            >
-              <Plus className="w-3 h-3" />
-            </button>
-          </div>
-        </div>
+  // Item is in cart - show quantity controls and remove button
+  <>
+    <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
+      <span className="text-sm text-gray-600 dark:text-gray-400">In Cart:</span>
+      <div className="flex items-center gap-2">
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleUpdateQuantity(cartKey, -1);
+          }}
+          className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+        >
+          <Minus className="w-3 h-3" />
+        </button>
+        <input
+  ref={inputRef}
+  type="number"
+  value={localQuantity[cartKey] !== undefined ? localQuantity[cartKey] : itemInCart.quantity}
+  onChange={(e) => {
+    e.stopPropagation();
+    const val = e.target.value;
+    setLocalQuantity(prev => ({ ...prev, [cartKey]: val }));
+  }}
+  onBlur={(e) => {
+    const val = e.target.value;
+    const num = Number.parseInt(val);
+    
+    if (val === '' || val === '0' || isNaN(num) || num < 1) {
+      // Reset to 1
+      const diff = 1 - itemInCart.quantity;
+      if (diff !== 0) {
+        handleUpdateQuantity(cartKey, diff);
+      }
+      setLocalQuantity(prev => {
+        const newState = { ...prev };
+        delete newState[cartKey];
+        return newState;
+      });
+    } else if (num !== itemInCart.quantity) {
+      // Update quantity
+      const diff = num - itemInCart.quantity;
+      handleUpdateQuantity(cartKey, diff);
+      setLocalQuantity(prev => {
+        const newState = { ...prev };
+        delete newState[cartKey];
+        return newState;
+      });
+    } else {
+      // Same value, just clear local state
+      setLocalQuantity(prev => {
+        const newState = { ...prev };
+        delete newState[cartKey];
+        return newState;
+      });
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  }}
+  onClick={(e) => e.stopPropagation()}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm font-semibold"
+/>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            handleUpdateQuantity(cartKey, 1);
+          }}
+          className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+        >
+          <Plus className="w-3 h-3" />
+        </button>
+      </div>
+    </div>
 
         <button
           onClick={(e) => {
             e.stopPropagation();
             handleRemoveFromCart(cartKey);
           }}
-          className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+          className="dark:text-white w-full bg-red-600 hover:bg-red-700 text-red-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200 flex items-center justify-center gap-2"
         >
           <Trash2 className="w-4 h-4" />
           Remove from Cart
@@ -1675,13 +1704,35 @@ const CategoryNavigationBar = () => {
             >
               <Minus className="w-3 h-3" />
             </button>
-            <input
-              type="number"
-              min="1"
-              // value={addQuantity}
-              onChange={(e) => setAddQuantity(Math.max(1, Number.parseInt(e.target.value) || 1))}
-              className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
-            />
+           <input
+  type="number"
+  value={addQuantity}
+  onChange={(e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setAddQuantity('');
+    } else {
+      const num = Number.parseInt(val);
+      if (!isNaN(num) && num >= 1) {
+        setAddQuantity(num);
+      }
+    }
+  }}
+  onBlur={(e) => {
+    if (e.target.value === '' || e.target.value === '0') {
+      setAddQuantity(1);
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      if (e.target.value === '' || e.target.value === '0') {
+        setAddQuantity(1);
+      }
+      handleAddToCartWithQuantity();
+    }
+  }}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
+/>
             <button
               onClick={() => setAddQuantity(addQuantity + 1)}
               className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
@@ -1705,7 +1756,7 @@ const CategoryNavigationBar = () => {
 
         <button
           onClick={handleAddToCartWithQuantity}
-          disabled={hasVariants && (!selectedVariant || !selectedSizeDetail) || currentStock === 0}
+          disabled={hasVariants && (!selectedVariant || !selectedSizeDetail)}
           className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200"
         >
           Add {addQuantity} to Cart
@@ -1717,7 +1768,18 @@ const CategoryNavigationBar = () => {
         </div>
       </div>
     )
-  }
+ }, (prevProps, nextProps) => {
+  // Return true to PREVENT re-render (props are equal)
+  // Return false to ALLOW re-render (props changed)
+  
+  if (prevProps.product._id !== nextProps.product._id) return false;
+  if (prevProps.forcedBadge?.text !== nextProps.forcedBadge?.text) return false;
+  if (prevProps.product.name !== nextProps.product.name) return false;
+  if (prevProps.product.price !== nextProps.product.price) return false;
+  
+  // Don't re-render for other changes
+  return true;
+});
 
   
 
@@ -2250,7 +2312,35 @@ const CategoryNavigationBar = () => {
           >
             <Minus className="w-3 h-3" />
           </button>
-          <span className="w-12 text-center font-semibold">{itemInCart.quantity}</span>
+          <input
+  type="number"
+  value={itemInCart.quantity}
+  onChange={(e) => {
+    const val = e.target.value;
+    if (val === '') return;
+    const num = Number.parseInt(val);
+    if (!isNaN(num) && num >= 1) {
+      const diff = num - itemInCart.quantity;
+      if (diff !== 0) {
+        handleUpdateQuantity(cartKey, diff);
+      }
+    }
+  }}
+  onBlur={(e) => {
+    if (e.target.value === '' || e.target.value === '0') {
+      const diff = 1 - itemInCart.quantity;
+      if (diff !== 0) {
+        handleUpdateQuantity(cartKey, diff);
+      }
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  }}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm font-semibold"
+/>
           <button
             onClick={() => handleUpdateQuantity(cartKey, 1)}
             className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
@@ -2262,7 +2352,7 @@ const CategoryNavigationBar = () => {
 
       <button
         onClick={() => handleRemoveFromCart(cartKey)}
-        className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-3 px-6 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
+        className="dark:text-white w-full bg-red-600 hover:bg-red-700 text-red-600 py-3 px-6 rounded-lg font-medium transition-colors duration-200 flex items-center justify-center gap-2"
       >
         <Trash2 className="w-4 h-4" />
         Remove from Cart
@@ -2279,13 +2369,35 @@ const CategoryNavigationBar = () => {
           >
             <Minus className="w-3 h-3" />
           </button>
-          <input
-            type="number"
-            min="1"
-            // value={localQuantityToAdd}
-            onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
-            className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
-          />
+        <input
+  type="number"
+  value={localQuantityToAdd}
+  onChange={(e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setLocalQuantityToAdd('');
+    } else {
+      const num = Number.parseInt(val);
+      if (!isNaN(num) && num >= 1) {
+        setLocalQuantityToAdd(num);
+      }
+    }
+  }}
+  onBlur={(e) => {
+    if (e.target.value === '' || e.target.value === '0') {
+      setLocalQuantityToAdd(1);
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      if (e.target.value === '' || e.target.value === '0') {
+        setLocalQuantityToAdd(1);
+      }
+      handleAddToCartFromModal();
+    }
+  }}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
+/>
           <button
             onClick={() => setLocalQuantityToAdd(localQuantityToAdd + 1)}
             className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
@@ -2320,12 +2432,34 @@ const CategoryNavigationBar = () => {
                   <Minus className="w-3 h-3" />
                 </button>
                 <input
-                  type="number"
-                  min="1"
-                  // value={localQuantityToAdd}
-                  onChange={(e) => setLocalQuantityToAdd(Math.max(1, Number.parseInt(e.target.value) || 1))}
-                  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
-                />
+  type="number"
+  value={localQuantityToAdd}
+  onChange={(e) => {
+    const val = e.target.value;
+    if (val === '') {
+      setLocalQuantityToAdd('');
+    } else {
+      const num = Number.parseInt(val);
+      if (!isNaN(num) && num >= 1) {
+        setLocalQuantityToAdd(num);
+      }
+    }
+  }}
+  onBlur={(e) => {
+    if (e.target.value === '' || e.target.value === '0') {
+      setLocalQuantityToAdd(1);
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      if (e.target.value === '' || e.target.value === '0') {
+        setLocalQuantityToAdd(1);
+      }
+      handleAddToCartFromModal();
+    }
+  }}
+  className="w-12 text-center border border-gray-300 rounded px-1 py-0.5 text-sm"
+/>
                 <button
                   onClick={() => setLocalQuantityToAdd(localQuantityToAdd + 1)}
                   className="p-1 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
@@ -2385,35 +2519,35 @@ const CategoryNavigationBar = () => {
 
 // CartModal was here
 
-  const getJustArrivedProducts = () => {
-    const filteredProducts =getFilteredProducts().filter((product) => isNew(product) && !isOutOfStock(product));
-    return sortProductsByPrice(filteredProducts);
-  }
+const getJustArrivedProducts = () => {
+  const filteredProducts = getFilteredProducts.filter((product) => isNew(product) && !isOutOfStock(product));
+  return sortProductsByPrice(filteredProducts);
+}
 
-  const getRestockedProducts = () => {
-    const filteredProducts =getFilteredProducts().filter((product) => !isOutOfStock(product) && (
-        isRecentlyRestocked(product) ||
-        product.variants?.some((variant) =>
-          variant.moreDetails?.some((sizeDetail) => isRecentlyRestocked(product, variant, sizeDetail)),
-        )
-      ));
-    return sortProductsByPrice(filteredProducts);
-  }
+const getRestockedProducts = () => {
+  const filteredProducts = getFilteredProducts.filter((product) => !isOutOfStock(product) && (
+      isRecentlyRestocked(product) ||
+      product.variants?.some((variant) =>
+        variant.moreDetails?.some((sizeDetail) => isRecentlyRestocked(product, variant, sizeDetail)),
+      )
+    ));
+  return sortProductsByPrice(filteredProducts);
+}
 
-  const getRevisedRatesProducts = () => {
-    const filteredProducts =getFilteredProducts().filter((product) => !isOutOfStock(product) && (
-        isDiscountActive(product) ||
-        product.variants?.some((variant) =>
-          variant.moreDetails?.some((sizeDetail) => isDiscountActive(product, variant, sizeDetail)),
-        )
-      ));
-    return sortProductsByPrice(filteredProducts);
-  }
+const getRevisedRatesProducts = () => {
+  const filteredProducts = getFilteredProducts.filter((product) => !isOutOfStock(product) && (
+      isDiscountActive(product) ||
+      product.variants?.some((variant) =>
+        variant.moreDetails?.some((sizeDetail) => isDiscountActive(product, variant, sizeDetail)),
+      )
+    ));
+  return sortProductsByPrice(filteredProducts);
+}
 
-  const getOutOfStockProducts = () => {
-    const filteredProducts =getFilteredProducts().filter(isOutOfStock);
-    return sortProductsByPrice(filteredProducts);
-  }
+const getOutOfStockProducts = () => {
+  const filteredProducts = getFilteredProducts.filter(isOutOfStock);
+  return sortProductsByPrice(filteredProducts);
+}
 
   const filterOptions = [
     { key: "all", label: "All Products" },
@@ -2452,10 +2586,14 @@ if (justArrivedProductsList.length > 0) {
       handleSearchKeyPress={handleSearchKeyPress}
     />
 
+    {isCartOpen && (
+  <Suspense fallback={<div />}>
     <CartModal
       getBulkPricing={getBulkPricing}
       getEffectiveUnitPrice={getEffectiveUnitPrice}
     />
+  </Suspense>
+)}
 
       <BannerCarousel />
 
@@ -2609,7 +2747,7 @@ if (justArrivedProductsList.length > 0) {
           </div>
         </section>
         <CategoryNavigationBar />
-            {showSearchSection && searchQuery && (
+           {showSearchSection && searchQuery && (
   <section className="mb-12" id="search-results-section">
     <div className="flex items-center justify-between mb-6">
       <h2 className="text-2xl font-bold -800 dark:text-black">
@@ -2623,7 +2761,7 @@ if (justArrivedProductsList.length > 0) {
         Clear Search
       </button>
     </div>
-    {getFilteredProducts().length > 0 ? (
+    {getFilteredProducts.length > 0 ? (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
         {sortProductsByPrice(filteredProductsList).map((product) => (
           <ProductCard key={`search-${product._id}`} product={product} />
@@ -2653,13 +2791,19 @@ if (justArrivedProductsList.length > 0) {
       const allRelevantCategoryIds = getAllDescendantCategoryIds(currentCategoryId, buildCategoryTree(categories));
       
       const categoryProducts = sortProductsByPrice(
-        getFilteredProducts().filter((product) => {
-          const productMainCat = typeof product.mainCategory === 'object' ? product.mainCategory._id : product.mainCategory;
-          const productSubCat = typeof product.subCategory === 'object' ? product.subCategory._id : product.subCategory;
-          
-          return allRelevantCategoryIds.includes(productMainCat) || allRelevantCategoryIds.includes(productSubCat);
-        })
-      );
+  getFilteredProducts.filter((product) => {
+    // Handle MongoDB ObjectId format
+    const productMainCat = product.mainCategory?.$oid || 
+                          product.mainCategory?._id || 
+                          product.mainCategory;
+    const productSubCat = product.subCategory?.$oid || 
+                         product.subCategory?._id || 
+                         product.subCategory;
+    
+    return (productMainCat && allRelevantCategoryIds.includes(productMainCat)) || 
+           (productSubCat && allRelevantCategoryIds.includes(productSubCat));
+  })
+);
       
       return categoryProducts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
@@ -2737,161 +2881,38 @@ if (justArrivedProductsList.length > 0) {
           </section>
         )}
 
-        <section>
-  <h2 className="text-2xl font-bold -800 dark:text-black mb-6">All Products</h2>
+        <section id="all-products-section">
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="text-2xl font-bold -800 dark:text-black">All Products</h2>
+    <span className="text-sm text-gray-600 dark:text-gray-400">
+      Showing {filteredProductsList.length} of {totalCount} products
+    </span>
+  </div>
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
     {sortProductsByPrice(filteredProductsList).map((product) => (
       <ProductCard key={product._id} product={product} />
     ))}
   </div>
+  
+  {/* Infinite scroll trigger */}
+  {hasMore && (
+    <div ref={observerTarget} className="flex justify-center py-8">
+      <div className="flex items-center gap-3">
+        <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+        <p className="text-gray-600 dark:text-gray-400">Loading more products...</p>
+      </div>
+    </div>
+  )}
+  
+  {!hasMore && filteredProductsList.length > 0 && (
+    <div className="text-center py-8">
+      <p className="text-gray-600 dark:text-gray-400">You've reached the end! 🎉</p>
+    </div>
+  )}
 </section>
       </div>
 
-      <footer className="bg-gray-800 text-white py-8 mt-auto">
-  <div className="w-full px-4 sm:px-6 lg:px-8">
-    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 sm:gap-8">
-      {/* About Us */}
-      {/* About Us */}
-<div>
-  <h3 className="text-lg font-semibold mb-4">About Us</h3>
-  <a 
-    href="#"
-    onClick={(e) => {
-      e.preventDefault();
-      openPolicyModal('about');
-    }}
-    className="text-gray-300 text-sm hover:text-white transition-colors"
-  >
-    Learn more about us
-  </a>
-</div>
-
-      {/* Customer Service */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Customer Service</h3>
-        <ul className="space-y-2 text-gray-300 text-sm">
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('return');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Return Policy
-            </a>
-          </li>
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('refund');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Refund Policy
-            </a>
-          </li>
-        </ul>
-      </div>
-
-      {/* Quick Links */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Quick Links</h3>
-        <ul className="space-y-2 text-gray-300 text-sm">
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('privacy');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Privacy Policy
-            </a>
-          </li>
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('terms');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Terms and Conditions
-            </a>
-          </li>
-          <li>
-            <a 
-              href="#"
-              onClick={(e) => {
-                e.preventDefault();
-                openPolicyModal('shipping');
-              }}
-              className="hover:text-white transition-colors"
-            >
-              Shipping Policy
-            </a>
-          </li>
-        </ul>
-      </div>
-
-      {/* Follow Us */}
-      <div>
-        <h3 className="text-lg font-semibold mb-4">Follow Us</h3>
-        <div className="flex space-x-4">
-          {companySettings?.instagramId && (
-            <a 
-              href={`https://instagram.com/${companySettings.instagramId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-300 hover:text-pink-500 transition-colors"
-              title="Follow us on Instagram"
-            >
-              <Instagram className="w-6 h-6" />
-            </a>
-          )}
-          {companySettings?.facebookId && (
-            <a 
-              href={`https://facebook.com/${companySettings.facebookId}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-300 hover:text-blue-500 transition-colors"
-              title="Follow us on Facebook"
-            >
-              <Facebook className="w-6 h-6" />
-            </a>
-          )}
-          {companySettings?.adminWhatsappNumber && (
-            <a 
-              href={`https://wa.me/${companySettings.adminWhatsappNumber.replace(/[^0-9]/g, '')}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-gray-300 hover:text-green-500 transition-colors"
-              title="Chat on WhatsApp"
-            >
-              <MessageCircle className="w-6 h-6" />
-            </a>
-          )}
-        </div>
-      </div>
-    </div>
-
-    {/* Copyright */}
-    <div className="border-t border-gray-700 mt-8 pt-8 text-center space-y-2">
-      <p className="text-gray-300 text-sm">
-        © 2024 {companySettings?.companyName || 'Our Company'}. All rights reserved.
-      </p>
-      <p className="text-gray-400 text-xs">
-        Designed and Developed by Ebrahim Mustafa Morkas
-      </p>
-    </div>
-  </div>
-</footer>
+      <Footer />
 
       {/* {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />} */}
       {selectedVariantProduct && (
@@ -2902,44 +2923,7 @@ if (justArrivedProductsList.length > 0) {
         <VariantModal product={selectedVariantProduct} onClose={() => setSelectedVariantProduct(null)} />
       )}
       {selectedImage && <ImageModal imageUrl={selectedImage} onClose={() => setSelectedImage(null)} />}
-      {/* Policy Modal */}
-{policyModal.isOpen && (
-  <div className="fixed inset-0 bg-black bg-opacity-75 z-50 flex items-center justify-center p-4 overflow-y-auto">
-    <div className="bg-white dark:bg-gray-900 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col shadow-2xl">
-      {/* Modal Header */}
-      <div className="flex justify-between items-center p-6 border-b border-gray-200 dark:border-gray-700 sticky top-0 bg-white dark:bg-gray-900 rounded-t-2xl z-10">
-        <h2 className="text-2xl font-bold text-gray-900">
-          {getPolicyTitle(policyModal.type)}
-        </h2>
-        <button
-          onClick={closePolicyModal}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors"
-        >
-          <X className="w-6 h-6 text-gray-600 dark:text-gray-400" />
-        </button>
-      </div>
 
-      {/* Modal Content */}
-      <div className="flex-1 overflow-y-auto p-6">
-        <div 
-          className="prose prose-sm sm:prose lg:prose-lg max-w-none text-gray-700"
-          dangerouslySetInnerHTML={{ __html: policyModal.content }}
-        />
-      </div>
-
-      {/* Modal Footer */}
-      <div className="p-6 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800 rounded-b-2xl sticky bottom-0">
-        <button
-          onClick={closePolicyModal}
-          className="w-full sm:w-auto px-6 py-3 bg-blue-600 hover:bg-blue-700 text-black rounded-lg font-semibold transition-colors duration-200 flex items-center justify-center gap-2"
-        >
-          <X className="w-5 h-5" />
-          Close
-        </button>
-      </div>
-    </div>
-  </div>
-)}
 {/* Scroll to Top Button */}
 {showScrollTop && (
   <button

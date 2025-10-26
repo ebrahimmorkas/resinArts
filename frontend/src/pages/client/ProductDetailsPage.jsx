@@ -65,16 +65,16 @@ export default function ProductDetailsPage() {
   }
 
   const getApplicableDiscount = (product) => {
-  if (!discountData || !Array.isArray(discountData)) return null;
-  
-  const now = new Date();
-  const activeDiscounts = discountData.filter(discount => {
-    const start = new Date(discount.startDate);
-    const end = new Date(discount.endDate);
-    return now >= start && now <= end && discount.isActive;
-  });
-  
-  for (const discount of activeDiscounts) {
+    if (!discountData || !Array.isArray(discountData)) return null;
+    
+    const now = new Date();
+    const activeDiscounts = discountData.filter(discount => {
+      const start = new Date(discount.startDate);
+      const end = new Date(discount.endDate);
+      return now >= start && now <= end && discount.isActive;
+    });
+    
+    for (const discount of activeDiscounts) {
       if (discount.applicableToAll ||
         (discount.selectedMainCategory && product.categoryPath?.includes(discount.selectedMainCategory)) ||
         (discount.selectedSubCategory && product.categoryPath?.includes(discount.selectedSubCategory))
@@ -161,6 +161,13 @@ export default function ProductDetailsPage() {
     }
     return effectivePrice
   }
+
+  // Calculate cartKey early
+  const cartKey = product && selectedVariant && selectedSize
+    ? `${product._id}-${selectedVariant.colorName}-${formatSize(selectedSize.size)}`
+    : product ? `${product._id}-default-default` : null
+
+  const itemInCart = cartKey ? cartItems[cartKey] : null
 
   // Search functionality
   const handleSearch = (query) => {
@@ -281,11 +288,11 @@ export default function ProductDetailsPage() {
     setShowSearchResults(false)
   }
 
- const handleSearchKeyPress = (e) => {
-  if (e.key === 'Enter' && searchQuery.trim()) {
-    navigate(`/?search=${encodeURIComponent(searchQuery)}`)
+  const handleSearchKeyPress = (e) => {
+    if (e.key === 'Enter' && searchQuery.trim()) {
+      navigate(`/?search=${encodeURIComponent(searchQuery)}`)
+    }
   }
-}
 
   const highlightMatchedText = (text, searchQuery) => {
     if (!searchQuery.trim()) return text
@@ -348,9 +355,16 @@ export default function ProductDetailsPage() {
     }
   }, [productId, products])
 
+  // Sync quantity with cart items
+  useEffect(() => {
+    if (itemInCart) {
+      setQuantity(itemInCart.quantity)
+    }
+  }, [itemInCart?.quantity])
+
   if (!product) {
     return (
-  <div className="min-h-screen bg-gray-50 w-screen overflow-x-hidden">
+      <div className="min-h-screen bg-gray-50 w-screen overflow-x-hidden">
         <Navbar
           searchQuery={searchQuery}
           setSearchQuery={handleSearch}
@@ -386,6 +400,11 @@ export default function ProductDetailsPage() {
     setSelectedSize(sizeDetail)
     setQuantity(1)
   }
+
+  const handleRemoveFromCart = () => {
+  removeFromCart(cartKey)
+  setQuantity(1)
+}
 
   const handleQuantityChange = (value) => {
     const numValue = parseInt(value)
@@ -442,7 +461,6 @@ export default function ProductDetailsPage() {
 
       await addToCart(product._id, null, null, quantity, productData)
     }
-    setQuantity(1)
   }
 
   const getCurrentImages = () => {
@@ -477,14 +495,8 @@ export default function ProductDetailsPage() {
   const effectiveUnitPrice = getEffectiveUnitPrice(quantity, bulkPricing, displayPrice)
   const totalPrice = effectiveUnitPrice * quantity
 
-  const cartKey = product.hasVariants && selectedVariant && selectedSize
-    ? `${product._id}-${selectedVariant.colorName}-${formatSize(selectedSize.size)}`
-    : `${product._id}-default-default`
-
-  const itemInCart = cartItems[cartKey]
-
   return (
-  <div className="min-h-screen bg-gray-50 w-screen overflow-x-hidden">
+    <div className="min-h-screen bg-gray-50 w-screen overflow-x-hidden">
       <Navbar
         searchQuery={searchQuery}
         setSearchQuery={handleSearch}
@@ -517,8 +529,8 @@ export default function ProductDetailsPage() {
       </div>
 
       {/* Product Details */}
-<div className="w-full px-4 sm:px-6 lg:px-8 py-8">
-  <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden max-w-full">
+      <div className="w-full px-4 sm:px-6 lg:px-8 py-8">
+        <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-xl overflow-hidden max-w-full">
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 lg:gap-8 p-4 sm:p-6 lg:p-8">
             {/* Left Section - Images */}
             <div className="space-y-4">
@@ -542,13 +554,13 @@ export default function ProductDetailsPage() {
                   <>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev - 1 + currentImages.length) % currentImages.length)}
-                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors dark:text-white"
+                      className="absolute left-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-colors"
                     >
                       <ChevronLeft className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
                     <button
                       onClick={() => setCurrentImageIndex((prev) => (prev + 1) % currentImages.length)}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-black p-1.5 sm:p-2 rounded-full transition-colors dark:text-white"
+                      className="absolute right-2 top-1/2 transform -translate-y-1/2 bg-black/50 hover:bg-black/70 text-white p-1.5 sm:p-2 rounded-full transition-colors"
                     >
                       <ChevronRight className="w-4 h-4 sm:w-5 sm:h-5" />
                     </button>
@@ -556,7 +568,7 @@ export default function ProductDetailsPage() {
                       {currentImages.map((_, index) => (
                         <div
                           key={index}
-                          className={`w-2 h-2 rounded-full ${index === currentImageIndex ? "bg-white dark:bg-gray-900" : "bg-white dark:bg-gray-900/50"}`}
+                          className={`w-2 h-2 rounded-full ${index === currentImageIndex ? "bg-white" : "bg-white/50"}`}
                         />
                       ))}
                     </div>
@@ -611,17 +623,17 @@ export default function ProductDetailsPage() {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg">
+              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
                 <div>
-                  <span className="text-2xl sm:text-3xl font-bold text-blue-600">
+                  <span className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
                     ₹ {effectiveUnitPrice.toFixed(2)}
                   </span>
                   {effectiveUnitPrice < displayPrice && (
-                    <span className="text-sm text-green-600 ml-2 dark:text-blue-600">(Bulk discount applied)</span>
+                    <span className="text-sm text-green-600 ml-2 dark:text-green-400">(Bulk discount applied)</span>
                   )}
                 </div>
                 {hasActiveDiscount && originalPrice > displayPrice && (
-                  <span className="text-lg sm:text-xl text-gray-500 line-through">
+                  <span className="text-lg sm:text-xl text-gray-500 line-through dark:text-gray-400">
                     ₹ {originalPrice.toFixed(2)}
                   </span>
                 )}
@@ -639,8 +651,8 @@ export default function ProductDetailsPage() {
                         onClick={() => handleVariantChange(variant)}
                         className={`px-3 sm:px-4 py-1.5 sm:py-2 rounded-lg border text-sm font-medium transition-colors ${
                           selectedVariant?._id === variant._id
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-300 hover:border-gray-400'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                            : 'border-gray-300 hover:border-gray-400 dark:border-gray-600 dark:hover:border-gray-500 dark:text-gray-300'
                         }`}
                       >
                         {variant.colorName}
@@ -662,8 +674,8 @@ export default function ProductDetailsPage() {
                         onClick={() => handleSizeChange(detail)}
                         className={`p-2 sm:p-3 rounded-lg border text-left transition-colors ${
                           selectedSize?._id === detail._id
-                            ? 'border-blue-500 bg-blue-50 text-blue-700'
-                            : 'border-gray-300 hover:border-gray-400'
+                            ? 'border-blue-500 bg-blue-50 text-blue-700 dark:bg-blue-900/50 dark:text-blue-300'
+                            : 'border-gray-300 hover:border-gray-400 dark:border-gray-600 dark:hover:border-gray-500 dark:text-gray-300'
                         }`}
                       >
                         <div className="text-sm font-medium">
@@ -691,97 +703,105 @@ export default function ProductDetailsPage() {
                 </div>
               )}
 
-              {itemInCart ? (
-                <>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">Quantity in Cart</h3>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center border border-gray-300 rounded-lg">
-                        <button
-                          onClick={() => updateQuantity(cartKey, -1)}
-                          className="p-2 hover:bg-gray-100 rounded-l-lg transition-colors"
-                        >
-                          <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </button>
-                        <span className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center font-semibold">
-                          {itemInCart.quantity}
-                        </span>
-                        <button
-                          onClick={() => updateQuantity(cartKey, 1)}
-                          className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors"
-                        >
-                          <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </button>
-                      </div>
+              <>
+                <div>
+                  <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">
+                    {itemInCart ? "Quantity in Cart" : "Quantity"}
+                  </h3>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
+                      <button
+                        onClick={() => {
+                          if (itemInCart) {
+                            updateQuantity(cartKey, -1)
+                          } else {
+                            quantity > 1 && setQuantity(quantity - 1)
+                          }
+                        }}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        disabled={itemInCart ? itemInCart.quantity <= 1 : quantity <= 1}
+                      >
+                        <Minus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
+                      </button>
+                      <input
+                        type="text"
+                        value={quantity}
+                        onChange={(e) => handleQuantityChange(e.target.value)}
+                        onBlur={(e) => {
+                          if (itemInCart) {
+                            const newQty = parseInt(e.target.value) || 1
+                            const diff = newQty - itemInCart.quantity
+                            if (diff !== 0) {
+                              updateQuantity(cartKey, diff)
+                            }
+                          }
+                        }}
+                        onKeyPress={(e) => {
+                          if (e.key === 'Enter' && itemInCart) {
+                            const newQty = parseInt(e.target.value) || 1
+                            const diff = newQty - itemInCart.quantity
+                            if (diff !== 0) {
+                              updateQuantity(cartKey, diff)
+                            }
+                            e.target.blur()
+                          }
+                        }}
+                        className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center border-0 focus:outline-none dark:bg-gray-900 dark:text-white"
+                      />
+                      <button
+                        onClick={() => {
+                          if (itemInCart) {
+                            updateQuantity(cartKey, 1)
+                          } else {
+                            currentStock > 0 && quantity < currentStock && setQuantity(quantity + 1)
+                          }
+                        }}
+                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        // disabled={itemInCart ? false : quantity >= currentStock}
+                      >
+                        <Plus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
+                      </button>
                     </div>
                   </div>
+                </div>
 
-                  <button
-                    onClick={() => removeFromCart(cartKey)}
-                    className="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-                    Remove from Cart
-                  </button>
-                </>
-              ) : (
-                <>
-                  <div>
-                    <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">Quantity</h3>
-                    <div className="flex items-center gap-4">
-                      <div className="flex items-center border border-gray-300 rounded-lg">
-                        <button
-                          onClick={() => quantity > 1 && setQuantity(quantity - 1)}
-                          className="p-2 hover:bg-gray-100 rounded-l-lg transition-colors"
-                          disabled={quantity <= 1}
-                        >
-                          <Minus className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </button>
-                        <input
-                          type="text"
-                          value={quantity}
-                          onChange={(e) => handleQuantityChange(e.target.value)}
-                          className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center border-0 focus:outline-none"
-                        />
-                        <button
-                          onClick={() => currentStock > 0 && quantity < currentStock && setQuantity(quantity + 1)}
-                          className="p-2 hover:bg-gray-100 rounded-r-lg transition-colors"
-                          disabled={quantity >= currentStock}
-                        >
-                          <Plus className="w-3 h-3 sm:w-4 sm:h-4" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
+               {itemInCart ? (
+  <button
+    onClick={handleRemoveFromCart}
+    className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+  >
+    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+    Remove from Cart
+  </button>
+                ) : (
                   <button
                     onClick={handleAddToCartFromModal}
-                    disabled={currentStock === 0 || (product.hasVariants && (!selectedVariant || !selectedSize))}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+                    // disabled={currentStock === 0 || (product.hasVariants && (!selectedVariant || !selectedSize))}
+                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
                   >
                     <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                    {currentStock === 0 ? "Out of Stock" : `Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}
+                    {`Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}
                   </button>
-                </>
-              )}
+                )}
+              </>
 
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t dark:border-gray-700">
                 <div className="flex items-center gap-3">
-                  <Shield className="w-5 h-5 text-green-600" />
+                  <Shield className="w-5 h-5 text-green-600 dark:text-green-400" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Quality Assured</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Truck className="w-5 h-5 text-blue-600" />
+                  <Truck className="w-5 h-5 text-blue-600 dark:text-blue-400" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Fast Shipping</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <Star className="w-5 h-5 text-yellow-500" />
+                  <Star className="w-5 h-5 text-yellow-500 dark:text-yellow-400" />
                   <span className="text-sm text-gray-700 dark:text-gray-300">Premium Quality</span>
                 </div>
               </div>
 
               {product.productDetails && product.productDetails.length > 0 && (
-                <div className="border-t pt-4">
+                <div className="border-t pt-4 dark:border-gray-700">
                   <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">Product Details</h3>
                   <div className="space-y-2">
                     {product.productDetails.map((detail) => (

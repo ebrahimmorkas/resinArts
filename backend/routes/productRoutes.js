@@ -1,11 +1,12 @@
 const express = require("express")
 const router = express.Router()
-const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, bulkOverrideProducts, deleteProduct, editProduct, getProductById, bulkEditProducts, duplicateProducts, toggleProductStatus, bulkToggleProductStatus, toggleVariantSizeStatus } = require("../controllers/productController")
+const { addProduct, fetchProducts, restock, massRestock, massRevisedRate, revisedRate, upload, bulkUploadProducts, bulkOverrideProducts, deleteProduct, editProduct, getProductById, bulkEditProducts, duplicateProducts, toggleProductStatus, bulkToggleProductStatus, toggleVariantSizeStatus, searchProducts } = require("../controllers/productController")
 const authenticate = require("../middlewares/authenticate")
 const authorize = require("../middlewares/authorize")
 const productController = require("../controllers/productController")
 
 // PUBLIC ROUTES - No authentication required
+router.get('/search', searchProducts);
 router.get("/all", fetchProducts); // Now accessible to guest users
 
 // ADMIN ONLY ROUTES - Authentication + Authorization required

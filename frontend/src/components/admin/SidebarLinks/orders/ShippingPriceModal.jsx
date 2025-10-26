@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react'
 import { X, DollarSign } from "lucide-react"
 import axios from "axios";
 
-function ShippingPriceModal({onClose, orderId, email, isEditMode = false, currentShippingPrice = 0}) {
+function ShippingPriceModal({onClose, orderId, email, isEditMode = false, currentShippingPrice = 0, fromConfirmationModal = false, updatedProducts = null, currentOrderStatus = null}) {
     const [shippingPriceValue, setShippingPriceValue] = useState("");
     const [isLoading, setIsLoading] = useState(false);
     const [errorMessage, setErrorMessage] = useState("");
@@ -25,13 +25,35 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
     if (!isNaN(priceValue) && priceValue >= 0) {
         setIsLoading(true);
         setErrorMessage("");
+        
+        // Validate orderId
+        if (!orderId) {
+            setErrorMessage("Order ID is missing. Please try again.");
+            setIsLoading(false);
+            return;
+        }
+        
         try {
-            const res = await axios.post("https://api.simplyrks.cloud/api/order/shipping-price-update", {
-                shippingPriceValue: priceValue,
-                orderId,
-                email,
-                isEdit: isEditMode
-            }, { withCredentials: true });
+            let res;
+            
+            // If called from ConfirmationModal, use confirm-order-update endpoint
+            if (fromConfirmationModal && updatedProducts) {
+                res = await axios.post("https://api.simplyrks.cloud/api/order/confirm-order-update", {
+                    orderId,
+                    products: updatedProducts,
+                    confirmedShippingPrice: priceValue,
+                    email,
+                    currentStatus: currentOrderStatus
+                }, { withCredentials: true });
+            } else {
+                // Normal flow - just update shipping price
+                res = await axios.post("https://api.simplyrks.cloud/api/order/shipping-price-update", {
+                    shippingPriceValue: priceValue,
+                    orderId,
+                    email,
+                    isEdit: isEditMode
+                }, { withCredentials: true });
+            }
             
             if (res.status === 200) {
                 console.log(isEditMode ? "Shipping price updated successfully" : "Shipping price added successfully");
@@ -41,19 +63,19 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
                 setErrorMessage("Failed to update shipping price. Please try again.");
             }
         } catch (error) {
-        console.log("Error:", error.message);
-        if (error.response && error.response.status === 400 && error.response.data.message.includes("Insufficient stock")) {
-            setErrorMessage(error.response.data.message);
-        } else {
-            setErrorMessage("Failed to update shipping price. Please try again.");
+            console.log("Error:", error.message);
+            if (error.response && error.response.status === 400 && error.response.data.message.includes("Insufficient stock")) {
+                setErrorMessage(error.response.data.message);
+            } else {
+                setErrorMessage(error.response?.data?.message || "Failed to update shipping price. Please try again.");
+            }
+        } finally {
+            setIsLoading(false);
         }
-    } finally {
-        setIsLoading(false);
+    } else {
+        setErrorMessage("Please enter a valid shipping price (0 or greater)");
     }
-} else {
-    setErrorMessage("Please enter a valid shipping price (0 or greater)");
-}
-    }
+};
 
     const modalTitle = isEditMode ? "Edit Shipping Price" : "Add Shipping Price";
     const buttonText = isEditMode ? "Update Shipping Price" : "Add Shipping Price";
@@ -113,7 +135,7 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
                                 onChange={(e) => setShippingPriceValue(e.target.value)}
                                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
                                 placeholder="Enter shipping price"
-                                min="1"
+                                min="0"
                                 step="0.01"
                                 disabled={isLoading}
                                 required

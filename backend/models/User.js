@@ -19,6 +19,10 @@ const userSchema = mongoose.Schema({
         type: String,
         default: 'user',
     },
+    favorites: [{
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Product'
+}],
     zip_code: {
         type: String,
         required: true
@@ -32,5 +36,7 @@ const userSchema = mongoose.Schema({
     select: false,
   },
 });
+
+userSchema.index({ favorites: 1 });
 
 module.exports = mongoose.model('User', userSchema);

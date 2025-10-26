@@ -550,7 +550,7 @@ commonStock: variant.commonStock?.toString() || "",
   const headerClass = "border-b border-gray-100 px-8 py-6 bg-gradient-to-r from-gray-50 to-white"
   const titleClass = "text-2xl font-bold text-gray-900 flex items-center gap-3"
   const subtitleClass = "text-gray-600 dark:text-gray-400 mt-1"
-  const inputClass = "w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 placeholder-gray-400"
+  const inputClass = "dark:text-gray-400 w-full px-4 py-3 border border-gray-200 dark:border-gray-700 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 bg-white dark:bg-gray-900 text-gray-900 placeholder-gray-400"
   const labelClass = "block text-sm font-semibold text-gray-700 mb-2"
   const buttonClass = "inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2"
   const primaryButtonClass = `${buttonClass} bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white shadow-lg hover:shadow-xl focus:ring-blue-500`
@@ -780,34 +780,48 @@ commonStock: variant.commonStock?.toString() || "",
                 {!hasVariants && (
                   <>
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                      <div className="space-y-2">
-                        <label htmlFor="stock" className={`${labelClass} dark:text-white`}>
-                          <Package className="inline w-4 h-4 mr-2" />
-                          Stock Quantity
-                        </label>
-                        <input
-                          id="stock"
-                          type="number"
-                          value={stock}
-                          onChange={(e) => setStock(e.target.value)}
-                          placeholder="Available quantity"
-                          className={`${inputClass} dark:text-gray-400`}
-                        />
-                      </div>
-                      <div className="space-y-2">
-                        <label htmlFor="price" className={`${labelClass} dark:text-white`}>
-                          <DollarSign className="inline w-4 h-4 mr-2" />
-                          Price ($)
-                        </label>
-                        <input
-                          id="price"
-                          type="number"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          placeholder="Product price"
-                          className={`${inputClass} dark:text-gray-400`}
-                        />
-                      </div>
+                     <div className="space-y-2">
+  <label htmlFor="stock" className={`${labelClass} dark:text-white`}>
+    <Package className="inline w-4 h-4 mr-2" />
+    Stock Quantity
+  </label>
+  <input
+    id="stock"
+    type="number"
+    value={stock}
+    onChange={(e) => setStock(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === '-' || e.key === 'e' || e.key === 'E' || e.key === '+') {
+        e.preventDefault();
+      }
+    }}
+    placeholder="Available quantity"
+    className={inputClass}
+    min="0"
+    step="1"
+  />
+</div>
+<div className="space-y-2">
+  <label htmlFor="price" className={`${labelClass} dark:text-white`}>
+    <DollarSign className="inline w-4 h-4 mr-2" />
+    Price ($)
+  </label>
+  <input
+    id="price"
+    type="number"
+    value={price}
+    onChange={(e) => setPrice(e.target.value)}
+    onKeyDown={(e) => {
+      if (e.key === '-' || e.key === 'e' || e.key === 'E') {
+        e.preventDefault();
+      }
+    }}
+    placeholder="Product price"
+    className={inputClass}
+    min="0"
+    step="0.01"
+  />
+</div>
                     </div>
 
                     {/* Main Image Upload */}

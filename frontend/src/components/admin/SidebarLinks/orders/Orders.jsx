@@ -1,18 +1,25 @@
 "use client"
 
 import { useState, useMemo, useEffect, useContext } from "react"
-import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar, DollarSign } from "lucide-react"
+import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar, DollarSign, Trash2 } from "lucide-react"
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from "jspdf";
 import io from 'socket.io-client';
-
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 import axios from "axios"
 import { ProductContext } from "../../../../../Context/ProductContext"
 import ShippingPriceModal from "./ShippingPriceModal"
 import StatusModal from "./StatusModal";
 import EditOrderModal from "./EditOrderModal"
 import { CompanySettingsContext } from "../../../../../Context/CompanySettingsContext";
+import BulkDeleteConfirmationModal from './bulkOperationsModal/BulkDeleteConfirmationModal';
+import BulkDeleteCompletedModal from './bulkOperationsModal/BulkDeleteCompletedModal';
+import BulkDeleteSelectionModal from './bulkOperationsModal/BulkDeleteSelectionModal';
+import BulkRejectConfirmationModal from './bulkOperationsModal/BulkRejectConfirmationModal';
+import BulkResultModal from './bulkOperationsModal/BulkResultModal';
+import BulkShippingPriceModal from './bulkOperationsModal/BulkShippingPriceModal';
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -34,14 +41,20 @@ const statusIcons = {
 
 // Function to get stock for a product
 const getStock = (details, variantAndSizeDetails) => {
+  // Handle case where details is undefined or not an array
+  if (!details || !Array.isArray(details)) {
+    console.warn("Invalid details provided to getStock:", details);
+    return undefined;
+  }
+  
   console.log(details);
   console.log("From get stock");
   
   for (const detail of details) {
     if (detail.hasVariants) {
       console.log("It has variants");
-      variantLoop: for (const variant of detail.variants) {
-        moreDetailLoop: for (const moreDetail of variant.moreDetails) {
+      for (const variant of detail.variants) {
+        for (const moreDetail of variant.moreDetails) {
           if (moreDetail.size._id.toString() === variantAndSizeDetails.size_id.toString()) {
             return moreDetail.stock;
           }
@@ -53,6 +66,8 @@ const getStock = (details, variantAndSizeDetails) => {
       return detail.stock;
     }
   }
+  
+  return undefined;
 }
 
 // Order Details Modal Component
@@ -162,24 +177,19 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
             </div>
 
             {/* Action Buttons */}
-            <div className="flex flex-wrap gap-3">
-            <button
+<div className="flex flex-wrap gap-3">
+  <button
   onClick={async () => {
     try {
       setOrderId(order._id);
 
-      // Show ShippingPriceModal only if total_price is "Pending" (pending shipping)
       if (order.total_price === "Pending") {
         setPendingAcceptOrderId(order._id);
         setShowShippingPriceModal(true);
       } else {
-        // Update local state immediately for better UX
         onStatusChange(order._id, "Accepted");
-        
-        // Call backend to persist status change
         await handleStatusChangeBackend("Accepted", order._id);
 
-        // Call endpoint to send acceptance email
         const res = await axios.post(
           'https://api.simplyrks.cloud/api/order/sendAcceptEmailWhenShippingPriceAddedAutomatically',
           {
@@ -192,13 +202,12 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       }
     } catch (error) {
       console.error('Error accepting order:', error.response?.data || error.message);
-      // Revert local state on error
       onStatusChange(order._id, "Pending");
     }
   }}
   className="inline-flex items-center px-4 py-2 bg-green-600 text-green-600 text-sm font-medium rounded-lg hover:bg-green-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
   disabled={
-    order.status === "Accepted" ||
+    (order.status !== "Pending" && order.status !== "Rejected") ||
     !productMappedWithOrderId ||
     order.orderedProducts.some((product, index) => {
       const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
@@ -211,94 +220,134 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
       return stock === undefined || stock < product.quantity;
     })
       ? "Cannot accept order: Insufficient stock for one or more products"
-      : order.status === "Accepted"
-      ? "Order already accepted"
+      : (order.status !== "Pending" && order.status !== "Rejected")
+      ? "Can only accept Pending or Rejected orders"
       : "Accept order"
   }
 >
   <Check className="h-4 w-4 mr-2" />
   Accept
 </button>
-              <button
-                onClick={() => {
-                  onStatusChange(order._id, "Rejected");
-                  handleStatusChangeBackend("Rejected", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-red-600 text-red-600 text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "Rejected"}
-              >
-                <X className="h-4 w-4 mr-2" />
-                Reject
-              </button>
-              <button
-                onClick={() => {
-                  onStatusChange(order._id, "Confirm");
-                  handleStatusChangeBackend("Confirm", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-blue-600 text-blue-600white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "Confirm"}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Confirm
-              </button>
-              {/*<button
-                onClick={() => {
-                  onStatusChange(order._id, "In Progress");
-                  handleStatusChangeBackend("In Progress", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-orange-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "In Progress"}
-              > 
-                <Clock className="h-4 w-4 mr-2" />
-                In Progress
-              </button> */}
-              <button
-                onClick={() => {
-                  onStatusChange(order._id, "Dispatched");
-                  handleStatusChangeBackend("Dispatched", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-indigo-600 text-green-600 text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "Dispatched"}
-              >
-                <Truck className="h-4 w-4 mr-2" />
-                Dispatch
-              </button>
-              <button
-                onClick={() => {
-                  onStatusChange(order._id, "Completed");
-                  handleStatusChangeBackend("Completed", order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-purple-600 text-green-600 text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                disabled={order.status === "Completed"}
-              >
-                <CheckCircle className="h-4 w-4 mr-2" />
-                Complete
-              </button>
-{order.status === "Accepted" && (
+
+  <button
+    onClick={() => {
+      onStatusChange(order._id, "Rejected");
+      handleStatusChangeBackend("Rejected", order._id);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-red-600 text-red-600 text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={!(order.status === "Pending" || order.status === "Accepted" || order.status === "Confirm")}
+    title={
+      !(order.status === "Pending" || order.status === "Accepted" || order.status === "Confirm")
+        ? "Can only reject Pending, Accepted, or Confirm orders"
+        : "Reject order"
+    }
+  >
+    <X className="h-4 w-4 mr-2" />
+    Reject
+  </button>
+
+  <button
+  onClick={() => {
+    onStatusChange(order._id, "Confirm");
+    handleStatusChangeBackend("Confirm", order._id);
+  }}
+  className="inline-flex items-center px-4 py-2 bg-blue-600 text-blue-600white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={
+    order.status !== "Accepted" ||
+    !productMappedWithOrderId ||
+    order.orderedProducts.some((product, index) => {
+      if (!productMappedWithOrderId || !productMappedWithOrderId.products[index] || productMappedWithOrderId.products[index].length === 0) {
+    // Allow acceptance - stock was validated during edit
+    return false;
+  }
+      const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+      return stock === undefined || stock < product.quantity;
+    })
+  }
+  title={
+    order.status !== "Accepted"
+      ? "Can only confirm Accepted orders"
+      : order.orderedProducts.some((product, index) => {
+          const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
+          return stock === undefined || stock < product.quantity;
+        })
+      ? "Cannot confirm order: Insufficient stock for one or more products"
+      : "Confirm order"
+  }
+>
+  <CheckCircle className="h-4 w-4 mr-2" />
+  Confirm
+</button>
+
+  <button
+    onClick={() => {
+      onStatusChange(order._id, "Dispatched");
+      handleStatusChangeBackend("Dispatched", order._id);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-indigo-600 text-green-600 text-sm font-medium rounded-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={order.status !== "Confirm"}
+    title={
+      order.status !== "Confirm"
+        ? "Can only dispatch Confirm orders"
+        : "Dispatch order"
+    }
+  >
+    <Truck className="h-4 w-4 mr-2" />
+    Dispatch
+  </button>
+
+  <button
+    onClick={() => {
+      onStatusChange(order._id, "Completed");
+      handleStatusChangeBackend("Completed", order._id);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-purple-600 text-green-600 text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={order.status !== "Dispatched"}
+    title={
+      order.status !== "Dispatched"
+        ? "Can only complete Dispatched orders"
+        : "Complete order"
+    }
+  >
+    <CheckCircle className="h-4 w-4 mr-2" />
+    Complete
+  </button>
+
   <button
     onClick={() => {
       setOrderId(order._id);
       setShowShippingPriceModal(true);
       setIsEditShippingPrice(true);
     }}
-    className="inline-flex items-center px-4 py-2 bg-yellow-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors"
-    disabled={isLoading}
+    className="inline-flex items-center px-4 py-2 bg-yellow-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-yellow-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={!(order.status === "Accepted" || order.status === "Confirm") || isLoading}
+    title={
+      !(order.status === "Accepted" || order.status === "Confirm")
+        ? "Can only edit shipping for Accepted or Confirm orders"
+        : `Edit Shipping (${order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price}`})`
+    }
   >
     <DollarSign className="h-4 w-4 mr-2" />
     Edit Shipping ({order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price}`})
   </button>
-)}
-              <button
-                onClick={() => {
-                  handleEdit(order);
-                  setOrderId(order._id);
-                }}
-                className="inline-flex items-center px-4 py-2 bg-gray-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors"
-              >
-                <User className="h-4 w-4 mr-2" />
-                Edit
-              </button>
-            </div>
+
+  <button
+    onClick={() => {
+      handleEdit(order);
+      setOrderId(order._id);
+    }}
+    className="inline-flex items-center px-4 py-2 bg-gray-600 text-blue-600 text-sm font-medium rounded-lg hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+    disabled={!(order.status === "Pending" || order.status === "Accepted" || order.status === "Rejected" || order.status === "Confirm")}
+    title={
+      !(order.status === "Pending" || order.status === "Accepted" || order.status === "Rejected" || order.status === "Confirm")
+        ? "Can only edit Pending, Accepted, Rejected, or Confirm orders"
+        : "Edit order"
+    }
+  >
+    <User className="h-4 w-4 mr-2" />
+    Edit
+  </button>
+</div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
@@ -544,6 +593,23 @@ export default function OrdersManagement() {
   const { companySettings, loadingSettings } = useContext(CompanySettingsContext);
   const [orderedProducts, setOrderedProducts] = useState({});
   const [singleOrderedProduct, setSingleOrderedProduct] = useState(null);
+
+const [selectedOrders, setSelectedOrders] = useState([]);
+const [showBulkActions, setShowBulkActions] = useState(false);
+const [bulkLoading, setBulkLoading] = useState(false);
+
+// Bulk operation modals
+const [showBulkDeleteConfirmation, setShowBulkDeleteConfirmation] = useState(false);
+const [showBulkDeleteCompleted, setShowBulkDeleteCompleted] = useState(false);
+const [showBulkDeleteSelection, setShowBulkDeleteSelection] = useState(false);
+const [showBulkRejectConfirmation, setShowBulkRejectConfirmation] = useState(false);
+const [showBulkResultModal, setShowBulkResultModal] = useState(false);
+const [showBulkShippingModal, setShowBulkShippingModal] = useState(false);
+
+const [bulkResults, setBulkResults] = useState(null);
+const [bulkOperation, setBulkOperation] = useState('');
+const [ordersToConfirmReject, setOrdersToConfirmReject] = useState([]);
+const [ordersByStatusForDelete, setOrdersByStatusForDelete] = useState({});
 
   // PDF generation function
   const generateOrderPDF = async (order, orderIndex) => {
@@ -862,20 +928,22 @@ pdfContent.innerHTML = `
   }, [loading]);
 
   // Map products to orders
-  useEffect(() => {
-    const productsMapperWithOrderId = {};
-    if (products.length > 0) {
-      orders.forEach(order => {
-        const p = [];
-        order.orderedProducts.forEach(product => {
-          p.push(products.filter(prod => prod._id.toString() === product.product_id.toString()));
-        });
-        productsMapperWithOrderId[order._id] = { products: p };
+// Map products to orders
+useEffect(() => {
+  const productsMapperWithOrderId = {};
+  if (products.length > 0) {
+    orders.forEach(order => {
+      const p = [];
+      order.orderedProducts.forEach(product => {
+        const matchedProducts = products.filter(prod => prod._id.toString() === product.product_id.toString());
+        p.push(matchedProducts.length > 0 ? matchedProducts : []);
       });
-      setOrderedProducts(productsMapperWithOrderId);
-      console.log(productsMapperWithOrderId);
-    }
-  }, [orders, products]);
+      productsMapperWithOrderId[order._id] = { products: p };
+    });
+    setOrderedProducts(productsMapperWithOrderId);
+    console.log(productsMapperWithOrderId);
+  }
+}, [orders, products]);
 
  useEffect(() => {
     const socket = io('https://api.simplyrks.cloud', {
@@ -932,6 +1000,41 @@ pdfContent.innerHTML = `
       }
     });
 
+    socket.on('orderUpdated', (updatedOrder) => {
+  console.log('Order updated:', updatedOrder);
+  if (updatedOrder && updatedOrder._id) {
+    setOrders((prevOrders) => {
+      const updatedOrders = prevOrders.map((order) =>
+        order._id === updatedOrder._id
+          ? { 
+              ...order, 
+              orderedProducts: updatedOrder.orderedProducts,
+              price: updatedOrder.price,
+              shipping_price: updatedOrder.shipping_price, 
+              total_price: updatedOrder.total_price, 
+              status: updatedOrder.status 
+            }
+          : order
+      );
+      return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    });
+    
+    // Update selected order in modal if it's open
+    if (selectedOrder && selectedOrder._id === updatedOrder._id) {
+      setSelectedOrder((prev) => ({
+        ...prev,
+        orderedProducts: updatedOrder.orderedProducts,
+        price: updatedOrder.price,
+        shipping_price: updatedOrder.shipping_price,
+        total_price: updatedOrder.total_price,
+        status: updatedOrder.status,
+      }));
+    }
+  } else {
+    console.error('Invalid order update received:', updatedOrder);
+  }
+});
+
     socket.on('connect_error', (error) => {
       console.error('Socket.IO connection error:', error);
     });
@@ -941,6 +1044,16 @@ pdfContent.innerHTML = `
       console.log('Disconnected from Socket.IO server');
     };
   }, [selectedOrder]);
+
+    // Reset to page 1 when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, itemsPerPage, statusFilter, dateFilter]);
+
+// Update showBulkActions when selectedOrders changes
+useEffect(() => {
+  setShowBulkActions(selectedOrders.length > 0);
+}, [selectedOrders]);
 
   // Enhanced filter orders based on search term, status, and date
   const filteredOrders = useMemo(() => {
@@ -1000,11 +1113,6 @@ pdfContent.innerHTML = `
   // Sort filtered orders by createdAt in descending order
   return filtered.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 }, [orders, searchTerm, statusFilter, dateFilter, customStartDate, customEndDate, singleDate]);
-
-  // Reset to page 1 when search changes
-  useEffect(() => {
-    setCurrentPage(1);
-  }, [searchTerm, itemsPerPage, statusFilter, dateFilter]);
 
   // Calculate pagination
   const totalPages = Math.ceil(filteredOrders.length / itemsPerPage);
@@ -1179,6 +1287,365 @@ pdfContent.innerHTML = `
     );
   }
 
+  // Checkbox handlers
+const handleSelectAll = (e) => {
+  if (e.target.checked) {
+    setSelectedOrders(currentOrders.map(order => order._id));
+  } else {
+    setSelectedOrders([]);
+  }
+};
+
+const handleSelectOrder = (orderId) => {
+  setSelectedOrders(prev => {
+    if (prev.includes(orderId)) {
+      return prev.filter(id => id !== orderId);
+    } else {
+      return [...prev, orderId];
+    }
+  });
+};
+
+// Bulk Accept Handler
+const handleBulkAccept = async () => {
+  setBulkLoading(true);
+  try {
+    const res = await axios.post(
+      'https://api.simplyrks.cloud/api/order/bulk-accept',
+      { orderIds: selectedOrders },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      setBulkResults(res.data.results);
+      setBulkOperation('accept');
+      setShowBulkResultModal(true);
+      
+      // Refresh orders
+      const ordersRes = await axios.get('https://api.simplyrks.cloud/api/order/all', { withCredentials: true });
+      if (ordersRes.status === 200) {
+        const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
+      }
+      
+      setSelectedOrders([]);
+      toast.success(`${res.data.results.accepted?.length || 0} order(s) accepted successfully!`);
+    }
+  } catch (error) {
+    console.error('Bulk accept error:', error);
+    toast.error('Failed to accept orders. Please try again.');
+  } finally {
+    setBulkLoading(false);
+  }
+};
+
+// Bulk Reject Handler
+const handleBulkReject = async () => {
+  setBulkLoading(true);
+  try {
+    const res = await axios.post(
+      'https://api.simplyrks.cloud/api/order/bulk-reject',
+      { orderIds: selectedOrders },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      const results = res.data.results;
+      
+      // If there are orders with sufficient stock, show confirmation modal
+      if (results.sufficientStock?.length > 0) {
+        setOrdersToConfirmReject(results.sufficientStock);
+        setShowBulkRejectConfirmation(true);
+      } else {
+        // Show results directly
+        setBulkResults(results);
+        setBulkOperation('reject');
+        setShowBulkResultModal(true);
+        
+        // Refresh orders
+        const ordersRes = await axios.get('https://api.simplyrks.cloud/api/order/all', { withCredentials: true });
+        if (ordersRes.status === 200) {
+          const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+          setOrders(sortedOrders);
+        }
+        
+        setSelectedOrders([]);
+        const totalRejected = (results.rejected?.length || 0) + (results.insufficientStock?.length || 0);
+        toast.success(`${totalRejected} order(s) rejected successfully!`);
+      }
+    }
+  } catch (error) {
+    console.error('Bulk reject error:', error);
+    toast.error('Failed to reject orders. Please try again.');
+  } finally {
+    setBulkLoading(false);
+  }
+};
+
+// Confirm Bulk Reject from Modal
+const handleConfirmBulkReject = async (orderIdsToReject) => {
+  setShowBulkRejectConfirmation(false);
+  setBulkLoading(true);
+  
+  try {
+    const res = await axios.post(
+      'https://api.simplyrks.cloud/api/order/bulk-reject',
+      { orderIds: orderIdsToReject },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      setBulkResults(res.data.results);
+      setBulkOperation('reject');
+      setShowBulkResultModal(true);
+      
+      // Refresh orders
+      const ordersRes = await axios.get('https://api.simplyrks.cloud/api/order/all', { withCredentials: true });
+      if (ordersRes.status === 200) {
+        const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
+      }
+      
+      setSelectedOrders([]);
+      const totalRejected = (res.data.results.rejected?.length || 0) + (res.data.results.insufficientStock?.length || 0);
+      toast.success(`${totalRejected} order(s) rejected successfully!`);
+    }
+  } catch (error) {
+    console.error('Bulk reject confirmation error:', error);
+    toast.error('Failed to reject orders. Please try again.');
+  } finally {
+    setBulkLoading(false);
+  }
+};
+
+// Bulk Confirm Handler
+const handleBulkConfirm = async () => {
+  setBulkLoading(true);
+  try {
+    const res = await axios.post(
+      'https://api.simplyrks.cloud/api/order/bulk-confirm',
+      { orderIds: selectedOrders },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      setBulkResults(res.data.results);
+      setBulkOperation('confirm');
+      setShowBulkResultModal(true);
+      
+      // Refresh orders
+      const ordersRes = await axios.get('https://api.simplyrks.cloud/api/order/all', { withCredentials: true });
+      if (ordersRes.status === 200) {
+        const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
+      }
+      
+      setSelectedOrders([]);
+      toast.success(`${res.data.results.confirmed?.length || 0} order(s) confirmed successfully!`);
+    }
+  } catch (error) {
+    console.error('Bulk confirm error:', error);
+    toast.error('Failed to confirm orders. Please try again.');
+  } finally {
+    setBulkLoading(false);
+  }
+};
+
+// Bulk Dispatch Handler
+const handleBulkDispatch = async () => {
+  setBulkLoading(true);
+  try {
+    const res = await axios.post(
+      'https://api.simplyrks.cloud/api/order/bulk-dispatch',
+      { orderIds: selectedOrders },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      setBulkResults(res.data.results);
+      setBulkOperation('dispatch');
+      setShowBulkResultModal(true);
+      
+      // Refresh orders
+      const ordersRes = await axios.get('https://api.simplyrks.cloud/api/order/all', { withCredentials: true });
+      if (ordersRes.status === 200) {
+        const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
+      }
+      
+      setSelectedOrders([]);
+      toast.success(`${res.data.results.dispatched?.length || 0} order(s) dispatched successfully!`);
+    }
+  } catch (error) {
+    console.error('Bulk dispatch error:', error);
+    toast.error('Failed to dispatch orders. Please try again.');
+  } finally {
+    setBulkLoading(false);
+  }
+};
+
+// Bulk Complete Handler
+const handleBulkComplete = async () => {
+  setBulkLoading(true);
+  try {
+    const res = await axios.post(
+      'https://api.simplyrks.cloud/api/order/bulk-complete',
+      { orderIds: selectedOrders },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      setBulkResults(res.data.results);
+      setBulkOperation('complete');
+      setShowBulkResultModal(true);
+      
+      // Refresh orders
+      const ordersRes = await axios.get('https://api.simplyrks.cloud/api/order/all', { withCredentials: true });
+      if (ordersRes.status === 200) {
+        const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
+      }
+      
+      setSelectedOrders([]);
+      toast.success(`${res.data.results.completed?.length || 0} order(s) completed successfully!`);
+    }
+  } catch (error) {
+    console.error('Bulk complete error:', error);
+    toast.error('Failed to complete orders. Please try again.');
+  } finally {
+    setBulkLoading(false);
+  }
+};
+
+// Bulk Update Shipping Price Handler
+const handleBulkUpdateShipping = () => {
+  setShowBulkShippingModal(true);
+};
+
+const handleConfirmBulkShipping = async (shippingPrice) => {
+  setShowBulkShippingModal(false);
+  setBulkLoading(true);
+  
+  try {
+    const res = await axios.post(
+      'https://api.simplyrks.cloud/api/order/bulk-update-shipping',
+      { orderIds: selectedOrders, shippingPrice },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      setBulkResults(res.data.results);
+      setBulkOperation('updateShipping');
+      setShowBulkResultModal(true);
+      
+      // Refresh orders
+      const ordersRes = await axios.get('https://api.simplyrks.cloud/api/order/all', { withCredentials: true });
+      if (ordersRes.status === 200) {
+        const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
+      }
+      
+      setSelectedOrders([]);
+      toast.success(`${res.data.results.updated?.length || 0} order(s) shipping price updated successfully!`);
+    }
+  } catch (error) {
+    console.error('Bulk update shipping error:', error);
+    toast.error('Failed to update shipping price. Please try again.');
+  } finally {
+    setBulkLoading(false);
+  }
+};
+
+// Bulk Delete Handler
+const handleBulkDelete = () => {
+  const selectedOrdersData = orders.filter(order => selectedOrders.includes(order._id));
+  
+  // Check if all selected orders are Completed
+  const allCompleted = selectedOrdersData.every(order => order.status === 'Completed');
+  
+  if (allCompleted) {
+    setShowBulkDeleteConfirmation(true);
+  } else {
+    // Has mixed statuses
+    const ordersByStatus = selectedOrdersData.reduce((acc, order) => {
+      if (!acc[order.status]) {
+        acc[order.status] = [];
+      }
+      acc[order.status].push({
+        orderId: order._id,
+        orderNumber: order._id.toString().substring(0, 8),
+        userName: order.user_name,
+        email: order.email,
+        status: order.status
+      });
+      return acc;
+    }, {});
+    
+    setOrdersByStatusForDelete(ordersByStatus);
+    setShowBulkDeleteSelection(true);
+  }
+};
+
+const handleConfirmDeleteAll = () => {
+  setShowBulkDeleteConfirmation(false);
+  
+  // Check if all are completed
+  const selectedOrdersData = orders.filter(order => selectedOrders.includes(order._id));
+  const allCompleted = selectedOrdersData.every(order => order.status === 'Completed');
+  
+  if (allCompleted) {
+    setShowBulkDeleteCompleted(true);
+  } else {
+    // This shouldn't happen, but handle it anyway
+    performBulkDelete(selectedOrders);
+  }
+};
+
+const handleDownloadCompletedOrders = async (shouldDownload) => {
+  setShowBulkDeleteCompleted(false);
+  
+  if (shouldDownload) {
+    const completedOrders = orders.filter(order => selectedOrders.includes(order._id));
+    exportToExcel(completedOrders, 'completed_orders_before_deletion');
+  }
+  
+  // Proceed with deletion
+  await performBulkDelete(selectedOrders);
+};
+
+const handleConfirmDeleteSelection = async (orderIdsToDelete) => {
+  setShowBulkDeleteSelection(false);
+  await performBulkDelete(orderIdsToDelete);
+};
+
+const performBulkDelete = async (orderIdsToDelete) => {
+  setBulkLoading(true);
+  try {
+    const res = await axios.post(
+      'https://api.simplyrks.cloud/api/order/bulk-delete',
+      { orderIds: orderIdsToDelete },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      // Refresh orders
+      const ordersRes = await axios.get('https://api.simplyrks.cloud/api/order/all', { withCredentials: true });
+      if (ordersRes.status === 200) {
+        const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
+      }
+      
+      setSelectedOrders([]);
+      toast.success(`${res.data.results.deleted?.length || 0} order(s) deleted successfully!`);
+    }
+  } catch (error) {
+    console.error('Bulk delete error:', error);
+    toast.error('Failed to delete orders. Please try again.');
+  } finally {
+    setBulkLoading(false);
+  }
+};
+
   // Main content starts from here
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-6">
@@ -1297,345 +1764,459 @@ pdfContent.innerHTML = `
         </div>
 
         {/* Orders Table */}
-        <div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
-          {/* Table Header - Fixed */}
-          <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-            <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
-              <div>
-                <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Orders Table</h3>
-                <p className="text-sm text-gray-500 dark:text-white mt-1">
-                  Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} results
-                </p>
-              </div>
-              <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
-                {/* Search */}
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                  <input
-                    type="text"
-                    placeholder="Search orders, customers, products..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
-                  />
-                </div>
-                
-                {/* Status Filter */}
-                <div className="relative">
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="appearance-none bg-white dark:bg-gray-900 border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value="">All Status</option>
-                    <option value="pending">Pending</option>
-                    <option value="accepted">Accepted</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="confirm">Confirm</option>
-                    <option value="in progress">In Progress</option>
-                    <option value="dispatched">Dispatched</option>
-                    <option value="completed">Completed</option>
-                  </select>
-                  <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-                </div>
-
-                {/* Date Filter */}
-                <div className="flex space-x-2">
-                  <div className="relative">
-                    <select
-                      value={dateFilter}
-                      onChange={(e) => setDateFilter(e.target.value)}
-                      className="appearance-none bg-white dark:bg-gray-900 border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="">All Dates</option>
-                      <option value="today">Today</option>
-                      <option value="yesterday">Yesterday</option>
-                      <option value="single">Single Date</option>
-                      <option value="custom">Date Range</option>
-                    </select>
-                    <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
-                  </div>
-                  
-                  {dateFilter === 'single' && (
-                    <input
-                      type="date"
-                      value={singleDate}
-                      onChange={(e) => setSingleDate(e.target.value)}
-                      className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  )}
-
-                  {dateFilter === 'custom' && (
-                    <div className="flex space-x-2">
-                      <input
-                        type="date"
-                        value={customStartDate}
-                        onChange={(e) => setCustomStartDate(e.target.value)}
-                        className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                      <input
-                        type="date"
-                        value={customEndDate}
-                        onChange={(e) => setCustomEndDate(e.target.value)}
-                        className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      />
-                    </div>
-                  )}
-                </div>
-
-                {/* Export Button */}
-                <button 
-                  onClick={() => exportToExcel(filteredOrders, 'filtered_orders')}
-                  className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
-                >
-                  <Download className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Table Content - Scrollable */}
-          <div className="overflow-y-auto max-h-[600px]">
-            <table className="w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
-                <tr>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    Sr No.
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    Order ID
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    User Name
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    Phone
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    WhatsApp
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    Email
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
-  Items Total
-</th>
-<th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
-  Shipping Price
-</th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    Total Price
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">
-                    Edit Shipping
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    Status
-                  </th>
-                  <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    Ordered At
-                  </th>
-                  <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
-                {currentOrders.map((order, index) => (
-                  <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 transition-colors cursor-pointer" onClick={() => handleOrderClick(order)}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {startIndex + index + 1}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className="font-medium text-blue-600" title={order._id}>{truncateOrderId(order._id)}</span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-                      {order.user_name}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                      {order.phone_number}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                      {order.whatsapp_number}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
-                      <div className="max-w-xs truncate" title={order.email}>
-                        {order.email}
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-  <span className="font-medium">₹{order.price.toFixed(2)}</span>
-</td>
-<td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-  <span className="font-medium">
-    {order.total_price === "Pending" ? 'Pending' : order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price.toFixed(2)}`}
-  </span>
-</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
-  <span className="font-medium">
-    {order.status === "Pending" ? "Pending" : `₹${order.total_price}`}
-  </span>
-</td>
-<td className="px-6 py-4 whitespace-nowrap text-center">
-  {order.status === "Accepted" ? (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        setSelectedOrder(order);
-        setSingleOrderedProduct(orderedProducts[order._id] || null);
-        setIsModalOpen(true);
-      }}
-      className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
-      title="Edit Shipping Price"
-    >
-      <DollarSign className="w-4 h-4" />
-    </button>
-  ) : (
-    <span className="text-gray-400 text-xs">-</span>
-  )}
-</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {getStatusBadge(order.status)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
-                      {formatOrderDate(order.createdAt, startIndex + index)}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <div className="flex items-center justify-center space-x-2">
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            handleOrderClick(order);
-                          }}
-                          className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                          title="View Details"
-                        >
-                          <Eye className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => handleAccept(e, order)}
-                          className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={
-                            order.status === "Accepted" ||
-                            !orderedProducts[order._id] ||
-                            order.orderedProducts.some((product, idx) => {
-                              const stock = getStock(orderedProducts[order._id].products[idx], order.orderedProducts[idx]);
-                              return stock === undefined || stock < product.quantity;
-                            })
-                          }
-                          title="Accept Order"
-                        >
-                          <Check className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => handleReject(e, order._id)}
-                          className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                          disabled={order.status === "Rejected"}
-                          title="Reject Order"
-                        >
-                          <X className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            generateOrderPDF(order, startIndex + index);
-                          }}
-                          className="p-2 text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
-                          title="Download PDF"
-                        >
-                          <Download className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-
-          {/* Show message when no orders */}
-          {currentOrders.length === 0 && (
-            <div className="text-center py-12">
-              <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
-              <p className="text-gray-500 dark:text-white text-lg font-medium">No orders found</p>
-              {(searchTerm || statusFilter || dateFilter) && (
-                <p className="text-gray-400 text-sm mt-2">Try adjusting your search criteria or filters</p>
-              )}
-            </div>
-          )}
-
-          {/* Table Footer */}
-          {totalPages > 1 && (
-            <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
-              <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
-                {/* Items per page */}
-                <div className="flex items-center space-x-2">
-                  <span className="text-sm text-gray-700">Show</span>
-                  <select
-                    value={itemsPerPage}
-                    onChange={(e) => setItemsPerPage(Number(e.target.value))}
-                    className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  >
-                    <option value={5}>5</option>
-                    <option value={10}>10</option>
-                    <option value={25}>25</option>
-                    <option value={50}>50</option>
-                    <option value={100}>100</option>
-                  </select>
-                  <span className="text-sm text-gray-700">entries per page</span>
-                </div>
-
-                {/* Pagination */}
-                <div className="flex items-center space-x-2">
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-                    disabled={currentPage === 1}
-                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronLeft className="w-4 h-4" />
-                  </button>
-
-                  <div className="flex items-center space-x-1">
-                    {[...Array(Math.min(totalPages, 7))].map((_, index) => {
-                      let pageNumber;
-                      if (totalPages <= 7) {
-                        pageNumber = index + 1;
-                      } else if (currentPage <= 4) {
-                        pageNumber = index + 1;
-                      } else if (currentPage >= totalPages - 3) {
-                        pageNumber = totalPages - 6 + index;
-                      } else {
-                        pageNumber = currentPage - 3 + index;
-                      }
-
-                      return (
-                        <button
-                          key={pageNumber}
-                          onClick={() => setCurrentPage(pageNumber)}
-                          className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
-                            currentPage === pageNumber
-                              ? 'bg-blue-600 text-blue-600 shadow-sm'
-                              : 'text-gray-500 dark:text-white hover:text-gray-700 hover:bg-gray-100'
-                          }`}
-                        >
-                          {pageNumber}
-                        </button>
-                      );
-                    })}
-                  </div>
-
-                  <button
-                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-                    disabled={currentPage === totalPages}
-                    className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
+<div className="bg-white dark:bg-gray-900 rounded-xl border border-gray-200 dark:border-gray-700 shadow-lg overflow-hidden">
+  {/* Table Header - Fixed */}
+  <div className="px-6 py-5 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+    {showBulkActions ? (
+      /* Bulk Actions Bar */
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+            {selectedOrders.length} Order(s) Selected
+          </h3>
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            Perform bulk actions on selected orders
+          </p>
         </div>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            onClick={handleBulkAccept}
+            disabled={bulkLoading}
+            className="inline-flex items-center px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-sm font-medium rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Check className="h-4 w-4 mr-1" />
+            Accept
+          </button>
+          <button
+            onClick={handleBulkReject}
+            disabled={bulkLoading}
+            className="inline-flex items-center px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <X className="h-4 w-4 mr-1" />
+            Reject
+          </button>
+          <button
+            onClick={handleBulkConfirm}
+            disabled={bulkLoading}
+            className="inline-flex items-center px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Confirm
+          </button>
+          <button
+            onClick={handleBulkDispatch}
+            disabled={bulkLoading}
+            className="inline-flex items-center px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-sm font-medium rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Truck className="h-4 w-4 mr-1" />
+            Dispatch
+          </button>
+          <button
+            onClick={handleBulkComplete}
+            disabled={bulkLoading}
+            className="inline-flex items-center px-3 py-2 bg-green-50 dark:bg-green-900/20 text-green-600 dark:text-green-400 text-sm font-medium rounded-lg hover:bg-green-100 dark:hover:bg-green-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <CheckCircle className="h-4 w-4 mr-1" />
+            Complete
+          </button>
+          <button
+            onClick={handleBulkUpdateShipping}
+            disabled={bulkLoading}
+            className="inline-flex items-center px-3 py-2 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-sm font-medium rounded-lg hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <DollarSign className="h-4 w-4 mr-1" />
+            Edit Shipping
+          </button>
+          <button
+            onClick={handleBulkDelete}
+            disabled={bulkLoading}
+            className="inline-flex items-center px-3 py-2 bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 text-sm font-medium rounded-lg hover:bg-red-100 dark:hover:bg-red-900/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <Trash2 className="h-4 w-4 mr-1" />
+            Delete
+          </button>
+          <button
+            onClick={() => setSelectedOrders([])}
+            className="inline-flex items-center px-3 py-2 bg-gray-100 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
+          >
+            Clear Selection
+          </button>
+        </div>
+      </div>
+    ) : (
+      /* Normal Header with Filters */
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+        <div>
+          <h3 className="text-xl font-semibold text-gray-900 dark:text-white">Orders Table</h3>
+          <p className="text-sm text-gray-500 dark:text-white mt-1">
+            Showing {startIndex + 1} to {Math.min(endIndex, filteredOrders.length)} of {filteredOrders.length} results
+          </p>
+        </div>
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center space-y-3 sm:space-y-0 sm:space-x-3">
+          {/* Search */}
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search orders, customers, products..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10 pr-4 py-2.5 border border-gray-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-full sm:w-80"
+            />
+          </div>
+          
+          {/* Status Filter */}
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              className="appearance-none bg-white dark:bg-gray-900 border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">All Status</option>
+              <option value="pending">Pending</option>
+              <option value="accepted">Accepted</option>
+              <option value="rejected">Rejected</option>
+              <option value="confirm">Confirm</option>
+              <option value="in progress">In Progress</option>
+              <option value="dispatched">Dispatched</option>
+              <option value="completed">Completed</option>
+            </select>
+            <Filter className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+          </div>
+
+          {/* Date Filter */}
+          <div className="flex space-x-2">
+            <div className="relative">
+              <select
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                className="appearance-none bg-white dark:bg-gray-900 border border-gray-300 rounded-lg px-4 py-2.5 pr-8 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="">All Dates</option>
+                <option value="today">Today</option>
+                <option value="yesterday">Yesterday</option>
+                <option value="single">Single Date</option>
+                <option value="custom">Date Range</option>
+              </select>
+              <Calendar className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4 pointer-events-none" />
+            </div>
+            
+            {dateFilter === 'single' && (
+              <input
+                type="date"
+                value={singleDate}
+                onChange={(e) => setSingleDate(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            )}
+
+            {dateFilter === 'custom' && (
+              <div className="flex space-x-2">
+                <input
+                  type="date"
+                  value={customStartDate}
+                  onChange={(e) => setCustomStartDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+                <input
+                  type="date"
+                  value={customEndDate}
+                  onChange={(e) => setCustomEndDate(e.target.value)}
+                  className="border border-gray-300 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Export Button */}
+          <button 
+            onClick={() => exportToExcel(filteredOrders, 'filtered_orders')}
+            className="inline-flex items-center px-4 py-2.5 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors"
+          >
+            <Download className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+
+  {/* Bulk Loading Spinner Overlay */}
+  {bulkLoading && (
+    <div className="absolute inset-0 bg-white dark:bg-gray-900 bg-opacity-75 dark:bg-opacity-75 flex items-center justify-center z-40">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-16 w-16 border-b-4 border-blue-600 mx-auto mb-4"></div>
+        <p className="text-lg font-semibold text-gray-900 dark:text-white">Processing bulk operation...</p>
+        <p className="text-sm text-gray-500 dark:text-gray-400 mt-2">Please wait</p>
+      </div>
+    </div>
+  )}
+
+  {/* Table Content - Scrollable */}
+  <div className="overflow-y-auto max-h-[600px]">
+    <table className="w-full divide-y divide-gray-200">
+      <thead className="bg-gray-50 dark:bg-gray-800 sticky top-0 z-10">
+        <tr>
+          <th className="px-6 py-4 text-left bg-gray-50 dark:bg-gray-800">
+            <input
+              type="checkbox"
+              checked={currentOrders.length > 0 && selectedOrders.length === currentOrders.length}
+              onChange={handleSelectAll}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2"
+            />
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+            Sr No.
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+            Order ID
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+            User Name
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+            Phone
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+            WhatsApp
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+            Email
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+            Items Total
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '120px' }}>
+            Shipping Price
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+            Total Price
+          </th>
+          {!showBulkActions && (
+            <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider">
+              Edit Shipping
+            </th>
+          )}
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+            Status
+          </th>
+          <th className="px-6 py-4 text-left text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+            Ordered At
+          </th>
+          {!showBulkActions && (
+            <th className="px-6 py-4 text-center text-xs font-medium text-gray-500 dark:text-white uppercase tracking-wider bg-gray-50 dark:bg-gray-800">
+              Actions
+            </th>
+          )}
+        </tr>
+      </thead>
+      <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
+        {currentOrders.map((order, index) => (
+          <tr key={order._id} className="hover:bg-gray-50 dark:hover:bg-gray-700 dark:bg-gray-800 transition-colors cursor-pointer" onClick={() => !showBulkActions && handleOrderClick(order)}>
+            <td className="px-6 py-4 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+              <input
+                type="checkbox"
+                checked={selectedOrders.includes(order._id)}
+                onChange={() => handleSelectOrder(order._id)}
+                className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2"
+              />
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+              {startIndex + index + 1}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm">
+              <span className="font-medium text-blue-600" title={order._id}>{truncateOrderId(order._id)}</span>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+              {order.user_name}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
+              {order.phone_number}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
+              {order.whatsapp_number}
+            </td>
+            <td className="px-6 py-4 text-sm text-gray-900 dark:text-white">
+              <div className="max-w-xs truncate" title={order.email}>
+                {order.email}
+              </div>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+              <span className="font-medium">₹{order.price.toFixed(2)}</span>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+              <span className="font-medium">
+                {order.total_price === "Pending" ? 'Pending' : order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price.toFixed(2)}`}
+              </span>
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-white">
+              <span className="font-medium">
+                {order.status === "Pending" ? "Pending" : `₹${order.total_price}`}
+              </span>
+            </td>
+            {!showBulkActions && (
+              <td className="px-6 py-4 whitespace-nowrap text-center">
+                {order.status === "Accepted" ? (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedOrder(order);
+                      setSingleOrderedProduct(orderedProducts[order._id] || null);
+                      setIsModalOpen(true);
+                    }}
+                    className="p-2 text-yellow-600 hover:bg-yellow-50 rounded-full transition-colors"
+                    title="Edit Shipping Price"
+                  >
+                    <DollarSign className="w-4 h-4" />
+                  </button>
+                ) : (
+                  <span className="text-gray-400 text-xs">-</span>
+                )}
+              </td>
+            )}
+            <td className="px-6 py-4 whitespace-nowrap text-sm">
+              {getStatusBadge(order.status)}
+            </td>
+            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 dark:text-white">
+              {formatOrderDate(order.createdAt, startIndex + index)}
+            </td>
+            {!showBulkActions && (
+              <td className="px-6 py-4 whitespace-nowrap text-sm">
+                <div className="flex items-center justify-center space-x-2">
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleOrderClick(order);
+                    }}
+                    className="p-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                    title="View Details"
+                  >
+                    <Eye className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => handleAccept(e, order)}
+                    className="p-2 text-green-600 hover:bg-green-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={
+                      order.status === "Accepted" ||
+                      !orderedProducts[order._id] ||
+                      order.orderedProducts.some((product, idx) => {
+                        const stock = getStock(orderedProducts[order._id].products[idx], order.orderedProducts[idx]);
+                        return stock === undefined || stock < product.quantity;
+                      })
+                    }
+                    title="Accept Order"
+                  >
+                    <Check className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => handleReject(e, order._id)}
+                    className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    disabled={order.status === "Rejected"}
+                    title="Reject Order"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      generateOrderPDF(order, startIndex + index);
+                    }}
+                    className="p-2 text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+                    title="Download PDF"
+                  >
+                    <Download className="w-4 h-4" />
+                  </button>
+                </div>
+              </td>
+            )}
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+
+  {/* Show message when no orders */}
+  {currentOrders.length === 0 && (
+    <div className="text-center py-12">
+      <Package className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+      <p className="text-gray-500 dark:text-white text-lg font-medium">No orders found</p>
+      {(searchTerm || statusFilter || dateFilter) && (
+        <p className="text-gray-400 text-sm mt-2">Try adjusting your search criteria or filters</p>
+      )}
+    </div>
+  )}
+
+  {/* Table Footer */}
+  {totalPages > 1 && (
+    <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800">
+      <div className="flex flex-col sm:flex-row items-center justify-between space-y-3 sm:space-y-0">
+        {/* Items per page */}
+        <div className="flex items-center space-x-2">
+          <span className="text-sm text-gray-700">Show</span>
+          <select
+            value={itemsPerPage}
+            onChange={(e) => setItemsPerPage(Number(e.target.value))}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value={5}>5</option>
+            <option value={10}>10</option>
+            <option value={25}>25</option>
+            <option value={50}>50</option>
+            <option value={100}>100</option>
+          </select>
+          <span className="text-sm text-gray-700">entries per page</span>
+        </div>
+
+        {/* Pagination */}
+        <div className="flex items-center space-x-2">
+          <button
+            onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+            disabled={currentPage === 1}
+            className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" />
+          </button>
+
+          <div className="flex items-center space-x-1">
+            {[...Array(Math.min(totalPages, 7))].map((_, index) => {
+              let pageNumber;
+              if (totalPages <= 7) {
+                pageNumber = index + 1;
+              } else if (currentPage <= 4) {
+                pageNumber = index + 1;
+              } else if (currentPage >= totalPages - 3) {
+                pageNumber = totalPages - 6 + index;
+              } else {
+                pageNumber = currentPage - 3 + index;
+              }
+
+              return (
+                <button
+                  key={pageNumber}
+                  onClick={() => setCurrentPage(pageNumber)}
+                  className={`px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+                    currentPage === pageNumber
+                      ? 'bg-blue-600 text-blue-600 shadow-sm'
+                      : 'text-gray-500 dark:text-white hover:text-gray-700 hover:bg-gray-100'
+                  }`}
+                >
+                  {pageNumber}
+                </button>
+              );
+            })}
+          </div>
+
+          <button
+            onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+            disabled={currentPage === totalPages}
+            className="inline-flex items-center p-2 border border-gray-300 rounded-lg text-sm font-medium text-gray-500 dark:text-white bg-white dark:bg-gray-900 hover:bg-gray-50 dark:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  )}
+</div>
 
         {/* Order Details Modal */}
         <OrderDetailsModal
@@ -1649,6 +2230,78 @@ pdfContent.innerHTML = `
           productMappedWithOrderId={singleOrderedProduct}
         />
       </div>
+      {/* Order Details Modal */}
+<OrderDetailsModal
+  order={selectedOrder}
+  isOpen={isModalOpen}
+  onClose={() => {
+    setIsModalOpen(false);
+    setSelectedOrder(null);
+  }}
+  onStatusChange={handleStatusChange}
+  productMappedWithOrderId={singleOrderedProduct}
+/>
+
+{/* Bulk Operation Modals */}
+<BulkDeleteConfirmationModal
+  isOpen={showBulkDeleteConfirmation}
+  onClose={() => setShowBulkDeleteConfirmation(false)}
+  onConfirm={handleConfirmDeleteAll}
+  orderCount={selectedOrders.length}
+/>
+
+<BulkDeleteCompletedModal
+  isOpen={showBulkDeleteCompleted}
+  onClose={() => setShowBulkDeleteCompleted(false)}
+  onDownload={handleDownloadCompletedOrders}
+  completedCount={selectedOrders.length}
+/>
+
+<BulkDeleteSelectionModal
+  isOpen={showBulkDeleteSelection}
+  onClose={() => setShowBulkDeleteSelection(false)}
+  onConfirm={handleConfirmDeleteSelection}
+  ordersByStatus={ordersByStatusForDelete}
+/>
+
+<BulkRejectConfirmationModal
+  isOpen={showBulkRejectConfirmation}
+  onClose={() => setShowBulkRejectConfirmation(false)}
+  onConfirm={handleConfirmBulkReject}
+  ordersToConfirm={ordersToConfirmReject}
+/>
+
+<BulkResultModal
+  isOpen={showBulkResultModal}
+  onClose={() => {
+    setShowBulkResultModal(false);
+    setBulkResults(null);
+    setBulkOperation('');
+  }}
+  results={bulkResults || {}}
+  operation={bulkOperation}
+/>
+
+<BulkShippingPriceModal
+  isOpen={showBulkShippingModal}
+  onClose={() => setShowBulkShippingModal(false)}
+  onConfirm={handleConfirmBulkShipping}
+  orderCount={selectedOrders.length}
+/>
+
+{/* Toast Container */}
+<ToastContainer
+  position="top-right"
+  autoClose={3000}
+  hideProgressBar={false}
+  newestOnTop={false}
+  closeOnClick
+  rtl={false}
+  pauseOnFocusLoss
+  draggable
+  pauseOnHover
+  theme="light"
+/>
     </div>
   );
 }

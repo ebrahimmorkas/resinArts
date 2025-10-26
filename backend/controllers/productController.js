@@ -1482,13 +1482,28 @@ console.log(`Images marked for deletion: ${imagesToDelete.length}`);
 
 const fetchProducts = async (req, res) => {
   try {
-    const products = await Product.find()
-      .select('-__v')
-      .lean();
-    
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 50; // Load 50 products at a time
+    const skip = (page - 1) * limit;
+
+    // Only select essential fields for listing
+    const products = await Product.find({ isActive: true })
+      .select('name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive  variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing')
+      .populate('mainCategory', 'categoryName isActive')
+      .populate('subCategory', 'categoryName isActive')
+      .lean()
+      .skip(skip)
+      .limit(limit);
+
+    const totalCount = await Product.countDocuments({ isActive: true });
+
     return res.status(200).json({
       products,
-      count: products.length
+      count: products.length,
+      totalCount,
+      totalPages: Math.ceil(totalCount / limit),
+      currentPage: page,
+      hasMore: skip + products.length < totalCount
     });
   } catch (err) {
     console.log("Error in fetching the products:", err);
@@ -3214,6 +3229,101 @@ const toggleVariantSizeStatus = async (req, res) => {
 };
 // End of function that will activate and deactivate products variants
 
+// Start of function that will handle the searching of products
+const searchProducts = async (req, res) => {
+  try {
+    const { query } = req.query;
+    
+    if (!query || query.trim().length === 0) {
+      return res.status(200).json({ results: [] });
+    }
+
+    const searchTerms = query.toLowerCase().trim().split(/\s+/).filter(term => term.length > 0);
+    
+    // Create search conditions for product name and variant colors
+    const searchConditions = searchTerms.map(term => ({
+      $or: [
+        { name: { $regex: term, $options: 'i' } },
+        { 'variants.colorName': { $regex: term, $options: 'i' } }
+      ]
+    }));
+
+    // Find matching products (limit to 100 results for performance)
+    const products = await Product.find({
+      isActive: true,
+      $and: searchConditions
+    })
+      .select('name image hasVariants variants.colorName variants.variantImage variants.isActive variants.moreDetails.size variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.isActive price stock')
+      .populate('mainCategory', 'categoryName isActive')
+      .populate('subCategory', 'categoryName isActive')
+      .lean()
+      .limit(100);
+
+    // Filter out products with inactive categories
+    const filteredProducts = products.filter(product => {
+      const mainCat = product.mainCategory;
+      const subCat = product.subCategory;
+      
+      if (mainCat && mainCat.isActive === false) return false;
+      if (subCat && subCat.isActive === false) return false;
+      
+      return true;
+    });
+
+    // Build search results matching your frontend format
+    const results = [];
+    
+    filteredProducts.forEach((product) => {
+      if (product.hasVariants && product.variants) {
+        product.variants.filter(v => v.isActive !== false).forEach((variant) => {
+          if (variant.moreDetails && variant.moreDetails.length > 0) {
+            variant.moreDetails.filter(md => md.isActive !== false).forEach((sizeDetail) => {
+              results.push({
+                productId: product._id,
+                productName: product.name,
+                variantId: variant._id,
+                colorName: variant.colorName,
+                sizeDetail: sizeDetail,
+                image: variant.variantImage || product.image,
+                price: sizeDetail.price,
+                stock: sizeDetail.stock
+              });
+            });
+          } else {
+            results.push({
+              productId: product._id,
+              productName: product.name,
+              variantId: variant._id,
+              colorName: variant.colorName,
+              sizeDetail: null,
+              image: variant.variantImage || product.image,
+              price: variant.commonPrice,
+              stock: variant.commonStock
+            });
+          }
+        });
+      } else {
+        results.push({
+          productId: product._id,
+          productName: product.name,
+          variantId: null,
+          colorName: null,
+          sizeDetail: null,
+          image: product.image,
+          price: product.price,
+          stock: product.stock
+        });
+      }
+    });
+
+    return res.status(200).json({ results, count: results.length });
+  } catch (err) {
+    console.log("Error in searching products:", err);
+    return res.status(500).json({ message: 'Internal server error' });
+  }
+};
+// End of function that will handle the searching of products
+
 module.exports = {
   addProduct: [upload.any(), addProduct],
   fetchProducts,
@@ -3232,4 +3342,5 @@ module.exports = {
   bulkToggleProductStatus,
   toggleVariantSizeStatus,
   bulkOverrideProducts,
+  searchProducts
 }

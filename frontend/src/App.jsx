@@ -12,8 +12,12 @@ import UpdateUser from './pages/client/UpdateUser';
 import ForgotPassword from './pages/client/ForgotPassword';
 import ResetPassword from './pages/client/ResetPassword';
 import ProductDetailsPage from './pages/client/ProductDetailsPage';
+import FavoritesPage from './pages/client/FavoritesPage';
+import useCompanySettings from '../hooks/useCompanySettings';
 
 function App() {
+  useCompanySettings();
+
   return (
       <Routes>
         {/* Routes for login and signup */}
@@ -40,6 +44,12 @@ function App() {
         <Route path='/user/update-profile' element={
           <ProtectedRoute allowedRole="user">
             <UpdateUser />
+          </ProtectedRoute>
+        } />
+
+        <Route path="/favorites" element={
+          <ProtectedRoute allowedRole="user">
+            <FavoritesPage />
           </ProtectedRoute>
         } />
         

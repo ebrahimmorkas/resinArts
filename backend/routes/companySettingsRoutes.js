@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const companySettingsController = require('../controllers/companySettingsController');
+const {getCompanySettings, updateCompanySettings, getPublicPolicies, getContactInfo} = require('../controllers/companySettingsController');
 const authenticate = require('../middlewares/authenticate');
 const authorize = require('../middlewares/authorize');
 const multer = require('multer');
@@ -18,10 +18,11 @@ const upload = multer({
     fileSize: 5 * 1024 * 1024 // 5MB limit
   },
   fileFilter: (req, file, cb) => {
-    if (file.mimetype.startsWith('image/')) {
+    const allowedMimeTypes = ['image/png', 'image/jpeg', 'image/jpg', 'image/ico'];
+    if (allowedMimeTypes.includes(file.mimetype)) {
       cb(null, true);
     } else {
-      cb(new Error('Only image files are allowed!'), false);
+      cb(new Error('Only PNG, JPEG, JPG, and ICO files are allowed!'), false);
     }
   }
 });
@@ -31,7 +32,7 @@ router.get(
   '/',
   authenticate,
   authorize(['admin']),
-  companySettingsController.getCompanySettings
+  getCompanySettings
 );
 
 router.put(
@@ -39,11 +40,11 @@ router.put(
   authenticate,
   authorize(['admin']),
   upload.single('logo'),
-  companySettingsController.updateCompanySettings
+  updateCompanySettings
 );
 
 // Public routes (no authentication required)
-router.get('/policies', companySettingsController.getPublicPolicies);
-router.get('/contact', companySettingsController.getContactInfo);
+router.get('/policies', getPublicPolicies);
+router.get('/contact', getContactInfo);
 
 module.exports = router;
