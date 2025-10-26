@@ -2869,11 +2869,78 @@ ${companySettings?.adminEmail || ''}`;
 // Manual trigger for automatic order deletion
 const automaticDelete = async (req, res) => {
     try {
+        // Get order IDs before deletion for socket emission
+        const CompanySettings = require('../models/CompanySettings');
+        const settings = await CompanySettings.findOne();
+        
+        if (!settings || !settings.autoDeleteOrders || !settings.autoDeleteOrders.enabled) {
+            return res.status(400).json({
+                success: false,
+                message: 'Automatic order deletion is not enabled'
+            });
+        }
+        
+        const { deleteStatus, deleteAfterUnit, deleteAfterValue } = settings.autoDeleteOrders;
+        
+        // Calculate cutoff date (copy from cron job)
+        const calculateCutoffDate = (unit, value) => {
+            const now = new Date();
+            switch(unit) {
+                case 'minutes':
+                    return new Date(now.getTime() - value * 60 * 1000);
+                case 'hours':
+                    return new Date(now.getTime() - value * 60 * 60 * 1000);
+                case 'days':
+                    return new Date(now.getTime() - value * 24 * 60 * 60 * 1000);
+                case 'weeks':
+                    return new Date(now.getTime() - value * 7 * 24 * 60 * 60 * 1000);
+                case 'months':
+                    const monthsAgo = new Date(now);
+                    monthsAgo.setMonth(monthsAgo.getMonth() - value);
+                    return monthsAgo;
+                case 'years':
+                    const yearsAgo = new Date(now);
+                    yearsAgo.setFullYear(yearsAgo.getFullYear() - value);
+                    return yearsAgo;
+                default:
+                    return now;
+            }
+        };
+        
+        const cutoffDate = calculateCutoffDate(deleteAfterUnit, deleteAfterValue);
+        
+        // Get orders to delete
+        const Order = require('../models/Order');
+        const ordersToDelete = await Order.find({
+            status: deleteStatus,
+            updatedAt: { $lte: cutoffDate }
+        });
+        
+        if (ordersToDelete.length === 0) {
+            return res.status(200).json({
+                success: true,
+                message: 'No orders found for deletion'
+            });
+        }
+        
+        const deletedOrderIds = ordersToDelete.map(order => order._id.toString());
+        
+        // Trigger the cron function
         await checkAndDeleteOrders();
+        
+        // Emit socket event
+        const io = req.app.get('io');
+        if (io) {
+            io.to('admin_room').emit('ordersDeleted', { 
+                orderIds: deletedOrderIds,
+                count: ordersToDelete.length 
+            });
+        }
         
         res.status(200).json({
             success: true,
-            message: 'Automatic order deletion process completed. Check admin email for details.'
+            message: `${ordersToDelete.length} order(s) deleted successfully. Check admin email for details.`,
+            deletedCount: ordersToDelete.length
         });
     } catch (error) {
         console.error('Error in manual order deletion trigger:', error);

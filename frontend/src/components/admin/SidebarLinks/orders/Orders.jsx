@@ -1037,6 +1037,28 @@ useEffect(() => {
   }
 });
 
+// Cron job deletion socket
+socket.on('ordersDeleted', (data) => {
+  console.log('Orders deleted:', data);
+  if (data && data.orderIds && Array.isArray(data.orderIds)) {
+    setOrders((prevOrders) => {
+      const updatedOrders = prevOrders.filter(
+        (order) => !data.orderIds.includes(order._id.toString())
+      );
+      return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    });
+    
+    // Show toast notification
+    toast.info(`${data.count} order(s) have been automatically deleted`, {
+      position: "top-right",
+      autoClose: 5000,
+    });
+    
+    // Clear selection if deleted orders were selected
+    setSelectedOrders(prev => prev.filter(id => !data.orderIds.includes(id)));
+  }
+});
+
     socket.on('connect_error', (error) => {
       console.error('Socket.IO connection error:', error);
     });

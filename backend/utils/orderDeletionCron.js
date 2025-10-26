@@ -213,6 +213,21 @@ const checkAndDeleteOrders = async () => {
         });
         
         console.log(`Deleted ${deleteResult.deletedCount} orders`);
+
+        // Emit socket event to notify frontend about deleted orders
+try {
+  const io = require('../server').io; // Get io instance from server
+  if (io) {
+    const deletedOrderIds = ordersToDelete.map(order => order._id.toString());
+    io.to('admin_room').emit('ordersDeleted', { 
+      orderIds: deletedOrderIds,
+      count: deleteResult.deletedCount 
+    });
+    console.log(`Socket event emitted for ${deleteResult.deletedCount} deleted orders`);
+  }
+} catch (socketError) {
+  console.error('Error emitting socket event:', socketError);
+}
         
         // Send email notification to admin
         if (settings.adminEmail) {
