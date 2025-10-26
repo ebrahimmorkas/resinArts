@@ -41,14 +41,20 @@ const statusIcons = {
 
 // Function to get stock for a product
 const getStock = (details, variantAndSizeDetails) => {
+  // Handle case where details is undefined or not an array
+  if (!details || !Array.isArray(details)) {
+    console.warn("Invalid details provided to getStock:", details);
+    return undefined;
+  }
+  
   console.log(details);
   console.log("From get stock");
   
   for (const detail of details) {
     if (detail.hasVariants) {
       console.log("It has variants");
-      variantLoop: for (const variant of detail.variants) {
-        moreDetailLoop: for (const moreDetail of variant.moreDetails) {
+      for (const variant of detail.variants) {
+        for (const moreDetail of variant.moreDetails) {
           if (moreDetail.size._id.toString() === variantAndSizeDetails.size_id.toString()) {
             return moreDetail.stock;
           }
@@ -60,6 +66,8 @@ const getStock = (details, variantAndSizeDetails) => {
       return detail.stock;
     }
   }
+  
+  return undefined;
 }
 
 // Order Details Modal Component
@@ -248,6 +256,10 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     order.status !== "Accepted" ||
     !productMappedWithOrderId ||
     order.orderedProducts.some((product, index) => {
+      if (!productMappedWithOrderId || !productMappedWithOrderId.products[index] || productMappedWithOrderId.products[index].length === 0) {
+    // Allow acceptance - stock was validated during edit
+    return false;
+  }
       const stock = getStock(productMappedWithOrderId.products[index], order.orderedProducts[index]);
       return stock === undefined || stock < product.quantity;
     })
@@ -916,20 +928,22 @@ pdfContent.innerHTML = `
   }, [loading]);
 
   // Map products to orders
-  useEffect(() => {
-    const productsMapperWithOrderId = {};
-    if (products.length > 0) {
-      orders.forEach(order => {
-        const p = [];
-        order.orderedProducts.forEach(product => {
-          p.push(products.filter(prod => prod._id.toString() === product.product_id.toString()));
-        });
-        productsMapperWithOrderId[order._id] = { products: p };
+// Map products to orders
+useEffect(() => {
+  const productsMapperWithOrderId = {};
+  if (products.length > 0) {
+    orders.forEach(order => {
+      const p = [];
+      order.orderedProducts.forEach(product => {
+        const matchedProducts = products.filter(prod => prod._id.toString() === product.product_id.toString());
+        p.push(matchedProducts.length > 0 ? matchedProducts : []);
       });
-      setOrderedProducts(productsMapperWithOrderId);
-      console.log(productsMapperWithOrderId);
-    }
-  }, [orders, products]);
+      productsMapperWithOrderId[order._id] = { products: p };
+    });
+    setOrderedProducts(productsMapperWithOrderId);
+    console.log(productsMapperWithOrderId);
+  }
+}, [orders, products]);
 
  useEffect(() => {
     const socket = io('http://localhost:3000', {

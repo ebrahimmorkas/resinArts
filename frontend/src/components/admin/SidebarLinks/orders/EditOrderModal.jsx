@@ -1,8 +1,9 @@
 import React, { useState } from "react";
-import { X } from "lucide-react";
+import { X, Plus } from "lucide-react";
 import axios from 'axios';
 import ShippingPriceModal from "./ShippingPriceModal";
 import ConfirmationModal from "./ConfirmationModal";
+import AddProductToOrderModal from "./AddProductToOrderModal";
 
 function EditOrderModal({ onClose, order }) {
   const [products, setProducts] = useState(order.orderedProducts);
@@ -10,6 +11,7 @@ function EditOrderModal({ onClose, order }) {
   const [pendingOrderUpdate, setPendingOrderUpdate] = useState(null);
   const [showConfirmationModal, setShowConfirmationModal] = useState(false);
   const [isEditShippingMode, setIsEditShippingMode] = useState(false);
+  const [showAddProductModal, setShowAddProductModal] = useState(false);
 
   // update product quantity directly in state
   const handleQuantityChange = (index, value) => {
@@ -25,7 +27,7 @@ function EditOrderModal({ onClose, order }) {
   };
 
   // submit handler (send whole updated products array)
-  const handleEditOrder = async (e) => {
+const handleEditOrder = async (e) => {
   e.preventDefault();
   console.log("Updated Products:", products);
   
@@ -53,10 +55,48 @@ function EditOrderModal({ onClose, order }) {
     return;
   }
   
+  // Validate stock for newly added products
+  const newlyAddedProducts = products.filter(p => p.isNewlyAdded);
+  if (newlyAddedProducts.length > 0) {
+    console.log("Validating stock for newly added products...");
+    const stockValidations = await Promise.all(
+      newlyAddedProducts.map(p => validateProductStock(p))
+    );
+    
+    const insufficientStock = [];
+    newlyAddedProducts.forEach((product, index) => {
+      const validation = stockValidations[index];
+      if (!validation.sufficient) {
+        insufficientStock.push({
+          name: product.product_name,
+          variant: product.variant_name || '',
+          size: product.size || '',
+          requested: product.quantity,
+          available: validation.available
+        });
+      }
+    });
+    
+    if (insufficientStock.length > 0) {
+      const errorMessage = insufficientStock.map(item => 
+        `${item.name}${item.variant ? ` (${item.variant})` : ''}${item.size ? ` - ${item.size}` : ''}: Requested ${item.requested}, Available ${item.available}`
+      ).join('\n');
+      
+      alert(`Insufficient stock for newly added products:\n\n${errorMessage}\n\nPlease adjust quantities and try again.`);
+      return;
+    }
+  }
+  
   try {
+    // Remove isNewlyAdded flag before sending to backend
+    const productsToSend = products.map(p => {
+      const { isNewlyAdded, ...rest } = p;
+      return rest;
+    });
+    
     const res = await axios.post(
       `http://localhost:3000/api/order/edit-order/${order._id}`, 
-      { products }, 
+      { products: productsToSend }, 
       { withCredentials: true }
     );
     
@@ -207,6 +247,55 @@ const handleShippingModalCloseFromConfirmation = (success) => {
   }
 };
 
+// While editing if user want to add new product
+const handleAddProducts = (newProducts) => {
+  setProducts((prevProducts) => {
+    const productsWithBadge = newProducts.map(p => ({
+      ...p,
+      isNewlyAdded: true
+    }));
+    const updatedProducts = [...prevProducts, ...productsWithBadge];
+    return updatedProducts;
+  });
+};
+
+// Validate stock for a product (works for both existing and newly added)
+const validateProductStock = async (product) => {
+  try {
+    const res = await axios.get(`http://localhost:3000/api/product/${product.product_id}`, {
+      withCredentials: true
+    });
+    
+    if (res.status === 200) {
+      const productData = res.data;
+      
+      if (!product.variant_id) {
+        // Product without variants
+        return {
+          available: productData.stock,
+          sufficient: productData.stock >= product.quantity
+        };
+      } else {
+        // Product with variants
+        const variant = productData.variants.find(v => v._id === product.variant_id);
+        if (variant) {
+          const sizeDetail = variant.moreDetails.find(md => md._id === product.size_id);
+          if (sizeDetail) {
+            return {
+              available: sizeDetail.stock,
+              sufficient: sizeDetail.stock >= product.quantity
+            };
+          }
+        }
+      }
+    }
+    return { available: 0, sufficient: false };
+  } catch (error) {
+    console.error('Error validating stock:', error);
+    return { available: 0, sufficient: false };
+  }
+};
+
   return (
     <>
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -222,41 +311,60 @@ const handleShippingModalCloseFromConfirmation = (success) => {
           {/* Start of modal content */}
           <form onSubmit={handleEditOrder} className="p-6">
             {products.map((product, index) => (
-              <div key={index} className="mb-4 border-b pb-2 dark:border-gray-700">
-                <p className="font-semibold dark:text-white">{product.product_name}</p>
+  <div key={index} className="mb-4 border-b pb-2 dark:border-gray-700">
+    <div className="flex items-start justify-between">
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          <p className="font-semibold dark:text-white">{product.product_name}</p>
+          {product.isNewlyAdded && (
+            <span className="px-2 py-0.5 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-400 text-xs font-medium rounded-full">
+              Newly Added
+            </span>
+          )}
+        </div>
 
-                {product.variant_name && (
-                  <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
-                    <p>Variant: {product.variant_name}</p>
-                    <p>Size: {product.size}</p>
-                  </div>
-                )}
+        {product.variant_name && (
+          <div className="ml-4 text-sm text-gray-600 dark:text-gray-400">
+            <p>Variant: {product.variant_name}</p>
+            <p>Size: {product.size}</p>
+          </div>
+        )}
 
-                <div className="mt-2">
-                  <label className="text-sm dark:text-gray-300">Enter new stock</label>
-                  <input
-                    type="number"
-                    className="border dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded px-2 py-1 w-24 ml-2"
-                    value={product.quantity}
-                    onChange={(e) => handleQuantityChange(index, e.target.value)}
-                    min="0"
-                  />
-                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    Total: ₹{product.total}
-                  </p>
-                </div>
-              </div>
-            ))}
+        <div className="mt-2">
+          <label className="text-sm dark:text-gray-300">Enter new stock</label>
+          <input
+            type="number"
+            className="border dark:border-gray-600 dark:bg-gray-800 dark:text-white rounded px-2 py-1 w-24 ml-2"
+            value={product.quantity}
+            onChange={(e) => handleQuantityChange(index, e.target.value)}
+            min="0"
+          />
+          <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
+            Total: ₹{product.total}
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+))}
 
-            {/* Single Save Button */}
-            <div className="mt-4 text-right">
-              <button
-                type="submit"
-                className="bg-blue-500 hover:bg-blue-600 text-BLUE-600 px-4 py-2 rounded transition-colors"
-              >
-                Save Changes
-              </button>
-            </div>
+            {/* Action Buttons */}
+<div className="mt-6 flex flex-col sm:flex-row gap-3">
+  <button
+    type="button"
+    onClick={() => setShowAddProductModal(true)}
+    className="flex-1 sm:flex-none inline-flex items-center justify-center gap-2 px-6 py-2 bg-green-600 text-green-600 dark:text-gray-400 rounded-lg hover:bg-green-700 transition-colors font-medium"
+  >
+    <Plus className="h-5 w-5" />
+    Add Product
+  </button>
+  <button
+    type="submit"
+    className="flex-1 bg-blue-500 hover:bg-blue-600 text-blue-600 dark:text-white px-6 py-2 rounded-lg transition-colors font-medium"
+  >
+    Save Changes
+  </button>
+</div>
           </form>
         </div>
       </div>
@@ -307,6 +415,13 @@ const handleShippingModalCloseFromConfirmation = (success) => {
       oldTotalPrice: order.total_price
     }}
     onEditShipping={handleEditShippingFromConfirmation}
+  />
+)}
+{showAddProductModal && (
+  <AddProductToOrderModal
+    onClose={() => setShowAddProductModal(false)}
+    onAddProducts={handleAddProducts}
+    existingProducts={products}
   />
 )}
     </>
