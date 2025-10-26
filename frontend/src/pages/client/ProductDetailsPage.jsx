@@ -624,20 +624,17 @@ export default function ProductDetailsPage() {
               </div>
 
               <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
-                <div>
-                  <span className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
-                    ₹ {effectiveUnitPrice.toFixed(2)}
-                  </span>
-                  {effectiveUnitPrice < displayPrice && (
-                    <span className="text-sm text-green-600 ml-2 dark:text-green-400">(Bulk discount applied)</span>
-                  )}
-                </div>
-                {hasActiveDiscount && originalPrice > displayPrice && (
-                  <span className="text-lg sm:text-xl text-gray-500 line-through dark:text-gray-400">
-                    ₹ {originalPrice.toFixed(2)}
-                  </span>
-                )}
-              </div>
+  <div>
+    <span className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
+      ₹ {effectiveUnitPrice.toFixed(2)}
+    </span>
+  </div>
+  {(hasActiveDiscount && originalPrice > displayPrice) || (effectiveUnitPrice < originalPrice) ? (
+    <span className="text-lg sm:text-xl text-gray-500 line-through dark:text-gray-400">
+      ₹ {originalPrice.toFixed(2)}
+    </span>
+  ) : null}
+</div>
 
               {product.hasVariants && product.variants && (
                 <div>
@@ -687,21 +684,21 @@ export default function ProductDetailsPage() {
                 </div>
               )}
 
-              {bulkPricing.length > 0 && (
-                <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
-                  <h4 className="font-semibold text-gray-800 dark:text-white mb-2">
-                    Bulk Pricing Available
-                  </h4>
-                  <div className="space-y-2">
-                    {bulkPricing.map((tier, index) => (
-                      <div key={index} className="flex justify-between text-sm">
-                        <span className="text-gray-600 dark:text-gray-400">{tier.quantity}+ pcs</span>
-                        <span className="font-semibold text-gray-900 dark:text-white">₹ {tier.wholesalePrice.toFixed(2)} each</span>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              {bulkPricing.filter(tier => tier.quantity > 1).length > 0 && (
+  <div className="p-4 bg-gray-50 dark:bg-gray-800 rounded-lg">
+    <h4 className="font-semibold text-gray-800 dark:text-white mb-2">
+      Bulk Pricing Available
+    </h4>
+    <div className="space-y-2">
+      {bulkPricing.filter(tier => tier.quantity > 1).map((tier, index) => (
+        <div key={index} className="flex justify-between text-sm">
+          <span className="text-gray-600 dark:text-gray-400">{tier.quantity}+ pcs</span>
+          <span className="font-semibold text-gray-900 dark:text-white">₹ {tier.wholesalePrice.toFixed(2)} each</span>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
               <>
                 <div>
