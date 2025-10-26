@@ -372,7 +372,10 @@ useEffect(() => {
 
   // Filter and search functionality using useMemo
 const filteredOrders = useMemo(() => {
-  return orders.map(transformOrder).filter((order) => {
+  return orders
+  .map(transformOrder)
+  .sort((a, b) => new Date(b.orderedAt) - new Date(a.orderedAt))
+  .filter((order) => {
     // Search filter
     const matchesSearch = !searchQuery || 
       order.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
