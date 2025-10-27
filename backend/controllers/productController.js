@@ -1482,13 +1482,36 @@ console.log(`Images marked for deletion: ${imagesToDelete.length}`);
 
 const fetchProducts = async (req, res) => {
   try {
+    // Check if admin wants all products
+    const loadAll = req.query.all === 'true';
+    
+    if (loadAll) {
+      // Return ALL products for admin
+      const products = await Product.find({ isActive: true })
+        .select('name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing')
+        .populate('mainCategory', 'categoryName isActive')
+        .populate('subCategory', 'categoryName isActive')
+        .lean();
+
+      const totalCount = products.length;
+
+      return res.status(200).json({
+        products,
+        count: totalCount,
+        totalCount,
+        totalPages: 1,
+        currentPage: 1,
+        hasMore: false
+      });
+    }
+    
+    // Paginated response for customer side
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50; // Load 50 products at a time
+    const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
-    // Only select essential fields for listing
     const products = await Product.find({ isActive: true })
-      .select('name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive  variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing')
+      .select('name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing')
       .populate('mainCategory', 'categoryName isActive')
       .populate('subCategory', 'categoryName isActive')
       .lean()
@@ -1496,6 +1519,7 @@ const fetchProducts = async (req, res) => {
       .limit(limit);
 
     const totalCount = await Product.countDocuments({ isActive: true });
+    console.log("Backend Fetch:", { page, skip, limit, productCount: products.length, totalCount });
 
     return res.status(200).json({
       products,
@@ -1509,7 +1533,7 @@ const fetchProducts = async (req, res) => {
     console.log("Error in fetching the products:", err);
     return res.status(500).json({message: 'Internal server error'});
   }
-}
+};
 
 // Function that will restock products that are single. (Both condition that is variants and non-variant product will be handled over here)
 const restock = async (req, res) => {

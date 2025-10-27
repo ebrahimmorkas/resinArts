@@ -224,34 +224,47 @@ const {
   loadMoreProducts, 
   hasMore, 
   loadingMore,
-  totalCount 
+  totalCount,
+    currentPage  
 } = contextData
 
 // Memoize context values to prevent unnecessary re-renders
 const memoizedCartItems = useMemo(() => cartItems, [cartItems]);
 const memoizedCategories = useMemo(() => categories, [categories]);
 const memoizedProducts = useMemo(() => products, [products]);
-
 useEffect(() => {
+  const target = observerTarget.current;
+  console.log("IntersectionObserver Setup - target exists:", !!target);
+  if (!target) return;
+
   const observer = new IntersectionObserver(
-    entries => {
+    (entries) => {
+      console.log("Observer triggered:", {
+        isIntersecting: entries[0].isIntersecting,
+        hasMore,
+        loadingMore,
+        currentPage,
+        productsLength: products.length
+      });
       if (entries[0].isIntersecting && hasMore && !loadingMore) {
+        console.log('🔄 Loading more products...');
         loadMoreProducts();
       }
     },
-    { threshold: 0.5 }
+    { 
+      threshold: 0.1,
+      rootMargin: '100px'
+    }
   );
 
-  if (observerTarget.current) {
-    observer.observe(observerTarget.current);
-  }
+  observer.observe(target);
+  console.log("Observer attached to target");
 
   return () => {
-    if (observerTarget.current) {
-      observer.unobserve(observerTarget.current);
-    }
+    console.log("Observer disconnected");
+    observer.disconnect();
   };
-}, [hasMore, loadingMore, loadMoreProducts]);
+}, [hasMore, loadingMore, loadMoreProducts, currentPage, products.length]);
 
  
   // console.log("Products from context:", contextData)
@@ -2894,7 +2907,7 @@ if (justArrivedProductsList.length > 0) {
     ))}
   </div>
   
-  {/* Infinite scroll trigger */}
+  {/* Infinite scroll triggers */}
   {hasMore && (
     <div ref={observerTarget} className="flex justify-center py-8">
       <div className="flex items-center gap-3">
