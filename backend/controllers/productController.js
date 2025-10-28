@@ -1482,13 +1482,21 @@ console.log(`Images marked for deletion: ${imagesToDelete.length}`);
 
 const fetchProducts = async (req, res) => {
   try {
-    // Check if admin wants all products
-    const loadAll = req.query.all === 'true';
-    
-    if (loadAll) {
-      // Return ALL products for admin
-      const products = await Product.find({ isActive: true })
-        .select('name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing')
+    // -------------------------------------------------
+    // 1. Detect if this request is for the ADMIN panel
+    // -------------------------------------------------
+    const isAdminRequest =
+      req.query.all === 'true' ||                // old ?all=true flag
+      req.path.toLowerCase().includes('/admin'); // any admin route
+
+    // -------------------------------------------------
+    // 2. ADMIN – return **every** product (no filter)
+    // -------------------------------------------------
+    if (isAdminRequest) {
+      const products = await Product.find({})               // <-- NO isActive filter
+        .select(
+          'name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing'
+        )
         .populate('mainCategory', 'categoryName isActive')
         .populate('subCategory', 'categoryName isActive')
         .lean();
@@ -1501,17 +1509,21 @@ const fetchProducts = async (req, res) => {
         totalCount,
         totalPages: 1,
         currentPage: 1,
-        hasMore: false
+        hasMore: false,
       });
     }
-    
-    // Paginated response for customer side
+
+    // -------------------------------------------------
+    // 3. CLIENT (Home) – paginated, only active products
+    // -------------------------------------------------
     const page = parseInt(req.query.page) || 1;
     const limit = parseInt(req.query.limit) || 50;
     const skip = (page - 1) * limit;
 
     const products = await Product.find({ isActive: true })
-      .select('name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing')
+      .select(
+        'name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing'
+      )
       .populate('mainCategory', 'categoryName isActive')
       .populate('subCategory', 'categoryName isActive')
       .lean()
@@ -1519,7 +1531,14 @@ const fetchProducts = async (req, res) => {
       .limit(limit);
 
     const totalCount = await Product.countDocuments({ isActive: true });
-    console.log("Backend Fetch:", { page, skip, limit, productCount: products.length, totalCount });
+
+    console.log('Backend Fetch (Client):', {
+      page,
+      skip,
+      limit,
+      productCount: products.length,
+      totalCount,
+    });
 
     return res.status(200).json({
       products,
@@ -1527,11 +1546,11 @@ const fetchProducts = async (req, res) => {
       totalCount,
       totalPages: Math.ceil(totalCount / limit),
       currentPage: page,
-      hasMore: skip + products.length < totalCount
+      hasMore: skip + products.length < totalCount,
     });
   } catch (err) {
-    console.log("Error in fetching the products:", err);
-    return res.status(500).json({message: 'Internal server error'});
+    console.error('Error in fetchProducts:', err);
+    return res.status(500).json({ message: 'Internal server error' });
   }
 };
 
