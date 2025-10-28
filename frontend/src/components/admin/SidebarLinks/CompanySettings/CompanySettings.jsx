@@ -1287,6 +1287,9 @@ const handleExcelUpload = async (e) => {
                 }}
                 className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg focus:outline-none focus:ring-2 focus:ring-red-500 dark:focus:ring-red-400 focus:border-transparent text-gray-700 dark:text-white bg-white dark:bg-gray-900"
               >
+                  <option value="Pending">Pending</option>
+  <option value="Accepted">Accepted</option>
+  <option value="Rejected">Rejected</option>
                 <option value="Confirm">Confirm</option>
                 <option value="Dispatched">Dispatched</option>
                 <option value="Completed">Completed</option>

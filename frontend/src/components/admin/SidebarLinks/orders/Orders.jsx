@@ -20,6 +20,7 @@ import BulkDeleteSelectionModal from './bulkOperationsModal/BulkDeleteSelectionM
 import BulkRejectConfirmationModal from './bulkOperationsModal/BulkRejectConfirmationModal';
 import BulkResultModal from './bulkOperationsModal/BulkResultModal';
 import BulkShippingPriceModal from './bulkOperationsModal/BulkShippingPriceModal';
+import DeleteConfirmationModal from './DeleteConfirmationModal';
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -597,6 +598,8 @@ export default function OrdersManagement() {
 const [selectedOrders, setSelectedOrders] = useState([]);
 const [showBulkActions, setShowBulkActions] = useState(false);
 const [bulkLoading, setBulkLoading] = useState(false);
+const [showDeleteConfirmation, setShowDeleteConfirmation] = useState(false);
+const [orderToDelete, setOrderToDelete] = useState(null);
 
 // Bulk operation modals
 const [showBulkDeleteConfirmation, setShowBulkDeleteConfirmation] = useState(false);
@@ -605,7 +608,6 @@ const [showBulkDeleteSelection, setShowBulkDeleteSelection] = useState(false);
 const [showBulkRejectConfirmation, setShowBulkRejectConfirmation] = useState(false);
 const [showBulkResultModal, setShowBulkResultModal] = useState(false);
 const [showBulkShippingModal, setShowBulkShippingModal] = useState(false);
-
 const [bulkResults, setBulkResults] = useState(null);
 const [bulkOperation, setBulkOperation] = useState('');
 const [ordersToConfirmReject, setOrdersToConfirmReject] = useState([]);
@@ -1032,6 +1034,28 @@ useEffect(() => {
     }
   } else {
     console.error('Invalid order update received:', updatedOrder);
+  }
+});
+
+// Cron job deletion socket
+socket.on('ordersDeleted', (data) => {
+  console.log('Orders deleted:', data);
+  if (data && data.orderIds && Array.isArray(data.orderIds)) {
+    setOrders((prevOrders) => {
+      const updatedOrders = prevOrders.filter(
+        (order) => !data.orderIds.includes(order._id.toString())
+      );
+      return updatedOrders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    });
+    
+    // Show toast notification
+    toast.info(`${data.count} order(s) have been automatically deleted`, {
+      position: "top-right",
+      autoClose: 5000,
+    });
+    
+    // Clear selection if deleted orders were selected
+    setSelectedOrders(prev => prev.filter(id => !data.orderIds.includes(id)));
   }
 });
 
@@ -1646,6 +1670,40 @@ const performBulkDelete = async (orderIdsToDelete) => {
   }
 };
 
+// Handle single order delete
+const handleDeleteOrder = (e, order) => {
+  e.stopPropagation();
+  setOrderToDelete(order);
+  setShowDeleteConfirmation(true);
+};
+
+const confirmDeleteOrder = async () => {
+  if (!orderToDelete) return;
+
+  try {
+    const res = await axios.delete(
+      `https://api.simplyrks.cloud/api/order/delete/${orderToDelete._id}`,
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      // Refresh orders
+      const ordersRes = await axios.get('https://api.simplyrks.cloud/api/order/all', { withCredentials: true });
+      if (ordersRes.status === 200) {
+        const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+        setOrders(sortedOrders);
+      }
+
+      toast.success('Order deleted successfully!');
+      setShowDeleteConfirmation(false);
+      setOrderToDelete(null);
+    }
+  } catch (error) {
+    console.error('Delete order error:', error);
+    toast.error('Failed to delete order. Please try again.');
+  }
+};
+
   // Main content starts from here
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800 py-6">
@@ -2109,12 +2167,19 @@ const performBulkDelete = async (orderIdsToDelete) => {
                   </button>
                   <button
                     onClick={(e) => handleReject(e, order._id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="p-2 text-red-600 dark:text-white hover:bg-red-50 rounded-full transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
                     disabled={order.status === "Rejected"}
                     title="Reject Order"
                   >
                     <X className="w-4 h-4" />
                   </button>
+                  <button
+  onClick={(e) => handleDeleteOrder(e, order)}
+  className="p-2 text-red-600 dark:text-white hover:bg-red-50 rounded-full transition-colors"
+  title="Delete Order"
+>
+  <Trash2 className="w-4 h-4" />
+</button>
                   <button
                     onClick={(e) => {
                       e.stopPropagation();
@@ -2287,6 +2352,17 @@ const performBulkDelete = async (orderIdsToDelete) => {
   onClose={() => setShowBulkShippingModal(false)}
   onConfirm={handleConfirmBulkShipping}
   orderCount={selectedOrders.length}
+/>
+
+{/* Delete Confirmation Modal */}
+<DeleteConfirmationModal
+  isOpen={showDeleteConfirmation}
+  onClose={() => {
+    setShowDeleteConfirmation(false);
+    setOrderToDelete(null);
+  }}
+  onConfirm={confirmDeleteOrder}
+  orderNumber={orderToDelete?._id.substring(0, 8)}
 />
 
 {/* Toast Container */}

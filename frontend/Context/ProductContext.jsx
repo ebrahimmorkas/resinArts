@@ -20,46 +20,23 @@ export const ProductProvider = ({ children }) => {
         setLoadingMore(true);
       }
 
-      // Check cache for this specific page
-      const cacheKey = `productsCache_page_${page}`;
-      const cachedData = sessionStorage.getItem(cacheKey);
-      const cacheTimestamp = sessionStorage.getItem(`${cacheKey}_time`);
+      // Determine if admin panel
+      const isAdmin = window.location.pathname.includes('/admin');
       
-      if (cachedData && cacheTimestamp) {
-        const now = Date.now();
-        const cacheAge = now - parseInt(cacheTimestamp);
-        
-        // Use cache if less than 5 minutes old
-        if (cacheAge < 300000) {
-          const cached = JSON.parse(cachedData);
-          if (append) {
-            setProducts(prev => [...prev, ...cached.products]);
-          } else {
-            setProducts(cached.products);
-          }
-          setHasMore(cached.hasMore);
-          setTotalCount(cached.totalCount);
-          setCurrentPage(page);
-          setLoading(false);
-          setLoadingMore(false);
-          return;
-        }
-      }
+      // Build URL
+      const url = isAdmin 
+        ? 'https://api.simplyrks.cloud/api/product/all?all=true'
+        : `https://api.simplyrks.cloud/api/product/all?page=${page}&limit=50`;
 
-      const response = await axios.get(
-        `https://api.simplyrks.cloud/api/product/all?page=${page}&limit=50`,
-        { withCredentials: true }
-      );
+      const response = await axios.get(url, { withCredentials: true });
+      console.log("Fetch Response:", {
+        page,
+        products: response.data.products,
+        hasMore: response.data.hasMore,
+        totalCount: response.data.totalCount
+      });
       
       const { products: productsData, hasMore: moreAvailable, totalCount: total } = response.data;
-      
-      // Cache this page
-      sessionStorage.setItem(cacheKey, JSON.stringify({
-        products: productsData,
-        hasMore: moreAvailable,
-        totalCount: total
-      }));
-      sessionStorage.setItem(`${cacheKey}_time`, Date.now().toString());
       
       if (append) {
         setProducts(prev => [...prev, ...productsData]);
@@ -81,19 +58,12 @@ export const ProductProvider = ({ children }) => {
 
   const loadMoreProducts = useCallback(() => {
     if (!loadingMore && hasMore) {
+      console.log("Loading more, currentPage:", currentPage);
       fetchProducts(currentPage + 1, true);
     }
   }, [currentPage, hasMore, loadingMore, fetchProducts]);
 
   const refreshProducts = useCallback(() => {
-    // Clear all product caches
-    for (let i = 0; i < sessionStorage.length; i++) {
-      const key = sessionStorage.key(i);
-      if (key.startsWith('productsCache_page_')) {
-        sessionStorage.removeItem(key);
-        sessionStorage.removeItem(`${key}_time`);
-      }
-    }
     setProducts([]);
     setCurrentPage(1);
     setHasMore(true);
@@ -102,7 +72,7 @@ export const ProductProvider = ({ children }) => {
 
   useEffect(() => {
     fetchProducts(1, false);
-  }, []);
+  }, [fetchProducts]);
 
   const contextValue = useMemo(
     () => ({ 
@@ -115,9 +85,10 @@ export const ProductProvider = ({ children }) => {
       loadingMore,
       error,
       hasMore,
-      totalCount
+      totalCount,
+      currentPage
     }),
-    [products, loading, loadingMore, error, hasMore, totalCount, loadMoreProducts, refreshProducts, setProducts, fetchProducts]
+    [products, loading, loadingMore, error, hasMore, totalCount, currentPage, loadMoreProducts, refreshProducts, fetchProducts]
   );
 
   return (

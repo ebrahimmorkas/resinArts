@@ -180,7 +180,7 @@ shippingPriceSettings: {
     },
     deleteStatus: {
       type: String,
-      enum: ['Confirm', 'Dispatched', 'Completed'],
+      enum: ['Pending', 'Accepted', 'Rejected', 'Confirm', 'Dispatched', 'Completed'],
       default: 'Completed'
     },
     deleteAfterUnit: {
