@@ -1144,24 +1144,25 @@ useEffect(() => {
   const endIndex = startIndex + itemsPerPage;
   const currentOrders = filteredOrders.slice(startIndex, endIndex);
 
-  // Calculate stats
-  const stats = useMemo(() => {
-    const totalOrders = orders.length;
-    const statusCounts = orders.reduce((acc, order) => {
-      acc[order.status] = (acc[order.status] || 0) + 1;
-      return acc;
-    }, {});
+// Calculate stats
+const stats = useMemo(() => {
+  const totalOrders = orders.length;
+  const statusCounts = orders.reduce((acc, order) => {
+    acc[order.status] = (acc[order.status] || 0) + 1;
+    return acc;
+  }, {});
 
-    return {
-      total: totalOrders,
-      pending: statusCounts.Pending || 0,
-      accepted: statusCounts.Accepted || 0,
-      dispatched: statusCounts.Dispatched || 0,
-      rejected: statusCounts.Rejected || 0,
-      completed: statusCounts.Completed || 0,
-      inProgress: statusCounts["In Progress"] || 0,
-    };
-  }, [orders]);
+  return {
+    total: totalOrders,
+    pending: statusCounts.Pending || 0,
+    accepted: statusCounts.Accepted || 0,
+    confirm: statusCounts.Confirm || 0,
+    dispatched: statusCounts.Dispatched || 0,
+    rejected: statusCounts.Rejected || 0,
+    completed: statusCounts.Completed || 0,
+    inProgress: statusCounts["In Progress"] || 0,
+  };
+}, [orders]);
 
   // Handle status change
   const handleStatusChange = async (orderId, newStatus) => {
@@ -1235,6 +1236,10 @@ useEffect(() => {
         filename = "completed_orders";
         break;
       default:
+        case 'confirm':
+  dataToExport = orders.filter(order => order.status.toLowerCase() === 'confirm');
+  filename = "confirm_orders";
+  break;
         dataToExport = orders;
         filename = "all_orders";
     }
@@ -1717,7 +1722,7 @@ const confirmDeleteOrder = async () => {
         </div>
 
         {/* Stats Section */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-7 gap-6 mb-8">
           <div className="bg-gradient-to-br from-blue-50 to-blue-100 border border-blue-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between mb-2">
               <div className="text-2xl font-bold text-blue-700">{stats.total}</div>
@@ -1768,6 +1773,23 @@ const confirmDeleteOrder = async () => {
               Export
             </button>
           </div>
+
+          <div className="bg-gradient-to-br from-teal-50 to-teal-100 border border-teal-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
+  <div className="flex items-center justify-between mb-2">
+    <div className="text-2xl font-bold text-teal-700">{stats.confirm}</div>
+    <div className="p-2 bg-teal-200 rounded-full">
+      <CheckCircle className="h-6 w-6 text-teal-700" />
+    </div>
+  </div>
+  <div className="text-sm text-teal-600 font-medium mb-3">Confirm</div>
+  <button
+    onClick={() => handleDownload("confirm")}
+    className="text-xs bg-teal-100 text-teal-700 px-3 py-1.5 rounded-full hover:bg-teal-200 transition-colors font-medium"
+  >
+    <Download className="h-3 w-3 inline mr-1" />
+    Export
+  </button>
+</div>
 
           <div className="bg-gradient-to-br from-blue-50 to-indigo-100 border border-blue-200 rounded-xl shadow-lg p-6 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1">
             <div className="flex items-center justify-between mb-2">
