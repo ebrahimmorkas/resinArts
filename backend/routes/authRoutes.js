@@ -35,7 +35,7 @@ try {
                 try {
                     const saltRounds = 10;
                     const hashedPassword = await bcrypt.hash(password, saltRounds);
-                    
+
                     const newUser = new User({first_name, middle_name, last_name, state, city, address, email, phone_number, whatsapp_number, password: hashedPassword, zip_code});
                     await newUser.save();
                     console.log("User added successfully")
@@ -63,7 +63,7 @@ router.post('/login', async (req, res) => {
                 id: user._id,
                 role: user.role,
                 iat: Math.floor(Date.now() / 1000),
-                type: 'access',    
+                type: 'access',
             },
             process.env.JWT_SECRET,
             {expiresIn: '8h'}
@@ -73,7 +73,8 @@ router.post('/login', async (req, res) => {
         res.cookie('token', token, {
             httpOnly: true,
             secure: true,
-            sameSite: 'Strict',
+            sameSite: 'None',
+domain: '.simplyrks.cloud',
             maxAge: 15 * 24 * 60 * 60 * 1000
         });
 
@@ -88,7 +89,7 @@ router.post('/login', async (req, res) => {
                 role: user.role
             }
         });
-        } 
+        }
         else {
             return res.status(401).json({message: "Invalid credentials"});
         }
@@ -102,7 +103,8 @@ router.post('/logout', (req, res) => {
     res.clearCookie('token', {
         httpOnly: true,
         secure: true,
-        sameSite: 'strict',
+        sameSite: 'None',
+domain: '.simplyrks.cloud'
     });
     res.status(200).json({
         message: "Logout successful",
@@ -112,20 +114,20 @@ router.post('/logout', (req, res) => {
 // Route for forgot password
 router.post('/forgot-password', async (req, res) => {
     const { email } = req.body;
-    
+
     try {
         const user = await User.findOne({ email });
-        
+
         if (!user) {
             return res.status(404).json({ message: "No account found with this email address" });
         }
 
         // Generate reset token (plain, not hashed yet)
         const resetToken = crypto.randomBytes(32).toString('hex');
-        
+
         // Hash the token before saving to database
         const hashedToken = crypto.createHash('sha256').update(resetToken).digest('hex');
-        
+
         // Set token and expiry (1 hour from now)
         user.resetPasswordToken = hashedToken;
         user.resetPasswordExpires = Date.now() + 3600000; // 1 hour
@@ -137,7 +139,6 @@ router.post('/forgot-password', async (req, res) => {
 
         // Create reset URL with PLAIN token (not hashed)
         const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/auth/reset-password/${resetToken}`;
-
         // Email message
         const message = `Hello ${user.first_name},
 
@@ -148,26 +149,26 @@ ${resetUrl}
 
 This link will expire in 1 hour.
 
-If you did not request this password reset, please ignore this email and your password will remain unchanged.
+If you did not request this password reset, please ignore this email and your password will remain unchanged.       
 
 Best regards,
 Mouldmarket Team`;
 
         try {
             await sendEmail(user.email, 'Password Reset Request - Mouldmarket', message);
-            
-            return res.status(200).json({ 
-                message: "Password reset link has been sent to your email address" 
+
+            return res.status(200).json({
+                message: "Password reset link has been sent to your email address"
             });
         } catch (emailError) {
             // If email fails, remove the token from database
             user.resetPasswordToken = null;
             user.resetPasswordExpires = null;
             await user.save();
-            
+
             console.error('Email sending error:', emailError);
-            return res.status(500).json({ 
-                message: "Error sending email. Please try again later." 
+            return res.status(500).json({
+                message: "Error sending email. Please try again later."
             });
         }
     } catch (err) {
@@ -183,7 +184,7 @@ router.post('/reset-password/:token', async (req, res) => {
 
     try {
         console.log('Received token from URL:', token);
-        
+
         // Hash the token from URL to compare with database
         const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
         console.log('Hashed token to compare:', hashedToken);
@@ -202,8 +203,8 @@ router.post('/reset-password/:token', async (req, res) => {
         }
 
         if (!user) {
-            return res.status(400).json({ 
-                message: "Password reset token is invalid or has expired. Please request a new password reset link." 
+            return res.status(400).json({
+                message: "Password reset token is invalid or has expired. Please request a new password reset link."
             });
         }
 
@@ -219,8 +220,8 @@ router.post('/reset-password/:token', async (req, res) => {
 
         console.log('Password reset successful for user:', user.email);
 
-        return res.status(200).json({ 
-            message: "Password has been reset successfully. You can now login with your new password." 
+        return res.status(200).json({
+            message: "Password has been reset successfully. You can now login with your new password."
         });
     } catch (err) {
         console.error('Reset password error:', err);
