@@ -1513,41 +1513,75 @@ const fetchProducts = async (req, res) => {
       });
     }
 
-    // -------------------------------------------------
-    // 3. CLIENT (Home) – paginated, only active products
-    // -------------------------------------------------
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 50;
-    const skip = (page - 1) * limit;
+   // -------------------------------------------------
+// 3. CLIENT (Home) – paginated, only active products
+// -------------------------------------------------
+const page = parseInt(req.query.page) || 1;
+const limit = parseInt(req.query.limit) || 50;
+const skip = (page - 1) * limit;
 
-    const products = await Product.find({ isActive: true })
-      .select(
-        'name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing'
-      )
-      .populate('mainCategory', 'categoryName isActive')
-      .populate('subCategory', 'categoryName isActive')
-      .lean()
-      .skip(skip)
-      .limit(limit);
+// Build filter query
+const filter = { isActive: true };
 
-    const totalCount = await Product.countDocuments({ isActive: true });
+// Add category filter if provided
+const categoryId = req.query.categoryId;
+if (categoryId) {
+  // Helper function to get all descendant category IDs
+  const getAllDescendants = async (catId) => {
+    const Category = require('../models/Category'); // Adjust path to your Category model
+    const ids = [catId];
+    
+    const getChildren = async (parentId) => {
+      const children = await Category.find({ parent_category_id: parentId }).select('_id');
+      for (const child of children) {
+        ids.push(child._id.toString());
+        await getChildren(child._id.toString());
+      }
+    };
+    
+    await getChildren(catId);
+    return ids;
+  };
+  
+  // Get all descendant category IDs
+  const allCategoryIds = await getAllDescendants(categoryId);
+  
+  filter.$or = [
+    { mainCategory: { $in: allCategoryIds } },
+    { subCategory: { $in: allCategoryIds } }
+  ];
+}
 
-    console.log('Backend Fetch (Client):', {
-      page,
-      skip,
-      limit,
-      productCount: products.length,
-      totalCount,
-    });
+const products = await Product.find(filter)
+  .select(
+    'name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing'
+  )
+  .populate('mainCategory', 'categoryName isActive')
+  .populate('subCategory', 'categoryName isActive')
+  .lean()
+  .skip(skip)
+  .limit(limit);
 
-    return res.status(200).json({
-      products,
-      count: products.length,
-      totalCount,
-      totalPages: Math.ceil(totalCount / limit),
-      currentPage: page,
-      hasMore: skip + products.length < totalCount,
-    });
+const totalCount = await Product.countDocuments(filter);
+
+console.log('Backend Fetch (Client):', {
+  page,
+  skip,
+  limit,
+  categoryId,
+  allCategoryIds: categoryId ? filter.$or : 'none',
+  productCount: products.length,
+  totalCount,
+});
+
+return res.status(200).json({
+  products,
+  count: products.length,
+  totalCount,
+  totalPages: Math.ceil(totalCount / limit),
+  currentPage: page,
+  hasMore: skip + products.length < totalCount,
+});
   } catch (err) {
     console.error('Error in fetchProducts:', err);
     return res.status(500).json({ message: 'Internal server error' });
