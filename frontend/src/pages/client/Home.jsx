@@ -140,6 +140,12 @@ const handleCartCheckout = async () => {
   const [selectedCategory, setSelectedCategory] = useState(null)
   const [selectedProduct, setSelectedProduct] = useState(null)
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || "")
+  const [categoryFilteredProducts, setCategoryFilteredProducts] = useState([])
+const [categoryHasMore, setCategoryHasMore] = useState(false)
+const [categoryLoadingMore, setCategoryLoadingMore] = useState(false)
+const [categoryTotalCount, setCategoryTotalCount] = useState(0)
+const [categoryCurrentPage, setCategoryCurrentPage] = useState(1)
+const [categoryLoading, setCategoryLoading] = useState(false)
   // Handle search from URL parameter
 // Handle search from URL parameter
 useEffect(() => {
@@ -166,6 +172,7 @@ useEffect(() => {
   const [selectedCategoryPath, setSelectedCategoryPath] = useState([])
   const [selectedVariantProduct, setSelectedVariantProduct] = useState(null)
   const [activeCategoryFilter, setActiveCategoryFilter] = useState(null)
+  const [selectedCategoryIdForFilter, setSelectedCategoryIdForFilter] = useState(null)
   const [selectedImage, setSelectedImage] = useState(null)
   const { discountData, loadingDiscount, loadingErrors, isDiscountAvailable } = useContext(DiscountContext);
   const { announcement, loadingAnnouncement, announcementError } = useContext(AnnouncementContext);
@@ -207,6 +214,7 @@ const scrollToTop = () => {
 
 // Infinite scroll observer
 const observerTarget = useRef(null);
+const categoryObserverTarget = useRef(null);
 
 const contextData = useContext(ProductContext) || { 
   products: [], 
@@ -248,7 +256,10 @@ useEffect(() => {
       });
       if (entries[0].isIntersecting && hasMore && !loadingMore) {
         console.log('🔄 Loading more products...');
-        loadMoreProducts();
+        if (entries[0].isIntersecting && hasMore && !loadingMore) {
+  console.log('🔄 Loading more products...');
+  loadMoreProducts(selectedCategoryIdForFilter);
+}
       }
     },
     { 
@@ -264,7 +275,49 @@ useEffect(() => {
     console.log("Observer disconnected");
     observer.disconnect();
   };
-}, [hasMore, loadingMore, loadMoreProducts, currentPage, products.length]);
+}, [hasMore, loadingMore, loadMoreProducts, currentPage, products.length, selectedCategoryIdForFilter]);
+
+// Category infinite scroll observer
+useEffect(() => {
+  if (!selectedCategoryIdForFilter) return;
+  
+  const target = categoryObserverTarget.current;
+  if (!target) return;
+
+  const observer = new IntersectionObserver(
+    async (entries) => {
+      if (entries[0].isIntersecting && categoryHasMore && !categoryLoadingMore) {
+        console.log('🔄 Loading more category products...', {
+          currentPage: categoryCurrentPage,
+          hasMore: categoryHasMore
+        });
+        
+        try {
+          setCategoryLoadingMore(true);
+          const nextPage = categoryCurrentPage + 1;
+          const response = await axios.get(
+            `http://localhost:3000/api/product/all?page=${nextPage}&limit=50&categoryId=${selectedCategoryIdForFilter}`,
+            { withCredentials: true }
+          );
+          
+          console.log("More category products loaded:", response.data);
+          
+          setCategoryFilteredProducts(prev => [...prev, ...response.data.products]);
+          setCategoryHasMore(response.data.hasMore);
+          setCategoryCurrentPage(nextPage);
+          setCategoryLoadingMore(false);
+        } catch (error) {
+          console.error("Error loading more category products:", error);
+          setCategoryLoadingMore(false);
+        }
+      }
+    },
+    { threshold: 0.1, rootMargin: '100px' }
+  );
+
+  observer.observe(target);
+  return () => observer.disconnect();
+}, [selectedCategoryIdForFilter, categoryHasMore, categoryLoadingMore, categoryCurrentPage]);
 
  
   // console.log("Products from context:", contextData)
@@ -873,21 +926,55 @@ const productData = {
   await removeFromCart(cartKey);
 };
 
-const handleCategoryClick = (category) => {
+const handleCategoryClick = async (category) => {
   if (selectedCategory === category.categoryName) {
+    // Clear category selection
     setSelectedCategory(null);
     setSelectedCategoryPath([]);
-    setSelectedFilters(['all']); // Reset to "All Products"
+    setSelectedFilters(['all']);
+    setSelectedCategoryIdForFilter(null);
+    setCategoryFilteredProducts([]);
+    setCategoryHasMore(false);
+    setCategoryTotalCount(0);
+    setCategoryCurrentPage(1);
+    
+    setTimeout(() => {
+      document.getElementById('all-products-section')?.scrollIntoView({ behavior: 'smooth' })
+    }, 100);
   } else {
+    // Set new category
     setSelectedCategory(category.categoryName);
     const path = buildCategoryPathFromId(category._id);
     setSelectedCategoryPath(path);
-    // Remove "all" from filters when category is selected
     setSelectedFilters((prev) => prev.filter(f => f !== 'all'));
-    // Scroll to category section after a brief delay
-    setTimeout(() => {
-      document.getElementById('selected-category-section')?.scrollIntoView({ behavior: 'smooth' })
-    }, 100);
+    setSelectedCategoryIdForFilter(category._id);
+    
+    // Clear and fetch category products
+    setCategoryFilteredProducts([]);
+    setCategoryCurrentPage(1);
+    
+    try {
+  setCategoryLoading(true);
+      const response = await axios.get(
+        `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${category._id}`,
+        { withCredentials: true }
+      );
+      
+      console.log("Category products loaded:", response.data);
+      
+      setCategoryFilteredProducts(response.data.products);
+      setCategoryHasMore(response.data.hasMore);
+      setCategoryTotalCount(response.data.totalCount);
+      setCategoryCurrentPage(1);
+setCategoryLoading(false);
+      
+      setTimeout(() => {
+        document.getElementById('selected-category-section')?.scrollIntoView({ behavior: 'smooth' })
+      }, 100);
+  } catch (error) {
+  console.error("Error fetching category products:", error);
+  setCategoryLoading(false);
+}
   }
 }
 
@@ -1069,23 +1156,68 @@ const CategoryNavigationBar = () => {
   const mainCategory = selectedCategoryPath[0];
   const subCategoryOptions = getCategoryChildren(currentCategory._id);
 
-  const handleMainCategoryChange = (categoryId) => {
-    if (!categoryId) {
-      setSelectedCategory(null);
-      setSelectedCategoryPath([]);
-      return;
-    }
-    const newPath = buildCategoryPathFromId(categoryId);
-    setSelectedCategory(newPath[newPath.length - 1].categoryName);
-    setSelectedCategoryPath(newPath);
-  };
+const handleMainCategoryChange = async (categoryId) => {
+  if (!categoryId) {
+    setSelectedCategory(null);
+    setSelectedCategoryPath([]);
+    setSelectedCategoryIdForFilter(null);
+    setCategoryFilteredProducts([]);
+    setCategoryHasMore(false);
+    setCategoryTotalCount(0);
+    setCategoryCurrentPage(1);
+    return;
+  }
+  
+  const newPath = buildCategoryPathFromId(categoryId);
+  setSelectedCategory(newPath[newPath.length - 1].categoryName);
+  setSelectedCategoryPath(newPath);
+  setSelectedCategoryIdForFilter(categoryId);
+  
+  // Fetch products for new category
+  try {
+    setCategoryLoading(true);
+    const response = await axios.get(
+      `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
+      { withCredentials: true }
+    );
+    
+    setCategoryFilteredProducts(response.data.products);
+    setCategoryHasMore(response.data.hasMore);
+    setCategoryTotalCount(response.data.totalCount);
+    setCategoryCurrentPage(1);
+    setCategoryLoading(false);
+  } catch (error) {
+    console.error("Error fetching category products:", error);
+    setCategoryLoading(false);
+  }
+};
 
-  const handleSubCategoryChange = (categoryId) => {
-    if (!categoryId) return;
-    const newPath = buildCategoryPathFromId(categoryId);
-    setSelectedCategory(newPath[newPath.length - 1].categoryName);
-    setSelectedCategoryPath(newPath);
-  };
+  const handleSubCategoryChange = async (categoryId) => {
+  if (!categoryId) return;
+  
+  const newPath = buildCategoryPathFromId(categoryId);
+  setSelectedCategory(newPath[newPath.length - 1].categoryName);
+  setSelectedCategoryPath(newPath);
+  setSelectedCategoryIdForFilter(categoryId);
+  
+  // Fetch products for new subcategory
+  try {
+    setCategoryLoading(true);
+    const response = await axios.get(
+      `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
+      { withCredentials: true }
+    );
+    
+    setCategoryFilteredProducts(response.data.products);
+    setCategoryHasMore(response.data.hasMore);
+    setCategoryTotalCount(response.data.totalCount);
+    setCategoryCurrentPage(1);
+    setCategoryLoading(false);
+  } catch (error) {
+    console.error("Error fetching category products:", error);
+    setCategoryLoading(false);
+  }
+};
 
   const handleBreadcrumbClick = (index) => {
     const newPath = selectedCategoryPath.slice(0, index + 1);
@@ -1170,10 +1302,15 @@ const CategoryNavigationBar = () => {
                 Go to Categories
               </button>
               <button
-                onClick={() => {
+onClick={() => {
   setSelectedCategory(null);
   setSelectedCategoryPath([]);
   setSelectedFilters(['all']);
+  setSelectedCategoryIdForFilter(null);
+  setCategoryFilteredProducts([]);
+  setCategoryHasMore(false);
+  setCategoryTotalCount(0);
+  setCategoryCurrentPage(1);
   setTimeout(() => {
     document.getElementById('all-products-section')?.scrollIntoView({ behavior: 'smooth' });
   }, 100);
@@ -2794,57 +2931,71 @@ if (justArrivedProductsList.length > 0) {
   </section>
 )}
 
-        {selectedCategoryPath.length > 0 && (
+  {selectedCategoryPath.length > 0 && (
   <section className="mb-12" id="selected-category-section">
-    <div className="flex items-center justify-center mb-6">
-      <h2 className="text-2xl font-bold -800 dark:text-gray-100">{selectedCategory}</h2>
+    <div className="flex items-center justify-between mb-6">
+      <h2 className="text-2xl font-bold -800 dark:text-black">{selectedCategory}</h2>
+      <span className="text-sm text-gray-600 dark:text-gray-400">
+        Showing {categoryFilteredProducts.length} of {categoryTotalCount} products
+      </span>
     </div>
-    {(() => {
-      const currentCategoryId = selectedCategoryPath[selectedCategoryPath.length - 1]._id;
-      const allRelevantCategoryIds = getAllDescendantCategoryIds(currentCategoryId, buildCategoryTree(categories));
-      
-      const categoryProducts = sortProductsByPrice(
-  getFilteredProducts.filter((product) => {
-    // Handle MongoDB ObjectId format
-    const productMainCat = product.mainCategory?.$oid || 
-                          product.mainCategory?._id || 
-                          product.mainCategory;
-    const productSubCat = product.subCategory?.$oid || 
-                         product.subCategory?._id || 
-                         product.subCategory;
-    
-    return (productMainCat && allRelevantCategoryIds.includes(productMainCat)) || 
-           (productSubCat && allRelevantCategoryIds.includes(productSubCat));
-  })
-);
-      
-      return categoryProducts.length > 0 ? (
+    {categoryLoading ? (
+      <div className="flex justify-center py-8">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-600 dark:text-gray-400">Loading products...</p>
+        </div>
+      </div>
+    ) : categoryFilteredProducts.length > 0 ? (
+      <>
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-          {categoryProducts.map((product) => (
-            <ProductCard key={product._id} product={product} />
+          {sortProductsByPrice(categoryFilteredProducts).map((product) => (
+            <ProductCard key={`category-${product._id}`} product={product} />
           ))}
         </div>
-      ) : (
-        <div className="flex flex-col items-center justify-center py-16 px-4">
-          <div className="bg-gray-100 rounded-full p-6 mb-4">
-            <Package className="w-16 h-16 text-gray-400" />
+        
+        {/* Category infinite scroll trigger */}
+        {categoryHasMore && (
+          <div ref={categoryObserverTarget} className="flex justify-center py-8">
+            <div className="flex items-center gap-3">
+              <div className="w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+              <p className="text-gray-600 dark:text-gray-400">Loading more products...</p>
+            </div>
           </div>
-          <h3 className="text-xl font-semibold -800 dark:text-gray-100 mb-2">No Products Available</h3>
-          <p className="text-gray-600 dark:text-gray-400 text-center mb-6 dark:text-black">
-            We couldn't find any products in the "{selectedCategory}" category at the moment.
-          </p>
-          <button
-            onClick={() => {
-              setSelectedCategory(null);
-              setSelectedCategoryPath([]);
-            }}
-            className="dark:text-gray-400 px-6 py-3 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
-          >
-            Browse All Products
-          </button>
+        )}
+        
+        {!categoryHasMore && categoryFilteredProducts.length > 0 && (
+          <div className="text-center py-8">
+            <p className="text-gray-600 dark:text-gray-400">You've reached the end! 🎉</p>
+          </div>
+        )}
+      </>
+    ) : (
+      <div className="flex flex-col items-center justify-center py-16 px-4">
+        <div className="bg-gray-100 rounded-full p-6 mb-4">
+          <Package className="w-16 h-16 text-gray-400" />
         </div>
-      );
-    })()}
+        <h3 className="text-xl font-semibold -800 dark:text-gray-100 mb-2">No Products Available</h3>
+        <p className="text-gray-600 dark:text-gray-400 text-center mb-6">
+          We couldn't find any products in the "{selectedCategory}" category at the moment.
+        </p>
+        <button
+          onClick={() => {
+            setSelectedCategory(null);
+            setSelectedCategoryPath([]);
+            setSelectedFilters(['all']);
+            setSelectedCategoryIdForFilter(null);
+            setCategoryFilteredProducts([]);
+            setCategoryHasMore(false);
+            setCategoryTotalCount(0);
+            setCategoryCurrentPage(1);
+          }}
+          className="dark:text-gray-400 px-6 py-3 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors duration-200 font-medium"
+        >
+          Browse All Products
+        </button>
+      </div>
+    )}
   </section>
 )}
 
