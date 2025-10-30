@@ -114,6 +114,7 @@ export const CartProvider = ({ children }) => {
                         variantId: item.variant_id,
                         detailsId: item.details_id,
                         sizeId: item.size_id,
+                        bulkPricing: item.bulk_pricing || [],
                         cashApplied: item.cash_applied || 0,
                         userId: item.user_id,
                     };
@@ -221,41 +222,46 @@ export const CartProvider = ({ children }) => {
 
         // Logged in user - optimistic update first (instant feedback)
         const optimisticCartItems = {
-            ...cartItems,
-            [cartKey]: {
-                productId,
-                variantName: colorName || null,
-                sizeString: sizeString || null,
-                quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
-                price: productData.price,
-                discountedPrice: productData.discountedPrice || productData.price,
-                imageUrl: productData.imageUrl,
-                productName: productData.productName,
-                variantId: productData.variantId,
-                detailsId: productData.detailsId,
-                sizeId: productData.sizeId,
-                cashApplied: 0,
-            },
-        };
+    ...cartItems,
+    [cartKey]: {
+        productId,
+        variantName: colorName || null,
+        sizeString: sizeString || null,
+        quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
+        price: productData.price,
+        discountedPrice: productData.discountedPrice || productData.price,
+        imageUrl: productData.imageUrl,
+        productName: productData.productName,
+        variantId: productData.variantId,
+        detailsId: productData.detailsId,
+        sizeId: productData.sizeId,
+        bulkPricing: productData.bulkPricing || [], // Add this line
+        cashApplied: 0,
+    },
+};
         setCartItems(optimisticCartItems);
 
         // Then update backend in background
-        let cashApplied = 0;
-        if (applyFreeCash && freeCash) {
-            const product = products.find((p) => p._id === productId);
-            if (product) {
-                const mockCartData = {
-                    ...productData,
-                    quantity: quantity,
-                    discountedPrice: productData.discountedPrice || productData.price
-                };
-                
-                if (isFreeCashEligible(product, mockCartData, freeCash)) {
-                    const itemTotal = mockCartData.discountedPrice * quantity;
-                    cashApplied = Math.min(freeCash.amount, itemTotal);
-                }
-            }
+        // Store bulk pricing data in cart item
+const bulkPricingData = productData.bulkPricing || [];
+
+// Background API call
+let cashApplied = 0;
+if (applyFreeCash && freeCash) {
+    const product = products.find((p) => p._id === productId);
+    if (product) {
+        const mockCartData = {
+            ...productData,
+            quantity: quantity,
+            discountedPrice: productData.discountedPrice || productData.price
+        };
+        
+        if (isFreeCashEligible(product, mockCartData, freeCash)) {
+            const itemTotal = mockCartData.discountedPrice * quantity;
+            cashApplied = Math.min(freeCash.amount, itemTotal);
         }
+    }
+}
 
         const cartItemData = {
             image_url: productData.imageUrl,
@@ -265,6 +271,7 @@ export const CartProvider = ({ children }) => {
             price: productData.price,
             cash_applied: cashApplied,
             discounted_price: productData.discountedPrice || productData.price,
+            bulk_pricing: productData.bulkPricing || [], 
         };
 
         if (productData.variantId && productData.variantId !== "") {

@@ -335,6 +335,18 @@ useEffect(() => {
   // Context for favorites
   const { toggleFavorite, isFavorite } = useFavorites()
 
+  // Add this RIGHT AFTER all your useState/useContext declarations
+const scrollPositionRef = useRef(0);
+
+// Add this helper to preserve scroll position
+const preserveScrollPosition = (callback) => {
+  scrollPositionRef.current = window.scrollY;
+  callback();
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollPositionRef.current);
+  });
+};
+
 const handleSearch = useCallback((query) => {
   setSearchQuery(query)
   
@@ -879,7 +891,8 @@ const handleLogout = async () => {
     }
   }
 
-  const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1) => {
+const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1) => {
+  scrollPositionRef.current = window.scrollY;
   
   const product = products.find((p) => p._id === productId);
   if (!product) return;
@@ -902,29 +915,40 @@ const handleLogout = async () => {
   // Use 1+ bulk price if available, otherwise use display price
   const effectivePrice = bulkPrice1Plus ? bulkPrice1Plus.wholesalePrice : displayPrice;
 
-const productData = {
+  const productData = {
     imageUrl: variant?.variantImage || product.image || "/placeholder.svg",
     productName: product.name,
     variantId: variant?._id || "",
     detailsId: sizeDetail?._id || "",
     sizeId: sizeDetail?.size?._id || "",
     price: originalPrice,
-    discountedPrice: effectivePrice, // Use effective price which includes 1+ bulk pricing
+    discountedPrice: effectivePrice,
+    bulkPricing: bulkPricing,
   };
 
   await addToCart(productId, colorName, sizeString, quantity, productData);
   
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollPositionRef.current);
+  });
 };
 
-  const handleUpdateQuantity = async (cartKey, change) => {
-  
+ const handleUpdateQuantity = async (cartKey, change) => {
+  scrollPositionRef.current = window.scrollY;
   await updateQuantity(cartKey, change);
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollPositionRef.current);
+  });
 };
 
-  const handleRemoveFromCart = async (cartKey) => {
-  
+const handleRemoveFromCart = async (cartKey) => {
+  scrollPositionRef.current = window.scrollY;
   await removeFromCart(cartKey);
+  requestAnimationFrame(() => {
+    window.scrollTo(0, scrollPositionRef.current);
+  });
 };
+  
 
 const handleCategoryClick = async (category) => {
   if (selectedCategory === category.categoryName) {
@@ -2736,12 +2760,9 @@ if (justArrivedProductsList.length > 0) {
       handleSearchKeyPress={handleSearchKeyPress}
     />
 
-    {isCartOpen && (
+   {isCartOpen && (
   <Suspense fallback={<div />}>
-    <CartModal
-      getBulkPricing={getBulkPricing}
-      getEffectiveUnitPrice={getEffectiveUnitPrice}
-    />
+    <CartModal />
   </Suspense>
 )}
 
