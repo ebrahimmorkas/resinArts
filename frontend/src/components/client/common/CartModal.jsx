@@ -12,10 +12,43 @@ import axios from "axios"
 import { useNavigate } from "react-router-dom"
 import { AuthContext } from "../../../../Context/AuthContext"
 
-export default function CartModal({ 
-  getBulkPricing, 
-  getEffectiveUnitPrice 
-}) {
+export default function CartModal() {
+  
+  // Add this helper function inside the component (after the state declarations)
+  const getEffectiveUnitPrice = (quantity, bulkPricing, basePrice) => {
+    if (!bulkPricing || bulkPricing.length === 0) return basePrice;
+    let effectivePrice = basePrice;
+    for (let i = bulkPricing.length - 1; i >= 0; i--) {
+      if (quantity >= bulkPricing[i].quantity) {
+        effectivePrice = bulkPricing[i].wholesalePrice;
+        break;
+      }
+    }
+    return effectivePrice;
+  };
+
+  const getBulkPricing = (product, variant, sizeDetail) => {
+ // Priority: sizeDetail → variant → product
+   if (sizeDetail?.bulkPricingCombinations?.length) {
+     return sizeDetail.bulkPricingCombinations.map(bp => ({
+       quantity: bp.quantity,
+       wholesalePrice: bp.wholesalePrice
+     }));
+   }
+   if (variant?.commonBulkPricingCombinations?.length) {
+     return variant.commonBulkPricingCombinations.map(bp => ({
+       quantity: bp.quantity,
+       wholesalePrice: bp.wholesalePrice
+     }));
+   }
+   if (product?.bulkPricing?.length) {
+     return product.bulkPricing.map(bp => ({
+       quantity: bp.quantity,
+       wholesalePrice: bp.wholesalePrice
+     }));
+   }
+   return [];
+ };
   const { user } = useContext(AuthContext)
   const navigate = useNavigate()
   const { products } = useContext(ProductContext)
@@ -270,14 +303,10 @@ export default function CartModal({
 
                 {/* Cart Items */}
                 {cartEntries.map(([cartKey, item]) => {
-                  const product = products.find((p) => p._id === item.productId)
-                  if (!product) return null
-
-                  const variant = product.variants?.find((v) => v._id === item.variantId)
-                  const sizeDetail = variant?.moreDetails?.find((md) => md._id === item.detailsId)
-                  const bulkPricing = getBulkPricing(product, variant, sizeDetail)
-                  const basePrice = item.discountedPrice || item.price
-                  const effectiveUnit = getEffectiveUnitPrice(item.quantity, bulkPricing, basePrice)
+  // Use bulk pricing stored in cart item instead of fetching from products
+  const bulkPricing = item.bulkPricing || []
+  const basePrice = item.discountedPrice || item.price
+  const effectiveUnit = getEffectiveUnitPrice(item.quantity, bulkPricing, basePrice)
 
                   return (
                     <div key={cartKey} className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">

@@ -879,7 +879,7 @@ const handleLogout = async () => {
     }
   }
 
-  const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1) => {
+const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1) => {
   
   const product = products.find((p) => p._id === productId);
   if (!product) return;
@@ -909,7 +909,8 @@ const productData = {
     detailsId: sizeDetail?._id || "",
     sizeId: sizeDetail?.size?._id || "",
     price: originalPrice,
-    discountedPrice: effectivePrice, // Use effective price which includes 1+ bulk pricing
+    discountedPrice: effectivePrice,
+    bulkPricing: bulkPricing, // Add this line - store complete bulk pricing data
   };
 
   await addToCart(productId, colorName, sizeString, quantity, productData);
@@ -2736,12 +2737,9 @@ if (justArrivedProductsList.length > 0) {
       handleSearchKeyPress={handleSearchKeyPress}
     />
 
-    {isCartOpen && (
+   {isCartOpen && (
   <Suspense fallback={<div />}>
-    <CartModal
-      getBulkPricing={getBulkPricing}
-      getEffectiveUnitPrice={getEffectiveUnitPrice}
-    />
+    <CartModal />
   </Suspense>
 )}
 

@@ -120,6 +120,7 @@ router.post("/", async (req, res) => {
       price,
       cash_applied,
       discounted_price,
+        bulk_pricing, 
     } = req.body
 
     const existingItem = await Cart.findOne({
@@ -144,6 +145,7 @@ router.post("/", async (req, res) => {
         price,
         cash_applied,
         discounted_price,
+        bulk_pricing: bulk_pricing || [], 
       }
 
       // Only add variant fields if they exist

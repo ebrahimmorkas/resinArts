@@ -62,6 +62,10 @@ const cartSchema = mongoose.Schema(
             type: Number,
             required: true,
         },
+        bulk_pricing: [{
+    wholesalePrice: { type: Number },
+    quantity: { type: Number }
+}],
     },
     {
         timestamps: true,
