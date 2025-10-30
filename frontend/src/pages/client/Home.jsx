@@ -296,7 +296,7 @@ useEffect(() => {
           setCategoryLoadingMore(true);
           const nextPage = categoryCurrentPage + 1;
           const response = await axios.get(
-            `http://localhost:3000/api/product/all?page=${nextPage}&limit=50&categoryId=${selectedCategoryIdForFilter}`,
+            `https://api.simplyrks.cloud/api/product/all?page=${nextPage}&limit=50&categoryId=${selectedCategoryIdForFilter}`,
             { withCredentials: true }
           );
           
@@ -980,7 +980,7 @@ const handleCategoryClick = async (category) => {
     try {
   setCategoryLoading(true);
       const response = await axios.get(
-        `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${category._id}`,
+        `https://api.simplyrks.cloud/api/product/all?page=1&limit=50&categoryId=${category._id}`,
         { withCredentials: true }
       );
       
@@ -1201,7 +1201,7 @@ const handleMainCategoryChange = async (categoryId) => {
   try {
     setCategoryLoading(true);
     const response = await axios.get(
-      `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
+      `https://api.simplyrks.cloud/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
       { withCredentials: true }
     );
     
@@ -1228,7 +1228,7 @@ const handleMainCategoryChange = async (categoryId) => {
   try {
     setCategoryLoading(true);
     const response = await axios.get(
-      `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
+      `https://api.simplyrks.cloud/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
       { withCredentials: true }
     );
     
