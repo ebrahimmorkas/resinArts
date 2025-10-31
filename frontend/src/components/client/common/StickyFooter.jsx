@@ -79,7 +79,7 @@ export default function StickyFooter() {
               handleCollapse();
             }}
             onMouseDown={(e) => e.preventDefault()} // Changed from stopPropagation
-            className="absolute top-4 right-4 z-50 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors"
+            className="absolute top-4 right-4 z-50 bg-red-500 hover:bg-red-600 text-black dark:text-white p-2 rounded-full shadow-lg transition-colors"
             aria-label="Collapse footer"
             style={{ pointerEvents: 'auto' }} // Ensure button is clickable
           >
