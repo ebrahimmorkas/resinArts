@@ -47,6 +47,8 @@ const [showViewVariantsModal, setShowViewVariantsModal] = useState(false);
 const [allCategoriesTree, setAllCategoriesTree] = useState([]);
 const [selectedCategoryIds, setSelectedCategoryIds] = useState([]);
 const [categoryFilterPath, setCategoryFilterPath] = useState("");
+const [showExportModal, setShowExportModal] = useState(false);
+const [exportingImages, setExportingImages] = useState(false);
   const navigate = useNavigate();
   
 
@@ -307,24 +309,8 @@ const confirmBulkStatusChange = async () => {
 };
 
   const exportToExcel = () => {
-    const exportData = products.map((product, index) => ({
-      'Sr No': index + 1,
-      'Product Name': product.name,
-      'Category': product.category,
-      'Stock': product.hasVariants ? 'View Stock' : product.stock,
-      'Color Variants': product.hasVariants ? product.variants.length : 0,
-      'Size Variants': getNumberOfSizeVariants(product),
-      'Price': product.hasVariants ? 'View Price' : product.price,
-      'Created Date': new Date(product.createdAt).toLocaleDateString(),
-      'Has Variants': product.hasVariants ? 'Yes' : 'No'
-    }));
-
-    const ws = XLSX.utils.json_to_sheet(exportData);
-    const wb = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(wb, ws, "Products");
-    XLSX.writeFile(wb, "products_export.xlsx");
-    toast.success('Products exported successfully!');
-  };
+  setShowExportModal(true);
+};
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -722,6 +708,354 @@ const ViewVariantsModal = ({ product, onClose }) => {
       </div>
     </div>
   );
+};
+
+const ExportModal = () => {
+  if (!showExportModal) return null;
+
+  const handleExportWithoutImages = async () => {
+    setShowExportModal(false);
+    await generateExcel(false);
+  };
+
+  const handleExportWithImages = async () => {
+    setShowExportModal(false);
+    setExportingImages(true);
+    try {
+      await generateExcelAndZip();
+    } finally {
+      setExportingImages(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-500 bg-opacity-75">
+      <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full mx-4">
+        <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-700">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="flex-shrink-0 w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3">
+                <Download className="w-6 h-6 text-blue-600" />
+              </div>
+              <h3 className="text-lg font-semibold text-gray-900 dark:text-white">Export Products</h3>
+            </div>
+            <button 
+              onClick={() => setShowExportModal(false)} 
+              className="p-2 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded-full transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="px-6 py-6">
+          <p className="text-sm text-gray-600 dark:text-gray-400 mb-6">
+            Would you like to download product images along with the Excel file?
+          </p>
+          
+          <div className="space-y-3">
+            <div className="bg-blue-50 dark:bg-gray-800 border border-blue-200 dark:border-gray-700 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-blue-900 dark:text-white mb-1">With Images (ZIP)</h4>
+              <p className="text-xs text-blue-700 dark:text-gray-400">
+                Downloads Excel + all product images organized in folders
+              </p>
+            </div>
+            
+            <div className="bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-lg p-4">
+              <h4 className="text-sm font-medium text-gray-900 dark:text-white mb-1">Excel Only</h4>
+              <p className="text-xs text-gray-600 dark:text-gray-400">
+                Downloads only the Excel file with image links
+              </p>
+            </div>
+          </div>
+        </div>
+        
+        <div className="px-6 py-4 bg-gray-50 dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700">
+          <div className="flex flex-col sm:flex-row items-center justify-end space-y-2 sm:space-y-0 sm:space-x-3">
+            <button 
+              onClick={handleExportWithoutImages}
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium rounded-md border border-gray-300 text-gray-700 dark:text-white hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
+            >
+              Excel Only
+            </button>
+            <button 
+              onClick={handleExportWithImages}
+              className="w-full sm:w-auto px-4 py-2 text-sm font-medium text-black dark:text-white bg-blue-600 hover:bg-blue-700 rounded-md transition-colors"
+            >
+              Download with Images (ZIP)
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+const generateExcel = async (includeImageLinks = true) => {
+  const ExcelJS = await import('exceljs');
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Products');
+
+  // Define columns
+  const columns = [
+    { header: 'Sr No', key: 'srNo', width: 8 },
+    { header: 'Product Name', key: 'productName', width: 30 },
+    { header: 'Category', key: 'category', width: 25 },
+    { header: 'Variant/Color', key: 'variant', width: 20 },
+    { header: 'Size (L×B×H)', key: 'size', width: 15 },
+    { header: 'Stock', key: 'stock', width: 10 },
+    { header: 'Price', key: 'price', width: 12 },
+    { header: 'Created Date', key: 'createdDate', width: 15 }
+  ];
+
+  if (includeImageLinks) {
+    columns.push({ header: 'Main Image', key: 'mainImage', width: 60 });
+    columns.push({ header: 'Additional Images', key: 'additionalImages', width: 80 });
+  }
+
+  worksheet.columns = columns;
+
+  // Style header row
+  worksheet.getRow(1).font = { bold: true, size: 11 };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FF4472C4' }
+  };
+  worksheet.getRow(1).font = { ...worksheet.getRow(1).font, color: { argb: 'FFFFFFFF' } };
+
+  let srNo = 1;
+
+  products.forEach((product) => {
+    if (product.hasVariants) {
+      // Product with variants - one row per variant-size combination
+      product.variants.forEach((variant) => {
+        variant.moreDetails.forEach((detail) => {
+          const row = {
+            srNo: srNo++,
+            productName: product.name,
+            category: product.categoryPath || product.category,
+            variant: variant.colorName,
+            size: `${detail.size.length}×${detail.size.breadth}×${detail.size.height} ${detail.size.unit}`,
+            stock: detail.stock || 0,
+            price: detail.discountPrice || detail.price,
+            createdDate: new Date(product.createdAt).toLocaleDateString()
+          };
+
+          const rowIndex = worksheet.addRow(row).number;
+
+          if (includeImageLinks) {
+            // Main Image (Variant Image)
+            if (variant.variantImage) {
+              worksheet.getCell(rowIndex, 9).value = {
+                text: 'View Image',
+                hyperlink: variant.variantImage
+              };
+              worksheet.getCell(rowIndex, 9).font = { color: { argb: 'FF0000FF' }, underline: true };
+            }
+
+            // Additional Images for this size
+            if (detail.additionalImages && detail.additionalImages.length > 0) {
+              const imageLinks = detail.additionalImages.map((img, idx) => 
+                `Image ${idx + 1}: ${img}`
+              ).join('\n');
+              worksheet.getCell(rowIndex, 10).value = imageLinks;
+              worksheet.getCell(rowIndex, 10).alignment = { wrapText: true, vertical: 'top' };
+            }
+          }
+        });
+      });
+    } else {
+      // Product without variants - main product row
+      const row = {
+        srNo: srNo++,
+        productName: product.name,
+        category: product.categoryPath || product.category,
+        variant: 'N/A',
+        size: 'N/A',
+        stock: product.stock,
+        price: product.discountPrice || product.price,
+        createdDate: new Date(product.createdAt).toLocaleDateString()
+      };
+
+      const rowIndex = worksheet.addRow(row).number;
+
+      if (includeImageLinks) {
+        // Main Image
+        if (product.image) {
+          worksheet.getCell(rowIndex, 9).value = {
+            text: 'View Image',
+            hyperlink: product.image
+          };
+          worksheet.getCell(rowIndex, 9).font = { color: { argb: 'FF0000FF' }, underline: true };
+        }
+
+        // Additional Images
+        if (product.additionalImages && product.additionalImages.length > 0) {
+          const imageLinks = product.additionalImages.map((img, idx) => 
+            `Image ${idx + 1}: ${img}`
+          ).join('\n');
+          worksheet.getCell(rowIndex, 10).value = imageLinks;
+          worksheet.getCell(rowIndex, 10).alignment = { wrapText: true, vertical: 'top' };
+        }
+      }
+
+      // Additional rows for additional images if product has no variants
+      if (includeImageLinks && product.additionalImages && product.additionalImages.length > 0) {
+        product.additionalImages.forEach((imgUrl, idx) => {
+          const additionalRow = {
+            srNo: '',
+            productName: `${product.name} - Additional Image ${idx + 1}`,
+            category: product.categoryPath || product.category,
+            variant: 'N/A',
+            size: 'N/A',
+            stock: '',
+            price: '',
+            createdDate: ''
+          };
+
+          const additionalRowIndex = worksheet.addRow(additionalRow).number;
+          worksheet.getCell(additionalRowIndex, 9).value = {
+            text: 'View Image',
+            hyperlink: imgUrl
+          };
+          worksheet.getCell(additionalRowIndex, 9).font = { color: { argb: 'FF0000FF' }, underline: true };
+        });
+      }
+    }
+  });
+
+  // Generate Excel file
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  
+  if (!includeImageLinks) {
+    // Save Excel only
+    const FileSaver = await import('file-saver');
+    FileSaver.saveAs(blob, 'products_export.xlsx');
+    toast.success('Excel file downloaded successfully!');
+  }
+  
+  return blob;
+};
+
+const generateExcelAndZip = async () => {
+  try {
+    const JSZip = (await import('jszip')).default;
+    const FileSaver = await import('file-saver');
+    const zip = new JSZip();
+
+    // Add Excel file
+    const excelBlob = await generateExcel(true);
+    zip.file('products_export.xlsx', excelBlob);
+
+    // Create images folder
+    const imagesFolder = zip.folder('images');
+
+    // Helper function to sanitize filenames
+    const sanitizeFilename = (name) => {
+      return name.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+    };
+
+    // Helper function to fetch image as blob
+    const fetchImageBlob = async (url) => {
+      try {
+        const response = await fetch(url);
+        if (!response.ok) throw new Error('Failed to fetch image');
+        return await response.blob();
+      } catch (error) {
+        console.error(`Error fetching image ${url}:`, error);
+        return null;
+      }
+    };
+
+    // Helper function to get file extension from URL
+    const getExtension = (url) => {
+      const match = url.match(/\.([a-z0-9]+)(\?|$)/i);
+      return match ? match[1] : 'jpg';
+    };
+
+    // Process all products
+    for (const product of products) {
+      const productName = sanitizeFilename(product.name);
+
+      if (product.hasVariants) {
+        // Create product folder
+        const productFolder = imagesFolder.folder(productName);
+
+        for (const variant of product.variants) {
+          const variantName = sanitizeFilename(variant.colorName);
+          const variantFolder = productFolder.folder(variantName);
+
+          // Add variant main image
+          if (variant.variantImage) {
+            const blob = await fetchImageBlob(variant.variantImage);
+            if (blob) {
+              const ext = getExtension(variant.variantImage);
+              variantFolder.file(`variant_main.${ext}`, blob);
+            }
+          }
+
+          // Add size-specific images
+          for (let sizeIdx = 0; sizeIdx < variant.moreDetails.length; sizeIdx++) {
+            const detail = variant.moreDetails[sizeIdx];
+            const sizeStr = `${detail.size.length}x${detail.size.breadth}x${detail.size.height}`;
+            const sizeName = sanitizeFilename(sizeStr);
+
+            if (detail.additionalImages && detail.additionalImages.length > 0) {
+              const sizeFolder = variantFolder.folder(`size_${sizeName}`);
+              
+              for (let imgIdx = 0; imgIdx < detail.additionalImages.length; imgIdx++) {
+                const imgUrl = detail.additionalImages[imgIdx];
+                const blob = await fetchImageBlob(imgUrl);
+                if (blob) {
+                  const ext = getExtension(imgUrl);
+                  sizeFolder.file(`image_${imgIdx + 1}.${ext}`, blob);
+                }
+              }
+            }
+          }
+        }
+      } else {
+        // Product without variants
+        const productFolder = imagesFolder.folder(productName);
+
+        // Add main image
+        if (product.image) {
+          const blob = await fetchImageBlob(product.image);
+          if (blob) {
+            const ext = getExtension(product.image);
+            productFolder.file(`main.${ext}`, blob);
+          }
+        }
+
+        // Add additional images
+        if (product.additionalImages && product.additionalImages.length > 0) {
+          for (let idx = 0; idx < product.additionalImages.length; idx++) {
+            const imgUrl = product.additionalImages[idx];
+            const blob = await fetchImageBlob(imgUrl);
+            if (blob) {
+              const ext = getExtension(imgUrl);
+              productFolder.file(`additional_${idx + 1}.${ext}`, blob);
+            }
+          }
+        }
+      }
+    }
+
+    // Generate and download ZIP
+    const zipBlob = await zip.generateAsync({ 
+      type: 'blob',
+      compression: 'DEFLATE',
+      compressionOptions: { level: 6 }
+    });
+    
+    FileSaver.saveAs(zipBlob, 'products_export_with_images.zip');
+    toast.success('ZIP file with images downloaded successfully!');
+  } catch (error) {
+    console.error('Error generating ZIP:', error);
+    toast.error('Failed to generate ZIP file with images');
+  }
 };
   
   const LoadingOverlay = () => (
@@ -2566,6 +2900,15 @@ const DeleteConfirmationModal = () => {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-800 p-6">
       {isLoading && <LoadingOverlay />}
+      {exportingImages && (
+  <div className="fixed inset-0 bg-black/30 flex items-center justify-center z-[60]">
+    <div className="bg-white dark:bg-gray-900 rounded-xl shadow-lg p-8 text-center max-w-sm">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+      <p className="text-gray-600 dark:text-gray-400 font-medium mb-2">Preparing your export...</p>
+      <p className="text-sm text-gray-500 dark:text-gray-500">Downloading images and creating ZIP file</p>
+    </div>
+  </div>
+)}
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <div className="mb-8">
@@ -3149,6 +3492,7 @@ const DeleteConfirmationModal = () => {
     onClose={() => setShowViewVariantsModal(false)}
   />
 )}
+<ExportModal />
     </div>
   );
 }
