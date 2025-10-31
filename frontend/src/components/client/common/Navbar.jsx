@@ -60,12 +60,12 @@ export default function Navbar({
   return (
     <>
       {!loadingAnnouncement && !announcementError && announcement && (
-  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center w-full sticky top-0 z-50">
+  <div className="bg-gradient-to-r from-blue-600 to-purple-600 text-white py-2 px-4 text-center w-full z-50">
           <p className="text-sm font-medium">{announcement}</p>
         </div>
       )}
 
-      <nav className="bg-white dark:bg-gray-900 shadow-lg sticky top-0 z-40 w-full">
+      <nav className="bg-white dark:bg-gray-900 shadow-lg sticky top-0 z-50 w-full">
         <div className="w-full px-4 sm:px-6 lg:px-8">
           {/* First Row - Logo, Profile, Cart */}
           <div className="flex justify-between items-center h-16">

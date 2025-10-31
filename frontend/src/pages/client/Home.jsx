@@ -2748,7 +2748,7 @@ if (justArrivedProductsList.length > 0) {
   filterOptions.push({ key: "price-low-to-high", label: "Price: Low to High" });
 
   return (
-  <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 w-screen overflow-x-hidden flex flex-col">
+    <>
     <Navbar
       searchQuery={searchQuery}
       setSearchQuery={handleSearch}
@@ -2761,6 +2761,8 @@ if (justArrivedProductsList.length > 0) {
       highlightMatchedText={highlightMatchedText}
       handleSearchKeyPress={handleSearchKeyPress}
     />
+  <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 w-screen overflow-x-hidden flex flex-col">
+    
 
    {isCartOpen && (
   <Suspense fallback={<div />}>
@@ -3134,5 +3136,6 @@ if (justArrivedProductsList.length > 0) {
 )}
 <ToastContainer />
     </div>
+    </>
   )
 }
