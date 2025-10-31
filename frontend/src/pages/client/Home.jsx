@@ -12,7 +12,7 @@ import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Navbar from "../../components/client/common/Navbar"
-import Footer from "../../components/client/common/Footer";
+import StickyFooter from "../../components/client/common/StickyFooter";
 const CartModal = lazy(() => import("../../components/client/common/CartModal"))
 // Keep all other imports like icons, etc.
 import {
@@ -2770,7 +2770,7 @@ if (justArrivedProductsList.length > 0) {
 
       <BannerCarousel />
 
-      <div className="w-screen overflow-x-hidden px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <div className="w-screen overflow-x-hidden px-4 sm:px-6 lg:px-8 py-8 pb-16 flex-1">
         <section className="mb-12 overflow-hidden" ref={categoriesRef} id="categories-section">
   <h2 className="text-2xl font-bold -800 mb-6 dark:text-black">
     Shop by Categories
@@ -3110,7 +3110,7 @@ if (justArrivedProductsList.length > 0) {
 </section>
       </div>
 
-      <Footer />
+      <StickyFooter />
 
       {/* {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />} */}
       {selectedVariantProduct && (
@@ -3126,8 +3126,7 @@ if (justArrivedProductsList.length > 0) {
 {showScrollTop && (
   <button
     onClick={scrollToTop}
-    // className="fixed bottom-8 right-8 bg-blue-600 hover:bg-black-700 text-black-600 p-3 rounded-full shadow-lg transition-all duration-300 z-40 hover:scale-110"
-    className="fixed bottom-8 right-8 bg-blue-600 border-2 border-black text-black-600 p-3 rounded-full shadow-lg transition-all duration-300 z-40 hover:scale-110"
+    className="fixed bottom-8 right-8 bg-blue-600 border-2 border-black text-black-600 p-3 rounded-full shadow-lg transition-all duration-300 z-50 hover:scale-110"
     aria-label="Scroll to top"
   >
     <ArrowUp className="w-6 h-6" />
