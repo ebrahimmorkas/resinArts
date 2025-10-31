@@ -12,7 +12,7 @@ import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import { ToastContainer, toast } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
 import Navbar from "../../components/client/common/Navbar"
-import Footer from "../../components/client/common/Footer";
+import StickyFooter from "../../components/client/common/StickyFooter";
 const CartModal = lazy(() => import("../../components/client/common/CartModal"))
 // Keep all other imports like icons, etc.
 import {
@@ -891,10 +891,12 @@ const handleLogout = async () => {
     }
   }
 
-const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1) => {
+const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1, sourceArray = null) => {
   scrollPositionRef.current = window.scrollY;
   
-  const product = products.find((p) => p._id === productId);
+  // Use sourceArray if provided (for category products), otherwise use global products
+  const productSource = sourceArray || products;
+  const product = productSource.find((p) => p._id === productId);
   if (!product) return;
 
   const variant = product.variants?.find((v) => v.colorName === colorName);
@@ -1426,7 +1428,7 @@ onClick={() => {
     );
   });
 
-  const ProductCard = React.memo(({ product, forcedBadge = null }) => {
+  const ProductCard = React.memo(({ product, forcedBadge = null, productSource = null }) => {
     const [currentImageIndex, setCurrentImageIndex] = useState(0)
     const [selectedVariant, setSelectedVariant] = useState(
   product.variants?.find(v => v.isActive !== false) || null
@@ -1527,15 +1529,15 @@ onClick={() => {
     }
 
     const handleAddToCartWithQuantity = async () => {
-      if (isSimpleProduct) {
-        await handleAddToCart(product._id, null, null, addQuantity)
-      } else {
-        if (!selectedVariant || !selectedSizeDetail) return
-        const sizeString = formatSize(selectedSizeDetail.size)
-        await handleAddToCart(product._id, selectedVariant.colorName, sizeString, addQuantity)
-      }
-      setAddQuantity(1)
-    }
+  if (isSimpleProduct) {
+    await handleAddToCart(product._id, null, null, addQuantity, productSource)
+  } else {
+    if (!selectedVariant || !selectedSizeDetail) return
+    const sizeString = formatSize(selectedSizeDetail.size)
+    await handleAddToCart(product._id, selectedVariant.colorName, sizeString, addQuantity, productSource)
+  }
+  setAddQuantity(1)
+}
 
     const currentStock = selectedSizeDetail ? selectedSizeDetail.stock : (selectedVariant ? selectedVariant.commonStock : product.stock) || 0
 
@@ -2768,7 +2770,7 @@ if (justArrivedProductsList.length > 0) {
 
       <BannerCarousel />
 
-      <div className="w-screen overflow-x-hidden px-4 sm:px-6 lg:px-8 py-8 flex-1">
+      <div className="w-screen overflow-x-hidden px-4 sm:px-6 lg:px-8 py-8 pb-16 flex-1">
         <section className="mb-12 overflow-hidden" ref={categoriesRef} id="categories-section">
   <h2 className="text-2xl font-bold -800 mb-6 dark:text-black">
     Shop by Categories
@@ -2935,8 +2937,12 @@ if (justArrivedProductsList.length > 0) {
     {getFilteredProducts.length > 0 ? (
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
         {sortProductsByPrice(filteredProductsList).map((product) => (
-          <ProductCard key={`search-${product._id}`} product={product} />
-        ))}
+  <ProductCard 
+    key={`search-${product._id}`} 
+    product={product}
+    productSource={products}
+  />
+))}
       </div>
     ) : (
       <div className="text-center py-32 min-h-[50vh]">
@@ -2969,11 +2975,15 @@ if (justArrivedProductsList.length > 0) {
       </div>
     ) : categoryFilteredProducts.length > 0 ? (
       <>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-          {sortProductsByPrice(categoryFilteredProducts).map((product) => (
-            <ProductCard key={`category-${product._id}`} product={product} />
-          ))}
-        </div>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
+  {sortProductsByPrice(categoryFilteredProducts).map((product) => (
+    <ProductCard 
+      key={`category-${product._id}`} 
+      product={product} 
+      productSource={categoryFilteredProducts}
+    />
+  ))}
+</div>
         
         {/* Category infinite scroll trigger */}
         {categoryHasMore && (
@@ -3020,48 +3030,47 @@ if (justArrivedProductsList.length > 0) {
   </section>
 )}
 
-        {justArrivedProductsList.length > 0 && (
-          <section className="mb-12" ref={justArrivedRef}>
-            <h2 className="text-2xl font-bold -80 mb-6 dark:text-black">Just Arrived</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {justArrivedProductsList
-                .slice(0, 10)
-                .map((product) => (
-                  <ProductCard key={`just-arrived-${product._id}`} product={product} forcedBadge={{ text: "New", color: "bg-blue-500" }} />
-                ))}
-            </div>
-          </section>
-        )}
+        {justArrivedProductsList
+  .slice(0, 10)
+  .map((product) => (
+    <ProductCard 
+      key={`just-arrived-${product._id}`} 
+      product={product} 
+      forcedBadge={{ text: "New", color: "bg-blue-500" }}
+      productSource={products}
+    />
+  ))}
 
-        {restockedProductsList.length > 0 && (
-          <section className="mb-12" ref={restockedRef}>
-            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Restocked Items</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {restockedProductsList.map((product) => (
-                <ProductCard key={`restocked-${product._id}`} product={product} forcedBadge={{ text: "Restocked", color: "bg-green-500" }} />
-              ))}
-            </div>
-          </section>
-        )}
+        {restockedProductsList.map((product) => (
+  <ProductCard 
+    key={`restocked-${product._id}`} 
+    product={product} 
+    forcedBadge={{ text: "Restocked", color: "bg-green-500" }}
+    productSource={products}
+  />
+))}
 
-        {revisedRatesProductsList.length > 0 && (
-          <section className="mb-12" ref={revisedRatesRef}>
-            <h2 className="text-2xl font-bold -800 dark:text-gray-100 mb-6">Revised Rates</h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {revisedRatesProductsList.map((product) => (
-                <ProductCard key={`revised-rates-${product._id}`} product={product} forcedBadge={{ text: "Revised Rate", color: "bg-orange-500" }} />
-              ))}
-            </div>
-          </section>
-        )}
+        {revisedRatesProductsList.map((product) => (
+  <ProductCard 
+    key={`revised-rates-${product._id}`} 
+    product={product} 
+    forcedBadge={{ text: "Revised Rate", color: "bg-orange-500" }}
+    productSource={products}
+  />
+))}
 
         {outOfStockProductsList.length > 0 && (
           <section className="mb-12" ref={outOfStockRef}>
             <h2 className="text-2xl font-bold -800 dark:text-black mb-6">Out of Stock</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6">
-              {outOfStockProductsList.map((product) => (
-                <ProductCard key={`out-of-stock-${product._id}`} product={product} forcedBadge={{ text: "Out of Stock", color: "bg-red-500" }} />
-              ))}
+             {outOfStockProductsList.map((product) => (
+  <ProductCard 
+    key={`out-of-stock-${product._id}`} 
+    product={product} 
+    forcedBadge={{ text: "Out of Stock", color: "bg-red-500" }}
+    productSource={products}
+  />
+))}
             </div>
           </section>
         )}
@@ -3074,9 +3083,13 @@ if (justArrivedProductsList.length > 0) {
     </span>
   </div>
   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5 gap-6 w-full">
-    {sortProductsByPrice(filteredProductsList).map((product) => (
-      <ProductCard key={product._id} product={product} />
-    ))}
+   {sortProductsByPrice(filteredProductsList).map((product) => (
+  <ProductCard 
+    key={`search-${product._id}`} 
+    product={product}
+    productSource={products}
+  />
+))}
   </div>
   
   {/* Infinite scroll triggers */}
@@ -3097,7 +3110,7 @@ if (justArrivedProductsList.length > 0) {
 </section>
       </div>
 
-      <Footer />
+      <StickyFooter />
 
       {/* {selectedProduct && <ProductModal product={selectedProduct} onClose={() => setSelectedProduct(null)} />} */}
       {selectedVariantProduct && (
@@ -3113,8 +3126,7 @@ if (justArrivedProductsList.length > 0) {
 {showScrollTop && (
   <button
     onClick={scrollToTop}
-    // className="fixed bottom-8 right-8 bg-blue-600 hover:bg-black-700 text-black-600 p-3 rounded-full shadow-lg transition-all duration-300 z-40 hover:scale-110"
-    className="fixed bottom-8 right-8 bg-blue-600 border-2 border-black text-black-600 p-3 rounded-full shadow-lg transition-all duration-300 z-40 hover:scale-110"
+    className="fixed bottom-8 right-8 bg-blue-600 border-2 border-black text-black-600 p-3 rounded-full shadow-lg transition-all duration-300 z-50 hover:scale-110"
     aria-label="Scroll to top"
   >
     <ArrowUp className="w-6 h-6" />

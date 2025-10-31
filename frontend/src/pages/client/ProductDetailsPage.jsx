@@ -11,6 +11,7 @@ import { DiscountContext } from "../../../Context/DiscountContext"
 import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import Navbar from "../../components/client/common/Navbar"
 import CartModal from "../../components/client/common/CartModal"
+import axios from "axios"
 
 export default function ProductDetailsPage() {
   const { productId } = useParams()
@@ -23,6 +24,8 @@ export default function ProductDetailsPage() {
   const [product, setProduct] = useState(null)
   const [selectedVariant, setSelectedVariant] = useState(null)
   const [selectedSize, setSelectedSize] = useState(null)
+  const [loadingProduct, setLoadingProduct] = useState(true)
+const [productError, setProductError] = useState(null)
   const [quantity, setQuantity] = useState(1)
   const [currentImageIndex, setCurrentImageIndex] = useState(0)
   const [selectedImage, setSelectedImage] = useState(null)
@@ -341,8 +344,14 @@ export default function ProductDetailsPage() {
   }
 
   // Load product
-  useEffect(() => {
+useEffect(() => {
+  const loadProduct = async () => {
+    setLoadingProduct(true)
+    setProductError(null)
+    
+    // First try to find in context
     const foundProduct = products.find(p => p._id === productId)
+    
     if (foundProduct) {
       setProduct(foundProduct)
       if (foundProduct.hasVariants && foundProduct.variants && foundProduct.variants.length > 0) {
@@ -352,8 +361,38 @@ export default function ProductDetailsPage() {
           setSelectedSize(defaultVariant.moreDetails[0])
         }
       }
+      setLoadingProduct(false)
+    } else {
+      // If not in context, fetch from backend
+      try {
+        const response = await axios.get(
+          `http://localhost:3000/api/product/${productId}`,
+          { withCredentials: true }
+        )
+        
+        if (response.status === 200 && response.data) {
+          const fetchedProduct = response.data
+          setProduct(fetchedProduct)
+          
+          if (fetchedProduct.hasVariants && fetchedProduct.variants && fetchedProduct.variants.length > 0) {
+            const defaultVariant = fetchedProduct.variants.find(v => v.isDefault) || fetchedProduct.variants[0]
+            setSelectedVariant(defaultVariant)
+            if (defaultVariant.moreDetails && defaultVariant.moreDetails.length > 0) {
+              setSelectedSize(defaultVariant.moreDetails[0])
+            }
+          }
+          setLoadingProduct(false)
+        }
+      } catch (error) {
+        console.error("Error fetching product:", error)
+        setProductError("Failed to load product")
+        setLoadingProduct(false)
+      }
     }
-  }, [productId, products])
+  }
+  
+  loadProduct()
+}, [productId, products])
 
   // Sync quantity with cart items
   useEffect(() => {
@@ -362,30 +401,59 @@ export default function ProductDetailsPage() {
     }
   }, [itemInCart?.quantity])
 
-  if (!product) {
-    return (
-      <div className="min-h-screen bg-gray-50 w-screen overflow-x-hidden">
-        <Navbar
-          searchQuery={searchQuery}
-          setSearchQuery={handleSearch}
-          searchResults={searchResults}
-          showSearchResults={showSearchResults}
-          setShowSearchResults={setShowSearchResults}
-          isSearching={isSearching}
-          onSearchResultClick={handleSearchResultClick}
-          onClearSearch={clearSearch}
-          highlightMatchedText={highlightMatchedText}
-          handleSearchKeyPress={handleSearchKeyPress}
-        />
-        <div className="flex items-center justify-center h-screen">
-          <div className="text-center">
-            <p className="text-xl text-gray-600 mb-4">Product not found</p>
-            <Link to="/" className="text-blue-600 hover:underline">Go back to home</Link>
-          </div>
+  if (loadingProduct) {
+  return (
+    <div className="min-h-screen bg-gray-50 w-screen overflow-x-hidden">
+      <Navbar
+        searchQuery={searchQuery}
+        setSearchQuery={handleSearch}
+        searchResults={searchResults}
+        showSearchResults={showSearchResults}
+        setShowSearchResults={setShowSearchResults}
+        isSearching={isSearching}
+        onSearchResultClick={handleSearchResultClick}
+        onClearSearch={clearSearch}
+        highlightMatchedText={highlightMatchedText}
+        handleSearchKeyPress={handleSearchKeyPress}
+      />
+      <div className="flex items-center justify-center h-screen">
+        <div className="bg-white dark:bg-gray-900/80 backdrop-blur-sm rounded-lg p-8 flex flex-col items-center gap-3">
+          <div className="w-12 h-12 border-4 border-blue-600 border-t-transparent rounded-full animate-spin" />
+          <p className="text-gray-600 dark:text-gray-400 text-lg font-medium">Loading product...</p>
         </div>
       </div>
-    )
-  }
+    </div>
+  )
+}
+
+if (productError || !product) {
+  return (
+    <div className="min-h-screen bg-gray-50 w-screen overflow-x-hidden">
+      <Navbar
+        searchQuery={searchQuery}
+        setSearchQuery={handleSearch}
+        searchResults={searchResults}
+        showSearchResults={showSearchResults}
+        setShowSearchResults={setShowSearchResults}
+        isSearching={isSearching}
+        onSearchResultClick={handleSearchResultClick}
+        onClearSearch={clearSearch}
+        highlightMatchedText={highlightMatchedText}
+        handleSearchKeyPress={handleSearchKeyPress}
+      />
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <p className="text-xl text-gray-600 dark:text-gray-400 mb-4">
+            {productError || "Product not found"}
+          </p>
+          <Link to="/" className="text-blue-600 hover:underline dark:text-blue-400">
+            Go back to home
+          </Link>
+        </div>
+      </div>
+    </div>
+  )
+}
 
   const handleVariantChange = (variant) => {
     setSelectedVariant(variant)
