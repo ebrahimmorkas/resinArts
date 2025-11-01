@@ -63,6 +63,38 @@ export const ProductProvider = ({ children }) => {
     }
   }, [currentPage, hasMore, loadingMore, fetchProducts]);
 
+  const loadProductsToPage = useCallback(async (targetPage) => {
+  if (targetPage <= 1) {
+    return fetchProducts(1, false);
+  }
+  
+  try {
+    setLoading(true);
+    const allProducts = [];
+    
+    for (let page = 1; page <= targetPage; page++) {
+      const response = await axios.get(
+        `http://localhost:3000/api/product/all?page=${page}&limit=50`,
+        { withCredentials: true }
+      );
+      
+      allProducts.push(...response.data.products);
+      
+      if (page === targetPage) {
+        setProducts(allProducts);
+        setHasMore(response.data.hasMore);
+        setTotalCount(response.data.totalCount);
+        setCurrentPage(page);
+      }
+    }
+    
+    setLoading(false);
+  } catch (err) {
+    setError(err.response?.data?.message || "Error loading products");
+    setLoading(false);
+  }
+}, []);
+
   const refreshProducts = useCallback(() => {
     setProducts([]);
     setCurrentPage(1);
@@ -74,22 +106,23 @@ export const ProductProvider = ({ children }) => {
     fetchProducts(1, false);
   }, [fetchProducts]);
 
-  const contextValue = useMemo(
-    () => ({ 
-      products, 
-      setProducts, 
-      fetchProducts, 
-      loadMoreProducts,
-      refreshProducts,
-      loading, 
-      loadingMore,
-      error,
-      hasMore,
-      totalCount,
-      currentPage
-    }),
-    [products, loading, loadingMore, error, hasMore, totalCount, currentPage, loadMoreProducts, refreshProducts, fetchProducts]
-  );
+const contextValue = useMemo(
+  () => ({ 
+    products, 
+    setProducts, 
+    fetchProducts, 
+    loadMoreProducts,
+    loadProductsToPage,
+    refreshProducts,
+    loading, 
+    loadingMore,
+    error,
+    hasMore,
+    totalCount,
+    currentPage
+  }),
+  [products, loading, loadingMore, error, hasMore, totalCount, currentPage, loadMoreProducts, loadProductsToPage, refreshProducts, fetchProducts]
+);
 
   return (
     <ProductContext.Provider value={contextValue}>
