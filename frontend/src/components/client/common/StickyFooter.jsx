@@ -1,35 +1,43 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useContext } from 'react';
 import { ChevronUp, X } from 'lucide-react';
 import Footer from './Footer';
+import { CompanySettingsContext } from '../../../../Context/CompanySettingsContext';
 
 export default function StickyFooter() {
+  const { companySettings } = useContext(CompanySettingsContext);
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isCollapsing, setIsCollapsing] = useState(false); // NEW: Prevent re-expand during collapse
+  const [isCollapsing, setIsCollapsing] = useState(false);
   const footerRef = useRef(null);
   const timerRef = useRef(null);
 
   const handleMouseEnter = () => {
-    if (isCollapsing) return; // Ignore if collapsing
+    if (isCollapsing) return;
     if (timerRef.current) {
       clearTimeout(timerRef.current);
     }
     setIsExpanded(true);
   };
 
-  const handleMouseLeave = () => {
-    if (isCollapsing) return;
-    timerRef.current = setTimeout(() => {
-      setIsExpanded(false);
-    }, 300);
-  };
+  const handleMouseLeave = (e) => {
+  if (isCollapsing) return;
+  
+  // Don't collapse if moving to the close button
+  const closeButton = document.querySelector('[aria-label="Collapse footer"]');
+  if (closeButton && closeButton.contains(e.relatedTarget)) {
+    return;
+  }
+  
+  timerRef.current = setTimeout(() => {
+    setIsExpanded(false);
+  }, 300);
+};
 
   const handleCollapse = () => {
     setIsCollapsing(true);
     setIsExpanded(false);
-    // Reset flag after animation
     setTimeout(() => {
       setIsCollapsing(false);
-    }, 500); // Matches transition duration
+    }, 500);
   };
 
   useEffect(() => {
@@ -53,10 +61,31 @@ export default function StickyFooter() {
         onMouseEnter={handleMouseEnter}
       >
         <div className="h-full flex items-center justify-center gap-2 px-4">
-          <span className="text-sm font-medium">© 2024 Mould Market edit test. All rights reserved.</span>
+          <span className="text-sm font-medium">
+            © 2024 {companySettings?.companyName || "Our Company"}. All rights reserved.
+          </span>
           <ChevronUp className="w-4 h-4 animate-bounce" />
         </div>
       </div>
+
+      {/* Collapse Button - Fixed Position (Always Visible) */}
+{isExpanded && (
+  <button
+    onClick={(e) => {
+      e.stopPropagation();
+      handleCollapse();
+    }}
+    onMouseEnter={handleMouseEnter}
+    className="fixed z-50 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors"
+    aria-label="Collapse footer"
+    style={{
+      top: '170px',
+      right: '16px'
+    }}
+  >
+    <X className="w-5 h-5" />
+  </button>
+)}
 
       {/* Full Footer Overlay */}
       <div
@@ -64,41 +93,31 @@ export default function StickyFooter() {
         className="fixed bottom-0 left-0 right-0 z-40 transition-transform duration-500 ease-in-out"
         style={{
           transform: isExpanded ? 'translateY(0)' : 'translateY(100%)',
-          maxHeight: '90vh',
+          top: '156px',
+          maxHeight: 'calc(100vh - 156px)',
           overflowY: 'auto',
-          pointerEvents: isExpanded ? 'auto' : 'none' // NEW: Prevent interaction when collapsed
+          pointerEvents: isExpanded ? 'auto' : 'none'
         }}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
       >
-        {/* Collapse Button */}
-        {isExpanded && (
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              handleCollapse();
-            }}
-            onMouseDown={(e) => e.preventDefault()} // Changed from stopPropagation
-            className="absolute top-4 right-4 z-50 bg-red-500 hover:bg-red-600 text-black dark:text-white p-2 rounded-full shadow-lg transition-colors"
-            aria-label="Collapse footer"
-            style={{ pointerEvents: 'auto' }} // Ensure button is clickable
-          >
-            <X className="w-5 h-5" />
-          </button>
-        )}
-        
         {/* Your Existing Footer Component */}
         <Footer />
       </div>
 
       {/* Overlay backdrop when expanded */}
-      {isExpanded && (
-        <div 
-          className="fixed inset-0 bg-black/20 z-30"
-          style={{ bottom: '0' }}
-          onClick={handleCollapse}
-        />
-      )}
+{isExpanded && (
+  <div 
+    className="fixed bg-black/20 z-30"
+    style={{ 
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0
+    }}
+    onClick={handleCollapse}
+  />
+)}
     </>
   );
 }
