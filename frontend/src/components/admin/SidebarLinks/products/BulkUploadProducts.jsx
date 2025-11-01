@@ -43,7 +43,7 @@ const Toast = ({ message, type, onClose }) => {
       <span className="flex-1 text-sm font-medium">{message}</span>
       <button 
         onClick={onClose}
-        className="ml-2 text-white hover:text-gray-200 transition-colors"
+        className="ml-2 text-black dark:text-white hover:text-gray-200 transition-colors"
       >
         <X className="w-4 h-4" />
       </button>
@@ -81,7 +81,7 @@ const ErrorModal = ({ isOpen, onClose, title, message, details }) => {
         <div className="p-6 border-t border-gray-100 dark:border-gray-700 flex justify-end">
           <button
             onClick={onClose}
-            className="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
+            className="px-6 py-2 bg-gray-600 text-black dark:text-white rounded-lg hover:bg-gray-700 transition-colors font-medium"
           >
             Close
           </button>
