@@ -446,9 +446,13 @@ if (productError || !product) {
           <p className="text-xl text-gray-600 dark:text-gray-400 mb-4">
             {productError || "Product not found"}
           </p>
-          <Link to="/" className="text-blue-600 hover:underline dark:text-blue-400">
-            Go back to home
-          </Link>
+          <button
+  onClick={() => navigate('/')}
+  className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
+>
+  <ArrowLeft className="w-5 h-5" />
+  <span className="font-medium">Back to Home</span>
+</button>
         </div>
       </div>
     </div>

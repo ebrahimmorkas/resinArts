@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext, useMemo, useCallback, memo, lazy, Suspense } from "react"
+import React, { useState, useEffect, useLayoutEffect, useRef, useContext, useMemo, useCallback, memo, lazy, Suspense } from "react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
@@ -521,9 +521,31 @@ const highlightMatchedText = (text, searchQuery) => {
 // }
 
 const handleSearchResultClick = (result) => {
-  navigate(`/product/${result.productId}`)
-  setShowSearchResults(false)
-  setSearchQuery("")
+  // Determine if we're coming from search section
+  const isFromSearchSection = showSearchSection && searchQuery.trim();
+  
+  // Save current state before navigation
+  const currentState = {
+    scrollPosition: window.scrollY,
+    selectedCategory,
+    selectedCategoryPath,
+    selectedCategoryIdForFilter,
+    categoryFilteredProducts,
+    categoryCurrentPage,
+    categoryHasMore,
+    categoryTotalCount,
+    currentPage,
+    searchQuery, // Keep the search query to restore it
+    showSearchSection,
+    selectedFilters,
+    // Add context flags
+    wasFromCategorySection: false, // Not from category when clicking dropdown
+    wasFromSearchSection: isFromSearchSection,
+  };
+  sessionStorage.setItem('homePageState', JSON.stringify(currentState));
+  
+  navigate(`/product/${result.productId}`);
+  setShowSearchResults(false);
 }
 
 const getFilteredProducts = useMemo(() => {
@@ -590,6 +612,112 @@ const getFilteredProducts = useMemo(() => {
   document.addEventListener('mousedown', handleClickOutside)
   return () => document.removeEventListener('mousedown', handleClickOutside)
 }, [])
+
+// Prevent scroll jump by restoring position before paint
+useLayoutEffect(() => {
+  const savedState = sessionStorage.getItem('homePageState');
+  if (savedState) {
+    try {
+      const state = JSON.parse(savedState);
+      if (state.scrollPosition) {
+        // Restore scroll position synchronously before browser paint
+        window.scrollTo(0, state.scrollPosition);
+      }
+    } catch (error) {
+      console.error('Error in scroll restoration:', error);
+    }
+  }
+}, []);
+
+// Restore page state when coming back from product details - OPTIMIZED
+useEffect(() => {
+  const savedState = sessionStorage.getItem('homePageState');
+  if (savedState) {
+    try {
+      const state = JSON.parse(savedState);
+      
+      // Restore scroll IMMEDIATELY before React renders
+      if (state.scrollPosition) {
+        window.scrollTo(0, state.scrollPosition);
+        // Also set CSS to prevent layout shift
+        document.documentElement.style.scrollBehavior = 'auto';
+      }
+
+      // Restore scroll IMMEDIATELY before React renders
+if (state.scrollPosition) {
+  window.scrollTo(0, state.scrollPosition);
+  // Also set CSS to prevent layout shift
+  document.documentElement.style.scrollBehavior = 'auto';
+  
+ // Store which section to scroll to after render based on where user was
+if (state.wasFromCategorySection && state.selectedCategoryIdForFilter) {
+  sessionStorage.setItem('scrollToSection', 'selected-category-section');
+} else if (state.wasFromSearchSection && state.showSearchSection) {
+  sessionStorage.setItem('scrollToSection', 'search-results-section');
+}
+}
+      
+      // Batch state updates for better performance
+      const updates = [];
+      
+      if (state.selectedCategory) {
+        updates.push(() => {
+          setSelectedCategory(state.selectedCategory);
+          setSelectedCategoryPath(state.selectedCategoryPath || []);
+          setSelectedCategoryIdForFilter(state.selectedCategoryIdForFilter);
+          setCategoryFilteredProducts(state.categoryFilteredProducts || []);
+          setCategoryCurrentPage(state.categoryCurrentPage || 1);
+          setCategoryHasMore(state.categoryHasMore || false);
+          setCategoryTotalCount(state.categoryTotalCount || 0);
+        });
+      }
+      
+      if (state.selectedFilters) {
+        updates.push(() => setSelectedFilters(state.selectedFilters));
+      }
+      
+      if (state.searchQuery) {
+        updates.push(() => {
+          setSearchQuery(state.searchQuery);
+          setShowSearchSection(state.showSearchSection || false);
+        });
+      }
+      
+      // Execute all updates
+      updates.forEach(update => update());
+      
+      // Restore smooth scrolling after restoration
+requestAnimationFrame(() => {
+  document.documentElement.style.scrollBehavior = '';
+  
+  // Ensure we're viewing the correct section
+  const scrollToSection = sessionStorage.getItem('scrollToSection');
+  if (scrollToSection) {
+    setTimeout(() => {
+      const element = document.getElementById(scrollToSection);
+      if (element && state.scrollPosition) {
+        // Verify we're in the right viewport area
+        const elementTop = element.offsetTop;
+        const currentScroll = window.scrollY;
+        
+        // If we're not near the target element, scroll to it
+        if (Math.abs(currentScroll - elementTop) > 100) {
+          window.scrollTo(0, state.scrollPosition);
+        }
+      }
+      sessionStorage.removeItem('scrollToSection');
+    }, 50);
+  }
+});
+
+// Clear the saved state
+sessionStorage.removeItem('homePageState');
+    } catch (error) {
+      console.error('Error restoring page state:', error);
+      sessionStorage.removeItem('homePageState');
+    }
+  }
+}, []);
 
   const isDiscountActive = (product, variant = null, sizeDetail = null) => {
     let discountStartDate, discountEndDate
@@ -978,8 +1106,21 @@ const handleCategoryClick = async (category) => {
     // Clear and fetch category products
     setCategoryFilteredProducts([]);
     setCategoryCurrentPage(1);
-    
-    try {
+
+    // Check if we're restoring state - don't fetch if data exists
+const restoringState = sessionStorage.getItem('homePageState');
+if (restoringState) {
+  const state = JSON.parse(restoringState);
+  if (state.categoryFilteredProducts && state.categoryFilteredProducts.length > 0) {
+    // Data already exists from restoration, skip fetch
+    setTimeout(() => {
+      document.getElementById('selected-category-section')?.scrollIntoView({ behavior: 'smooth' })
+    }, 100);
+    return;
+  }
+}
+
+try {
   setCategoryLoading(true);
       const response = await axios.get(
         `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${category._id}`,
@@ -1542,9 +1683,36 @@ onClick={() => {
     const currentStock = selectedSizeDetail ? selectedSizeDetail.stock : (selectedVariant ? selectedVariant.commonStock : product.stock) || 0
 
     return (
- <div 
+<div 
   className="bg-white dark:bg-gray-900 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group w-full cursor-pointer"
-  onClick={() => navigate(`/product/${product._id}`)}
+  onClick={() => {
+  // Determine which section this product belongs to
+  const isFromCategorySection = selectedCategoryIdForFilter && 
+    categoryFilteredProducts.some(p => p._id === product._id);
+  
+  const isFromSearchSection = showSearchSection && searchQuery.trim();
+  
+  // Save current state before navigation
+  const currentState = {
+    scrollPosition: window.scrollY,
+    selectedCategory,
+    selectedCategoryPath,
+    selectedCategoryIdForFilter,
+    categoryFilteredProducts,
+    categoryCurrentPage,
+    categoryHasMore,
+    categoryTotalCount,
+    currentPage,
+    searchQuery,
+    showSearchSection,
+    selectedFilters,
+    // Add context flags
+    wasFromCategorySection: isFromCategorySection,
+    wasFromSearchSection: isFromSearchSection,
+  };
+  sessionStorage.setItem('homePageState', JSON.stringify(currentState));
+  navigate(`/product/${product._id}`);
+}}
 >
         <div className="relative">
           <div className="relative">
