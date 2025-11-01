@@ -25,7 +25,7 @@ router.post("/bulk-override", authenticate, authorize(['admin']), upload.fields(
 ]), bulkOverrideProducts);
 router.delete("/delete-product/:id", authenticate, authorize(['admin']), deleteProduct)
 router.put('/edit-product/:id', authenticate, authorize(['admin']), upload.any(), editProduct);
-router.get('/:id', authenticate, authorize(['admin', 'user']), getProductById);
+router.get('/:id', getProductById);
 router.put('/bulk-edit', authenticate, authorize(['admin']), upload.any(), bulkEditProducts);
 router.post("/duplicate", authenticate, authorize(['admin']), duplicateProducts);
 router.post("/toggle-status", authenticate, authorize(['admin']), toggleProductStatus);

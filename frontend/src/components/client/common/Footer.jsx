@@ -17,11 +17,11 @@ export default function Footer() {
 
   // Developer dummy data
   const developerInfo = {
-    name: "Ebrahim Mustafa Morkas",
+    name: "Morkas Softwares",
     email: "morkasebrahim3@gmail.com",
     phone: "+91 8097744371",
     whatsapp: "+91 8097744371",
-    portfolio: "https://ebrahimmorkas.dev"
+    portfolio: "https://morkassoftwares.dev"
   };
 
   return (

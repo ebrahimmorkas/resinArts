@@ -106,7 +106,7 @@ export const ProductProvider = ({ children }) => {
     fetchProducts(1, false);
   }, [fetchProducts]);
 
-  const contextValue = useMemo(
+const contextValue = useMemo(
   () => ({ 
     products, 
     setProducts, 
