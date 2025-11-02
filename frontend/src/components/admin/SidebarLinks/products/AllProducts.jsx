@@ -103,6 +103,22 @@ const [exportingImages, setExportingImages] = useState(false);
     setCurrentPage(1);
   }, [searchTerm, itemsPerPage]);
 
+  // Fetch all products when admin panel mounts
+useEffect(() => {
+  const fetchAllAdminProducts = async () => {
+    try {
+      const response = await axios.get('http://localhost:3000/api/product/all?all=true', { 
+        withCredentials: true 
+      });
+      setProducts(response.data.products);
+    } catch (error) {
+      console.error("Failed to fetch admin products:", error);
+    }
+  };
+  
+  fetchAllAdminProducts();
+}, []); // Empty dependency array - run only once on mount
+
   // Fetch categories on component mount
 useEffect(() => {
   const getCategories = async () => {

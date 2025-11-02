@@ -103,8 +103,32 @@ export const ProductProvider = ({ children }) => {
   }, [fetchProducts]);
 
   useEffect(() => {
+  const isAdmin = window.location.pathname.includes('/admin');
+  if (isAdmin) {
+    // For admin, fetch all products at once
+    const fetchAllProducts = async () => {
+      try {
+        setLoading(true);
+        const response = await axios.get('http://localhost:3000/api/product/all?all=true', { 
+          withCredentials: true 
+        });
+        
+        setProducts(response.data.products);
+        setHasMore(false); // No more products to load
+        setTotalCount(response.data.totalCount || response.data.products.length);
+        setCurrentPage(1);
+        setLoading(false);
+      } catch (err) {
+        setError(err.response?.data?.message || "Error fetching products");
+        setLoading(false);
+      }
+    };
+    fetchAllProducts();
+  } else {
+    // For home/client, use pagination
     fetchProducts(1, false);
-  }, [fetchProducts]);
+  }
+}, [fetchProducts]);
 
 const contextValue = useMemo(
   () => ({ 
