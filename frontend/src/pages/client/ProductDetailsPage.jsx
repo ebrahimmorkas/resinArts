@@ -12,12 +12,10 @@ import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import Navbar from "../../components/client/common/Navbar"
 import CartModal from "../../components/client/common/CartModal"
 import axios from "axios"
-import { useNavigationState } from "../../../Context/NavigationStateContext"
 
 export default function ProductDetailsPage() {
   const { productId } = useParams()
   const navigate = useNavigate()
-  const { saveHomeState } = useNavigationState()
   const { products } = useContext(ProductContext)
   const { categories } = useContext(CategoryContext)
   const { discountData, loadingDiscount } = useContext(DiscountContext)
@@ -592,13 +590,13 @@ if (productError || !product) {
       {/* Back Navigation */}
       <div className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-700 py-3">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <button
-  onClick={() => navigate('/')}
-  className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
->
-  <ArrowLeft className="w-5 h-5" />
-  <span className="font-medium">Back to Home</span>
-</button>
+          <Link
+            to="/"
+            className="inline-flex items-center gap-2 text-gray-600 dark:text-gray-400 hover:text-blue-600 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
+            <span className="font-medium">Back to Home</span>
+          </Link>
         </div>
       </div>
 

@@ -1588,7 +1588,7 @@ return res.status(200).json({
   }
 };
 
-// start of Function that will restock products that are single. (Both condition that is variants and non-variant product will be handled over here)
+// Function that will restock products that are single. (Both condition that is variants and non-variant product will be handled over here)
 const restock = async (req, res) => {
   console.log("Request received")
   try {
