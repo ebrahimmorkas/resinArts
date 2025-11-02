@@ -620,8 +620,14 @@ useLayoutEffect(() => {
     try {
       const state = JSON.parse(savedState);
       if (state.scrollPosition) {
+        // Disable smooth scrolling during restoration
+        document.documentElement.style.scrollBehavior = 'auto';
+        
         // Restore scroll position synchronously before browser paint
         window.scrollTo(0, state.scrollPosition);
+        
+        // Force immediate paint
+        document.documentElement.offsetHeight; // Trigger reflow
       }
     } catch (error) {
       console.error('Error in scroll restoration:', error);
@@ -636,82 +642,38 @@ useEffect(() => {
     try {
       const state = JSON.parse(savedState);
       
-      // Restore scroll IMMEDIATELY before React renders
-      if (state.scrollPosition) {
-        window.scrollTo(0, state.scrollPosition);
-        // Also set CSS to prevent layout shift
-        document.documentElement.style.scrollBehavior = 'auto';
-      }
-
-      // Restore scroll IMMEDIATELY before React renders
-if (state.scrollPosition) {
-  window.scrollTo(0, state.scrollPosition);
-  // Also set CSS to prevent layout shift
-  document.documentElement.style.scrollBehavior = 'auto';
-  
- // Store which section to scroll to after render based on where user was
-if (state.wasFromCategorySection && state.selectedCategoryIdForFilter) {
-  sessionStorage.setItem('scrollToSection', 'selected-category-section');
-} else if (state.wasFromSearchSection && state.showSearchSection) {
-  sessionStorage.setItem('scrollToSection', 'search-results-section');
-}
-}
-      
-      // Batch state updates for better performance
-      const updates = [];
-      
+      // Batch ALL state updates together synchronously
       if (state.selectedCategory) {
-        updates.push(() => {
-          setSelectedCategory(state.selectedCategory);
-          setSelectedCategoryPath(state.selectedCategoryPath || []);
-          setSelectedCategoryIdForFilter(state.selectedCategoryIdForFilter);
-          setCategoryFilteredProducts(state.categoryFilteredProducts || []);
-          setCategoryCurrentPage(state.categoryCurrentPage || 1);
-          setCategoryHasMore(state.categoryHasMore || false);
-          setCategoryTotalCount(state.categoryTotalCount || 0);
-        });
+        setSelectedCategory(state.selectedCategory);
+        setSelectedCategoryPath(state.selectedCategoryPath || []);
+        setSelectedCategoryIdForFilter(state.selectedCategoryIdForFilter);
+        setCategoryFilteredProducts(state.categoryFilteredProducts || []);
+        setCategoryCurrentPage(state.categoryCurrentPage || 1);
+        setCategoryHasMore(state.categoryHasMore || false);
+        setCategoryTotalCount(state.categoryTotalCount || 0);
       }
       
       if (state.selectedFilters) {
-        updates.push(() => setSelectedFilters(state.selectedFilters));
+        setSelectedFilters(state.selectedFilters);
       }
       
       if (state.searchQuery) {
-        updates.push(() => {
-          setSearchQuery(state.searchQuery);
-          setShowSearchSection(state.showSearchSection || false);
-        });
+        setSearchQuery(state.searchQuery);
+        setShowSearchSection(state.showSearchSection || false);
       }
-      
-      // Execute all updates
-      updates.forEach(update => update());
       
       // Restore smooth scrolling after restoration
-requestAnimationFrame(() => {
-  document.documentElement.style.scrollBehavior = '';
-  
-  // Ensure we're viewing the correct section
-  const scrollToSection = sessionStorage.getItem('scrollToSection');
-  if (scrollToSection) {
-    setTimeout(() => {
-      const element = document.getElementById(scrollToSection);
-      if (element && state.scrollPosition) {
-        // Verify we're in the right viewport area
-        const elementTop = element.offsetTop;
-        const currentScroll = window.scrollY;
+      requestAnimationFrame(() => {
+        document.documentElement.style.scrollBehavior = '';
         
-        // If we're not near the target element, scroll to it
-        if (Math.abs(currentScroll - elementTop) > 100) {
+        // Final scroll position check and correction
+        if (state.scrollPosition && Math.abs(window.scrollY - state.scrollPosition) > 10) {
           window.scrollTo(0, state.scrollPosition);
         }
-      }
-      sessionStorage.removeItem('scrollToSection');
-    }, 50);
-  }
-});
+      });
 
-// Clear the saved state
-sessionStorage.removeItem('homePageState');
+      // Clear the saved state
+      sessionStorage.removeItem('homePageState');
     } catch (error) {
       console.error('Error restoring page state:', error);
       sessionStorage.removeItem('homePageState');
@@ -1685,12 +1647,24 @@ onClick={() => {
     return (
 <div 
   className="bg-white dark:bg-gray-900 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group w-full cursor-pointer"
-  onClick={() => {
-  // Determine which section this product belongs to
+onClick={() => {
+  // Check if productSource matches categoryFilteredProducts array reference
   const isFromCategorySection = selectedCategoryIdForFilter && 
-    categoryFilteredProducts.some(p => p._id === product._id);
+    productSource === categoryFilteredProducts;
   
   const isFromSearchSection = showSearchSection && searchQuery.trim();
+  
+  console.log('🔍 ProductCard Click Debug:', {
+    productId: product._id,
+    productName: product.name,
+    selectedCategoryIdForFilter,
+    hasProductSource: !!productSource,
+    productSourceLength: productSource?.length,
+    categoryProductsLength: categoryFilteredProducts.length,
+    areSourcesSame: productSource === categoryFilteredProducts,
+    isFromCategorySection,
+    isFromSearchSection,
+  });
   
   // Save current state before navigation
   const currentState = {
