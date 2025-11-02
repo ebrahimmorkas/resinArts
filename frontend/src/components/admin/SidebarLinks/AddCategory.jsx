@@ -462,7 +462,7 @@ const AddCategory = () => {
               disabled={isSubmitting}
             >
               <Save size={16} />
-              <span>{isSubmitting ? 'Saving...' : 'Save Category'}</span>
+              <span className="dark:text-white text-green-600">{isSubmitting ? 'Saving...' : 'Save Category'}</span>
             </button>
           </div>
         </form>

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useContext, useMemo, useCallback, memo, lazy, Suspense } from "react"
+import React, { useState, useEffect, useLayoutEffect, useRef, useContext, useMemo, useCallback, memo, lazy, Suspense } from "react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { useCart } from "../../../Context/CartContext"
 import { Link, useNavigate, useLocation, useSearchParams } from 'react-router-dom'
@@ -521,9 +521,31 @@ const highlightMatchedText = (text, searchQuery) => {
 // }
 
 const handleSearchResultClick = (result) => {
-  navigate(`/product/${result.productId}`)
-  setShowSearchResults(false)
-  setSearchQuery("")
+  // Determine if we're coming from search section
+  const isFromSearchSection = showSearchSection && searchQuery.trim();
+  
+  // Save current state before navigation
+  const currentState = {
+    scrollPosition: window.scrollY,
+    selectedCategory,
+    selectedCategoryPath,
+    selectedCategoryIdForFilter,
+    categoryFilteredProducts,
+    categoryCurrentPage,
+    categoryHasMore,
+    categoryTotalCount,
+    currentPage,
+    searchQuery, // Keep the search query to restore it
+    showSearchSection,
+    selectedFilters,
+    // Add context flags
+    wasFromCategorySection: false, // Not from category when clicking dropdown
+    wasFromSearchSection: isFromSearchSection,
+  };
+  sessionStorage.setItem('homePageState', JSON.stringify(currentState));
+  
+  navigate(`/product/${result.productId}`);
+  setShowSearchResults(false);
 }
 
 const getFilteredProducts = useMemo(() => {
@@ -590,6 +612,74 @@ const getFilteredProducts = useMemo(() => {
   document.addEventListener('mousedown', handleClickOutside)
   return () => document.removeEventListener('mousedown', handleClickOutside)
 }, [])
+
+// Prevent scroll jump by restoring position before paint
+useLayoutEffect(() => {
+  const savedState = sessionStorage.getItem('homePageState');
+  if (savedState) {
+    try {
+      const state = JSON.parse(savedState);
+      if (state.scrollPosition) {
+        // Disable smooth scrolling during restoration
+        document.documentElement.style.scrollBehavior = 'auto';
+        
+        // Restore scroll position synchronously before browser paint
+        window.scrollTo(0, state.scrollPosition);
+        
+        // Force immediate paint
+        document.documentElement.offsetHeight; // Trigger reflow
+      }
+    } catch (error) {
+      console.error('Error in scroll restoration:', error);
+    }
+  }
+}, []);
+
+// Restore page state when coming back from product details - OPTIMIZED
+useEffect(() => {
+  const savedState = sessionStorage.getItem('homePageState');
+  if (savedState) {
+    try {
+      const state = JSON.parse(savedState);
+      
+      // Batch ALL state updates together synchronously
+      if (state.selectedCategory) {
+        setSelectedCategory(state.selectedCategory);
+        setSelectedCategoryPath(state.selectedCategoryPath || []);
+        setSelectedCategoryIdForFilter(state.selectedCategoryIdForFilter);
+        setCategoryFilteredProducts(state.categoryFilteredProducts || []);
+        setCategoryCurrentPage(state.categoryCurrentPage || 1);
+        setCategoryHasMore(state.categoryHasMore || false);
+        setCategoryTotalCount(state.categoryTotalCount || 0);
+      }
+      
+      if (state.selectedFilters) {
+        setSelectedFilters(state.selectedFilters);
+      }
+      
+      if (state.searchQuery) {
+        setSearchQuery(state.searchQuery);
+        setShowSearchSection(state.showSearchSection || false);
+      }
+      
+      // Restore smooth scrolling after restoration
+      requestAnimationFrame(() => {
+        document.documentElement.style.scrollBehavior = '';
+        
+        // Final scroll position check and correction
+        if (state.scrollPosition && Math.abs(window.scrollY - state.scrollPosition) > 10) {
+          window.scrollTo(0, state.scrollPosition);
+        }
+      });
+
+      // Clear the saved state
+      sessionStorage.removeItem('homePageState');
+    } catch (error) {
+      console.error('Error restoring page state:', error);
+      sessionStorage.removeItem('homePageState');
+    }
+  }
+}, []);
 
   const isDiscountActive = (product, variant = null, sizeDetail = null) => {
     let discountStartDate, discountEndDate
@@ -978,8 +1068,21 @@ const handleCategoryClick = async (category) => {
     // Clear and fetch category products
     setCategoryFilteredProducts([]);
     setCategoryCurrentPage(1);
-    
-    try {
+
+    // Check if we're restoring state - don't fetch if data exists
+const restoringState = sessionStorage.getItem('homePageState');
+if (restoringState) {
+  const state = JSON.parse(restoringState);
+  if (state.categoryFilteredProducts && state.categoryFilteredProducts.length > 0) {
+    // Data already exists from restoration, skip fetch
+    setTimeout(() => {
+      document.getElementById('selected-category-section')?.scrollIntoView({ behavior: 'smooth' })
+    }, 100);
+    return;
+  }
+}
+
+try {
   setCategoryLoading(true);
       const response = await axios.get(
         `https://api.simplyrks.cloud/api/product/all?page=1&limit=50&categoryId=${category._id}`,
@@ -1542,9 +1645,48 @@ onClick={() => {
     const currentStock = selectedSizeDetail ? selectedSizeDetail.stock : (selectedVariant ? selectedVariant.commonStock : product.stock) || 0
 
     return (
- <div 
+<div 
   className="bg-white dark:bg-gray-900 rounded-xl shadow-lg hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 overflow-hidden group w-full cursor-pointer"
-  onClick={() => navigate(`/product/${product._id}`)}
+onClick={() => {
+  // Check if productSource matches categoryFilteredProducts array reference
+  const isFromCategorySection = selectedCategoryIdForFilter && 
+    productSource === categoryFilteredProducts;
+  
+  const isFromSearchSection = showSearchSection && searchQuery.trim();
+  
+  console.log('🔍 ProductCard Click Debug:', {
+    productId: product._id,
+    productName: product.name,
+    selectedCategoryIdForFilter,
+    hasProductSource: !!productSource,
+    productSourceLength: productSource?.length,
+    categoryProductsLength: categoryFilteredProducts.length,
+    areSourcesSame: productSource === categoryFilteredProducts,
+    isFromCategorySection,
+    isFromSearchSection,
+  });
+  
+  // Save current state before navigation
+  const currentState = {
+    scrollPosition: window.scrollY,
+    selectedCategory,
+    selectedCategoryPath,
+    selectedCategoryIdForFilter,
+    categoryFilteredProducts,
+    categoryCurrentPage,
+    categoryHasMore,
+    categoryTotalCount,
+    currentPage,
+    searchQuery,
+    showSearchSection,
+    selectedFilters,
+    // Add context flags
+    wasFromCategorySection: isFromCategorySection,
+    wasFromSearchSection: isFromSearchSection,
+  };
+  sessionStorage.setItem('homePageState', JSON.stringify(currentState));
+  navigate(`/product/${product._id}`);
+}}
 >
         <div className="relative">
           <div className="relative">

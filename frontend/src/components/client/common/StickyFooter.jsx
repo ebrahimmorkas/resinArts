@@ -76,7 +76,7 @@ export default function StickyFooter() {
       handleCollapse();
     }}
     onMouseEnter={handleMouseEnter}
-    className="fixed z-50 bg-red-500 hover:bg-red-600 text-white p-2 rounded-full shadow-lg transition-colors"
+    className="fixed z-50 bg-red-500 hover:bg-red-600 dark:text-white text-black p-2 rounded-full shadow-lg transition-colors"
     aria-label="Collapse footer"
     style={{
       top: '170px',
