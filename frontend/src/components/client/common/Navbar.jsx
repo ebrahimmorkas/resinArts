@@ -114,7 +114,7 @@ export default function Navbar({
               
               {/* Search Results Dropdown */}
               {showSearchResults && (
-                <div className="absolute top-full mt-2 w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200 dark:border-gray-700">
+                <div className="search-results-dropdown absolute top-full mt-2 w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200 dark:border-gray-700" onClick={(e) => e.stopPropagation()}>
                   {isSearching ? (
                     <div className="p-4 text-center text-gray-500">Searching...</div>
                   ) : searchResults.length > 0 ? (
@@ -278,7 +278,7 @@ export default function Navbar({
             
             {/* Mobile Search Results Dropdown */}
             {showSearchResults && (
-              <div className="absolute top-full mt-2 w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200 dark:border-gray-700 left-0 right-0">
+              <div className="search-results-dropdown absolute top-full mt-2 w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl max-h-96 overflow-y-auto z-50 border border-gray-200 dark:border-gray-700 left-0 right-0">
                 {isSearching ? (
                   <div className="p-4 text-center text-gray-500 dark:text-gray-400">Searching...</div>
                 ) : searchResults.length > 0 ? (
@@ -294,10 +294,16 @@ export default function Navbar({
                     <div className="py-2">
                       {searchResults.map((result, index) => (
                         <button
-                          key={`${result.productId}-${result.variantId}-${index}`}
-                          onClick={() => onSearchResultClick(result)}
-                          className="w-full px-4 py-3 hover:bg-gray-50 dark:bg-gray-800 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
-                        >
+  key={`${result.productId}-${result.variantId}-${index}`}
+  onClick={(e) => {
+      console.log('MOBILE CLICK TRIGGERED', result.productId);
+    e.preventDefault();
+    e.stopPropagation();
+    onSearchResultClick(result);
+  }}
+  className="w-full px-4 py-3 hover:bg-gray-50 dark:bg-gray-800 flex items-center gap-3 transition-colors border-b border-gray-100 last:border-b-0"
+  type="button"
+>
                           <img
                             src={getOptimizedImageUrl(result.image, { width: 100 }) || "/placeholder.svg"}
                             alt={result.productName}

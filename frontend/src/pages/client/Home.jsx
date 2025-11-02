@@ -521,6 +521,7 @@ const highlightMatchedText = (text, searchQuery) => {
 // }
 
 const handleSearchResultClick = (result) => {
+    console.log('handleSearchResultClick called with:', result);
   // Determine if we're coming from search section
   const isFromSearchSection = showSearchSection && searchQuery.trim();
   
@@ -593,19 +594,13 @@ const getFilteredProducts = useMemo(() => {
 }, [memoizedProducts, memoizedCategories, searchQuery]); // Only recalculate when these change
 
   // Close dropdowns of search when clicking outside
-  useEffect(() => {
+useEffect(() => {
   const handleClickOutside = (event) => {
-    if (!event.target.closest('.relative.flex-1')) {
-      setShowSearchResults(false)
-    }
-  }
-  document.addEventListener('mousedown', handleClickOutside)
-  return () => document.removeEventListener('mousedown', handleClickOutside)
-}, [])
-
-  useEffect(() => {
-  const handleClickOutside = (event) => {
-    if (!event.target.closest('.relative.flex-1')) {
+    // Check if click is inside search container or search results dropdown
+    const isInsideSearch = event.target.closest('.relative.flex-1') || 
+                          event.target.closest('.search-results-dropdown');
+    
+    if (!isInsideSearch) {
       setShowSearchResults(false)
     }
   }
