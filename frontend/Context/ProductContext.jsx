@@ -109,7 +109,7 @@ export const ProductProvider = ({ children }) => {
     const fetchAllProducts = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:3000/api/product/all?all=true', { 
+        const response = await axios.get('https://api.simplyrks.cloud/api/product/all?all=true', { 
           withCredentials: true 
         });
         

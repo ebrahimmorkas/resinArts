@@ -107,7 +107,7 @@ const [exportingImages, setExportingImages] = useState(false);
 useEffect(() => {
   const fetchAllAdminProducts = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/product/all?all=true', { 
+      const response = await axios.get('https://api.simplyrks.cloud/api/product/all?all=true', { 
         withCredentials: true 
       });
       setProducts(response.data.products);
