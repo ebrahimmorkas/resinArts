@@ -107,7 +107,7 @@ const [exportingImages, setExportingImages] = useState(false);
 useEffect(() => {
   const fetchAllAdminProducts = async () => {
     try {
-      const response = await axios.get('http://localhost:3000/api/product/all?all=true', { 
+      const response = await axios.get('https://api.mouldmarket.in/api/product/all?all=true', { 
         withCredentials: true 
       });
       setProducts(response.data.products);
@@ -256,7 +256,7 @@ const confirmStatusChange = async () => {
   setIsLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/product/toggle-status',
+      'https://api.mouldmarket.in/api/product/toggle-status',
       {
         productId: statusModalData.productId,
         isActive: statusModalData.isActive
@@ -299,7 +299,7 @@ const confirmBulkStatusChange = async () => {
   try {
     const productIds = selectedProducts.map(p => p._id);
     const res = await axios.post(
-      'http://localhost:3000/api/product/bulk-toggle-status',
+      'https://api.mouldmarket.in/api/product/bulk-toggle-status',
       {
         productIds,
         isActive: bulkStatusAction
@@ -364,7 +364,7 @@ const handleDelete = async () => {
   if (!selectedProductForDelete) return;
   setIsLoading(true);
   try {
-    const res = await axios.delete(`http://localhost:3000/api/product/delete-product/${selectedProductForDelete._id}`, {
+    const res = await axios.delete(`https://api.mouldmarket.in/api/product/delete-product/${selectedProductForDelete._id}`, {
       withCredentials: true
     });
     if (res.status === 200) {
@@ -388,7 +388,7 @@ const handleDeleteSelected = async () => {
   setIsLoading(true);
   try {
     const deletePromises = selectedProducts.map(product => 
-      axios.delete(`http://localhost:3000/api/product/delete-product/${product._id}`, {
+      axios.delete(`https://api.mouldmarket.in/api/product/delete-product/${product._id}`, {
         withCredentials: true
       })
     );
@@ -537,7 +537,7 @@ const ViewVariantsModal = ({ product, onClose }) => {
   setToggleLoading({ [`variant-${variantId}`]: true });
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/product/toggle-variant-size-status',
+      'https://api.mouldmarket.in/api/product/toggle-variant-size-status',
       {
         productId: product._id,
         variantId: variantId,
@@ -578,7 +578,7 @@ const ViewVariantsModal = ({ product, onClose }) => {
     setToggleLoading({ [`size-${variantId}-${sizeId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.mouldmarket.in/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -1548,7 +1548,7 @@ const DeleteConfirmationModal = () => {
     setToggleLoading({ [`variant-${variantId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.mouldmarket.in/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -1573,7 +1573,7 @@ const DeleteConfirmationModal = () => {
     setToggleLoading({ [`size-${sizeId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.mouldmarket.in/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -1710,7 +1710,7 @@ const DeleteConfirmationModal = () => {
     setToggleLoading({ [`variant-${variantId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.mouldmarket.in/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -1735,7 +1735,7 @@ const DeleteConfirmationModal = () => {
     setToggleLoading({ [`size-${sizeId}`]: true });
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/product/toggle-variant-size-status',
+        'https://api.mouldmarket.in/api/product/toggle-variant-size-status',
         {
           productId: product._id,
           variantId: variantId,
@@ -1902,7 +1902,7 @@ const DeleteConfirmationModal = () => {
       };
     }
     const res = await axios.post(
-      'http://localhost:3000/api/product/restock',
+      'https://api.mouldmarket.in/api/product/restock',
       dataToSend,
       { withCredentials: true }
     );
@@ -1948,7 +1948,7 @@ const DeleteConfirmationModal = () => {
     const handleUpdateMultipleStock = async (localMultipleToRestock) => {
       setModalLoading(true);
       try {
-        const res = await axios.post('http://localhost:3000/api/product/mass-restock', localMultipleToRestock, {
+        const res = await axios.post('https://api.mouldmarket.in/api/product/mass-restock', localMultipleToRestock, {
           withCredentials: true,
         });
         if (res.status === 200) {
@@ -2247,7 +2247,7 @@ const DeleteConfirmationModal = () => {
           };
         }
         const res = await axios.post(
-          'http://localhost:3000/api/product/revised-rate',
+          'https://api.mouldmarket.in/api/product/revised-rate',
           dataToSend,
           { withCredentials: true }
         );
@@ -2269,7 +2269,7 @@ const DeleteConfirmationModal = () => {
     const handleUpdateMultipleRevisedRate = async (localMultipleForRevisedRate) => {
       setModalLoading(true);
       try {
-        const res = await axios.post('http://localhost:3000/api/product/mass-revised-rate', localMultipleForRevisedRate, {
+        const res = await axios.post('https://api.mouldmarket.in/api/product/mass-revised-rate', localMultipleForRevisedRate, {
           withCredentials: true,
         });
         if (res.status === 200) {

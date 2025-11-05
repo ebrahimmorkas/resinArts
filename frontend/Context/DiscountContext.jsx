@@ -30,7 +30,7 @@ export const DiscountProvider = ({children}) => {
                     }
                 }
 
-                const res = await axios.get('http://localhost:3000/api/discount/fetch-discount', {
+                const res = await axios.get('https://api.mouldmarket.in/api/discount/fetch-discount', {
                     withCredentials: true
                 });
                

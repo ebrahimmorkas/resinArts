@@ -5,7 +5,7 @@ import io from 'socket.io-client';
 import OverrideProductsModal from './OverrideProductsModal';
 import { ProductContext } from '../../../../../Context/ProductContext';
 
-const socket = io('http://localhost:3000');
+const socket = io('https://api.mouldmarket.in');
 
 // Toast Component
 const Toast = ({ message, type, onClose }) => {
@@ -608,7 +608,7 @@ const [pendingUploadData, setPendingUploadData] = useState(null);
   formData.append('imagesZip', productZipFile);
 
   try {
-    const res = await axios.post('http://localhost:3000/api/product/bulk-upload', formData, {
+    const res = await axios.post('https://api.mouldmarket.in/api/product/bulk-upload', formData, {
       withCredentials: true,
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -667,7 +667,7 @@ const handleOverrideProducts = async (selectedProductIds) => {
     formData.append('imagesZip', pendingUploadData.zipFile);
     formData.append('productIds', JSON.stringify(selectedProductIds));
 
-    const res = await axios.post('http://localhost:3000/api/product/bulk-override', formData, {
+    const res = await axios.post('https://api.mouldmarket.in/api/product/bulk-override', formData, {
       withCredentials: true,
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -721,7 +721,7 @@ const handleOverrideProducts = async (selectedProductIds) => {
   formData.append('imagesZip', categoryZipFile);
 
   try {
-    const res = await axios.post('http://localhost:3000/api/category/bulk-upload', formData, {
+    const res = await axios.post('https://api.mouldmarket.in/api/category/bulk-upload', formData, {
       withCredentials: true,
       headers: {
         'Content-Type': 'multipart/form-data',

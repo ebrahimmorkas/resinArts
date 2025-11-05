@@ -35,7 +35,7 @@ const ResetPassword = () => {
     }
 
     try {
-      const res = await axios.post(`http://localhost:3000/api/auth/reset-password/${token}`, {
+      const res = await axios.post(`https://api.mouldmarket.in/api/auth/reset-password/${token}`, {
         password,
       });
       setSuccessMessage(res.data.message);

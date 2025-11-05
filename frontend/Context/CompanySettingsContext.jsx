@@ -30,10 +30,10 @@ export const CompanySettingsProvider = ({ children }) => {
      
       // Fetch both in parallel for speed
       const [contactResponse, policiesResponse] = await Promise.all([
-        axios.get('http://localhost:3000/api/company-settings/contact', {
+        axios.get('https://api.mouldmarket.in/api/company-settings/contact', {
           withCredentials: true
         }),
-        axios.get('http://localhost:3000/api/company-settings/policies', {
+        axios.get('https://api.mouldmarket.in/api/company-settings/policies', {
           withCredentials: true
         })
       ]);

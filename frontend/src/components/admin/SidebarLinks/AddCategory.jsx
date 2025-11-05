@@ -273,7 +273,7 @@ const AddCategory = () => {
       console.log('Sending data to backend:', { categories })
 
       const response = await axios.post(
-        'http://localhost:3000/api/category/add',
+        'https://api.mouldmarket.in/api/category/add',
         formData,
         {
           headers: {

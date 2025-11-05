@@ -501,7 +501,7 @@ export default function Users() {
   useEffect(() => {
     const getCategories = async () => {
       try {
-        const res = await axios.get("http://localhost:3000/api/category/fetch-categories", {withCredentials: true});
+        const res = await axios.get("https://api.mouldmarket.in/api/category/fetch-categories", {withCredentials: true});
         if (res.status === 200) {
           const flatCats = res.data.categories;
           const activeFlatCats = flatCats.filter(cat => cat.isActive === true);
@@ -701,7 +701,7 @@ export default function Users() {
   const confirmDelete = async () => {
     try {
       const userIds = selectedUser ? [selectedUser._id] : selectedUsers;
-      const res = await axios.post('http://localhost:3000/api/user/delete', 
+      const res = await axios.post('https://api.mouldmarket.in/api/user/delete', 
         { userIds: userIds }, 
         { withCredentials: true }
       );
@@ -730,7 +730,7 @@ export default function Users() {
     e.preventDefault();
     try {
       const userIds = selectedUser ? [selectedUser._id] : selectedUsers;
-      const res = await axios.post('http://localhost:3000/api/user/send-email', 
+      const res = await axios.post('https://api.mouldmarket.in/api/user/send-email', 
         { userIds: userIds, subject: emailForm.subject, body: emailForm.body },
         { withCredentials: true }
       );
@@ -756,7 +756,7 @@ export default function Users() {
     const formData = new FormData();
     formData.append('file', file);
     try {
-      const res = await axios.post('http://localhost:3000/api/user/import', formData, {
+      const res = await axios.post('https://api.mouldmarket.in/api/user/import', formData, {
         withCredentials: true,
         headers: { 'Content-Type': 'multipart/form-data' }
       });
@@ -776,7 +776,7 @@ export default function Users() {
 
   const handleExport = async () => {
     try {
-      const res = await axios.get('http://localhost:3000/api/user/export', {
+      const res = await axios.get('https://api.mouldmarket.in/api/user/export', {
         withCredentials: true,
         responseType: 'blob'
       });
@@ -796,7 +796,7 @@ export default function Users() {
   const handleAddUser = async (e) => {
     e.preventDefault();
     try {
-      const res = await axios.post('http://localhost:3000/api/auth/register', userForm, { withCredentials: true });
+      const res = await axios.post('https://api.mouldmarket.in/api/auth/register', userForm, { withCredentials: true });
       if (res.status === 200) {
         toast.success("User added successfully");
         await refetchUsers();
@@ -891,7 +891,7 @@ export default function Users() {
     }
     try {
       const userIds = selectedUser ? [selectedUser._id] : selectedUsers;
-      const res = await axios.post('http://localhost:3000/api/free-cash/bulk-add', 
+      const res = await axios.post('https://api.mouldmarket.in/api/free-cash/bulk-add', 
         { cashForm: cleanedCashForm, userIds: userIds },
         { withCredentials: true }
       );
@@ -1004,7 +1004,7 @@ export default function Users() {
               <button onClick={handleExport} className="inline-flex items-center px-4 py-2 bg-purple-600 hover:bg-purple-700 text-gren-600 rounded-lg font-medium transition-colors">
                 <Download className="w-4 h-4 mr-2" />Export
               </button>
-              <button onClick={() => window.open('http://localhost:3000/users_sample.xlsx', '_blank')} className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-all duration-200 text-sm font-medium">
+              <button onClick={() => window.open('https://api.mouldmarket.in/users_sample.xlsx', '_blank')} className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-all duration-200 text-sm font-medium">
           <FileDown className="w-4 h-4 mr-2" />Download Sample
         </button>
               <div className="flex items-center space-x-2 text-sm text-gray-600 dark:text-gray-400">

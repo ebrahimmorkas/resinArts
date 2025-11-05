@@ -20,7 +20,7 @@ const Banner = () => {
   const fetchBanners = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:3000/api/banner/fetch-banners');
+      const res = await axios.get('https://api.mouldmarket.in/api/banner/fetch-banners');
       setBanners(res.data);
       setError(null);
     } catch (err) {
@@ -50,7 +50,7 @@ const Banner = () => {
     data.append('isActive', formData.isActive);
 
     try {
-      await axios.post('http://localhost:3000/api/banner/add', data, {
+      await axios.post('https://api.mouldmarket.in/api/banner/add', data, {
         headers: { 'Content-Type': 'multipart/form-data' },
       });
       setError(null);
@@ -74,7 +74,7 @@ const Banner = () => {
     if (!window.confirm('Are you sure you want to delete this banner?')) return;
     setLoading(true);
     try {
-      await axios.delete(`http://localhost:3000/api/banner/delete/${id}`);
+      await axios.delete(`https://api.mouldmarket.in/api/banner/delete/${id}`);
       setError(null);
       fetchBanners();
     } catch (err) {

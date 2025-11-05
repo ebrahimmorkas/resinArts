@@ -101,7 +101,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   // Function to handle status change for backend
   const handleStatusChangeBackend = async (status, orderId) => {
     try {
-      const res = await axios.post('http://localhost:3000/api/order/status-change', { status, orderId }, { withCredentials: true });
+      const res = await axios.post('https://api.mouldmarket.in/api/order/status-change', { status, orderId }, { withCredentials: true });
       if (res.status === 200) {
         console.log("Order status changed successfully");
         setStatus(status);
@@ -192,7 +192,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         await handleStatusChangeBackend("Accepted", order._id);
 
         const res = await axios.post(
-          'http://localhost:3000/api/order/sendAcceptEmailWhenShippingPriceAddedAutomatically',
+          'https://api.mouldmarket.in/api/order/sendAcceptEmailWhenShippingPriceAddedAutomatically',
           {
             email: order.email,
             orderId: order._id,
@@ -897,7 +897,7 @@ pdfContent.innerHTML = `
   useEffect(() => {
   const fetchOrders = async () => {
     try {
-      const res = await axios.get("http://localhost:3000/api/order/all", {
+      const res = await axios.get("https://api.mouldmarket.in/api/order/all", {
         withCredentials: true,
       });
 
@@ -948,7 +948,7 @@ useEffect(() => {
 }, [orders, products]);
 
  useEffect(() => {
-    const socket = io('http://localhost:3000', {
+    const socket = io('https://api.mouldmarket.in', {
       withCredentials: true,
       auth: { token: localStorage.getItem('token') },
       reconnection: true,
@@ -1200,7 +1200,7 @@ const stats = useMemo(() => {
   const handleReject = async (e, orderId) => {
     e.stopPropagation();
     try {
-      const res = await axios.post('http://localhost:3000/api/order/status-change', { status: "Rejected", orderId }, { withCredentials: true });
+      const res = await axios.post('https://api.mouldmarket.in/api/order/status-change', { status: "Rejected", orderId }, { withCredentials: true });
       if (res.status === 200) {
         handleStatusChange(orderId, "Rejected");
       }
@@ -1340,7 +1340,7 @@ const handleBulkAccept = async () => {
   setBulkLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/order/bulk-accept',
+      'https://api.mouldmarket.in/api/order/bulk-accept',
       { orderIds: selectedOrders },
       { withCredentials: true }
     );
@@ -1351,7 +1351,7 @@ const handleBulkAccept = async () => {
       setShowBulkResultModal(true);
       
       // Refresh orders
-      const ordersRes = await axios.get('http://localhost:3000/api/order/all', { withCredentials: true });
+      const ordersRes = await axios.get('https://api.mouldmarket.in/api/order/all', { withCredentials: true });
       if (ordersRes.status === 200) {
         const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(sortedOrders);
@@ -1373,7 +1373,7 @@ const handleBulkReject = async () => {
   setBulkLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/order/bulk-reject',
+      'https://api.mouldmarket.in/api/order/bulk-reject',
       { orderIds: selectedOrders },
       { withCredentials: true }
     );
@@ -1392,7 +1392,7 @@ const handleBulkReject = async () => {
         setShowBulkResultModal(true);
         
         // Refresh orders
-        const ordersRes = await axios.get('http://localhost:3000/api/order/all', { withCredentials: true });
+        const ordersRes = await axios.get('https://api.mouldmarket.in/api/order/all', { withCredentials: true });
         if (ordersRes.status === 200) {
           const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
           setOrders(sortedOrders);
@@ -1418,7 +1418,7 @@ const handleConfirmBulkReject = async (orderIdsToReject) => {
   
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/order/bulk-reject',
+      'https://api.mouldmarket.in/api/order/bulk-reject',
       { orderIds: orderIdsToReject },
       { withCredentials: true }
     );
@@ -1429,7 +1429,7 @@ const handleConfirmBulkReject = async (orderIdsToReject) => {
       setShowBulkResultModal(true);
       
       // Refresh orders
-      const ordersRes = await axios.get('http://localhost:3000/api/order/all', { withCredentials: true });
+      const ordersRes = await axios.get('https://api.mouldmarket.in/api/order/all', { withCredentials: true });
       if (ordersRes.status === 200) {
         const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(sortedOrders);
@@ -1452,7 +1452,7 @@ const handleBulkConfirm = async () => {
   setBulkLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/order/bulk-confirm',
+      'https://api.mouldmarket.in/api/order/bulk-confirm',
       { orderIds: selectedOrders },
       { withCredentials: true }
     );
@@ -1463,7 +1463,7 @@ const handleBulkConfirm = async () => {
       setShowBulkResultModal(true);
       
       // Refresh orders
-      const ordersRes = await axios.get('http://localhost:3000/api/order/all', { withCredentials: true });
+      const ordersRes = await axios.get('https://api.mouldmarket.in/api/order/all', { withCredentials: true });
       if (ordersRes.status === 200) {
         const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(sortedOrders);
@@ -1485,7 +1485,7 @@ const handleBulkDispatch = async () => {
   setBulkLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/order/bulk-dispatch',
+      'https://api.mouldmarket.in/api/order/bulk-dispatch',
       { orderIds: selectedOrders },
       { withCredentials: true }
     );
@@ -1496,7 +1496,7 @@ const handleBulkDispatch = async () => {
       setShowBulkResultModal(true);
       
       // Refresh orders
-      const ordersRes = await axios.get('http://localhost:3000/api/order/all', { withCredentials: true });
+      const ordersRes = await axios.get('https://api.mouldmarket.in/api/order/all', { withCredentials: true });
       if (ordersRes.status === 200) {
         const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(sortedOrders);
@@ -1518,7 +1518,7 @@ const handleBulkComplete = async () => {
   setBulkLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/order/bulk-complete',
+      'https://api.mouldmarket.in/api/order/bulk-complete',
       { orderIds: selectedOrders },
       { withCredentials: true }
     );
@@ -1529,7 +1529,7 @@ const handleBulkComplete = async () => {
       setShowBulkResultModal(true);
       
       // Refresh orders
-      const ordersRes = await axios.get('http://localhost:3000/api/order/all', { withCredentials: true });
+      const ordersRes = await axios.get('https://api.mouldmarket.in/api/order/all', { withCredentials: true });
       if (ordersRes.status === 200) {
         const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(sortedOrders);
@@ -1557,7 +1557,7 @@ const handleConfirmBulkShipping = async (shippingPrice) => {
   
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/order/bulk-update-shipping',
+      'https://api.mouldmarket.in/api/order/bulk-update-shipping',
       { orderIds: selectedOrders, shippingPrice },
       { withCredentials: true }
     );
@@ -1568,7 +1568,7 @@ const handleConfirmBulkShipping = async (shippingPrice) => {
       setShowBulkResultModal(true);
       
       // Refresh orders
-      const ordersRes = await axios.get('http://localhost:3000/api/order/all', { withCredentials: true });
+      const ordersRes = await axios.get('https://api.mouldmarket.in/api/order/all', { withCredentials: true });
       if (ordersRes.status === 200) {
         const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(sortedOrders);
@@ -1651,14 +1651,14 @@ const performBulkDelete = async (orderIdsToDelete) => {
   setBulkLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/order/bulk-delete',
+      'https://api.mouldmarket.in/api/order/bulk-delete',
       { orderIds: orderIdsToDelete },
       { withCredentials: true }
     );
 
     if (res.status === 200) {
       // Refresh orders
-      const ordersRes = await axios.get('http://localhost:3000/api/order/all', { withCredentials: true });
+      const ordersRes = await axios.get('https://api.mouldmarket.in/api/order/all', { withCredentials: true });
       if (ordersRes.status === 200) {
         const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(sortedOrders);
@@ -1687,13 +1687,13 @@ const confirmDeleteOrder = async () => {
 
   try {
     const res = await axios.delete(
-      `http://localhost:3000/api/order/delete/${orderToDelete._id}`,
+      `https://api.mouldmarket.in/api/order/delete/${orderToDelete._id}`,
       { withCredentials: true }
     );
 
     if (res.status === 200) {
       // Refresh orders
-      const ordersRes = await axios.get('http://localhost:3000/api/order/all', { withCredentials: true });
+      const ordersRes = await axios.get('https://api.mouldmarket.in/api/order/all', { withCredentials: true });
       if (ordersRes.status === 200) {
         const sortedOrders = ordersRes.data.orders.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
         setOrders(sortedOrders);

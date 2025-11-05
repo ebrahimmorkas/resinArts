@@ -51,7 +51,7 @@ export const FreeCashProvider = ({ children }) => {
       }
 
       const response = await axios.get(
-        "http://localhost:3000/api/free-cash/check-eligibility",
+        "https://api.mouldmarket.in/api/free-cash/check-eligibility",
         { 
           withCredentials: true,
           headers: {

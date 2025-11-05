@@ -38,7 +38,7 @@ const handleEditOrder = async (e) => {
     // All products have 0 quantity - reject the order
     try {
       const res = await axios.post(
-        'http://localhost:3000/api/order/reject-zero-quantity-order',
+        'https://api.mouldmarket.in/api/order/reject-zero-quantity-order',
         { orderId: order._id, email: order.email },
         { withCredentials: true }
       );
@@ -95,7 +95,7 @@ const handleEditOrder = async (e) => {
     });
     
     const res = await axios.post(
-      `http://localhost:3000/api/order/edit-order/${order._id}`, 
+      `https://api.mouldmarket.in/api/order/edit-order/${order._id}`, 
       { products: productsToSend }, 
       { withCredentials: true }
     );
@@ -153,7 +153,7 @@ const handleConfirmationConfirm = async () => {
   // Otherwise proceed with confirmation
   try {
     const res = await axios.post(
-      `http://localhost:3000/api/order/confirm-order-update`,
+      `https://api.mouldmarket.in/api/order/confirm-order-update`,
       {
         orderId: order._id,
         products: products,
@@ -181,7 +181,7 @@ const handleEditShippingFromConfirmation = async (action, value) => {
     // Set shipping to 0 immediately
     try {
       const res = await axios.post(
-        `http://localhost:3000/api/order/confirm-order-update`,
+        `https://api.mouldmarket.in/api/order/confirm-order-update`,
         {
           orderId: order._id,
           products: products,  // ← This sends updated quantities
@@ -206,7 +206,7 @@ const handleEditShippingFromConfirmation = async (action, value) => {
     // Reuse old shipping price
     try {
       const res = await axios.post(
-        `http://localhost:3000/api/order/confirm-order-update`,
+        `https://api.mouldmarket.in/api/order/confirm-order-update`,
         {
           orderId: order._id,
           products: products,  // ← This sends updated quantities
@@ -262,7 +262,7 @@ const handleAddProducts = (newProducts) => {
 // Validate stock for a product (works for both existing and newly added)
 const validateProductStock = async (product) => {
   try {
-    const res = await axios.get(`http://localhost:3000/api/product/${product.product_id}`, {
+    const res = await axios.get(`https://api.mouldmarket.in/api/product/${product.product_id}`, {
       withCredentials: true
     });
     

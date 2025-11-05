@@ -145,7 +145,7 @@ iframeStyle: `
   const fetchSettings = async () => {
     try {
       setFetchLoading(true);
-      const response = await fetch('http://localhost:3000/api/company-settings', {
+      const response = await fetch('https://api.mouldmarket.in/api/company-settings', {
         method: 'GET',
         credentials: 'include',
         headers: {
@@ -506,7 +506,7 @@ const handleExcelUpload = async (e) => {
   }
 
   const response = await axios.put(
-    'http://localhost:3000/api/company-settings',
+    'https://api.mouldmarket.in/api/company-settings',
     formDataToSend,
     {
       withCredentials: true,

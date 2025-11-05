@@ -48,7 +48,7 @@ export default function Navbar({
 
   const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true })
+      await axios.post('https://api.mouldmarket.in/api/auth/logout', {}, { withCredentials: true })
       sessionStorage.clear()
       setUser(null)
       navigate('/auth/login')

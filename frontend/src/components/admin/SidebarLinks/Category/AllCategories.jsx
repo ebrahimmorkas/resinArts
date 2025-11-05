@@ -233,7 +233,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
       setIsDeleting(true);
       try {
         const deletePromises = deleteModal.categoryId.map(id =>
-          axios.delete(`http://localhost:3000/api/category/delete-category/${id}`, { withCredentials: true })
+          axios.delete(`https://api.mouldmarket.in/api/category/delete-category/${id}`, { withCredentials: true })
         );
         await Promise.all(deletePromises);
 
@@ -276,7 +276,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
       setIsDeleting(true);
       try {
         await axios.delete(
-          `http://localhost:3000/api/category/delete-category/${deleteModal.categoryId}`,
+          `https://api.mouldmarket.in/api/category/delete-category/${deleteModal.categoryId}`,
           { withCredentials: true }
         );
         
@@ -388,7 +388,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
       setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: true }));
       try {
         await axios.put(
-          `http://localhost:3000/api/category/update-category/${unsavedChanges.categoryId}`,
+          `https://api.mouldmarket.in/api/category/update-category/${unsavedChanges.categoryId}`,
           { categoryName: editingValue },
           { withCredentials: true }
         );
@@ -422,7 +422,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
         formData.append('image', selectedImage);
 
         const response = await axios.put(
-          `http://localhost:3000/api/category/update-category-image/${uploadCategoryId}`,
+          `https://api.mouldmarket.in/api/category/update-category-image/${uploadCategoryId}`,
           formData,
           { 
             withCredentials: true,
@@ -487,7 +487,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
     setLoadingStates(prev => ({ ...prev, [categoryId]: true }));
     try {
       await axios.put(
-        `http://localhost:3000/api/category/update-category/${categoryId}`,
+        `https://api.mouldmarket.in/api/category/update-category/${categoryId}`,
         { categoryName: editingValue },
         { withCredentials: true }
       );
@@ -533,7 +533,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
     setLoadingStates(prev => ({ ...prev, [`add-${parentId}`]: true }));
     try {
       const response = await axios.post(
-        `http://localhost:3000/api/category/add-subcategory`,
+        `https://api.mouldmarket.in/api/category/add-subcategory`,
         { categoryName: newSubcategoryName, parent_category_id: parentId },
         { withCredentials: true }
       );
@@ -591,7 +591,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
       formData.append('image', selectedImage);
 
       const response = await axios.put(
-        `http://localhost:3000/api/category/update-category-image/${uploadCategoryId}`,
+        `https://api.mouldmarket.in/api/category/update-category-image/${uploadCategoryId}`,
         formData,
         { 
           withCredentials: true,
@@ -635,7 +635,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
 
     try {
       await axios.put(
-        `http://localhost:3000/api/category/update-category-image/${categoryId}`,
+        `https://api.mouldmarket.in/api/category/update-category-image/${categoryId}`,
         { removeImage: true },
         { 
           withCredentials: true,
@@ -720,7 +720,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
       setLoadingStates(prev => ({ ...prev, [unsavedChanges.categoryId]: true }));
       try {
         await axios.put(
-          `http://localhost:3000/api/category/update-category/${unsavedChanges.categoryId}`,
+          `https://api.mouldmarket.in/api/category/update-category/${unsavedChanges.categoryId}`,
           { categoryName: editingValue },
           { withCredentials: true }
         );
@@ -747,7 +747,7 @@ const [bulkStatusAction, setBulkStatusAction] = useState(null);
         formData.append('image', selectedImage);
 
         const response = await axios.put(
-          `http://localhost:3000/api/category/update-category-image/${uploadCategoryId}`,
+          `https://api.mouldmarket.in/api/category/update-category-image/${uploadCategoryId}`,
           formData,
           { 
             withCredentials: true,
@@ -842,7 +842,7 @@ const confirmStatusChange = async (reactivateProducts = false) => {
   setIsLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/category/toggle-status',
+      'https://api.mouldmarket.in/api/category/toggle-status',
       {
         categoryId: statusModalData.categoryId,
         isActive: statusModalData.isActive,
@@ -856,7 +856,7 @@ const confirmStatusChange = async (reactivateProducts = false) => {
       
       // Update categories in context
       const updatedCategories = await axios.get(
-        'http://localhost:3000/api/category/fetch-categories',
+        'https://api.mouldmarket.in/api/category/fetch-categories',
         { withCredentials: true }
       );
       setCategories(updatedCategories.data.categories);
@@ -897,7 +897,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
   setIsLoading(true);
   try {
     const res = await axios.post(
-      'http://localhost:3000/api/category/bulk-toggle-status',
+      'https://api.mouldmarket.in/api/category/bulk-toggle-status',
       {
         categoryIds: selectedRows,
         isActive: bulkStatusAction,
@@ -911,7 +911,7 @@ const confirmBulkStatusChange = async (reactivateProducts = false) => {
       
       // Refresh categories
       const updatedCategories = await axios.get(
-        'http://localhost:3000/api/category/fetch-categories',
+        'https://api.mouldmarket.in/api/category/fetch-categories',
         { withCredentials: true }
       );
       setCategories(updatedCategories.data.categories);

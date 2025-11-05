@@ -106,7 +106,7 @@ export default function EditProduct() {
     const fetchProduct = async () => {
       try {
         setIsFetchingProduct(true)
-        const response = await axios.get(`http://localhost:3000/api/product/${id}`, {
+        const response = await axios.get(`https://api.mouldmarket.in/api/product/${id}`, {
           withCredentials: true
         })
         const product = response.data
@@ -518,7 +518,7 @@ commonStock: variant.commonStock?.toString() || "",
 
     formData.append("productData", JSON.stringify(productData))
 
-    const response = await axios.put(`http://localhost:3000/api/product/edit-product/${id}`, formData, {
+    const response = await axios.put(`https://api.mouldmarket.in/api/product/edit-product/${id}`, formData, {
       headers: {
         'Content-Type': 'multipart/form-data'
       },

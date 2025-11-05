@@ -38,7 +38,7 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
             
             // If called from ConfirmationModal, use confirm-order-update endpoint
             if (fromConfirmationModal && updatedProducts) {
-                res = await axios.post("http://localhost:3000/api/order/confirm-order-update", {
+                res = await axios.post("https://api.mouldmarket.in/api/order/confirm-order-update", {
                     orderId,
                     products: updatedProducts,
                     confirmedShippingPrice: priceValue,
@@ -47,7 +47,7 @@ function ShippingPriceModal({onClose, orderId, email, isEditMode = false, curren
                 }, { withCredentials: true });
             } else {
                 // Normal flow - just update shipping price
-                res = await axios.post("http://localhost:3000/api/order/shipping-price-update", {
+                res = await axios.post("https://api.mouldmarket.in/api/order/shipping-price-update", {
                     shippingPriceValue: priceValue,
                     orderId,
                     email,

@@ -89,7 +89,7 @@ const AllBanners = () => {
   const fetchBanners = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:3000/api/banner/fetch-banners', {
+      const res = await axios.get('https://api.mouldmarket.in/api/banner/fetch-banners', {
         withCredentials: true
       });
       setBanners(res.data);
@@ -139,7 +139,7 @@ const AllBanners = () => {
     setShowDefaultModal(false);
     
     try {
-      await axios.put(`http://localhost:3000/api/banner/update-default/${bannerToUpdateDefault._id}`, {
+      await axios.put(`https://api.mouldmarket.in/api/banner/update-default/${bannerToUpdateDefault._id}`, {
         isDefault: newDefaultStatus
       }, {
         withCredentials: true
@@ -195,7 +195,7 @@ const AllBanners = () => {
     setShowDeleteModal(false);
     
     try {
-      await axios.delete(`http://localhost:3000/api/banner/delete/${bannerToDelete._id}`, {
+      await axios.delete(`https://api.mouldmarket.in/api/banner/delete/${bannerToDelete._id}`, {
         withCredentials: true
       });
       

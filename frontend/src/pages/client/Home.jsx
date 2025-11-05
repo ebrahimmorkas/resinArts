@@ -97,7 +97,7 @@ const handleCartCheckout = async () => {
 
     // Send cart data directly without transformation
     const res = await axios.post(
-      'http://localhost:3000/api/order/place-order', 
+      'https://api.mouldmarket.in/api/order/place-order', 
       cartItems, 
       {
         withCredentials: true,
@@ -296,7 +296,7 @@ useEffect(() => {
           setCategoryLoadingMore(true);
           const nextPage = categoryCurrentPage + 1;
           const response = await axios.get(
-            `http://localhost:3000/api/product/all?page=${nextPage}&limit=50&categoryId=${selectedCategoryIdForFilter}`,
+            `https://api.mouldmarket.in/api/product/all?page=${nextPage}&limit=50&categoryId=${selectedCategoryIdForFilter}`,
             { withCredentials: true }
           );
           
@@ -389,7 +389,7 @@ useEffect(() => {
     
     try {
       const response = await axios.get(
-        `http://localhost:3000/api/product/search?query=${encodeURIComponent(debouncedSearchQuery)}`,
+        `https://api.mouldmarket.in/api/product/search?query=${encodeURIComponent(debouncedSearchQuery)}`,
         { withCredentials: true }
       );
       
@@ -932,7 +932,7 @@ const getCategoryChildren = (categoryId) => {
 // Function that will handle logout
 const handleLogout = async () => {
     try {
-      await axios.post('http://localhost:3000/api/auth/logout', {}, { withCredentials: true });
+      await axios.post('https://api.mouldmarket.in/api/auth/logout', {}, { withCredentials: true });
       
       // Clear all session caches
       sessionStorage.clear();
@@ -1080,7 +1080,7 @@ if (restoringState) {
 try {
   setCategoryLoading(true);
       const response = await axios.get(
-        `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${category._id}`,
+        `https://api.mouldmarket.in/api/product/all?page=1&limit=50&categoryId=${category._id}`,
         { withCredentials: true }
       );
       
@@ -1301,7 +1301,7 @@ const handleMainCategoryChange = async (categoryId) => {
   try {
     setCategoryLoading(true);
     const response = await axios.get(
-      `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
+      `https://api.mouldmarket.in/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
       { withCredentials: true }
     );
     
@@ -1328,7 +1328,7 @@ const handleMainCategoryChange = async (categoryId) => {
   try {
     setCategoryLoading(true);
     const response = await axios.get(
-      `http://localhost:3000/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
+      `https://api.mouldmarket.in/api/product/all?page=1&limit=50&categoryId=${categoryId}`,
       { withCredentials: true }
     );
     

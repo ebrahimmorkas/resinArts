@@ -280,7 +280,7 @@ const AllAnnouncements = () => {
   const fetchAnnouncements = async () => {
     setLoading(true);
     try {
-      const res = await axios.get('http://localhost:3000/api/announcement/all');
+      const res = await axios.get('https://api.mouldmarket.in/api/announcement/all');
       setAnnouncements(res.data);
       setError(null);
     } catch (err) {
@@ -321,7 +321,7 @@ const AllAnnouncements = () => {
   const confirmDelete = async () => {
     setOperationLoading('delete');
     try {
-      await axios.delete(`http://localhost:3000/api/announcement/delete/${selectedAnnouncement._id}`);
+      await axios.delete(`https://api.mouldmarket.in/api/announcement/delete/${selectedAnnouncement._id}`);
       setDeleteModal(false);
       showToast('Announcement deleted successfully', 'success');
       fetchAnnouncements();
@@ -343,7 +343,7 @@ const AllAnnouncements = () => {
   const handleUpdate = async (updatedData) => {
     setOperationLoading('update');
     try {
-      await axios.put(`http://localhost:3000/api/announcement/update/${selectedAnnouncement._id}`, updatedData);
+      await axios.put(`https://api.mouldmarket.in/api/announcement/update/${selectedAnnouncement._id}`, updatedData);
       setEditModal(false);
       showToast('Announcement updated successfully', 'success');
       fetchAnnouncements();
@@ -365,7 +365,7 @@ const AllAnnouncements = () => {
   const confirmSetDefault = async () => {
     setOperationLoading('default');
     try {
-      await axios.put(`http://localhost:3000/api/announcement/update/${selectedAnnouncement._id}`, { 
+      await axios.put(`https://api.mouldmarket.in/api/announcement/update/${selectedAnnouncement._id}`, { 
         ...selectedAnnouncement,
         isDefault: true 
       });
@@ -726,7 +726,7 @@ const EditForm = ({ initialData, onSubmit, onCancel, loading }) => {
 
         // Check for overlapping announcements
         try {
-          const response = await axios.get('http://localhost:3000/api/announcement/all');
+          const response = await axios.get('https://api.mouldmarket.in/api/announcement/all');
           const announcements = response.data;
           
           const overlapping = announcements.find(ann => 

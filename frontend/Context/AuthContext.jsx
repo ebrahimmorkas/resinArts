@@ -27,7 +27,7 @@ export const AuthProvider = ({children}) => {
           }
 
           const res = await axios.get(
-            'http://localhost:3000/api/auth/me',
+            'https://api.mouldmarket.in/api/auth/me',
             {withCredentials: true},
           );
           

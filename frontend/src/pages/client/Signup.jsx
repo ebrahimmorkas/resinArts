@@ -194,10 +194,10 @@ const Signup = () => {
     }
 
     try {
-      const registerRes = await axios.post("http://localhost:3000/api/auth/register", formData);
+      const registerRes = await axios.post("https://api.mouldmarket.in/api/auth/register", formData);
       
       const loginRes = await axios.post(
-        "http://localhost:3000/api/auth/login",
+        "https://api.mouldmarket.in/api/auth/login",
         {
           email: formData.email,
           password: formData.password,

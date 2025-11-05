@@ -45,7 +45,7 @@ const AddAnnouncement = ({ onSuccess }) => {
     setLoading(true);
     
     try {
-      await axios.post('http://localhost:3000/api/announcement/add', formData);
+      await axios.post('https://api.mouldmarket.in/api/announcement/add', formData);
       showToast('Announcement added successfully! 🎉');
       setFormData({ text: '', startDate: '', endDate: '', isDefault: false });
       if (onSuccess) onSuccess();
@@ -67,7 +67,7 @@ const AddAnnouncement = ({ onSuccess }) => {
     setShowModal(false);
     setLoading(true);
     try {
-      await axios.post('http://localhost:3000/api/announcement/add-with-override', formData);
+      await axios.post('https://api.mouldmarket.in/api/announcement/add-with-override', formData);
       showToast('Announcement added and set as default! ✅');
       setFormData({ text: '', startDate: '', endDate: '', isDefault: false });
       if (onSuccess) onSuccess();
@@ -84,7 +84,7 @@ const AddAnnouncement = ({ onSuccess }) => {
     setLoading(true);
     try {
       const dataWithoutDefault = { ...formData, isDefault: false };
-      await axios.post('http://localhost:3000/api/announcement/add', dataWithoutDefault);
+      await axios.post('https://api.mouldmarket.in/api/announcement/add', dataWithoutDefault);
       showToast('Announcement added successfully! 📢');
       setFormData({ text: '', startDate: '', endDate: '', isDefault: false });
       if (onSuccess) onSuccess();

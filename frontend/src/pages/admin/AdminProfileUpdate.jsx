@@ -72,7 +72,7 @@ const AdminProfileUpdate = () => {
       if (formData.password) updateData.password = formData.password;
 
       const response = await axios.put(
-        'http://localhost:3000/api/user/update-profile-admin',
+        'https://api.mouldmarket.in/api/user/update-profile-admin',
         updateData,
         { withCredentials: true }
       );

@@ -560,7 +560,7 @@ function AddProductToOrderModal({ onClose, onAddProducts, existingProducts }) {
   useEffect(() => {
     const fetchCategories = async () => {
       try {
-        const response = await axios.get('http://localhost:3000/api/category/all', { withCredentials: true });
+        const response = await axios.get('https://api.mouldmarket.in/api/category/all', { withCredentials: true });
         setAllCategoriesTree(response.data);
         setAllCategoriesFlat(flattenCategories(response.data));
       } catch (error) {

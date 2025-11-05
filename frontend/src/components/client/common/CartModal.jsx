@@ -87,7 +87,7 @@ export default function CartModal() {
     console.log('Cart Items being sent to checkout:', JSON.stringify(cartItems, null, 2));
 
     const res = await axios.post(
-      'http://localhost:3000/api/order/place-order',
+      'https://api.mouldmarket.in/api/order/place-order',
       cartItems,
       {
         withCredentials: true,

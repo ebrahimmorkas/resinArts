@@ -53,7 +53,7 @@ export const FavoritesProvider = ({ children }) => {
     try {
       const endpoint = isFavorited ? '/remove' : '/add';
       await axios.post(
-        `http://localhost:3000/api/favourites${endpoint}`,
+        `https://api.mouldmarket.in/api/favourites${endpoint}`,
         { productId },
         { withCredentials: true }
       );

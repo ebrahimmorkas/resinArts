@@ -28,7 +28,7 @@ export const CategoryProvider = ({ children }) => {
         }
 
         const res = await axios.get(
-          "http://localhost:3000/api/category/fetch-categories",
+          "https://api.mouldmarket.in/api/category/fetch-categories",
           { withCredentials: true }
         );
         

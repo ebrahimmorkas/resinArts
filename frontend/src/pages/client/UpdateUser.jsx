@@ -33,7 +33,7 @@ const UpdateUser = () => {
         const loadUserProfile = async () => {
             try {
                 setIsLoadingData(true);
-                const response = await axios.get('http://localhost:3000/api/user/profile', {
+                const response = await axios.get('https://api.mouldmarket.in/api/user/profile', {
     withCredentials: true // Send HTTP-only cookies
 });
 
@@ -270,7 +270,7 @@ const UpdateUser = () => {
             // Log the data being sent for debugging
             console.log('PUT Request Data:', submitData);
 
-            const response = await axios.put('http://localhost:3000/api/user/update-profile', submitData, {
+            const response = await axios.put('https://api.mouldmarket.in/api/user/update-profile', submitData, {
     headers: {
         'Content-Type': 'application/json'
     },

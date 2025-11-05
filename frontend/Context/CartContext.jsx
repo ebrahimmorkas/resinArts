@@ -90,7 +90,7 @@ export const CartProvider = ({ children }) => {
             const guestCart = localStorage.getItem('guestCart');
             
             // Fetch backend cart first
-            const response = await axios.get("http://localhost:3000/api/cart", {
+            const response = await axios.get("https://api.mouldmarket.in/api/cart", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -130,7 +130,7 @@ export const CartProvider = ({ children }) => {
                     if (backendCart[cartKey]) {
                         // Item exists in backend, increase quantity
                         await axios.put(
-                            "http://localhost:3000/api/cart",
+                            "https://api.mouldmarket.in/api/cart",
                             {
                                 product_id: guestItem.productId,
                                 variant_name: guestItem.variantName,
@@ -164,7 +164,7 @@ export const CartProvider = ({ children }) => {
                         if (guestItem.variantName) cartItemData.variant_name = guestItem.variantName;
                         if (guestItem.sizeString) cartItemData.size = guestItem.sizeString;
 
-                        await axios.post("http://localhost:3000/api/cart", cartItemData, {
+                        await axios.post("https://api.mouldmarket.in/api/cart", cartItemData, {
                             withCredentials: true,
                             headers: {
                                 "Content-Type": "application/json",
@@ -291,7 +291,7 @@ if (applyFreeCash && freeCash) {
         }
 
         // Background API call
-        axios.post("http://localhost:3000/api/cart", cartItemData, {
+        axios.post("https://api.mouldmarket.in/api/cart", cartItemData, {
             withCredentials: true,
             headers: {
                 "Content-Type": "application/json",
@@ -375,7 +375,7 @@ if (applyFreeCash && freeCash) {
         }
 
         axios.put(
-            "http://localhost:3000/api/cart",
+            "https://api.mouldmarket.in/api/cart",
             {
                 product_id: item.productId,
                 variant_name: item.variantName,
@@ -432,7 +432,7 @@ if (applyFreeCash && freeCash) {
         setCartItems(optimisticCartItems);
 
         // Background API call
-        axios.delete("http://localhost:3000/api/cart", {
+        axios.delete("https://api.mouldmarket.in/api/cart", {
             withCredentials: true,
             headers: {
                 "Content-Type": "application/json",
@@ -536,7 +536,7 @@ if (applyFreeCash && freeCash) {
 
                 try {
                     await axios.put(
-                        "http://localhost:3000/api/cart",
+                        "https://api.mouldmarket.in/api/cart",
                         {
                             product_id: item.productId,
                             variant_name: item.variantName,
@@ -601,7 +601,7 @@ if (applyFreeCash && freeCash) {
             }
 
             // Logged in user - clear backend
-            const response = await axios.delete("http://localhost:3000/api/cart/clear", {
+            const response = await axios.delete("https://api.mouldmarket.in/api/cart/clear", {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",

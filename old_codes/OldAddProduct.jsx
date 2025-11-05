@@ -198,7 +198,7 @@ const AddProduct = () => {
     try {
       setLoading(true)
       console.log("Fetching categories from /api/category/all...")
-      const response = await axios.get("http://localhost:3000/api/category/all", { withCredentials: true })
+      const response = await axios.get("https://api.mouldmarket.in/api/category/all", { withCredentials: true })
       const categoriesData = response.data
       console.log("Fetched categories:", JSON.stringify(categoriesData, null, 2))
       if (!Array.isArray(categoriesData)) {
@@ -1272,7 +1272,7 @@ const AddProduct = () => {
       }
     }
 
-    const response = await axios.post("http://localhost:3000/api/product/add", formDataToSend, {
+    const response = await axios.post("https://api.mouldmarket.in/api/product/add", formDataToSend, {
       headers: { "Content-Type": "multipart/form-data" },
       withCredentials: true,
     })

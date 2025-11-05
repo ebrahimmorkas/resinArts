@@ -18,7 +18,7 @@ const ForgotPassword = () => {
     setSuccessMessage('');
 
     try {
-      const res = await axios.post('http://localhost:3000/api/auth/forgot-password', { email });
+      const res = await axios.post('https://api.mouldmarket.in/api/auth/forgot-password', { email });
       setSuccessMessage(res.data.message);
       setEmail('');
     } catch (err) {

@@ -366,7 +366,7 @@ useEffect(() => {
       // If not in context, fetch from backend
       try {
         const response = await axios.get(
-          `http://localhost:3000/api/product/${productId}`,
+          `https://api.mouldmarket.in/api/product/${productId}`,
           { withCredentials: true }
         )
         

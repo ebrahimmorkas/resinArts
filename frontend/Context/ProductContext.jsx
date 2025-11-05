@@ -25,8 +25,8 @@ export const ProductProvider = ({ children }) => {
       
       // Build URL
       const url = isAdmin 
-        ? 'http://localhost:3000/api/product/all?all=true'
-        : `http://localhost:3000/api/product/all?page=${page}&limit=50`;
+        ? 'https://api.mouldmarket.in/api/product/all?all=true'
+        : `https://api.mouldmarket.in/api/product/all?page=${page}&limit=50`;
 
       const response = await axios.get(url, { withCredentials: true });
       console.log("Fetch Response:", {
@@ -74,7 +74,7 @@ export const ProductProvider = ({ children }) => {
     
     for (let page = 1; page <= targetPage; page++) {
       const response = await axios.get(
-        `http://localhost:3000/api/product/all?page=${page}&limit=50`,
+        `https://api.mouldmarket.in/api/product/all?page=${page}&limit=50`,
         { withCredentials: true }
       );
       
@@ -109,7 +109,7 @@ export const ProductProvider = ({ children }) => {
     const fetchAllProducts = async () => {
       try {
         setLoading(true);
-        const response = await axios.get('http://localhost:3000/api/product/all?all=true', { 
+        const response = await axios.get('https://api.mouldmarket.in/api/product/all?all=true', { 
           withCredentials: true 
         });
         

@@ -5,7 +5,7 @@ import io from 'socket.io-client';
 import { ProductContext } from '../../../../../Context/ProductContext';
 import OverrideProductsModal from './OverrideProductsModal';
 
-const socket = io('http://localhost:3000');
+const socket = io('https://api.mouldmarket.in');
 
 // Loading Spinner Component
 const LoadingSpinner = ({ message = "Processing..." }) => {
@@ -224,7 +224,7 @@ const [pendingUploadData, setPendingUploadData] = useState(null);
   formData.append('imagesZip', zipFile);
 
   try {
-    const res = await axios.post('http://localhost:3000/api/product/bulk-upload', formData, {
+    const res = await axios.post('https://api.mouldmarket.in/api/product/bulk-upload', formData, {
       withCredentials: true,
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -297,7 +297,7 @@ const handleOverrideProducts = async (selectedProductIds) => {
     formData.append('imagesZip', pendingUploadData.zipFile);
     formData.append('productIds', JSON.stringify(selectedProductIds));
 
-    const res = await axios.post('http://localhost:3000/api/product/bulk-override', formData, {
+    const res = await axios.post('https://api.mouldmarket.in/api/product/bulk-override', formData, {
       withCredentials: true,
       headers: {
         'Content-Type': 'multipart/form-data',
@@ -367,7 +367,7 @@ const handleOverrideProducts = async (selectedProductIds) => {
             </div>
             <div className="flex items-center space-x-4">
   <button
-    onClick={() => window.open('http://localhost:3000/products_sample.xlsx', '_blank')}
+    onClick={() => window.open('https://api.mouldmarket.in/products_sample.xlsx', '_blank')}
     className="inline-flex items-center px-4 py-2 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded-lg hover:bg-green-200 dark:hover:bg-green-800 transition-all duration-200 text-sm font-medium"
   >
     <FileSpreadsheet className="w-5 h-5 mr-2" />

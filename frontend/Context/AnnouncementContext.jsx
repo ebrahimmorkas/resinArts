@@ -27,7 +27,7 @@ export const AnnouncementProvider = ({ children }) => {
           }
         }
 
-        const res = await axios.get('http://localhost:3000/api/announcement/all', {
+        const res = await axios.get('https://api.mouldmarket.in/api/announcement/all', {
           withCredentials: true
         });
        

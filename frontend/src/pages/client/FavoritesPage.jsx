@@ -31,7 +31,7 @@ const FavoritesPage = () => {
       }
 
       const response = await axios.get(
-        `http://localhost:3000/api/favourites/list?page=${pageNum}&limit=${limit}`,
+        `https://api.mouldmarket.in/api/favourites/list?page=${pageNum}&limit=${limit}`,
         { withCredentials: true }
       );
 

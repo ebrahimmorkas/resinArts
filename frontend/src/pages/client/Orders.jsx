@@ -305,7 +305,7 @@ useEffect(() => {
         console.log("Fetching orders for userId:", userId);
         setLoadingOrders(true);
         const res = await axios.post(
-          "http://localhost:3000/api/user/find-user",
+          "https://api.mouldmarket.in/api/user/find-user",
           { userId },
           { withCredentials: true }
         );

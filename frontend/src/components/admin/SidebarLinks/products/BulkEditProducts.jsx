@@ -96,7 +96,7 @@ export default function BulkEditProducts() {
         const productIds = ids.split(',')
         
         const promises = productIds.map(id => 
-          axios.get(`http://localhost:3000/api/product/${id}`, {
+          axios.get(`https://api.mouldmarket.in/api/product/${id}`, {
             withCredentials: true
           })
         )
@@ -664,7 +664,7 @@ export default function BulkEditProducts() {
       })
 
       const response = await axios.put(
-        `http://localhost:3000/api/product/bulk-edit`,
+        `https://api.mouldmarket.in/api/product/bulk-edit`,
         formData,
         {
           headers: { 'Content-Type': 'multipart/form-data' },
