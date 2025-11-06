@@ -67,6 +67,22 @@ const orderSchema = mongoose.Schema({
         type: String,
         required: true,
     },
+    // Delivery address information
+address_id: {
+    type: mongoose.Types.ObjectId,
+    ref: 'Address',
+    required: false, // null means home address from User model
+},
+delivery_address: {
+    type: {
+        name: { type: String, required: true }, // "Home" or custom name
+        state: { type: String, required: true },
+        city: { type: String, required: true },
+        pincode: { type: String, required: true },
+        full_address: { type: String, required: true },
+    },
+    required: true,
+},
     orderedProducts: [orderedProductSchema],
     status: {
         type: String,

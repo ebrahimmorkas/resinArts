@@ -110,8 +110,9 @@ const findProduct = async (productId) => {
 // Function to add the order
 const placeOrder = async (req, res) => {
   try {
-    const cartItems = Object.values(req.body);
-    if (!cartItems || cartItems.length === 0) {
+    const { cartItems, deliveryAddress } = req.body;
+const cartItemsArray = Object.values(cartItems);
+if (!cartItemsArray || cartItemsArray.length === 0) {
       return res.status(400).json({
         success: false,
         message: 'Cart is empty',
@@ -154,7 +155,7 @@ const placeOrder = async (req, res) => {
       isActive: true,
     });
 
-    for (const cartData of cartItems) {
+    for (const cartData of cartItemsArray) {
       try {
         const product = await Product.findById(cartData.productId);
         if (!product) {
@@ -316,7 +317,15 @@ const placeOrder = async (req, res) => {
         email: user.email,
         phone_number: user.phone_number,
         whatsapp_number: user.whatsapp_number,
-        orderedProducts: ordersToAdd,
+  address_id: deliveryAddress?.address_id || null,
+  delivery_address: {
+    name: deliveryAddress?.name || 'Home',
+    state: deliveryAddress?.state || user.state,
+    city: deliveryAddress?.city || user.city,
+    pincode: deliveryAddress?.pincode || user.zip_code,
+    full_address: deliveryAddress?.full_address || user.address,
+  },
+  orderedProducts: ordersToAdd,
         price: finalPrice,
         shipping_price: shippingPrice || 0,
         total_price: isPending ? "Pending" : (finalPrice + (shippingPrice || 0)),
@@ -489,7 +498,7 @@ This is an automated email notification.
           totalPrice: finalPrice,
           itemCount: ordersToAdd.length,
           validItems: ordersToAdd.length,
-          totalItems: cartItems.length,
+          totalItems: cartItemsArray.length,
         },
         warnings: errors.length > 0 ? {
           message: `${errors.length} items could not be processed`,
