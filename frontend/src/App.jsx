@@ -13,6 +13,9 @@ import ForgotPassword from './pages/client/ForgotPassword';
 import ResetPassword from './pages/client/ResetPassword';
 import ProductDetailsPage from './pages/client/ProductDetailsPage';
 import FavoritesPage from './pages/client/FavoritesPage';
+import Addresses from './pages/client/address/Addresses';
+import AddAddress from './pages/client/address/AddAddress';
+import UpdateAddress from './pages/client/address/UpdateAddress';
 import useCompanySettings from '../hooks/useCompanySettings';
 
 function App() {
@@ -58,6 +61,24 @@ function App() {
             <Orders />
           </ProtectedRoute>
         } />
+
+{/* Start fo addresses routes */}
+        <Route path="address/all" element={
+          <ProtectedRoute allowedRole="user">
+            <Addresses />
+          </ProtectedRoute>
+        } />
+        <Route path="address/add" element={
+          <ProtectedRoute allowedRole="user">
+            <AddAddress />
+          </ProtectedRoute>
+        } />
+        <Route path="address/update/:id" element={
+          <ProtectedRoute allowedRole="user">
+            <UpdateAddress />
+          </ProtectedRoute>
+        } />
+        {/* End of addresses routes */}
         
         <Route path='/admin' element={<OrdersPanel />} />
       </Routes>

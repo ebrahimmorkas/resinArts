@@ -17,6 +17,7 @@ const announcementRoutes = require('./routes/announcementRoutes');
 const companySettingsRoute = require('./routes/companySettingsRoutes');
 const abandonedCartRoutes = require('./routes/abandonedCartRoutes');
 const notificationRoutes = require('./routes/notificationRoutes');
+const addressRoutes = require('./routes/addressRoutes');
 const authenticate = require('./middlewares/authenticate');
 const authorize = require('./middlewares/authorize');
 const User = require('./models/User');
@@ -119,6 +120,7 @@ app.use('/api/free-cash', authenticate, freeCashRoutes);
 app.use('/api/abandoned-cart', authenticate, abandonedCartRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/favourites', authenticate, authorize(['user']), require('./routes/favoritesRoutes'));
+app.use('/api/address', authenticate, addressRoutes);
 
 // Authenticated user info
 app.get('/api/auth/me', authenticate, async (req, res) => {
