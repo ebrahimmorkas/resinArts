@@ -310,7 +310,7 @@ useEffect(() => {
                 <p className="text-gray-500 text-lg dark:text-white">Your cart is empty</p>
                 <button
                   onClick={() => setIsCartOpen(false)}
-                  className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:text-gray-400"
+                  className="mt-6 px-6 py-2 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors dark:text-gray-400"
                 >
                   Continue Shopping
                 </button>

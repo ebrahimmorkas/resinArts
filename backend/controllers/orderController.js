@@ -454,10 +454,10 @@ Email: ${user.email}
 Phone: ${user.phone_number}
 WhatsApp: ${user.whatsapp_number}
 
-Address: ${user.address || 'Not provided'}
-City: ${user.city || 'Not provided'}
-State: ${user.state || 'Not provided'}
-Pincode: ${user.zip_code || 'Not provided'}
+DELIVERY ADDRESS (${orderData.delivery_address.name}):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${orderData.delivery_address.full_address}
+${orderData.delivery_address.city}, ${orderData.delivery_address.state} - ${orderData.delivery_address.pincode}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 ORDER DETAILS
@@ -1270,9 +1270,10 @@ Email: ${order.email || user.email}
 Phone: ${order.phone_number || user.phone_number}
 WhatsApp: ${order.whatsapp_number || ''}
 
-DELIVERY ADDRESS:
+DELIVERY ADDRESS (${order.delivery_address?.name || 'N/A'}):
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${order.address || 'As provided during checkout'}
+${order.delivery_address?.full_address || 'Address not available'}
+${order.delivery_address?.city || ''}, ${order.delivery_address?.state || ''} - ${order.delivery_address?.pincode || ''}
 
 ORDER ITEMS:
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━

@@ -379,6 +379,19 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                   <span className="text-gray-600 dark:text-gray-400">WhatsApp:</span>
                   <span className="font-medium">{order.whatsapp_number}</span>
                 </div>
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="text-gray-600 dark:text-gray-400 mb-1 font-semibold">Delivery Address ({order.delivery_address?.name || 'N/A'}):</div>
+                  <div className="font-medium text-gray-900 dark:text-white text-sm">
+                    {order.delivery_address && order.delivery_address.full_address ? (
+                      <>
+                        {order.delivery_address.full_address}<br />
+                        {order.delivery_address.city}, {order.delivery_address.state} - {order.delivery_address.pincode}
+                      </>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500 italic">Address not available</span>
+                    )}
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -671,7 +684,15 @@ pdfContent.innerHTML = `
               <p style="margin: 8px 0;"><strong>Email:</strong> ${order.email}</p>
               <p style="margin: 8px 0;"><strong>Phone:</strong> ${order.phone_number}</p>
               <p style="margin: 8px 0;"><strong>WhatsApp:</strong> ${order.whatsapp_number}</p>
-              <p style="margin: 8px 0; font-size: 10px; color: #6b7280;"><strong>User ID:</strong> ${order.user_id}</p>
+              <p style="margin: 8px 0;"><strong>WhatsApp:</strong> ${order.whatsapp_number}</p>
+              <p>
+                DELIVERY ADDRESS (${order.delivery_address?.name || 'N/A'}):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+${order.delivery_address && order.delivery_address.full_address 
+  ? `${order.delivery_address.full_address}
+${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.pincode}`
+  : 'Address not available'}
+              </p>
             </div>
           </div>
 
@@ -878,6 +899,11 @@ pdfContent.innerHTML = `
       'Phone': order.phone_number,
       'WhatsApp': order.whatsapp_number,
       'Email': order.email,
+      'Delivery Address Name': order.delivery_address?.name || 'N/A',
+      'Full Address': order.delivery_address?.full_address || 'N/A',
+      'City': order.delivery_address?.city || 'N/A',
+      'State': order.delivery_address?.state || 'N/A',
+      'Pincode': order.delivery_address?.pincode || 'N/A',
       'Total Price': order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`,
       'Status': order.status,
       'Ordered At': formatOrderDate(order.createdAt, index),
