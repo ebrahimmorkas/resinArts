@@ -788,11 +788,11 @@ pdfContent.innerHTML = `
                       <div>
                         ${product.variant_name ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Variant:</strong> ${product.variant_name}</p>` : ''}
                         ${product.size ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Size:</strong> ${product.size}</p>` : ''}
-                        <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹{product.price}</p>
+                        <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹${product.price}</p>
                       </div>
                       <div>
                         <p style="margin: 4px 0; font-size: 14px;"><strong>Quantity:</strong> ${product.quantity}</p>
-                        <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹{product.total}</strong></p>
+                        <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹${product.total}</strong></p>
                       </div>
                     </div>
                     <div style="font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 8px; border-radius: 4px;">
