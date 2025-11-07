@@ -144,7 +144,7 @@ app.use('/api/free-cash', authenticate, freeCashRoutes);
 app.use('/api/abandoned-cart', authenticate, abandonedCartRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/favourites', authenticate, authorize(['user']), favoritesRoutes);
-app.use('/api/address', authenticate, authorize(['user']), addressRoutes);
+app.use('/api/address', authenticate, addressRoutes);
 
 // Authenticated user info
 app.get('/api/auth/me', authenticate, async (req, res) => {

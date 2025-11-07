@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useContext } from "react"
-import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar, DollarSign, Trash2 } from "lucide-react"
+import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar, DollarSign, Trash2, MapPin } from "lucide-react"
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from "jspdf";
@@ -21,6 +21,7 @@ import BulkRejectConfirmationModal from './bulkOperationsModal/BulkRejectConfirm
 import BulkResultModal from './bulkOperationsModal/BulkResultModal';
 import BulkShippingPriceModal from './bulkOperationsModal/BulkShippingPriceModal';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
+import AdminAddressSelectionModal from './AdminAddressSelectionModal';
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -85,6 +86,8 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   const [isLoading, setIsLoading] = useState(false);
   const [isEditShippingPrice, setIsEditShippingPrice] = useState(false)
   const [pendingAcceptOrderId, setPendingAcceptOrderId] = useState(null);
+  const [showChangeAddressModal, setShowChangeAddressModal] = useState(false);
+const [isChangingAddress, setIsChangingAddress] = useState(false);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -119,6 +122,51 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     setCurrentOrder(order);
     setShowEditModal(true);
   };
+
+  // Function to handle address change
+const handleAddressChange = async (newAddress) => {
+  try {
+    setIsChangingAddress(true);
+    const res = await axios.post(
+      'http://localhost:3000/api/address/change-order-address',
+      {
+        orderId: order._id,
+        newAddress: {
+          address_id: newAddress.id,
+          name: newAddress.name,
+          state: newAddress.state,
+          city: newAddress.city,
+          pincode: newAddress.pincode,
+          full_address: newAddress.full_address
+        },
+        changedBy: 'admin'
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success('Delivery address changed successfully!');
+      
+      // Update the selected order state
+      setSelectedOrder(prev => ({
+        ...prev,
+        delivery_address: newAddress,
+        address_id: newAddress.id,
+        shipping_price: res.data.order.shipping_price,
+        total_price: res.data.order.total_price
+      }));
+
+      // Trigger parent component refresh if needed
+      onStatusChange(order._id, order.status);
+    }
+  } catch (error) {
+    console.error('Address change error:', error);
+    toast.error(error.response?.data?.message || 'Failed to change address. Please try again.');
+  } finally {
+    setIsChangingAddress(false);
+    setShowChangeAddressModal(false);
+  }
+};
 
   // Function to check stock status and return appropriate styling
   const getStockStatus = (orderedQuantity, currentStock) => {
@@ -331,6 +379,22 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     <DollarSign className="h-4 w-4 mr-2" />
     Edit Shipping ({order.shipping_price === 0 ? 'Free' : `₹${order.shipping_price}`})
   </button>
+
+  <button
+  onClick={() => {
+    setShowChangeAddressModal(true);
+  }}
+  className="inline-flex items-center px-4 py-2 bg-purple-600 text-black dark:text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={!['Pending', 'Accepted', 'Confirm'].includes(order.status) || isChangingAddress}
+  title={
+    !['Pending', 'Accepted', 'Confirm'].includes(order.status)
+      ? "Address can only be changed for Pending, Accepted, or Confirm orders"
+      : "Change delivery address"
+  }
+>
+  <MapPin className="h-4 w-4 mr-2" />
+  Change Address
+</button>
 
   <button
     onClick={() => {
@@ -584,6 +648,16 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         />
       )}
       {showEditModal && <EditOrderModal onClose={() => setShowEditModal(false)} order={currentOrder} />}
+        {showChangeAddressModal && (
+  <AdminAddressSelectionModal
+    isOpen={showChangeAddressModal}
+    onClose={() => setShowChangeAddressModal(false)}
+    onSelectAddress={handleAddressChange}
+    currentAddressId={order.address_id}
+    userId={order.user_id}
+    currentAddress={order.delivery_address}
+  />
+)}
     </div>
   );
   // End of order details modal
