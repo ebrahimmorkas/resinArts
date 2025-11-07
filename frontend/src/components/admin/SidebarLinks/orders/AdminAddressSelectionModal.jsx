@@ -206,7 +206,7 @@ const AdminAddressSelectionModal = ({ isOpen, onClose, onSelectAddress, currentA
           <button
             onClick={handleConfirm}
             disabled={selectedId === undefined}
-            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
+            className="flex-1 px-4 py-2 bg-blue-600 hover:bg-blue-700 text-black dark:text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-medium"
           >
             Confirm Address Change
           </button>

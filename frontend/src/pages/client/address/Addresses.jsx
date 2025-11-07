@@ -9,6 +9,7 @@ import { AuthContext } from '../../../../Context/AuthContext';
 
 const Addresses = () => {
   const [addresses, setAddresses] = useState([]);
+const [homeAddress, setHomeAddress] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState('');
   const [deleteConfirm, setDeleteConfirm] = useState({ show: false, addressId: null, addressName: '' });
@@ -24,20 +25,35 @@ const Addresses = () => {
   }, [user, navigate]);
 
   const fetchAddresses = async () => {
-    try {
-      setIsLoading(true);
-      const response = await axios.get('http://localhost:3000/api/address', {
-        withCredentials: true
-      });
-      setAddresses(response.data.addresses);
-      setErrorMessage('');
-    } catch (error) {
-      console.error('Error fetching addresses:', error);
-      setErrorMessage(error.response?.data?.message || 'Failed to fetch addresses');
-    } finally {
-      setIsLoading(false);
-    }
-  };
+  try {
+    setIsLoading(true);
+    
+    // Fetch user's home address
+    const userResponse = await axios.get('http://localhost:3000/api/user/profile', {
+      withCredentials: true
+    });
+    const userData = userResponse.data.user;
+    setHomeAddress({
+      name: 'Home',
+      state: userData.state,
+      city: userData.city,
+      pincode: userData.zip_code,
+      full_address: userData.address
+    });
+    
+    // Fetch saved addresses
+    const response = await axios.get('http://localhost:3000/api/address', {
+      withCredentials: true
+    });
+    setAddresses(response.data.addresses);
+    setErrorMessage('');
+  } catch (error) {
+    console.error('Error fetching addresses:', error);
+    setErrorMessage(error.response?.data?.message || 'Failed to fetch addresses');
+  } finally {
+    setIsLoading(false);
+  }
+};
 
   const handleDelete = async (addressId) => {
     try {
@@ -92,11 +108,11 @@ const Addresses = () => {
           )}
 
           {/* Loading State */}
-          {isLoading ? (
-            <div className="flex justify-center items-center py-20">
-              <Loader className="w-8 h-8 animate-spin text-blue-600" />
-            </div>
-          ) : addresses.length === 0 ? (
+         {isLoading ? (
+  <div className="flex justify-center items-center py-20">
+    <Loader className="w-8 h-8 animate-spin text-blue-600" />
+  </div>
+) : !homeAddress && addresses.length === 0 ? (
             /* Empty State */
             <div className="text-center py-20">
               <MapPin className="w-16 h-16 text-gray-400 dark:text-gray-600 mx-auto mb-4" />
@@ -111,9 +127,44 @@ const Addresses = () => {
               </button>
             </div>
           ) : (
-            /* Address Cards Grid */
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {addresses.map((address) => (
+  /* Address Cards Grid */
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+    {/* Home Address Card (Default) */}
+    {homeAddress && (
+      <div className="bg-white dark:bg-gray-900 border-2 border-blue-500 dark:border-blue-600 rounded-lg p-6 hover:shadow-lg transition-shadow">
+        {/* Address Name Badge */}
+        <div className="flex items-center justify-between mb-4">
+          <span className="inline-flex items-center gap-2 px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 text-sm font-medium rounded-full">
+            <MapPin className="w-4 h-4" />
+            {homeAddress.name}
+          </span>
+          <span className="text-xs bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 px-2 py-1 rounded-full font-semibold">
+            Default
+          </span>
+        </div>
+
+        {/* Address Details */}
+        <div className="space-y-2 mb-6">
+          <p className="text-gray-900 dark:text-white font-medium">{homeAddress.full_address}</p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+            {homeAddress.city}, {homeAddress.state}
+          </p>
+          <p className="text-gray-600 dark:text-gray-400 text-sm">
+            PIN: {homeAddress.pincode}
+          </p>
+        </div>
+
+        {/* Info Message */}
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-3">
+          <p className="text-xs text-blue-800 dark:text-blue-300">
+            This is your default address from profile. Edit it from Profile Settings.
+          </p>
+        </div>
+      </div>
+    )}
+
+    {/* Saved Addresses */}
+    {addresses.map((address) => (
                 <div
                   key={address._id}
                   className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg p-6 hover:shadow-lg transition-shadow"

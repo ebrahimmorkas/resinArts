@@ -35,14 +35,22 @@ const getAddressById = async (req, res) => {
 const createAddress = async (req, res) => {
   try {
     const { name, state, city, pincode, full_address } = req.body;
-    
+
     // Validate required fields
-    if (!name || !state || !city || !pincode || !full_address) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'All fields are required' 
-      });
-    }
+if (!name || !state || !city || !pincode || !full_address) {
+  return res.status(400).json({ 
+    success: false, 
+    message: 'All fields are required' 
+  });
+}
+
+// Prevent using "Home" as address name (case-insensitive)
+if (name.trim().toLowerCase() === 'home') {
+  return res.status(400).json({ 
+    success: false, 
+    message: 'Cannot use "Home" as address name. This is reserved for your default address.' 
+  });
+}
     
     // Check if address name already exists for this user
     const existingAddress = await Address.findOne({ 
@@ -96,12 +104,20 @@ const updateAddress = async (req, res) => {
     const addressId = req.params.id;
     
     // Validate required fields
-    if (!name || !state || !city || !pincode || !full_address) {
-      return res.status(400).json({ 
-        success: false, 
-        message: 'All fields are required' 
-      });
-    }
+if (!name || !state || !city || !pincode || !full_address) {
+  return res.status(400).json({ 
+    success: false, 
+    message: 'All fields are required' 
+  });
+}
+
+// Prevent using "Home" as address name (case-insensitive)
+if (name.trim().toLowerCase() === 'home') {
+  return res.status(400).json({ 
+    success: false, 
+    message: 'Cannot use "Home" as address name. This is reserved for your default address.' 
+  });
+}
     
     // Find the address
     const address = await Address.findOne({ 
