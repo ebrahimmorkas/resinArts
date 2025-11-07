@@ -685,16 +685,17 @@ pdfContent.innerHTML = `
               <p style="margin: 8px 0;"><strong>Phone:</strong> ${order.phone_number}</p>
               <p style="margin: 8px 0;"><strong>WhatsApp:</strong> ${order.whatsapp_number}</p>
               <p style="margin: 8px 0;"><strong>WhatsApp:</strong> ${order.whatsapp_number}</p>
-              <p>
-                DELIVERY ADDRESS (${order.delivery_address?.name || 'N/A'}):
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-${order.delivery_address && order.delivery_address.full_address 
-  ? `${order.delivery_address.full_address}
-${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.pincode}`
-  : 'Address not available'}
-              </p>
             </div>
           </div>
+
+          <!-- Delivery Address Section -->
+          <div style="margin-bottom: 30px; border: 1px solid #d1d5db; border-radius: 8px; padding: 15px; background: #f9fafb;">
+            <h3 style="color: #374151; font-size: 14px; font-weight: bold; margin: 0 0 10px 0;">Delivery Address (${order.delivery_address?.name || 'N/A'})</h3>
+            <p style="margin: 0; font-size: 12px; color: #374151; line-height: 1.6; word-wrap: break-word; white-space: normal;">
+              ${order.delivery_address && order.delivery_address.full_address 
+                ? `${order.delivery_address.full_address}<br/>${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.pincode}`
+                : 'Address not available'}
+            </p>
 
           <!-- Products Section -->
           <div style="margin-bottom: 30px;">

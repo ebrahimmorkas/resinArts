@@ -230,7 +230,7 @@ const exportToExcel = (data) => {
         `"$${safeNumber(order.total).toFixed(2)}"`,
         `"${statusConfig[order.status]?.label || order.status}"`,
         `"${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}"`,
-        `"${order.shippingAddress.replace(/"/g, '""')}"`
+        `"${order.shippingAddress.replace(/\n/g, ', ').replace(/"/g, '""')}"`
       ];
       csvContent += row.join(',') + '\n';
     });
@@ -363,8 +363,10 @@ useEffect(() => {
       status: (order.status || 'pending').toLowerCase(),
       trackingNumber: order._id || '',
       estimatedDelivery: null,
-      shippingAddress: userAddress
-        ? `${userAddress.address || ''}, ${userAddress.city || ''}, ${userAddress.state || ''} ${userAddress.zipCode || ''}`
+      shippingAddress: order.delivery_address 
+        ? `${order.delivery_address.name}\n${order.delivery_address.full_address}\n${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.pincode}`
+        : userAddress
+        ? `Home\n${userAddress.address || ''}\n${userAddress.city || ''}, ${userAddress.state || ''} - ${userAddress.zipCode || ''}`
         : "Address not available",
       paymentStatus: order.payment_status ? order.payment_status.toLowerCase() : "pending",
     };
@@ -512,13 +514,14 @@ const filteredOrders = useMemo(() => {
     doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, contactY + 6);
     doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, contactY + 12);
     
-    // Bill To section
+    // Bill To section (Delivery Address)
     const billToY = addressY + 10;
     doc.setFontSize(12);
     doc.setFont(undefined, "bold");
-    doc.text("BILL TO:", 20, billToY);
+    doc.text("DELIVER TO:", 20, billToY);
     doc.setFontSize(10);
     doc.setFont(undefined, "normal");
+    // Split address properly for better formatting
     const addressLinesBill = doc.splitTextToSize(order.shippingAddress, 170);
     let addressYBill = billToY + 10;
     addressLinesBill.forEach((line) => {
@@ -615,7 +618,7 @@ const filteredOrders = useMemo(() => {
     doc.setFontSize(8);
     doc.setFont(undefined, "normal");
     doc.text("Thank you for your business!", 20, yPosition);
-    doc.text(`For support, contact us at ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, yPosition + 5);
+    doc.text(`For support, contact us at ${companySettings?.adminEmail || "Email Address not disclosed"}`, 20, yPosition + 5);
     const filename = `invoice-${order.id.substring(0, 10)}.pdf`;
     doc.save(filename);
   } catch (error) {
@@ -741,8 +744,8 @@ const handleSearchKeyPress = (e) => {
                 </div>
               </div>
               <div>
-                <h3 className="font-semibold -800 dark:text-gray-100 mb-2">Shipping Address</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{order.shippingAddress}</p>
+                <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Shipping Address</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line">{order.shippingAddress}</p>
               </div>
             </div>
             <div>
