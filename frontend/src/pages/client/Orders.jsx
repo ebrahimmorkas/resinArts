@@ -21,12 +21,16 @@ import {
   CheckCircle2,
   AlertCircle,
   RotateCcw,
+  MapPin
 } from "lucide-react"
 import Navbar from "../../components/client/common/Navbar"
 import Footer from "../../components/client/common/Footer"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
 import { CompanySettingsContext } from "../../../Context/CompanySettingsContext"
+import AddressSelectionModal from "../../components/client/common/AddressSelectionModal"
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const statusConfig = {
   pending: {
@@ -272,6 +276,9 @@ export default function Orders() {
 const [searchResults, setSearchResults] = useState([])
 const [showSearchResults, setShowSearchResults] = useState(false)
 const [isSearching, setIsSearching] = useState(false)
+const [showChangeAddressModal, setShowChangeAddressModal] = useState(false);
+const [selectedOrderForAddressChange, setSelectedOrderForAddressChange] = useState(null);
+const [isChangingAddress, setIsChangingAddress] = useState(false);
   // const [isAutoSwitching, setIsAutoSwitching] = useState(false);
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -627,6 +634,84 @@ const filteredOrders = useMemo(() => {
   }
 };
 
+// Handle address change for client
+const handleAddressChange = async (newAddress) => {
+  if (!selectedOrderForAddressChange) return;
+
+  try {
+    setIsChangingAddress(true);
+    
+    console.log('Order being changed:', selectedOrderForAddressChange); // Debug log
+    console.log('New address:', newAddress); // Debug log
+    
+    const res = await axios.post(
+      'http://localhost:3000/api/address/change-order-address',
+      {
+        orderId: selectedOrderForAddressChange.id, // Use 'id' from transformed order
+        newAddress: {
+          address_id: newAddress.id,
+          name: newAddress.name,
+          state: newAddress.state,
+          city: newAddress.city,
+          pincode: newAddress.pincode,
+          full_address: newAddress.full_address
+        },
+        changedBy: 'user'
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success('Delivery address changed successfully!', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+
+      // Show notification about informing seller
+      setTimeout(() => {
+        toast.info('📢 Please inform the seller about this address change via phone/WhatsApp and keep proof of communication to avoid delivery issues.', {
+          position: "top-center",
+          autoClose: 8000,
+          closeOnClick: false,
+          draggable: false,
+        });
+      }, 500);
+
+      // Refresh orders
+      const ordersRes = await axios.post(
+        "http://localhost:3000/api/user/find-user",
+        { userId },
+        { withCredentials: true }
+      );
+      
+      if (ordersRes.status === 200) {
+        const fetchedOrders = ordersRes.data.orders || [];
+        const fetchedAddress = ordersRes.data.userAddress || null;
+        setOrders(fetchedOrders);
+        setUserAddress(fetchedAddress);
+      }
+
+      // Update selected order in modal if it's open
+      if (selectedOrder && selectedOrder.id === selectedOrderForAddressChange.id) {
+        setSelectedOrder(prev => ({
+          ...prev,
+          shippingAddress: `${newAddress.name}\n${newAddress.full_address}\n${newAddress.city}, ${newAddress.state} - ${newAddress.pincode}`
+        }));
+      }
+    }
+  } catch (error) {
+    console.error('Address change error:', error);
+    toast.error(error.response?.data?.message || 'Failed to change address. Please try again.', {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  } finally {
+    setIsChangingAddress(false);
+    setShowChangeAddressModal(false);
+    setSelectedOrderForAddressChange(null);
+  }
+};
+
   const getPaymentStatus = (order) => {
     if (order.status === "returned") {
       return order.paymentStatus === "refund_pending" ? "refund_pending" : "refunded";
@@ -688,7 +773,63 @@ const handleSearchKeyPress = (e) => {
 }
 
   const OrderDetailsModal = ({ order, onClose }) => {
+    const [showChangeAddressModal, setShowChangeAddressModal] = useState(false);
+  const [isChangingAddress, setIsChangingAddress] = useState(false);
     if (!order) return null;
+    const handleModalAddressChange = async (newAddress) => {
+  try {
+    setIsChangingAddress(true);
+    
+    console.log('Modal order being changed:', order); // Debug log
+    console.log('New address:', newAddress); // Debug log
+    
+    const res = await axios.post(
+      'http://localhost:3000/api/address/change-order-address',
+      {
+        orderId: order.id, // Use 'id' from transformed order
+        newAddress: {
+          address_id: newAddress.id,
+          name: newAddress.name,
+          state: newAddress.state,
+          city: newAddress.city,
+          pincode: newAddress.pincode,
+          full_address: newAddress.full_address
+        },
+        changedBy: 'user'
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success('Delivery address changed successfully!', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+
+      setTimeout(() => {
+        toast.info('📢 Please inform the seller about this address change via phone/WhatsApp and keep proof of communication to avoid delivery issues.', {
+          position: "top-center",
+          autoClose: 8000,
+          closeOnClick: false,
+          draggable: false,
+        });
+      }, 500);
+
+      // Close modal and refresh
+      onClose();
+      window.location.reload();
+    }
+  } catch (error) {
+    console.error('Address change error:', error);
+    toast.error(error.response?.data?.message || 'Failed to change address. Please try again.', {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  } finally {
+    setIsChangingAddress(false);
+    setShowChangeAddressModal(false);
+  }
+};
     return (
       <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -789,6 +930,25 @@ const handleSearchKeyPress = (e) => {
                 <Download className="w-4 h-4 mr-2" />
                 {order.status === "pending" || order.status === "rejected" ? "Invoice Unavailable" : "Download Invoice"}
               </button>
+              <button
+  onClick={() => {
+    const canChange = ['pending', 'accepted', 'confirm'].includes(order.status);
+    if (canChange) {
+      setShowChangeAddressModal(true);
+    }
+  }}
+  disabled={!['pending', 'accepted', 'confirm'].includes(order.status) || isChangingAddress}
+  className={`inline-flex items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md transition-colors ${
+    ['pending', 'accepted', 'confirm'].includes(order.status)
+      ? "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-900/30"
+      : "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600 dark:border-gray-700"
+  }`}
+>
+  <MapPin className="w-4 h-4 mr-2" />
+  {['pending', 'accepted', 'confirm'].includes(order.status) 
+    ? (isChangingAddress ? "Changing..." : "Change Address")
+    : "Cannot Change Address"}
+</button>
               <div className="text-right">
                 <span className="text-lg font-semibold">Total Amount:</span>
                 <span className="text-2xl font-bold text-blue-600 ml-2">${safeNumber(order.total).toFixed(2)}</span>
@@ -1092,6 +1252,29 @@ const handleSearchKeyPress = (e) => {
                           >
                             <Download className="w-4 h-4" />
                           </button>
+                          <button
+  onClick={(e) => {
+    e.stopPropagation();
+    const canChange = ['pending', 'accepted', 'confirm'].includes(order.status);
+    if (canChange) {
+      setSelectedOrderForAddressChange(order);
+      setShowChangeAddressModal(true);
+    }
+  }}
+  disabled={!['pending', 'accepted', 'confirm'].includes(order.status)}
+  className={`p-1.5 rounded-md transition-colors ${
+    ['pending', 'accepted', 'confirm'].includes(order.status)
+      ? "text-purple-600 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20"
+      : "text-gray-400 cursor-not-allowed dark:text-gray-600"
+  }`}
+  title={
+    ['pending', 'accepted', 'confirm'].includes(order.status)
+      ? "Change delivery address"
+      : "Address cannot be changed after dispatch"
+  }
+>
+  <MapPin className="w-4 h-4" />
+</button>
                         </div>
                       </td>
                     </tr>
@@ -1193,6 +1376,34 @@ const handleSearchKeyPress = (e) => {
       </div>
       
       <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      
+      {/* Address Change Modal */}
+      {showChangeAddressModal && selectedOrderForAddressChange && (
+        <AddressSelectionModal
+          isOpen={showChangeAddressModal}
+          onClose={() => {
+            setShowChangeAddressModal(false);
+            setSelectedOrderForAddressChange(null);
+          }}
+          onSelectAddress={handleAddressChange}
+          currentAddressId={null}
+          userId={userId}
+        />
+      )}
+      
+      {/* Toast Container */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       </div>
       
       <Footer />
