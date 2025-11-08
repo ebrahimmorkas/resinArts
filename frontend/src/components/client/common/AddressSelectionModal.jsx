@@ -9,11 +9,18 @@ const AddressSelectionModal = ({ isOpen, onClose, onSelectAddress, currentAddres
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState('');
 
-  useEffect(() => {
-    if (isOpen && userId) {
-      fetchAddresses();
-    }
-  }, [isOpen, userId]);
+useEffect(() => {
+  if (isOpen && userId) {
+    fetchAddresses();
+  }
+}, [isOpen, userId]);
+
+// useEffect to set initial selection based on currentAddressId
+useEffect(() => {
+  if (isOpen && currentAddressId !== undefined) {
+    setSelectedId(currentAddressId);
+  }
+}, [isOpen, currentAddressId]);
 
   const fetchAddresses = async () => {
     try {

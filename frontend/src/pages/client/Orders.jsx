@@ -354,8 +354,9 @@ useEffect(() => {
   // Transform backend data to match frontend expectations
   const transformOrder = (order) => {
     return {
-      id: order._id || '',
-      date: order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+  id: order._id || '',
+  address_id: order.address_id || null, // ADD THIS LINE
+  date: order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       orderedAt: order.createdAt,
       items: (order.orderedProducts || []).map((product) => ({
         name: (product.product_name || 'Unknown Product') + (product.variant_name ? ` - ${product.variant_name}` : ""),
@@ -439,6 +440,21 @@ const filteredOrders = useMemo(() => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, ordersPerPage, statusFilter, paymentFilter, dateFilter]);
+
+  // Listen for address change event from modal
+useEffect(() => {
+  const handleAddressChangeEvent = (e) => {
+    const order = e.detail.order;
+    setSelectedOrderForAddressChange(order);
+    setShowChangeAddressModal(true);
+  };
+
+  document.addEventListener('openAddressChange', handleAddressChangeEvent);
+  
+  return () => {
+    document.removeEventListener('openAddressChange', handleAddressChangeEvent);
+  };
+}, []);
 
   const handleExportToExcel = () => {
     if (filteredOrders.length === 0) {
@@ -776,60 +792,7 @@ const handleSearchKeyPress = (e) => {
     const [showChangeAddressModal, setShowChangeAddressModal] = useState(false);
   const [isChangingAddress, setIsChangingAddress] = useState(false);
     if (!order) return null;
-    const handleModalAddressChange = async (newAddress) => {
-  try {
-    setIsChangingAddress(true);
     
-    console.log('Modal order being changed:', order); // Debug log
-    console.log('New address:', newAddress); // Debug log
-    
-    const res = await axios.post(
-      'http://localhost:3000/api/address/change-order-address',
-      {
-        orderId: order.id, // Use 'id' from transformed order
-        newAddress: {
-          address_id: newAddress.id,
-          name: newAddress.name,
-          state: newAddress.state,
-          city: newAddress.city,
-          pincode: newAddress.pincode,
-          full_address: newAddress.full_address
-        },
-        changedBy: 'user'
-      },
-      { withCredentials: true }
-    );
-
-    if (res.status === 200) {
-      toast.success('Delivery address changed successfully!', {
-        position: "top-right",
-        autoClose: 3000,
-      });
-
-      setTimeout(() => {
-        toast.info('📢 Please inform the seller about this address change via phone/WhatsApp and keep proof of communication to avoid delivery issues.', {
-          position: "top-center",
-          autoClose: 8000,
-          closeOnClick: false,
-          draggable: false,
-        });
-      }, 500);
-
-      // Close modal and refresh
-      onClose();
-      window.location.reload();
-    }
-  } catch (error) {
-    console.error('Address change error:', error);
-    toast.error(error.response?.data?.message || 'Failed to change address. Please try again.', {
-      position: "top-right",
-      autoClose: 3000,
-    });
-  } finally {
-    setIsChangingAddress(false);
-    setShowChangeAddressModal(false);
-  }
-};
     return (
       <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -930,11 +893,19 @@ const handleSearchKeyPress = (e) => {
                 <Download className="w-4 h-4 mr-2" />
                 {order.status === "pending" || order.status === "rejected" ? "Invoice Unavailable" : "Download Invoice"}
               </button>
-              <button
+<button
   onClick={() => {
     const canChange = ['pending', 'accepted', 'confirm'].includes(order.status);
     if (canChange) {
-      setShowChangeAddressModal(true);
+      onClose(); // Close the details modal first
+      // Then open address change modal via parent
+      const mainComponent = document.querySelector('[data-order-id]');
+      if (mainComponent) {
+        // Trigger parent's address change
+        setTimeout(() => {
+          document.dispatchEvent(new CustomEvent('openAddressChange', { detail: { order } }));
+        }, 300);
+      }
     }
   }}
   disabled={!['pending', 'accepted', 'confirm'].includes(order.status) || isChangingAddress}
@@ -946,7 +917,7 @@ const handleSearchKeyPress = (e) => {
 >
   <MapPin className="w-4 h-4 mr-2" />
   {['pending', 'accepted', 'confirm'].includes(order.status) 
-    ? (isChangingAddress ? "Changing..." : "Change Address")
+    ? "Change Address"
     : "Cannot Change Address"}
 </button>
               <div className="text-right">
@@ -1257,7 +1228,12 @@ const handleSearchKeyPress = (e) => {
     e.stopPropagation();
     const canChange = ['pending', 'accepted', 'confirm'].includes(order.status);
     if (canChange) {
-      setSelectedOrderForAddressChange(order);
+      // Find the original order from backend to get address_id
+      const originalOrder = orders.find(o => o._id === order.id);
+      setSelectedOrderForAddressChange({
+        ...order,
+        address_id: originalOrder?.address_id || null
+      });
       setShowChangeAddressModal(true);
     }
   }}
@@ -1375,21 +1351,21 @@ const handleSearchKeyPress = (e) => {
         </div>
       </div>
       
-      <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} userId={userId} />
       
-      {/* Address Change Modal */}
-      {showChangeAddressModal && selectedOrderForAddressChange && (
-        <AddressSelectionModal
-          isOpen={showChangeAddressModal}
-          onClose={() => {
-            setShowChangeAddressModal(false);
-            setSelectedOrderForAddressChange(null);
-          }}
-          onSelectAddress={handleAddressChange}
-          currentAddressId={null}
-          userId={userId}
-        />
-      )}
+    {/* Address Change Modal */}
+{showChangeAddressModal && selectedOrderForAddressChange && (
+  <AddressSelectionModal
+    isOpen={showChangeAddressModal}
+    onClose={() => {
+      setShowChangeAddressModal(false);
+      setSelectedOrderForAddressChange(null);
+    }}
+    onSelectAddress={handleAddressChange}
+    currentAddressId={selectedOrderForAddressChange.address_id}
+    userId={userId}
+  />
+)}
       
       {/* Toast Container */}
       <ToastContainer
