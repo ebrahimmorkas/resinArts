@@ -456,6 +456,28 @@ useEffect(() => {
   };
 }, []);
 
+// Listen for address change trigger from modal
+useEffect(() => {
+  const handleTriggerAddressChange = (e) => {
+    const orderId = e.detail.orderId;
+    const order = filteredOrders.find(o => o.id === orderId);
+    if (order) {
+      const originalOrder = orders.find(o => o._id === order.id);
+      setSelectedOrderForAddressChange({
+        ...order,
+        address_id: originalOrder?.address_id || null
+      });
+      setShowChangeAddressModal(true);
+    }
+  };
+
+  window.addEventListener('triggerAddressChange', handleTriggerAddressChange);
+  
+  return () => {
+    window.removeEventListener('triggerAddressChange', handleTriggerAddressChange);
+  };
+}, [filteredOrders, orders]);
+
   const handleExportToExcel = () => {
     if (filteredOrders.length === 0) {
       alert('No data to export');
@@ -897,18 +919,30 @@ const handleSearchKeyPress = (e) => {
   onClick={() => {
     const canChange = ['pending', 'accepted', 'confirm'].includes(order.status);
     if (canChange) {
-      onClose(); // Close the details modal first
-      // Then open address change modal via parent
-      const mainComponent = document.querySelector('[data-order-id]');
-      if (mainComponent) {
-        // Trigger parent's address change
-        setTimeout(() => {
-          document.dispatchEvent(new CustomEvent('openAddressChange', { detail: { order } }));
-        }, 300);
-      }
+      onClose(); // Close the details modal
+      // Use setTimeout to ensure modal closes before opening address modal
+      setTimeout(() => {
+        // Find the order from the main list
+        const mainOrders = document.querySelectorAll('[data-order-row]');
+        // Trigger the change by finding and clicking the MapPin button
+        const orderRow = Array.from(mainOrders).find(row => 
+          row.getAttribute('data-order-id') === order.id
+        );
+        if (orderRow) {
+          const mapPinButton = orderRow.querySelector('[data-change-address]');
+          if (mapPinButton) {
+            mapPinButton.click();
+          }
+        } else {
+          // Fallback: dispatch custom event
+          window.dispatchEvent(new CustomEvent('triggerAddressChange', { 
+            detail: { orderId: order.id } 
+          }));
+        }
+      }, 100);
     }
   }}
-  disabled={!['pending', 'accepted', 'confirm'].includes(order.status) || isChangingAddress}
+  disabled={!['pending', 'accepted', 'confirm'].includes(order.status)}
   className={`inline-flex items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md transition-colors ${
     ['pending', 'accepted', 'confirm'].includes(order.status)
       ? "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-900/30"
@@ -1174,7 +1208,7 @@ const handleSearchKeyPress = (e) => {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                   {currentData.map((order, index) => (
-                    <tr key={order.id} onClick={() => handleView(order)} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors hover:cursor-pointer">
+                    <tr key={order.id} onClick={() => handleView(order)} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors hover:cursor-pointer" data-order-row data-order-id={order.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '80px' }}>
                         {startIndex + index + 1}
                       </td>
@@ -1228,7 +1262,6 @@ const handleSearchKeyPress = (e) => {
     e.stopPropagation();
     const canChange = ['pending', 'accepted', 'confirm'].includes(order.status);
     if (canChange) {
-      // Find the original order from backend to get address_id
       const originalOrder = orders.find(o => o._id === order.id);
       setSelectedOrderForAddressChange({
         ...order,
@@ -1248,6 +1281,7 @@ const handleSearchKeyPress = (e) => {
       ? "Change delivery address"
       : "Address cannot be changed after dispatch"
   }
+  data-change-address
 >
   <MapPin className="w-4 h-4" />
 </button>

@@ -101,6 +101,12 @@ const AdminAddressSelectionModal = ({ isOpen, onClose, onSelectAddress, currentA
 
         {/* Content */}
         <div className="flex-1 overflow-y-auto p-6">
+          {/* Note about manual shipping price update */}
+  <div className="mb-4 p-3 bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-200 dark:border-yellow-800 rounded-lg">
+    <p className="text-sm text-yellow-800 dark:text-yellow-200">
+      <strong>Note:</strong> If your shipping price location is not present in the system, you will need to manually update the shipping price after changing the address.
+    </p>
+  </div>
           {isLoading ? (
             <div className="flex justify-center items-center py-12">
               <Loader className="w-8 h-8 animate-spin text-blue-600" />

@@ -145,9 +145,12 @@ const handleAddressChange = async (newAddress) => {
     );
 
     if (res.status === 200) {
-      toast.success('Delivery address changed successfully!');
+      toast.success('Delivery address changed successfully!', {
+        position: "top-right",
+        autoClose: 3000,
+      });
       
-      // Update the selected order state
+      // Update the selected order state immediately
       setSelectedOrder(prev => ({
         ...prev,
         delivery_address: newAddress,
@@ -156,15 +159,18 @@ const handleAddressChange = async (newAddress) => {
         total_price: res.data.order.total_price
       }));
 
-      // Trigger parent component refresh if needed
-      onStatusChange(order._id, order.status);
+      setShowChangeAddressModal(false);
+      
+      // Note: Real-time update via Socket.IO happens automatically from backend
     }
   } catch (error) {
     console.error('Address change error:', error);
-    toast.error(error.response?.data?.message || 'Failed to change address. Please try again.');
+    toast.error(error.response?.data?.message || 'Failed to change address. Please try again.', {
+      position: "top-right",
+      autoClose: 3000,
+    });
   } finally {
     setIsChangingAddress(false);
-    setShowChangeAddressModal(false);
   }
 };
 
@@ -384,16 +390,27 @@ const handleAddressChange = async (newAddress) => {
   onClick={() => {
     setShowChangeAddressModal(true);
   }}
-  className="inline-flex items-center px-4 py-2 bg-purple-600 text-black dark:text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white dark:text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
   disabled={!['Pending', 'Accepted', 'Confirm'].includes(order.status) || isChangingAddress}
   title={
     !['Pending', 'Accepted', 'Confirm'].includes(order.status)
       ? "Address can only be changed for Pending, Accepted, or Confirm orders"
+      : isChangingAddress
+      ? "Changing address..."
       : "Change delivery address"
   }
 >
-  <MapPin className="h-4 w-4 mr-2" />
-  Change Address
+  {isChangingAddress ? (
+    <>
+      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+      Changing...
+    </>
+  ) : (
+    <>
+      <MapPin className="h-4 w-4 mr-2" />
+      Change Address
+    </>
+  )}
 </button>
 
   <button
@@ -520,7 +537,7 @@ const handleAddressChange = async (newAddress) => {
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-semibold text-gray-900 dark:text-white text-lg">{product.product_name}</h4>
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-900 text-lg">{product.product_name}</h4>
                           <div
                             className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${stockStatus.bgColor} ${stockStatus.textColor}`}
                           >
@@ -1115,7 +1132,9 @@ useEffect(() => {
               price: updatedOrder.price,
               shipping_price: updatedOrder.shipping_price, 
               total_price: updatedOrder.total_price, 
-              status: updatedOrder.status 
+              status: updatedOrder.status,
+              delivery_address: updatedOrder.delivery_address, 
+              address_id: updatedOrder.address_id  
             }
           : order
       );
@@ -1131,6 +1150,8 @@ useEffect(() => {
         shipping_price: updatedOrder.shipping_price,
         total_price: updatedOrder.total_price,
         status: updatedOrder.status,
+        delivery_address: updatedOrder.delivery_address,
+        address_id: updatedOrder.address_id
       }));
     }
   } else {
@@ -1362,7 +1383,7 @@ const stats = useMemo(() => {
   const getStatusBadge = (status) => {
     const statusStyles = {
       'Completed': 'bg-green-100 text-green-800 border-green-200',
-      'Processing': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'Confirm': 'bg-yellow-100 text-yellow-800 border-yellow-200',
       'Shipped': 'bg-blue-100 text-blue-800 border-blue-200',
       'Pending': 'bg-orange-100 text-orange-800 border-orange-200',
       'Cancelled': 'bg-red-100 text-red-800 border-red-200',
