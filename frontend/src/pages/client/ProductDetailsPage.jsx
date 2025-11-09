@@ -780,59 +780,79 @@ if (productError || !product) {
                   <div className="flex items-center gap-4">
                     <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
                       <button
-                        onClick={() => {
-                          if (itemInCart) {
-                            updateQuantity(cartKey, -1)
-                          } else {
-                            quantity > 1 && setQuantity(quantity - 1)
-                          }
-                        }}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        disabled={itemInCart ? itemInCart.quantity <= 1 : quantity <= 1}
-                      >
-                        <Minus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
-                      </button>
+  onClick={() => {
+    if (itemInCart) {
+      updateQuantity(cartKey, -1)
+    } else {
+      quantity > 1 && setQuantity(quantity - 1)
+    }
+  }}
+  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={currentStock === 0 || (itemInCart ? itemInCart.quantity <= 1 : quantity <= 1)}
+>
+  <Minus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
+</button>
                       <input
-                        type="text"
-                        value={quantity}
-                        onChange={(e) => handleQuantityChange(e.target.value)}
-                        onBlur={(e) => {
-                          if (itemInCart) {
-                            const newQty = parseInt(e.target.value) || 1
-                            const diff = newQty - itemInCart.quantity
-                            if (diff !== 0) {
-                              updateQuantity(cartKey, diff)
-                            }
-                          }
-                        }}
-                        onKeyPress={(e) => {
-                          if (e.key === 'Enter' && itemInCart) {
-                            const newQty = parseInt(e.target.value) || 1
-                            const diff = newQty - itemInCart.quantity
-                            if (diff !== 0) {
-                              updateQuantity(cartKey, diff)
-                            }
-                            e.target.blur()
-                          }
-                        }}
-                        className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center border-0 focus:outline-none dark:bg-gray-900 dark:text-white"
-                      />
+  type="text"
+  value={quantity}
+  onChange={(e) => handleQuantityChange(e.target.value)}
+  onBlur={(e) => {
+    const val = e.target.value;
+    const num = parseInt(val);
+    
+    if (val === '' || val === '0' || isNaN(num) || num < 1) {
+      setQuantity(1);
+      if (itemInCart && itemInCart.quantity !== 1) {
+        const diff = 1 - itemInCart.quantity;
+        updateQuantity(cartKey, diff);
+      }
+    } else if (num > currentStock) {
+      setQuantity(currentStock);
+      if (itemInCart && itemInCart.quantity !== currentStock) {
+        const diff = currentStock - itemInCart.quantity;
+        updateQuantity(cartKey, diff);
+      }
+    } else if (itemInCart && num !== itemInCart.quantity) {
+      const diff = num - itemInCart.quantity;
+      updateQuantity(cartKey, diff);
+    }
+  }}
+  onKeyPress={(e) => {
+    if (e.key === 'Enter') {
+      e.target.blur();
+    }
+  }}
+  disabled={currentStock === 0}
+  className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center border-0 focus:outline-none dark:bg-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+/>
                       <button
-                        onClick={() => {
-                          if (itemInCart) {
-                            updateQuantity(cartKey, 1)
-                          } else {
-                            currentStock > 0 && quantity < currentStock && setQuantity(quantity + 1)
-                          }
-                        }}
-                        className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                        // disabled={itemInCart ? false : quantity >= currentStock}
-                      >
-                        <Plus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
-                      </button>
+  onClick={() => {
+    if (itemInCart) {
+      updateQuantity(cartKey, 1)
+    } else {
+      currentStock > 0 && quantity < currentStock && setQuantity(quantity + 1)
+    }
+  }}
+  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={currentStock === 0 || (itemInCart ? itemInCart.quantity >= currentStock : quantity >= currentStock)}
+>
+  <Plus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
+</button>
                     </div>
                   </div>
                 </div>
+
+                {currentStock === 0 && (
+                  <div className="text-sm text-red-600 dark:text-red-400 font-medium">
+                    Out of Stock
+                  </div>
+                )}
+
+                {currentStock > 0 && currentStock <= 10 && (
+                  <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+                    Only {currentStock} left in stock
+                  </div>
+                )}
 
                {itemInCart ? (
   <button
@@ -844,13 +864,13 @@ if (productError || !product) {
   </button>
                 ) : (
                   <button
-                    onClick={handleAddToCartFromModal}
-                    // disabled={currentStock === 0 || (product.hasVariants && (!selectedVariant || !selectedSize))}
-                    className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-green-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
-                  >
-                    <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-                    {`Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}
-                  </button>
+  onClick={handleAddToCartFromModal}
+  disabled={currentStock === 0 || quantity > currentStock || (product.hasVariants && (!selectedVariant || !selectedSize))}
+  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-green-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+>
+  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+  {currentStock === 0 ? 'Out of Stock' : `Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}
+</button>
                 )}
               </>
 

@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useMemo, useEffect, useContext } from "react"
-import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar, DollarSign, Trash2 } from "lucide-react"
+import { Search, Download, Check, X, XCircle, Clock, Truck, CheckCircle, Eye, User, Package, AlertTriangle, ChevronLeft, ChevronRight, Filter, Calendar, DollarSign, Trash2, MapPin } from "lucide-react"
 import * as XLSX from 'xlsx';
 import html2canvas from 'html2canvas';
 import { jsPDF } from "jspdf";
@@ -21,6 +21,7 @@ import BulkRejectConfirmationModal from './bulkOperationsModal/BulkRejectConfirm
 import BulkResultModal from './bulkOperationsModal/BulkResultModal';
 import BulkShippingPriceModal from './bulkOperationsModal/BulkShippingPriceModal';
 import DeleteConfirmationModal from './DeleteConfirmationModal';
+import AdminAddressSelectionModal from './AdminAddressSelectionModal';
 
 const statusColors = {
   Pending: "bg-yellow-100 text-yellow-800",
@@ -85,6 +86,8 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   const [isLoading, setIsLoading] = useState(false);
   const [isEditShippingPrice, setIsEditShippingPrice] = useState(false)
   const [pendingAcceptOrderId, setPendingAcceptOrderId] = useState(null);
+  const [showChangeAddressModal, setShowChangeAddressModal] = useState(false);
+const [isChangingAddress, setIsChangingAddress] = useState(false);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString("en-US", {
@@ -119,6 +122,57 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
     setCurrentOrder(order);
     setShowEditModal(true);
   };
+
+  // Function to handle address change
+const handleAddressChange = async (newAddress) => {
+  try {
+    setIsChangingAddress(true);
+    const res = await axios.post(
+      'https://api.mouldmarket.in/api/address/change-order-address',
+      {
+        orderId: order._id,
+        newAddress: {
+          address_id: newAddress.id,
+          name: newAddress.name,
+          state: newAddress.state,
+          city: newAddress.city,
+          pincode: newAddress.pincode,
+          full_address: newAddress.full_address
+        },
+        changedBy: 'admin'
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success('Delivery address changed successfully!', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      
+      // Update the selected order state immediately
+      setSelectedOrder(prev => ({
+        ...prev,
+        delivery_address: newAddress,
+        address_id: newAddress.id,
+        shipping_price: res.data.order.shipping_price,
+        total_price: res.data.order.total_price
+      }));
+
+      setShowChangeAddressModal(false);
+      
+      // Note: Real-time update via Socket.IO happens automatically from backend
+    }
+  } catch (error) {
+    console.error('Address change error:', error);
+    // toast.error(error.response?.data?.message || 'Failed to change address. Please try again.', {
+    //   position: "top-right",
+    //   autoClose: 3000,
+    // });
+  } finally {
+    setIsChangingAddress(false);
+  }
+};
 
   // Function to check stock status and return appropriate styling
   const getStockStatus = (orderedQuantity, currentStock) => {
@@ -333,6 +387,33 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
   </button>
 
   <button
+  onClick={() => {
+    setShowChangeAddressModal(true);
+  }}
+  className="inline-flex items-center px-4 py-2 bg-purple-600 text-white dark:text-white text-sm font-medium rounded-lg hover:bg-purple-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={!['Pending', 'Accepted', 'Confirm'].includes(order.status) || isChangingAddress}
+  title={
+    !['Pending', 'Accepted', 'Confirm'].includes(order.status)
+      ? "Address can only be changed for Pending, Accepted, or Confirm orders"
+      : isChangingAddress
+      ? "Changing address..."
+      : "Change delivery address"
+  }
+>
+  {isChangingAddress ? (
+    <>
+      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+      Changing...
+    </>
+  ) : (
+    <>
+      <MapPin className="h-4 w-4 mr-2" />
+      Change Address
+    </>
+  )}
+</button>
+
+  <button
     onClick={() => {
       handleEdit(order);
       setOrderId(order._id);
@@ -378,6 +459,19 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                 <div className="flex justify-between">
                   <span className="text-gray-600 dark:text-gray-400">WhatsApp:</span>
                   <span className="font-medium">{order.whatsapp_number}</span>
+                </div>
+                <div className="pt-2 border-t border-gray-200 dark:border-gray-700">
+                  <div className="text-gray-600 dark:text-gray-400 mb-1 font-semibold">Delivery Address ({order.delivery_address?.name || 'N/A'}):</div>
+                  <div className="font-medium text-gray-900 dark:text-white text-sm">
+                    {order.delivery_address && order.delivery_address.full_address ? (
+                      <>
+                        {order.delivery_address.full_address}<br />
+                        {order.delivery_address.city}, {order.delivery_address.state} - {order.delivery_address.pincode}
+                      </>
+                    ) : (
+                      <span className="text-gray-400 dark:text-gray-500 italic">Address not available</span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -443,7 +537,7 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
                       />
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-semibold text-gray-900 dark:text-white text-lg">{product.product_name}</h4>
+                          <h4 className="font-semibold text-gray-900 dark:text-gray-900 text-lg">{product.product_name}</h4>
                           <div
                             className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${stockStatus.bgColor} ${stockStatus.textColor}`}
                           >
@@ -571,6 +665,16 @@ function OrderDetailsModal({ order, isOpen, onClose, onStatusChange, productMapp
         />
       )}
       {showEditModal && <EditOrderModal onClose={() => setShowEditModal(false)} order={currentOrder} />}
+        {showChangeAddressModal && (
+  <AdminAddressSelectionModal
+    isOpen={showChangeAddressModal}
+    onClose={() => setShowChangeAddressModal(false)}
+    onSelectAddress={handleAddressChange}
+    currentAddressId={order.address_id}
+    userId={order.user_id}
+    currentAddress={order.delivery_address}
+  />
+)}
     </div>
   );
   // End of order details modal
@@ -671,9 +775,18 @@ pdfContent.innerHTML = `
               <p style="margin: 8px 0;"><strong>Email:</strong> ${order.email}</p>
               <p style="margin: 8px 0;"><strong>Phone:</strong> ${order.phone_number}</p>
               <p style="margin: 8px 0;"><strong>WhatsApp:</strong> ${order.whatsapp_number}</p>
-              <p style="margin: 8px 0; font-size: 10px; color: #6b7280;"><strong>User ID:</strong> ${order.user_id}</p>
+              <p style="margin: 8px 0;"><strong>WhatsApp:</strong> ${order.whatsapp_number}</p>
             </div>
           </div>
+
+          <!-- Delivery Address Section -->
+          <div style="margin-bottom: 30px; border: 1px solid #d1d5db; border-radius: 8px; padding: 15px; background: #f9fafb;">
+            <h3 style="color: #374151; font-size: 14px; font-weight: bold; margin: 0 0 10px 0;">Delivery Address (${order.delivery_address?.name || 'N/A'})</h3>
+            <p style="margin: 0; font-size: 12px; color: #374151; line-height: 1.6; word-wrap: break-word; white-space: normal;">
+              ${order.delivery_address && order.delivery_address.full_address 
+                ? `${order.delivery_address.full_address}<br/>${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.pincode}`
+                : 'Address not available'}
+            </p>
 
           <!-- Products Section -->
           <div style="margin-bottom: 30px;">
@@ -692,11 +805,11 @@ pdfContent.innerHTML = `
                       <div>
                         ${product.variant_name ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Variant:</strong> ${product.variant_name}</p>` : ''}
                         ${product.size ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Size:</strong> ${product.size}</p>` : ''}
-                        <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹{product.price}</p>
+                        <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹${product.price}</p>
                       </div>
                       <div>
                         <p style="margin: 4px 0; font-size: 14px;"><strong>Quantity:</strong> ${product.quantity}</p>
-                        <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹{product.total}</strong></p>
+                        <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹${product.total}</strong></p>
                       </div>
                     </div>
                     <div style="font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 8px; border-radius: 4px;">
@@ -878,6 +991,11 @@ pdfContent.innerHTML = `
       'Phone': order.phone_number,
       'WhatsApp': order.whatsapp_number,
       'Email': order.email,
+      'Delivery Address Name': order.delivery_address?.name || 'N/A',
+      'Full Address': order.delivery_address?.full_address || 'N/A',
+      'City': order.delivery_address?.city || 'N/A',
+      'State': order.delivery_address?.state || 'N/A',
+      'Pincode': order.delivery_address?.pincode || 'N/A',
       'Total Price': order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`,
       'Status': order.status,
       'Ordered At': formatOrderDate(order.createdAt, index),
@@ -1014,7 +1132,9 @@ useEffect(() => {
               price: updatedOrder.price,
               shipping_price: updatedOrder.shipping_price, 
               total_price: updatedOrder.total_price, 
-              status: updatedOrder.status 
+              status: updatedOrder.status,
+              delivery_address: updatedOrder.delivery_address, 
+              address_id: updatedOrder.address_id  
             }
           : order
       );
@@ -1030,6 +1150,8 @@ useEffect(() => {
         shipping_price: updatedOrder.shipping_price,
         total_price: updatedOrder.total_price,
         status: updatedOrder.status,
+        delivery_address: updatedOrder.delivery_address,
+        address_id: updatedOrder.address_id
       }));
     }
   } else {
@@ -1261,7 +1383,7 @@ const stats = useMemo(() => {
   const getStatusBadge = (status) => {
     const statusStyles = {
       'Completed': 'bg-green-100 text-green-800 border-green-200',
-      'Processing': 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      'Confirm': 'bg-yellow-100 text-yellow-800 border-yellow-200',
       'Shipped': 'bg-blue-100 text-blue-800 border-blue-200',
       'Pending': 'bg-orange-100 text-orange-800 border-orange-200',
       'Cancelled': 'bg-red-100 text-red-800 border-red-200',

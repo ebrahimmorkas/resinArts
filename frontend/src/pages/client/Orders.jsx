@@ -21,12 +21,16 @@ import {
   CheckCircle2,
   AlertCircle,
   RotateCcw,
+  MapPin
 } from "lucide-react"
 import Navbar from "../../components/client/common/Navbar"
 import Footer from "../../components/client/common/Footer"
 import { useParams, useNavigate } from "react-router-dom"
 import axios from "axios"
 import { CompanySettingsContext } from "../../../Context/CompanySettingsContext"
+import AddressSelectionModal from "../../components/client/common/AddressSelectionModal"
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const statusConfig = {
   pending: {
@@ -230,7 +234,7 @@ const exportToExcel = (data) => {
         `"$${safeNumber(order.total).toFixed(2)}"`,
         `"${statusConfig[order.status]?.label || order.status}"`,
         `"${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}"`,
-        `"${order.shippingAddress.replace(/"/g, '""')}"`
+        `"${order.shippingAddress.replace(/\n/g, ', ').replace(/"/g, '""')}"`
       ];
       csvContent += row.join(',') + '\n';
     });
@@ -272,6 +276,9 @@ export default function Orders() {
 const [searchResults, setSearchResults] = useState([])
 const [showSearchResults, setShowSearchResults] = useState(false)
 const [isSearching, setIsSearching] = useState(false)
+const [showChangeAddressModal, setShowChangeAddressModal] = useState(false);
+const [selectedOrderForAddressChange, setSelectedOrderForAddressChange] = useState(null);
+const [isChangingAddress, setIsChangingAddress] = useState(false);
   // const [isAutoSwitching, setIsAutoSwitching] = useState(false);
   const { userId } = useParams();
   const navigate = useNavigate();
@@ -347,8 +354,9 @@ useEffect(() => {
   // Transform backend data to match frontend expectations
   const transformOrder = (order) => {
     return {
-      id: order._id || '',
-      date: order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
+  id: order._id || '',
+  address_id: order.address_id || null, // ADD THIS LINE
+  date: order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       orderedAt: order.createdAt,
       items: (order.orderedProducts || []).map((product) => ({
         name: (product.product_name || 'Unknown Product') + (product.variant_name ? ` - ${product.variant_name}` : ""),
@@ -363,8 +371,10 @@ useEffect(() => {
       status: (order.status || 'pending').toLowerCase(),
       trackingNumber: order._id || '',
       estimatedDelivery: null,
-      shippingAddress: userAddress
-        ? `${userAddress.address || ''}, ${userAddress.city || ''}, ${userAddress.state || ''} ${userAddress.zipCode || ''}`
+      shippingAddress: order.delivery_address 
+        ? `${order.delivery_address.name}\n${order.delivery_address.full_address}\n${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.pincode}`
+        : userAddress
+        ? `Home\n${userAddress.address || ''}\n${userAddress.city || ''}, ${userAddress.state || ''} - ${userAddress.zipCode || ''}`
         : "Address not available",
       paymentStatus: order.payment_status ? order.payment_status.toLowerCase() : "pending",
     };
@@ -430,6 +440,43 @@ const filteredOrders = useMemo(() => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, ordersPerPage, statusFilter, paymentFilter, dateFilter]);
+
+  // Listen for address change event from modal
+useEffect(() => {
+  const handleAddressChangeEvent = (e) => {
+    const order = e.detail.order;
+    setSelectedOrderForAddressChange(order);
+    setShowChangeAddressModal(true);
+  };
+
+  document.addEventListener('openAddressChange', handleAddressChangeEvent);
+  
+  return () => {
+    document.removeEventListener('openAddressChange', handleAddressChangeEvent);
+  };
+}, []);
+
+// Listen for address change trigger from modal
+useEffect(() => {
+  const handleTriggerAddressChange = (e) => {
+    const orderId = e.detail.orderId;
+    const order = filteredOrders.find(o => o.id === orderId);
+    if (order) {
+      const originalOrder = orders.find(o => o._id === order.id);
+      setSelectedOrderForAddressChange({
+        ...order,
+        address_id: originalOrder?.address_id || null
+      });
+      setShowChangeAddressModal(true);
+    }
+  };
+
+  window.addEventListener('triggerAddressChange', handleTriggerAddressChange);
+  
+  return () => {
+    window.removeEventListener('triggerAddressChange', handleTriggerAddressChange);
+  };
+}, [filteredOrders, orders]);
 
   const handleExportToExcel = () => {
     if (filteredOrders.length === 0) {
@@ -512,13 +559,14 @@ const filteredOrders = useMemo(() => {
     doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, contactY + 6);
     doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, contactY + 12);
     
-    // Bill To section
+    // Bill To section (Delivery Address)
     const billToY = addressY + 10;
     doc.setFontSize(12);
     doc.setFont(undefined, "bold");
-    doc.text("BILL TO:", 20, billToY);
+    doc.text("DELIVER TO:", 20, billToY);
     doc.setFontSize(10);
     doc.setFont(undefined, "normal");
+    // Split address properly for better formatting
     const addressLinesBill = doc.splitTextToSize(order.shippingAddress, 170);
     let addressYBill = billToY + 10;
     addressLinesBill.forEach((line) => {
@@ -615,12 +663,90 @@ const filteredOrders = useMemo(() => {
     doc.setFontSize(8);
     doc.setFont(undefined, "normal");
     doc.text("Thank you for your business!", 20, yPosition);
-    doc.text(`For support, contact us at ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, yPosition + 5);
+    doc.text(`For support, contact us at ${companySettings?.adminEmail || "Email Address not disclosed"}`, 20, yPosition + 5);
     const filename = `invoice-${order.id.substring(0, 10)}.pdf`;
     doc.save(filename);
   } catch (error) {
     console.error("Error generating invoice:", error);
     alert('Error generating invoice. Please try again.');
+  }
+};
+
+// Handle address change for client
+const handleAddressChange = async (newAddress) => {
+  if (!selectedOrderForAddressChange) return;
+
+  try {
+    setIsChangingAddress(true);
+    
+    console.log('Order being changed:', selectedOrderForAddressChange); // Debug log
+    console.log('New address:', newAddress); // Debug log
+    
+    const res = await axios.post(
+      'https://api.mouldmarket.in/api/address/change-order-address',
+      {
+        orderId: selectedOrderForAddressChange.id, // Use 'id' from transformed order
+        newAddress: {
+          address_id: newAddress.id,
+          name: newAddress.name,
+          state: newAddress.state,
+          city: newAddress.city,
+          pincode: newAddress.pincode,
+          full_address: newAddress.full_address
+        },
+        changedBy: 'user'
+      },
+      { withCredentials: true }
+    );
+
+    if (res.status === 200) {
+      toast.success('Delivery address changed successfully!', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+
+      // Show notification about informing seller
+      setTimeout(() => {
+        toast.info('📢 Please inform the seller about this address change via phone/WhatsApp and keep proof of communication to avoid delivery issues.', {
+          position: "top-center",
+          autoClose: 8000,
+          closeOnClick: false,
+          draggable: false,
+        });
+      }, 500);
+
+      // Refresh orders
+      const ordersRes = await axios.post(
+        "https://api.mouldmarket.in/api/user/find-user",
+        { userId },
+        { withCredentials: true }
+      );
+      
+      if (ordersRes.status === 200) {
+        const fetchedOrders = ordersRes.data.orders || [];
+        const fetchedAddress = ordersRes.data.userAddress || null;
+        setOrders(fetchedOrders);
+        setUserAddress(fetchedAddress);
+      }
+
+      // Update selected order in modal if it's open
+      if (selectedOrder && selectedOrder.id === selectedOrderForAddressChange.id) {
+        setSelectedOrder(prev => ({
+          ...prev,
+          shippingAddress: `${newAddress.name}\n${newAddress.full_address}\n${newAddress.city}, ${newAddress.state} - ${newAddress.pincode}`
+        }));
+      }
+    }
+  } catch (error) {
+    console.error('Address change error:', error);
+    toast.error(error.response?.data?.message || 'Failed to change address. Please try again.', {
+      position: "top-right",
+      autoClose: 3000,
+    });
+  } finally {
+    setIsChangingAddress(false);
+    setShowChangeAddressModal(false);
+    setSelectedOrderForAddressChange(null);
   }
 };
 
@@ -685,7 +811,10 @@ const handleSearchKeyPress = (e) => {
 }
 
   const OrderDetailsModal = ({ order, onClose }) => {
+    const [showChangeAddressModal, setShowChangeAddressModal] = useState(false);
+  const [isChangingAddress, setIsChangingAddress] = useState(false);
     if (!order) return null;
+    
     return (
       <div className="fixed inset-0 bg-black/60 dark:bg-black/80 flex items-center justify-center z-50 p-4">
         <div className="bg-white dark:bg-gray-900 rounded-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
@@ -741,8 +870,8 @@ const handleSearchKeyPress = (e) => {
                 </div>
               </div>
               <div>
-                <h3 className="font-semibold -800 dark:text-gray-100 mb-2">Shipping Address</h3>
-                <p className="text-sm text-gray-600 dark:text-gray-400">{order.shippingAddress}</p>
+                <h3 className="font-semibold text-gray-800 dark:text-gray-100 mb-2">Shipping Address</h3>
+                <p className="text-sm text-gray-600 dark:text-gray-400 whitespace-pre-line">{order.shippingAddress}</p>
               </div>
             </div>
             <div>
@@ -786,6 +915,45 @@ const handleSearchKeyPress = (e) => {
                 <Download className="w-4 h-4 mr-2" />
                 {order.status === "pending" || order.status === "rejected" ? "Invoice Unavailable" : "Download Invoice"}
               </button>
+<button
+  onClick={() => {
+    const canChange = ['pending', 'accepted', 'confirm'].includes(order.status);
+    if (canChange) {
+      onClose(); // Close the details modal
+      // Use setTimeout to ensure modal closes before opening address modal
+      setTimeout(() => {
+        // Find the order from the main list
+        const mainOrders = document.querySelectorAll('[data-order-row]');
+        // Trigger the change by finding and clicking the MapPin button
+        const orderRow = Array.from(mainOrders).find(row => 
+          row.getAttribute('data-order-id') === order.id
+        );
+        if (orderRow) {
+          const mapPinButton = orderRow.querySelector('[data-change-address]');
+          if (mapPinButton) {
+            mapPinButton.click();
+          }
+        } else {
+          // Fallback: dispatch custom event
+          window.dispatchEvent(new CustomEvent('triggerAddressChange', { 
+            detail: { orderId: order.id } 
+          }));
+        }
+      }, 100);
+    }
+  }}
+  disabled={!['pending', 'accepted', 'confirm'].includes(order.status)}
+  className={`inline-flex items-center px-4 py-2 border shadow-sm text-sm font-medium rounded-md transition-colors ${
+    ['pending', 'accepted', 'confirm'].includes(order.status)
+      ? "border-purple-300 text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500 dark:bg-purple-900/20 dark:text-purple-300 dark:border-purple-700 dark:hover:bg-purple-900/30"
+      : "border-gray-300 text-gray-400 bg-gray-100 cursor-not-allowed dark:bg-gray-800 dark:text-gray-600 dark:border-gray-700"
+  }`}
+>
+  <MapPin className="w-4 h-4 mr-2" />
+  {['pending', 'accepted', 'confirm'].includes(order.status) 
+    ? "Change Address"
+    : "Cannot Change Address"}
+</button>
               <div className="text-right">
                 <span className="text-lg font-semibold">Total Amount:</span>
                 <span className="text-2xl font-bold text-blue-600 ml-2">${safeNumber(order.total).toFixed(2)}</span>
@@ -1040,7 +1208,7 @@ const handleSearchKeyPress = (e) => {
                 </thead>
                 <tbody className="bg-white dark:bg-gray-900 divide-y divide-gray-200">
                   {currentData.map((order, index) => (
-                    <tr key={order.id} onClick={() => handleView(order)} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors hover:cursor-pointer">
+                    <tr key={order.id} onClick={() => handleView(order)} className="hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors hover:cursor-pointer" data-order-row data-order-id={order.id}>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '80px' }}>
                         {startIndex + index + 1}
                       </td>
@@ -1089,6 +1257,34 @@ const handleSearchKeyPress = (e) => {
                           >
                             <Download className="w-4 h-4" />
                           </button>
+                          <button
+  onClick={(e) => {
+    e.stopPropagation();
+    const canChange = ['pending', 'accepted', 'confirm'].includes(order.status);
+    if (canChange) {
+      const originalOrder = orders.find(o => o._id === order.id);
+      setSelectedOrderForAddressChange({
+        ...order,
+        address_id: originalOrder?.address_id || null
+      });
+      setShowChangeAddressModal(true);
+    }
+  }}
+  disabled={!['pending', 'accepted', 'confirm'].includes(order.status)}
+  className={`p-1.5 rounded-md transition-colors ${
+    ['pending', 'accepted', 'confirm'].includes(order.status)
+      ? "text-purple-600 hover:bg-purple-50 dark:text-purple-400 dark:hover:bg-purple-900/20"
+      : "text-gray-400 cursor-not-allowed dark:text-gray-600"
+  }`}
+  title={
+    ['pending', 'accepted', 'confirm'].includes(order.status)
+      ? "Change delivery address"
+      : "Address cannot be changed after dispatch"
+  }
+  data-change-address
+>
+  <MapPin className="w-4 h-4" />
+</button>
                         </div>
                       </td>
                     </tr>
@@ -1189,7 +1385,35 @@ const handleSearchKeyPress = (e) => {
         </div>
       </div>
       
-      <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} />
+      <OrderDetailsModal order={selectedOrder} onClose={() => setSelectedOrder(null)} userId={userId} />
+      
+    {/* Address Change Modal */}
+{showChangeAddressModal && selectedOrderForAddressChange && (
+  <AddressSelectionModal
+    isOpen={showChangeAddressModal}
+    onClose={() => {
+      setShowChangeAddressModal(false);
+      setSelectedOrderForAddressChange(null);
+    }}
+    onSelectAddress={handleAddressChange}
+    currentAddressId={selectedOrderForAddressChange.address_id}
+    userId={userId}
+  />
+)}
+      
+      {/* Toast Container */}
+      <ToastContainer
+        position="top-right"
+        autoClose={3000}
+        hideProgressBar={false}
+        newestOnTop={false}
+        closeOnClick
+        rtl={false}
+        pauseOnFocusLoss
+        draggable
+        pauseOnHover
+        theme="light"
+      />
       </div>
       
       <Footer />

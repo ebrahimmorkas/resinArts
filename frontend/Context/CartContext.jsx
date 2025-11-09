@@ -126,53 +126,74 @@ export const CartProvider = ({ children }) => {
                 const guestCartItems = JSON.parse(guestCart);
                 
                 // Merge guest cart with backend cart
-                for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
-                    if (backendCart[cartKey]) {
-                        // Item exists in backend, increase quantity
-                        await axios.put(
-                            "https://api.mouldmarket.in/api/cart",
-                            {
-                                product_id: guestItem.productId,
-                                variant_name: guestItem.variantName,
-                                size: guestItem.sizeString,
-                                quantity: backendCart[cartKey].quantity + guestItem.quantity,
-                                cash_applied: 0,
-                            },
-                            {
-                                withCredentials: true,
-                                headers: {
-                                    "Content-Type": "application/json",
-                                },
-                            }
-                        );
-                        backendCart[cartKey].quantity += guestItem.quantity;
-                    } else {
-                        // Item doesn't exist in backend, add it
-                        const cartItemData = {
-                            image_url: guestItem.imageUrl,
-                            product_id: guestItem.productId,
-                            product_name: guestItem.productName,
-                            quantity: guestItem.quantity,
-                            price: guestItem.price,
-                            cash_applied: 0,
-                            discounted_price: guestItem.discountedPrice || guestItem.price,
-                        };
-
-                        if (guestItem.variantId) cartItemData.variant_id = guestItem.variantId;
-                        if (guestItem.detailsId) cartItemData.details_id = guestItem.detailsId;
-                        if (guestItem.sizeId) cartItemData.size_id = guestItem.sizeId;
-                        if (guestItem.variantName) cartItemData.variant_name = guestItem.variantName;
-                        if (guestItem.sizeString) cartItemData.size = guestItem.sizeString;
-
-                        await axios.post("https://api.mouldmarket.in/api/cart", cartItemData, {
-                            withCredentials: true,
-                            headers: {
-                                "Content-Type": "application/json",
-                            },
-                        });
-                        backendCart[cartKey] = guestItem;
-                    }
+for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
+    if (backendCart[cartKey]) {
+        // Item exists in backend, increase quantity
+        try {
+            await axios.put(
+                "https://api.mouldmarket.in/api/cart",
+                {
+                    product_id: guestItem.productId,
+                    variant_name: guestItem.variantName,
+                    size: guestItem.sizeString,
+                    quantity: backendCart[cartKey].quantity + guestItem.quantity,
+                    cash_applied: 0,
+                },
+                {
+                    withCredentials: true,
+                    headers: {
+                        "Content-Type": "application/json",
+                    },
                 }
+            );
+            backendCart[cartKey].quantity += guestItem.quantity;
+        } catch (error) {
+            console.error('Error merging cart item:', error);
+            // If merge fails due to stock, just use backend quantity
+            if (error.response?.data?.availableStock !== undefined) {
+                backendCart[cartKey].quantity = Math.min(
+                    backendCart[cartKey].quantity + guestItem.quantity,
+                    error.response.data.availableStock
+                );
+            }
+        }
+    } else {
+        // Item doesn't exist in backend, add it
+        try {
+            const cartItemData = {
+                image_url: guestItem.imageUrl,
+                product_id: guestItem.productId,
+                product_name: guestItem.productName,
+                quantity: guestItem.quantity,
+                price: guestItem.price,
+                cash_applied: 0,
+                discounted_price: guestItem.discountedPrice || guestItem.price,
+                bulk_pricing: guestItem.bulkPricing || [],
+            };
+
+            if (guestItem.variantId) cartItemData.variant_id = guestItem.variantId;
+            if (guestItem.detailsId) cartItemData.details_id = guestItem.detailsId;
+            if (guestItem.sizeId) cartItemData.size_id = guestItem.sizeId;
+            if (guestItem.variantName) cartItemData.variant_name = guestItem.variantName;
+            if (guestItem.sizeString) cartItemData.size = guestItem.sizeString;
+
+            await axios.post("https://api.mouldmarket.in/api/cart", cartItemData, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            backendCart[cartKey] = {
+                ...guestItem,
+                cashApplied: 0,
+                userId: req.user?.id
+            };
+        } catch (error) {
+            console.error('Error adding guest cart item:', error);
+            // If adding fails due to stock, skip this item
+        }
+    }
+}
 
                 // Clear guest cart from localStorage
                 localStorage.removeItem('guestCart');
@@ -292,27 +313,38 @@ if (applyFreeCash && freeCash) {
 
         // Background API call
         axios.post("https://api.mouldmarket.in/api/cart", cartItemData, {
-            withCredentials: true,
-            headers: {
-                "Content-Type": "application/json",
+    withCredentials: true,
+    headers: {
+        "Content-Type": "application/json",
+    },
+}).then(response => {
+    if (response.status === 200 || response.status === 201) {
+        // Update with server response (includes correct cashApplied)
+        setCartItems((prev) => ({
+            ...prev,
+            [cartKey]: {
+                ...prev[cartKey],
+                cashApplied,
             },
-        }).then(response => {
-            if (response.status === 200 || response.status === 201) {
-                // Update with server response (includes correct cashApplied)
-                setCartItems((prev) => ({
-                    ...prev,
-                    [cartKey]: {
-                        ...prev[cartKey],
-                        cashApplied,
-                    },
-                }));
-            }
-        }).catch(err => {
-            // Rollback on error
-            setCartItems(cartItems);
-            setError("Failed to add item to cart");
-            console.error("Error adding to cart:", err);
+        }));
+    }
+}).catch(err => {
+    // Rollback on error
+    setCartItems(cartItems);
+    
+    // Show user-friendly error message
+    const errorMessage = err.response?.data?.error || "Failed to add item to cart";
+    setError(errorMessage);
+    console.error("Error adding to cart:", err);
+    
+    // Display toast notification
+    import('react-toastify').then(({ toast }) => {
+        toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 3000,
         });
+    });
+});
 
     } catch (err) {
         setError("Failed to add item to cart");
@@ -375,37 +407,48 @@ if (applyFreeCash && freeCash) {
         }
 
         axios.put(
-            "https://api.mouldmarket.in/api/cart",
-            {
-                product_id: item.productId,
-                variant_name: item.variantName,
-                size: item.sizeString,
+    "https://api.mouldmarket.in/api/cart",
+    {
+        product_id: item.productId,
+        variant_name: item.variantName,
+        size: item.sizeString,
+        quantity: newQuantity,
+        cash_applied: cashApplied,
+    },
+    {
+        withCredentials: true,
+        headers: {
+            "Content-Type": "application/json",
+        },
+    },
+).then(response => {
+    if (response.status === 200) {
+        setCartItems((prev) => ({
+            ...prev,
+            [cartKey]: {
+                ...prev[cartKey],
                 quantity: newQuantity,
-                cash_applied: cashApplied,
+                cashApplied,
             },
-            {
-                withCredentials: true,
-                headers: {
-                    "Content-Type": "application/json",
-                },
-            },
-        ).then(response => {
-            if (response.status === 200) {
-                setCartItems((prev) => ({
-                    ...prev,
-                    [cartKey]: {
-                        ...prev[cartKey],
-                        quantity: newQuantity,
-                        cashApplied,
-                    },
-                }));
-            }
-        }).catch(err => {
-            // Rollback on error
-            setCartItems(cartItems);
-            setError("Failed to update quantity");
-            console.error("Error updating quantity:", err);
+        }));
+    }
+}).catch(err => {
+    // Rollback on error
+    setCartItems(cartItems);
+    
+    // Show user-friendly error message
+    const errorMessage = err.response?.data?.error || "Failed to update quantity";
+    setError(errorMessage);
+    console.error("Error updating quantity:", err);
+    
+    // Display toast notification
+    import('react-toastify').then(({ toast }) => {
+        toast.error(errorMessage, {
+            position: "top-right",
+            autoClose: 3000,
         });
+    });
+});
     } catch (err) {
         setError("Failed to update quantity");
         console.error("Error updating quantity:", err);

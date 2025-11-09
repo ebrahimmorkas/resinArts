@@ -1,5 +1,5 @@
-import { useContext, useState } from "react"
-import { X, Minus, Plus, ShoppingCart, Trash2 } from "lucide-react"
+import { useContext, useState, useEffect } from "react"
+import { X, Minus, Plus, ShoppingCart, Trash2, MapPin } from "lucide-react"
 import { useCart } from "../../../../Context/CartContext"
 import { ProductContext } from "../../../../Context/ProductContext"
 import { CategoryContext } from "../../../../Context/CategoryContext"
@@ -11,6 +11,7 @@ import ConfirmationModal from "../Home/ConfirmationModal"
 import axios from "axios"
 import { useNavigate } from "react-router-dom"
 import { AuthContext } from "../../../../Context/AuthContext"
+import AddressSelectionModal from './AddressSelectionModal';
 
 export default function CartModal() {
   
@@ -74,6 +75,15 @@ export default function CartModal() {
 
   const [isProcessing, setIsProcessing] = useState(false)
   const [showClearCartModal, setShowClearCartModal] = useState(false)
+  const [showAddressModal, setShowAddressModal] = useState(false)
+const [selectedAddress, setSelectedAddress] = useState({
+  id: null, // null means home address
+  name: 'Home',
+  state: '',
+  city: '',
+  pincode: '',
+  full_address: ''
+})
 
   const handleCartCheckout = async () => {
   try {
@@ -84,11 +94,33 @@ export default function CartModal() {
       return
     }
 
+    // Validate address selection
+    if (!selectedAddress || !selectedAddress.full_address) {
+      toast.error('Please select a delivery address', {
+        position: "top-right",
+        autoClose: 3000,
+      });
+      return;
+    }
+
     console.log('Cart Items being sent to checkout:', JSON.stringify(cartItems, null, 2));
+    console.log('Selected Address:', selectedAddress);
+
+    const orderPayload = {
+      cartItems: cartItems,
+      deliveryAddress: {
+        address_id: selectedAddress.id, // null for home, or ObjectId for saved address
+        name: selectedAddress.name,
+        state: selectedAddress.state,
+        city: selectedAddress.city,
+        pincode: selectedAddress.pincode,
+        full_address: selectedAddress.full_address
+      }
+    };
 
     const res = await axios.post(
       'https://api.mouldmarket.in/api/order/place-order',
-      cartItems,
+      orderPayload,
       {
         withCredentials: true,
         timeout: 10000,
@@ -206,6 +238,34 @@ export default function CartModal() {
     localCartTotal += subtotal - (item.cashApplied || 0)
   })
 
+  // Fetch user's home address on component mount
+useEffect(() => {
+  const fetchUserHomeAddress = async () => {
+    if (!user?.id) return;
+    
+    try {
+      const response = await axios.get('https://api.mouldmarket.in/api/user/profile', {
+        withCredentials: true
+      });
+      const userData = response.data.user;
+      setSelectedAddress({
+        id: null,
+        name: 'Home',
+        state: userData.state,
+        city: userData.city,
+        pincode: userData.zip_code,
+        full_address: userData.address
+      });
+    } catch (error) {
+      console.error('Error fetching user home address:', error);
+    }
+  };
+
+  if (isCartOpen) {
+    fetchUserHomeAddress();
+  }
+}, [isCartOpen, user?.id]);
+
   return (
     <>
       <div className={`fixed inset-0 z-50 ${isCartOpen ? "block" : "hidden"}`}>
@@ -250,7 +310,7 @@ export default function CartModal() {
                 <p className="text-gray-500 text-lg dark:text-white">Your cart is empty</p>
                 <button
                   onClick={() => setIsCartOpen(false)}
-                  className="mt-6 px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors dark:text-gray-400"
+                  className="mt-6 px-6 py-2 bg-blue-600 text-black rounded-lg hover:bg-blue-700 transition-colors dark:text-gray-400"
                 >
                   Continue Shopping
                 </button>
@@ -300,6 +360,38 @@ export default function CartModal() {
                     </label>
                   </div>
                 )}
+
+                {/* Delivery Address Selection */}
+{Object.keys(cartItems).length > 0 && (
+  <div className="mb-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700">
+    <div className="flex items-center justify-between">
+      <div className="flex items-start gap-3 flex-1">
+        <MapPin className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+        <div className="flex-1 min-w-0">
+          <p className="text-sm font-semibold text-gray-900 dark:text-white mb-1">
+            Deliver to: {selectedAddress.name}
+          </p>
+          {selectedAddress.full_address && (
+            <>
+              <p className="text-xs text-gray-600 dark:text-gray-400 truncate">
+                {selectedAddress.full_address}
+              </p>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">
+                {selectedAddress.city}, {selectedAddress.state} - {selectedAddress.pincode}
+              </p>
+            </>
+          )}
+        </div>
+      </div>
+      <button
+        onClick={() => setShowAddressModal(true)}
+        className="ml-3 px-3 py-1.5 text-sm font-medium text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 border border-blue-600 dark:border-blue-400 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex-shrink-0"
+      >
+        Change
+      </button>
+    </div>
+  </div>
+)}
 
                 {/* Cart Items */}
                 {cartEntries.map(([cartKey, item]) => {
@@ -458,6 +550,15 @@ export default function CartModal() {
             </div>
           )}
         </div>
+
+        {/* Address Selection Modal */}
+<AddressSelectionModal
+  isOpen={showAddressModal}
+  onClose={() => setShowAddressModal(false)}
+  onSelectAddress={setSelectedAddress}
+  currentAddressId={selectedAddress.id}
+  userId={user?.id}
+/>
 
         <ConfirmationModal
           isOpen={showClearCartModal}
