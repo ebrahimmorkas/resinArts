@@ -201,8 +201,8 @@ const UpdateAddress = () => {
     <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex flex-col">
       <Navbar />
       
-      <div className="flex-grow w-full px-4 sm:px-6 lg:px-8 py-8">
-        <div className="max-w-2xl mx-auto">
+      <div className="flex-grow w-full py-8">
+        <div className="w-full px-4 sm:px-6 lg:px-8">
           {/* Header */}
           <div className="mb-8">
             <button
@@ -220,7 +220,7 @@ const UpdateAddress = () => {
           </div>
 
           {/* Form Card */}
-          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-8">
+          <div className="bg-white dark:bg-gray-900 border border-gray-200 dark:border-gray-800 rounded-lg shadow-sm p-8 w-full">
             <form onSubmit={handleSubmit} className="space-y-6">
               {/* Error Message */}
               {errorMessage && (

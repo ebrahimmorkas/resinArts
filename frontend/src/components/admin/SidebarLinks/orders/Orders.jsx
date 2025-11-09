@@ -165,10 +165,10 @@ const handleAddressChange = async (newAddress) => {
     }
   } catch (error) {
     console.error('Address change error:', error);
-    toast.error(error.response?.data?.message || 'Failed to change address. Please try again.', {
-      position: "top-right",
-      autoClose: 3000,
-    });
+    // toast.error(error.response?.data?.message || 'Failed to change address. Please try again.', {
+    //   position: "top-right",
+    //   autoClose: 3000,
+    // });
   } finally {
     setIsChangingAddress(false);
   }
