@@ -47,7 +47,6 @@ const getCompanySettings = async (req, res) => {
 };
 
 // Update company settings
-// Update company settings
 const updateCompanySettings = async (req, res) => {
   try {
     const {
@@ -220,6 +219,7 @@ if (autoDeleteOrders) {
     });
   }
 };
+
 // Get public policies (for displaying on website - no authentication required)
 const getPublicPolicies = async (req, res) => {
   try {

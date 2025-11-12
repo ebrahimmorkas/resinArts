@@ -1,4 +1,5 @@
 const API_BASE_URL = "http://localhost:3000/api" // Updated to match backend port
+import axios from 'axios';
 
 export const fetchCategories = async () => {
   try {
@@ -56,3 +57,9 @@ export const duplicateProducts = async (productIds) => {
     throw error;
   }
 };
+
+// Fetch company settings
+export const fetchCompanySettings = async () => {
+  const response = await axios.get('http://localhost:3000/api/company-settings/', {withCredentials: true})
+  return response.data.data
+}

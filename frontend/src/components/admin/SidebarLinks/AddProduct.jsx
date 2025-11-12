@@ -1,7 +1,7 @@
 "use client"
 
 import { useState, useEffect, useCallback, useRef } from "react"
-import { fetchCategories, addProduct } from "../../../../utils/api"
+import { fetchCategories, addProduct, fetchCompanySettings } from "../../../../utils/api"
 import { X, Plus, AlertCircle, Upload, Image as ImageIcon, Package, Tag, DollarSign, Layers, Check } from "lucide-react"
 import { toast, ToastContainer } from 'react-toastify'
 import 'react-toastify/dist/ReactToastify.css'
@@ -69,8 +69,16 @@ export default function AddProduct() {
   const [additionalImages, setAdditionalImages] = useState([{ file: null, preview: null }])
   const [bulkPricing, setBulkPricing] = useState([{ wholesalePrice: "", quantity: "" }])
 
+  // Start of use state variables for dimension based pricing
+  const [hasDimensionPricing, setHasDimensionPricing] = useState("no")
+const [dimensionPricingType, setDimensionPricingType] = useState("dynamic") // 'static' or 'dynamic'
+const [dimensionPricingData, setDimensionPricingData] = useState([
+  { length: "", breadth: "", height: "", price: "" }
+])
+// End of use state variables for dimension based pricing
   const [hasVariants, setHasVariants] = useState(false)
   const [variants, setVariants] = useState([])
+
 
   // Refs for direct file input clicks
   const mainAdditionalImageInputRef = useRef([])
@@ -106,21 +114,28 @@ export default function AddProduct() {
         ),
     )
 
-  // Effect to manage conditional visibility
-  useEffect(() => {
-    if (isVariantInfoFilled) {
-      setStock("")
-      setPrice("")
-      setMainImage(null)
-      setMainImagePreview(null)
-      setAdditionalImages([{ file: null, preview: null }])
-      setBulkPricing([{ wholesalePrice: "", quantity: "" }])
-      setHasVariants(true)
-    } else if (isBasicInfoFilled) {
-      setVariants([])
-      setHasVariants(false)
-    }
-  }, [isBasicInfoFilled, isVariantInfoFilled])
+// Effect to manage conditional visibility
+useEffect(() => {
+  if (isVariantInfoFilled) {
+    setStock("")
+    setPrice("")
+    setMainImage(null)
+    setMainImagePreview(null)
+    setAdditionalImages([{ file: null, preview: null }])
+    setBulkPricing([{ wholesalePrice: "", quantity: "" }])
+    setHasVariants(true)
+  } else if (isBasicInfoFilled) {
+    setVariants([])
+    setHasVariants(false)
+  }
+  
+  // If dimension pricing is enabled, hide price field and variants
+  if (hasDimensionPricing === "yes") {
+    setPrice("")
+    setVariants([])
+    setHasVariants(false)
+  }
+}, [isBasicInfoFilled, isVariantInfoFilled, hasDimensionPricing])
 
   // Fetch categories on component mount
   useEffect(() => {
@@ -353,6 +368,22 @@ export default function AddProduct() {
     setVariants(newVariants)
   }
 
+  // Dimension pricing handlers
+const addDimensionPricing = () => {
+  setDimensionPricingData([...dimensionPricingData, { length: "", breadth: "", height: "", price: "" }])
+}
+
+const updateDimensionPricing = (index, field, value) => {
+  const newData = [...dimensionPricingData]
+  newData[index][field] = value
+  setDimensionPricingData(newData)
+}
+
+const removeDimensionPricing = (index) => {
+  const newData = dimensionPricingData.filter((_, i) => i !== index)
+  setDimensionPricingData(newData)
+}
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
@@ -363,13 +394,17 @@ export default function AddProduct() {
       const finalCategoryId = selectedCategoryIds[selectedCategoryIds.length - 1] || ""
 
       const productData = {
-        name: productName,
-        mainCategory: selectedCategoryIds[0] || "",
-        subCategory: finalCategoryId,
-        categoryPath: categoryPath,
-        productDetails: productDetails.filter((pd) => pd.key && pd.value),
-        hasVariants: hasVariants,
-      }
+  name: productName,
+  mainCategory: selectedCategoryIds[0] || "",
+  subCategory: finalCategoryId,
+  categoryPath: categoryPath,
+  productDetails: productDetails.filter((pd) => pd.key && pd.value),
+  hasVariants: hasVariants,
+  hasDimensionPricing: hasDimensionPricing,
+  dimensionPricingData: hasDimensionPricing === "yes" 
+    ? dimensionPricingData.filter(d => d.length && d.breadth && d.price)
+    : []
+}
 
       if (!hasVariants) {
         productData.stock = stock
@@ -677,7 +712,141 @@ export default function AddProduct() {
                     </div>
                   ))}
                 </div>
+                  </div>
 
+                {/* Dimension Based Pricing Dropdown */}
+                <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
+                  <div className="space-y-4">
+                    <label htmlFor="dimensionPricing" className="text-lg font-semibold text-gray-900 dark:text-white">
+                      Does product have dimension based pricing?
+                    </label>
+                    <select
+                      id="dimensionPricing"
+                      value={hasDimensionPricing}
+                      onChange={async (e) => {
+                        const value = e.target.value
+                        setHasDimensionPricing(value)
+                        
+                        // Fetch company settings when user selects "yes"
+                        if (value === "yes") {
+                          try {
+                            const settings = await fetchCompanySettings()
+                            setDimensionPricingType(settings.dimensionBasedPricing || "dynamic")
+                          } catch (error) {
+                            console.error("Failed to fetch company settings:", error)
+                            toast.error("Failed to fetch company settings")
+                            // Reset to "no" if fetch fails
+                            setHasDimensionPricing("no")
+                          }
+                        }
+                      }}
+                      className={selectClass}
+                    >
+                      <option value="no">No</option>
+                      <option value="yes">Yes</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Dimension Based Pricing Section */}
+                {hasDimensionPricing === "yes" && (
+                  <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900 dark:text-white">
+                          Dimension Based Pricing
+                        </h3>
+                        <p className="text-sm text-gray-600 dark:text-gray-400 mt-1">
+                          Mode: <span className="font-medium capitalize">{dimensionPricingType}</span>
+                        </p>
+                      </div>
+                      {dimensionPricingType === "static" && (
+                        <button
+                          type="button"
+                          className={secondaryButtonClass}
+                          onClick={addDimensionPricing}
+                        >
+                          <Plus className="w-4 h-4" />
+                          Add Dimension
+                        </button>
+                      )}
+                    </div>
+
+                    {dimensionPricingData.map((item, index) => (
+                      <div key={index} className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
+                        {dimensionPricingType === "static" && dimensionPricingData.length > 1 && (
+                          <div className="flex justify-between items-center mb-4">
+                            <h4 className="font-semibold text-gray-900 dark:text-white">Dimension Set {index + 1}</h4>
+                            <button
+                              type="button"
+                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-white"
+                              onClick={() => removeDimensionPricing(index)}
+                            >
+                              <X className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
+                        
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                          <div className="space-y-2">
+                            <label className={labelClass}>
+                              Length (cm) *
+                            </label>
+                            <input
+                              type="number"
+                              value={item.length}
+                              onChange={(e) => updateDimensionPricing(index, "length", e.target.value)}
+                              placeholder="Length"
+                              className={`${inputClass} dark:text-gray-400`}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className={labelClass}>
+                              Breadth (cm) *
+                            </label>
+                            <input
+                              type="number"
+                              value={item.breadth}
+                              onChange={(e) => updateDimensionPricing(index, "breadth", e.target.value)}
+                              placeholder="Breadth"
+                              className={`${inputClass} dark:text-gray-400`}
+                              required
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className={labelClass}>
+                              Height (cm)
+                            </label>
+                            <input
+                              type="number"
+                              value={item.height}
+                              onChange={(e) => updateDimensionPricing(index, "height", e.target.value)}
+                              placeholder="Height (optional)"
+                              className={`${inputClass} dark:text-gray-400`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <label className={labelClass}>
+                              Price ($) *
+                            </label>
+                            <input
+                              type="number"
+                              value={item.price}
+                              onChange={(e) => updateDimensionPricing(index, "price", e.target.value)}
+                              placeholder="Price"
+                              className={`${inputClass} dark:text-gray-400`}
+                              required
+                            />
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+
+                {/* Warning Message */}
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
                 {/* Warning Message */}
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
                   <div className="flex items-start gap-3">
@@ -709,20 +878,22 @@ export default function AddProduct() {
                           className={`${inputClass} dark:text-gray-400`}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <label htmlFor="price" className={`${inputClass} dark:text-white`}>
-                          <DollarSign className="inline w-4 h-4 mr-2" />
-                          Price ($)
-                        </label>
-                        <input
-                          id="price"
-                          type="number"
-                          value={price}
-                          onChange={(e) => setPrice(e.target.value)}
-                          placeholder="Product price"
-                          className={`${inputClass} dark:text-gray-400`}
-                        />
-                      </div>
+                      {hasDimensionPricing === "no" && (
+                        <div className="space-y-2">
+                          <label htmlFor="price" className={`${inputClass} dark:text-white`}>
+                            <DollarSign className="inline w-4 h-4 mr-2" />
+                            Price ($)
+                          </label>
+                          <input
+                            id="price"
+                            type="number"
+                            value={price}
+                            onChange={(e) => setPrice(e.target.value)}
+                            placeholder="Product price"
+                            className={`${inputClass} dark:text-gray-400`}
+                          />
+                        </div>
+                      )}
                     </div>
 
                     {/* Main Image Upload */}
@@ -1650,7 +1821,7 @@ export default function AddProduct() {
                 </>
               )}
             </button>
-            {!hasVariants && (
+           {!hasVariants && hasDimensionPricing === "no" && (
               <button
                 type="button"
                 className={`${secondaryButtonClass} text-lg px-8 py-4`}
