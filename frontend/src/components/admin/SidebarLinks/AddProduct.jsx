@@ -73,7 +73,7 @@ export default function AddProduct() {
   const [hasDimensionPricing, setHasDimensionPricing] = useState("no")
 const [dimensionPricingType, setDimensionPricingType] = useState("dynamic") // 'static' or 'dynamic'
 const [dimensionPricingData, setDimensionPricingData] = useState([
-  { length: "", breadth: "", height: "", price: "", pricingType: "dynamic" }
+  { length: "", breadth: "", height: "", price: "", pricingType: "dynamic", stock: "", bulkPricing: [{ wholesalePrice: "", quantity: "" }] }
 ])
 // End of use state variables for dimension based pricing
   const [hasVariants, setHasVariants] = useState(false)
@@ -370,7 +370,15 @@ useEffect(() => {
 
   // Dimension pricing handlers
 const addDimensionPricing = () => {
-  setDimensionPricingData([...dimensionPricingData, { length: "", breadth: "", height: "", price: "", pricingType: dimensionPricingType }])
+  setDimensionPricingData([...dimensionPricingData, { 
+    length: "", 
+    breadth: "", 
+    height: "", 
+    price: "", 
+    pricingType: dimensionPricingType,
+    stock: "",
+    bulkPricing: [{ wholesalePrice: "", quantity: "" }]
+  }])
 }
 
 const updateDimensionPricing = (index, field, value) => {
@@ -384,12 +392,56 @@ const removeDimensionPricing = (index) => {
   setDimensionPricingData(newData)
 }
 
+// Bulk pricing handlers for static dimensions
+const addStaticDimensionBulkPricing = (dimensionIndex) => {
+  const newData = [...dimensionPricingData]
+  newData[dimensionIndex].bulkPricing.push({ wholesalePrice: "", quantity: "" })
+  setDimensionPricingData(newData)
+}
+
+const updateStaticDimensionBulkPricing = (dimensionIndex, bulkIndex, field, value) => {
+  const newData = [...dimensionPricingData]
+  newData[dimensionIndex].bulkPricing[bulkIndex][field] = value
+  setDimensionPricingData(newData)
+}
+
+const removeStaticDimensionBulkPricing = (dimensionIndex, bulkIndex) => {
+  const newData = [...dimensionPricingData]
+  newData[dimensionIndex].bulkPricing = newData[dimensionIndex].bulkPricing.filter((_, i) => i !== bulkIndex)
+  setDimensionPricingData(newData)
+}
+
   const handleSubmit = async (e) => {
     e.preventDefault()
     setIsLoading(true)
 
     try {
-      const formData = new FormData()
+    // Validate dimension pricing if enabled
+    if (hasDimensionPricing === "yes") {
+      if (dimensionPricingType === "static") {
+        const hasValidDimensionData = dimensionPricingData.some(
+          (item) => item.length && item.breadth && item.price && item.stock
+        )
+        
+        if (!hasValidDimensionData) {
+          toast.error("Please fill at least one complete dimension entry (Length, Breadth, Price, and Stock are required for static pricing)")
+          setIsLoading(false)
+          return
+        }
+      } else {
+        const hasValidDimensionData = dimensionPricingData.some(
+          (item) => item.length && item.breadth && item.price
+        )
+        
+        if (!hasValidDimensionData) {
+          toast.error("Please fill at least one complete dimension pricing entry (Length, Breadth, and Price are required)")
+          setIsLoading(false)
+          return
+        }
+      }
+    }
+
+    const formData = new FormData()
 
       const finalCategoryId = selectedCategoryIds[selectedCategoryIds.length - 1] || ""
 
@@ -402,14 +454,23 @@ const removeDimensionPricing = (index) => {
   hasVariants: hasVariants,
   hasDimensionPricing: hasDimensionPricing,
   dimensionPricingData: hasDimensionPricing === "yes" 
-    ? dimensionPricingData.filter(d => d.length && d.breadth && d.price).map(d => ({
+  ? dimensionPricingData
+      .filter(d => dimensionPricingType === "static" 
+        ? (d.length && d.breadth && d.price && d.stock)
+        : (d.length && d.breadth && d.price)
+      )
+      .map(d => ({
         length: d.length,
         breadth: d.breadth,
         height: d.height || "",
         price: d.price,
-        pricingType: dimensionPricingType
+        pricingType: dimensionPricingType,
+        stock: dimensionPricingType === "static" ? d.stock : undefined,
+        bulkPricing: dimensionPricingType === "static" 
+          ? d.bulkPricing.filter(bp => bp.wholesalePrice && bp.quantity)
+          : undefined
       }))
-    : []
+  : []
 }
 
       if (!hasVariants) {
@@ -496,18 +557,21 @@ const removeDimensionPricing = (index) => {
       })
       
       // Reset form
-      setProductName("")
-      setSelectedCategoryIds([])
-      setCategoryPath("")
-      setProductDetails([{ key: "", value: "" }])
-      setStock("")
-      setPrice("")
-      setMainImage(null)
-      setMainImagePreview(null)
-      setAdditionalImages([{ file: null, preview: null }])
-      setBulkPricing([{ wholesalePrice: "", quantity: "" }])
-      setVariants([])
-      setHasVariants(false)
+setProductName("")
+setSelectedCategoryIds([])
+setCategoryPath("")
+setProductDetails([{ key: "", value: "" }])
+setStock("")
+setPrice("")
+setMainImage(null)
+setMainImagePreview(null)
+setAdditionalImages([{ file: null, preview: null }])
+setBulkPricing([{ wholesalePrice: "", quantity: "" }])
+setVariants([])
+setHasVariants(false)
+setHasDimensionPricing("no")
+setDimensionPricingType("dynamic")
+setDimensionPricingData([{ length: "", breadth: "", height: "", price: "", pricingType: "dynamic", stock: "", bulkPricing: [{ wholesalePrice: "", quantity: "" }] }])
 
     } catch (error) {
   console.error("Error adding product:", error);
@@ -729,7 +793,7 @@ const removeDimensionPricing = (index) => {
                     <select
                       id="dimensionPricing"
                       value={hasDimensionPricing}
-  onChange={async (e) => {
+onChange={async (e) => {
   const value = e.target.value
   setHasDimensionPricing(value)
   
@@ -742,7 +806,12 @@ const removeDimensionPricing = (index) => {
       
       // Update all dimension pricing data with the pricing type
       setDimensionPricingData(prevData => 
-        prevData.map(item => ({ ...item, pricingType: fetchedPricingType }))
+        prevData.map(item => ({ 
+          ...item, 
+          pricingType: fetchedPricingType,
+          stock: item.stock || "",
+          bulkPricing: item.bulkPricing || [{ wholesalePrice: "", quantity: "" }]
+        }))
       )
     } catch (error) {
       console.error("Failed to fetch company settings:", error)
@@ -785,75 +854,150 @@ const removeDimensionPricing = (index) => {
                     </div>
 
                     {dimensionPricingData.map((item, index) => (
-                      <div key={index} className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
-                        {dimensionPricingType === "static" && dimensionPricingData.length > 1 && (
-                          <div className="flex justify-between items-center mb-4">
-                            <h4 className="font-semibold text-gray-900 dark:text-white">Dimension Set {index + 1}</h4>
-                            <button
-                              type="button"
-                              className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-white"
-                              onClick={() => removeDimensionPricing(index)}
-                            >
-                              <X className="w-4 h-4" />
-                            </button>
-                          </div>
-                        )}
-                        
-                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                          <div className="space-y-2">
-                            <label className={labelClass}>
-                              Length (cm) *
-                            </label>
-                            <input
-                              type="number"
-                              value={item.length}
-                              onChange={(e) => updateDimensionPricing(index, "length", e.target.value)}
-                              placeholder="Length"
-                              className={`${inputClass} dark:text-gray-400`}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className={labelClass}>
-                              Breadth (cm) *
-                            </label>
-                            <input
-                              type="number"
-                              value={item.breadth}
-                              onChange={(e) => updateDimensionPricing(index, "breadth", e.target.value)}
-                              placeholder="Breadth"
-                              className={`${inputClass} dark:text-gray-400`}
-                              required
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className={labelClass}>
-                              Height (cm)
-                            </label>
-                            <input
-                              type="number"
-                              value={item.height}
-                              onChange={(e) => updateDimensionPricing(index, "height", e.target.value)}
-                              placeholder="Height (optional)"
-                              className={`${inputClass} dark:text-gray-400`}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <label className={labelClass}>
-                              Price ($) *
-                            </label>
-                            <input
-                              type="number"
-                              value={item.price}
-                              onChange={(e) => updateDimensionPricing(index, "price", e.target.value)}
-                              placeholder="Price"
-                              className={`${inputClass} dark:text-gray-400`}
-                              required
-                            />
-                          </div>
-                        </div>
-                      </div>
-                    ))}
+  <div key={index} className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
+    {dimensionPricingType === "static" && dimensionPricingData.length > 1 && (
+      <div className="flex justify-between items-center mb-4">
+        <h4 className="font-semibold text-gray-900 dark:text-white">Dimension Set {index + 1}</h4>
+        <button
+          type="button"
+          className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-white"
+          onClick={() => removeDimensionPricing(index)}
+        >
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+    )}
+    
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="space-y-2">
+        <label className={labelClass}>
+          Length (cm) *
+        </label>
+        <input
+          type="number"
+          value={item.length}
+          onChange={(e) => updateDimensionPricing(index, "length", e.target.value)}
+          placeholder="Length"
+          className={`${inputClass} dark:text-gray-400`}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label className={labelClass}>
+          Breadth (cm) *
+        </label>
+        <input
+          type="number"
+          value={item.breadth}
+          onChange={(e) => updateDimensionPricing(index, "breadth", e.target.value)}
+          placeholder="Breadth"
+          className={`${inputClass} dark:text-gray-400`}
+          required
+        />
+      </div>
+      <div className="space-y-2">
+        <label className={labelClass}>
+          Height (cm)
+        </label>
+        <input
+          type="number"
+          value={item.height}
+          onChange={(e) => updateDimensionPricing(index, "height", e.target.value)}
+          placeholder="Height (optional)"
+          className={`${inputClass} dark:text-gray-400`}
+        />
+      </div>
+      <div className="space-y-2">
+        <label className={labelClass}>
+          Price ($) *
+        </label>
+        <input
+          type="number"
+          value={item.price}
+          onChange={(e) => updateDimensionPricing(index, "price", e.target.value)}
+          placeholder="Price"
+          className={`${inputClass} dark:text-gray-400`}
+          required
+        />
+      </div>
+    </div>
+
+    {/* Stock and Bulk Pricing for Static Dimensions */}
+    {dimensionPricingType === "static" && (
+      <>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+          <div className="space-y-2">
+            <label className={labelClass}>
+              <Package className="inline w-4 h-4 mr-2" />
+              Stock Quantity *
+            </label>
+            <input
+              type="number"
+              value={item.stock}
+              onChange={(e) => updateDimensionPricing(index, "stock", e.target.value)}
+              placeholder="Stock quantity"
+              className={`${inputClass} dark:text-gray-400`}
+              required
+            />
+          </div>
+        </div>
+
+        {/* Bulk Pricing for this dimension */}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-4 mt-4">
+          <div className="flex justify-between items-center">
+            <h5 className="text-md font-semibold text-gray-900 dark:text-white">
+              Bulk Pricing for this Dimension
+            </h5>
+            <button
+              type="button"
+              className={secondaryButtonClass}
+              onClick={() => addStaticDimensionBulkPricing(index)}
+            >
+              <Plus className="w-4 h-4" />
+              Add Bulk Price
+            </button>
+          </div>
+          {item.bulkPricing && item.bulkPricing.map((bp, bpIndex) => (
+            <div key={bpIndex} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
+              <div className="space-y-2">
+                <label className={labelClass}>Wholesale Price ($)</label>
+                <input
+                  type="number"
+                  value={bp.wholesalePrice}
+                  onChange={(e) => updateStaticDimensionBulkPricing(index, bpIndex, "wholesalePrice", e.target.value)}
+                  placeholder="Bulk price"
+                  className={`${inputClass} dark:text-gray-400`}
+                />
+                {item.price && bp.wholesalePrice && parseFloat(bp.wholesalePrice) >= parseFloat(item.price) && (
+                  <p className="text-red-500 text-sm">Must be less than regular price</p>
+                )}
+              </div>
+              <div className="space-y-2 flex gap-4 items-end">
+                <div className="flex-1">
+                  <label className={labelClass}>Minimum Quantity</label>
+                  <input
+                    type="number"
+                    value={bp.quantity}
+                    onChange={(e) => updateStaticDimensionBulkPricing(index, bpIndex, "quantity", e.target.value)}
+                    placeholder="Min qty"
+                    className={`${inputClass} dark:text-gray-400`}
+                  />
+                </div>
+                <button
+                  type="button"
+                  className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
+                  onClick={() => removeStaticDimensionBulkPricing(index, bpIndex)}
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </>
+    )}
+  </div>
+))}
                   </div>
                 )}
 

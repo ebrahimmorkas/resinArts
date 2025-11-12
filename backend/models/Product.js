@@ -95,6 +95,14 @@ const productSchema = mongoose.Schema(
       height: { type: Number, required: false },
       price: { type: Number, required: false }
     }],
+    staticDimensions: [{
+      length: { type: Number, required: false },
+      breadth: { type: Number, required: false },
+      height: { type: Number, required: false },
+      price: { type: Number, required: false },
+      stock: { type: Number, required: false },
+      bulkPricing: [bulkPricingSchema]
+    }],
   },
   {
     timestamps: true,

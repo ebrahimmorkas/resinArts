@@ -194,7 +194,7 @@ const addProduct = async (req, res) => {
       }
     }
 
-   // Prepare basic product data
+ // Prepare basic product data
 const newProductData = {
   name,
   mainCategory,
@@ -209,12 +209,24 @@ const newProductData = {
   hasVariants,
   hasDimensions: hasDimensionPricing === "yes",
   pricingType: hasDimensionPricing === "yes" ? dimensionPricingData[0]?.pricingType || "dynamic" : "normal",
-  dimensions: hasDimensionPricing === "yes" ? dimensionPricingData.map(d => ({
-    length: Number(d.length) || null,
-    breadth: Number(d.breadth) || null,
-    height: d.height ? Number(d.height) : null,
-    price: Number(d.price) || null
-  })) : [],
+  dimensions: hasDimensionPricing === "yes" && dimensionPricingData[0]?.pricingType === "dynamic" 
+    ? dimensionPricingData.map(d => ({
+        length: Number(d.length) || null,
+        breadth: Number(d.breadth) || null,
+        height: d.height ? Number(d.height) : null,
+        price: Number(d.price) || null
+      })) 
+    : [],
+  staticDimensions: hasDimensionPricing === "yes" && dimensionPricingData[0]?.pricingType === "static"
+    ? dimensionPricingData.map(d => ({
+        length: Number(d.length) || null,
+        breadth: Number(d.breadth) || null,
+        height: d.height ? Number(d.height) : null,
+        price: Number(d.price) || null,
+        stock: Number(d.stock) || null,
+        bulkPricing: d.bulkPricing ? d.bulkPricing.filter(bp => bp.wholesalePrice && bp.quantity) : []
+      }))
+    : [],
 }
 
     // Process variants if they exist
