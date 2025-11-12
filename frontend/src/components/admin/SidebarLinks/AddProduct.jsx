@@ -73,7 +73,7 @@ export default function AddProduct() {
   const [hasDimensionPricing, setHasDimensionPricing] = useState("no")
 const [dimensionPricingType, setDimensionPricingType] = useState("dynamic") // 'static' or 'dynamic'
 const [dimensionPricingData, setDimensionPricingData] = useState([
-  { length: "", breadth: "", height: "", price: "" }
+  { length: "", breadth: "", height: "", price: "", pricingType: "dynamic" }
 ])
 // End of use state variables for dimension based pricing
   const [hasVariants, setHasVariants] = useState(false)
@@ -370,7 +370,7 @@ useEffect(() => {
 
   // Dimension pricing handlers
 const addDimensionPricing = () => {
-  setDimensionPricingData([...dimensionPricingData, { length: "", breadth: "", height: "", price: "" }])
+  setDimensionPricingData([...dimensionPricingData, { length: "", breadth: "", height: "", price: "", pricingType: dimensionPricingType }])
 }
 
 const updateDimensionPricing = (index, field, value) => {
@@ -393,7 +393,7 @@ const removeDimensionPricing = (index) => {
 
       const finalCategoryId = selectedCategoryIds[selectedCategoryIds.length - 1] || ""
 
-      const productData = {
+ const productData = {
   name: productName,
   mainCategory: selectedCategoryIds[0] || "",
   subCategory: finalCategoryId,
@@ -402,7 +402,13 @@ const removeDimensionPricing = (index) => {
   hasVariants: hasVariants,
   hasDimensionPricing: hasDimensionPricing,
   dimensionPricingData: hasDimensionPricing === "yes" 
-    ? dimensionPricingData.filter(d => d.length && d.breadth && d.price)
+    ? dimensionPricingData.filter(d => d.length && d.breadth && d.price).map(d => ({
+        length: d.length,
+        breadth: d.breadth,
+        height: d.height || "",
+        price: d.price,
+        pricingType: dimensionPricingType
+      }))
     : []
 }
 
@@ -723,23 +729,29 @@ const removeDimensionPricing = (index) => {
                     <select
                       id="dimensionPricing"
                       value={hasDimensionPricing}
-                      onChange={async (e) => {
-                        const value = e.target.value
-                        setHasDimensionPricing(value)
-                        
-                        // Fetch company settings when user selects "yes"
-                        if (value === "yes") {
-                          try {
-                            const settings = await fetchCompanySettings()
-                            setDimensionPricingType(settings.dimensionBasedPricing || "dynamic")
-                          } catch (error) {
-                            console.error("Failed to fetch company settings:", error)
-                            toast.error("Failed to fetch company settings")
-                            // Reset to "no" if fetch fails
-                            setHasDimensionPricing("no")
-                          }
-                        }
-                      }}
+  onChange={async (e) => {
+  const value = e.target.value
+  setHasDimensionPricing(value)
+  
+  // Fetch company settings when user selects "yes"
+  if (value === "yes") {
+    try {
+      const settings = await fetchCompanySettings()
+      const fetchedPricingType = settings.dimensionBasedPricing || "dynamic"
+      setDimensionPricingType(fetchedPricingType)
+      
+      // Update all dimension pricing data with the pricing type
+      setDimensionPricingData(prevData => 
+        prevData.map(item => ({ ...item, pricingType: fetchedPricingType }))
+      )
+    } catch (error) {
+      console.error("Failed to fetch company settings:", error)
+      toast.error("Failed to fetch company settings")
+      // Reset to "no" if fetch fails
+      setHasDimensionPricing("no")
+    }
+  }
+}}
                       className={selectClass}
                     >
                       <option value="no">No</option>

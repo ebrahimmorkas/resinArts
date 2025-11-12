@@ -162,6 +162,8 @@ const addProduct = async (req, res) => {
       bulkPricing,
       hasVariants,
       variants,
+      hasDimensionPricing,
+  dimensionPricingData,
     } = productData
 
     // Map uploaded files by their fieldname for easier access
@@ -192,20 +194,28 @@ const addProduct = async (req, res) => {
       }
     }
 
-    // Prepare basic product data
-    const newProductData = {
-      name,
-      mainCategory,
-      subCategory,
-      categoryPath,
-      productDetails: productDetails || [],
-      stock: hasVariants ? undefined : stock, // Only include if no variants
-      price: hasVariants ? undefined : price, // Only include if no variants
-      image: hasVariants ? undefined : imageUrl, // Only include if no variants
-      additionalImages: hasVariants ? [] : additionalImagesUrls, // Only include if no variants
-      bulkPricing: hasVariants ? [] : bulkPricing, // Only include if no variants
-      hasVariants,
-    }
+   // Prepare basic product data
+const newProductData = {
+  name,
+  mainCategory,
+  subCategory,
+  categoryPath,
+  productDetails: productDetails || [],
+  stock: hasVariants ? undefined : stock, // Only exclude if has variants
+  price: hasVariants || hasDimensionPricing === "yes" ? undefined : price, // Exclude if variants or dimension pricing
+  image: hasVariants ? undefined : imageUrl, // Only include if no variants
+  additionalImages: hasVariants ? [] : additionalImagesUrls, // Only include if no variants
+  bulkPricing: hasVariants ? [] : bulkPricing, // Only exclude if has variants
+  hasVariants,
+  hasDimensions: hasDimensionPricing === "yes",
+  pricingType: hasDimensionPricing === "yes" ? dimensionPricingData[0]?.pricingType || "dynamic" : "normal",
+  dimensions: hasDimensionPricing === "yes" ? dimensionPricingData.map(d => ({
+    length: Number(d.length) || null,
+    breadth: Number(d.breadth) || null,
+    height: d.height ? Number(d.height) : null,
+    price: Number(d.price) || null
+  })) : [],
+}
 
     // Process variants if they exist
     if (hasVariants && variants && variants.length > 0) {
