@@ -140,6 +140,15 @@ const BulkUploadImageToCloudinary = async (imagePath, folder = 'products') => {
 // Start of function to add single product
 const addProduct = async (req, res) => {
   try {
+    // 🚫 Limit total products to 100
+    const MAX_PRODUCTS = 100000000;
+    const productCount = await Product.countDocuments();
+    if (productCount >= MAX_PRODUCTS) {
+      return res.status(400).json({
+        error: `Cannot add more than ${MAX_PRODUCTS} products.`,
+      });
+    }
+
     // Parse JSON fields from FormData
     const productData = JSON.parse(req.body.productData)
     const {

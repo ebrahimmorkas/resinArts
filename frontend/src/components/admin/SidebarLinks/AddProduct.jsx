@@ -469,16 +469,23 @@ export default function AddProduct() {
       setHasVariants(false)
 
     } catch (error) {
-      console.error("Error adding product:", error.message)
-      toast.error(`Error adding product: ${error.message}`, {
-        position: "top-right",
-        autoClose: 5000,
-        hideProgressBar: false,
-        closeOnClick: true,
-        pauseOnHover: true,
-        draggable: true,
-      })
-    } finally {
+  console.error("Error adding product:", error);
+
+  const errorMessage =
+    error.response?.data?.error ||  // From backend (like "Cannot add more than 100 products.")
+    error.message ||                // From thrown errors
+    "Something went wrong while adding the product.";
+
+  toast.error(errorMessage, {
+    position: "top-right",
+    autoClose: 5000,
+    hideProgressBar: false,
+    closeOnClick: true,
+    pauseOnHover: true,
+    draggable: true,
+  });
+}
+ finally {
       setIsLoading(false)
     }
   }
