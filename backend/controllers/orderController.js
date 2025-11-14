@@ -199,34 +199,46 @@ if (!cartItemsArray || cartItemsArray.length === 0) {
             : false;
 
         let basePrice = 0;
-        if (sizeDetail) {
-          basePrice = parseFloat(isDiscountActive && sizeDetail.discountPrice ? sizeDetail.discountPrice : sizeDetail.price) || 0;
-        } else if (variant && variant.commonPrice !== undefined) {
-          basePrice = parseFloat(isDiscountActive && variant.discountCommonPrice ? variant.discountCommonPrice : variant.commonPrice) || 0;
-        } else {
-          basePrice = parseFloat(isDiscountActive && product.discountPrice ? product.discountPrice : product.price) || 0;
-        }
+
+// Check if product has custom dimensions (dimension-based pricing)
+if (cartData.customDimensions && cartData.customDimensions.calculatedPrice) {
+  basePrice = parseFloat(cartData.customDimensions.calculatedPrice) || 0;
+  console.log('💰 Dimension product basePrice:', basePrice);
+} else if (sizeDetail) {
+  basePrice = parseFloat(isDiscountActive && sizeDetail.discountPrice ? sizeDetail.discountPrice : sizeDetail.price) || 0;
+} else if (variant && variant.commonPrice !== undefined) {
+  basePrice = parseFloat(isDiscountActive && variant.discountCommonPrice ? variant.discountCommonPrice : variant.commonPrice) || 0;
+} else {
+  basePrice = parseFloat(isDiscountActive && product.discountPrice ? product.discountPrice : product.price) || 0;
+}
+
+console.log('📊 Final basePrice:', basePrice, 'for product:', cartData.productName);
 
         let bulkPricing = [];
-        if (sizeDetail) {
-          if (isDiscountActive && sizeDetail.discountBulkPricing) {
-            bulkPricing = sizeDetail.discountBulkPricing || [];
-          } else if (sizeDetail.bulkPricingCombinations) {
-            bulkPricing = sizeDetail.bulkPricingCombinations || [];
-          }
-        } else if (variant) {
-          if (isDiscountActive && variant.discountBulkPricing) {
-            bulkPricing = variant.discountBulkPricing || [];
-          } else if (variant.bulkPricing) {
-            bulkPricing = variant.bulkPricing || [];
-          }
-        } else {
-          if (isDiscountActive && product.discountBulkPricing) {
-            bulkPricing = product.discountBulkPricing || [];
-          } else if (product.bulkPricing) {
-            bulkPricing = product.bulkPricing || [];
-          }
-        }
+
+// Check if product has custom dimensions - use product-level bulk pricing
+if (cartData.customDimensions) {
+  bulkPricing = product.bulkPricing || [];
+  console.log('💰 Dimension product bulkPricing:', bulkPricing);
+} else if (sizeDetail) {
+  if (isDiscountActive && sizeDetail.discountBulkPricing) {
+    bulkPricing = sizeDetail.discountBulkPricing || [];
+  } else if (sizeDetail.bulkPricingCombinations) {
+    bulkPricing = sizeDetail.bulkPricingCombinations || [];
+  }
+} else if (variant) {
+  if (isDiscountActive && variant.discountBulkPricing) {
+    bulkPricing = variant.discountBulkPricing || [];
+  } else if (variant.bulkPricing) {
+    bulkPricing = variant.bulkPricing || [];
+  }
+} else {
+  if (isDiscountActive && product.discountBulkPricing) {
+    bulkPricing = product.discountBulkPricing || [];
+  } else if (product.bulkPricing) {
+    bulkPricing = product.bulkPricing || [];
+  }
+}
 
         let globalDiscount = null;
         for (const discount of discountData) {
@@ -258,9 +270,9 @@ if (!cartItemsArray || cartItemsArray.length === 0) {
             }
           }
         }
-
+        console.log('💵 effectiveUnitPrice:', effectiveUnitPrice, 'quantity:', cartData.quantity);
         const subtotal = effectiveUnitPrice * cartData.quantity;
-
+        console.log('💵 subtotal:', subtotal);
         let cashApplied = cartData.cash_applied || cartData.cashApplied || 0;
         if (freeCash && cashApplied > 0) {
           const isEligible = isFreeCashEligible(product, cartData, freeCash);
