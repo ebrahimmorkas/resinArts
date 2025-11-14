@@ -220,23 +220,33 @@ const [selectedAddress, setSelectedAddress] = useState({
 
   const isFreeCashDisabled = cartTotal < validAboveAmount || (!isAllProducts && !hasEligibleProduct)
 
-  let localCartTotal = 0
-  const cartEntries = Object.entries(cartItems)
-  cartEntries.forEach(([cartKey, item]) => {
-    const product = products.find((p) => p._id === item.productId)
-    if (!product) {
-      localCartTotal += ((item.discountedPrice || item.price) * item.quantity) - (item.cashApplied || 0)
-      return
-    }
+let localCartTotal = 0;
+const cartEntries = Object.entries(cartItems);
 
-    const variant = product.variants?.find((v) => v._id === item.variantId)
-    const sizeDetail = variant?.moreDetails?.find((md) => md._id === item.detailsId)
-    const bulkPricing = getBulkPricing(product, variant, sizeDetail)
-    const basePrice = item.discountedPrice || item.price
-    const effectiveUnit = getEffectiveUnitPrice(item.quantity, bulkPricing, basePrice)
-    const subtotal = effectiveUnit * item.quantity
-    localCartTotal += subtotal - (item.cashApplied || 0)
-  })
+cartEntries.forEach(([cartKey, item]) => {
+  // Get base price
+  let basePrice = item.discountedPrice || item.price || 0;
+  if (item.customDimensions && item.customDimensions.calculatedPrice) {
+    basePrice = item.customDimensions.calculatedPrice;
+  }
+  
+  // Apply bulk pricing
+  let effectiveUnit = basePrice;
+  const bulkPricing = item.bulkPricing || [];
+  if (bulkPricing.length > 0 && item.quantity) {
+    for (let i = bulkPricing.length - 1; i >= 0; i--) {
+      if (item.quantity >= bulkPricing[i].quantity) {
+        effectiveUnit = bulkPricing[i].wholesalePrice || basePrice;
+        break;
+      }
+    }
+  }
+  
+  const subtotal = (effectiveUnit || 0) * (item.quantity || 0);
+  localCartTotal += subtotal - (item.cashApplied || 0);
+});
+
+localCartTotal = Math.max(0, localCartTotal);
 
   // Fetch user's home address on component mount
 useEffect(() => {
@@ -395,110 +405,142 @@ useEffect(() => {
 
                 {/* Cart Items */}
                 {cartEntries.map(([cartKey, item]) => {
-  // Use bulk pricing stored in cart item instead of fetching from products
-  const bulkPricing = item.bulkPricing || []
-  const basePrice = item.discountedPrice || item.price
-  const effectiveUnit = getEffectiveUnitPrice(item.quantity, bulkPricing, basePrice)
+  // Use bulk pricing stored in cart item
+  const bulkPricing = item.bulkPricing || [];
+  
+  // Check if item has custom dimensions
+  let basePrice = item.discountedPrice || item.price || 0;
+  if (item.customDimensions && item.customDimensions.calculatedPrice) {
+    basePrice = item.customDimensions.calculatedPrice;
+  }
+  
+  // Calculate effective unit price with bulk pricing
+  let effectiveUnit = basePrice;
+  if (bulkPricing.length > 0 && item.quantity) {
+    for (let i = bulkPricing.length - 1; i >= 0; i--) {
+      if (item.quantity >= bulkPricing[i].quantity) {
+        effectiveUnit = bulkPricing[i].wholesalePrice || basePrice;
+        break;
+      }
+    }
+  }
 
-                  return (
-                    <div key={cartKey} className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
-                      <div className="flex gap-3 sm:gap-4">
-                        <img
-                          src={getOptimizedImageUrl(item.imageUrl, { width: 100 }) || "/placeholder.svg"}
-                          alt={item.productName}
-                          className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-contain flex-shrink-0"
-                          loading="lazy"
-                        />
-                        <div className="flex-1 min-w-0">
-                          <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate dark:text-white">
-                            {item.productName}
-                          </h3>
-                          {(item.colorName || item.sizeString) && (
-                            <p className="text-xs sm:text-sm text-gray-500 mt-1 dark:text-gray-400">
-                              {item.colorName && item.sizeString
-                                ? `${item.colorName} • ${item.sizeString}`
-                                : item.colorName || item.sizeString}
-                            </p>
-                          )}
-                          <div className="flex items-center gap-2 mt-2">
-                            <span className={`text-base sm:text-lg font-bold ${effectiveUnit < basePrice ? "text-green-600" : "text-blue-600"}`}>
-                              ₹{effectiveUnit.toFixed(2)}
-                            </span>
-                            {effectiveUnit < basePrice && (
-                              <span className="text-xs sm:text-sm text-gray-500 line-through dark:text-gray-400">
-                                ₹{basePrice.toFixed(2)}
-                              </span>
-                            )}
-                          </div>
-                          {item.cashApplied > 0 && (
-                            <p className="text-xs text-green-600 mt-1 font-medium">
-                              Free Cash: -₹{item.cashApplied.toFixed(2)}
-                            </p>
-                          )}
-                        </div>
-                        <div className="flex flex-col items-end justify-between">
-                          <button
-                            onClick={() => handleRemoveFromCart(cartKey)}
-                            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors dark:text-white"
-                            disabled={cartLoading}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
-                          <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg p-1 dark:bg-gray-700">
-  <button
-    onClick={() => handleUpdateQuantity(cartKey, -1)}
-    className="p-1 hover:bg-white rounded transition-colors dark:hover:bg-gray-600"
-    disabled={cartLoading}
-  >
-    <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
-  </button>
-  <input
-    type="number"
-    value={item.quantity}
-    onChange={(e) => {
-      const val = e.target.value;
-      if (val === '') {
-        // Temporarily allow empty for editing
-        return;
-      }
-      const num = Number.parseInt(val);
-      if (!isNaN(num) && num >= 1) {
-        const diff = num - item.quantity;
-        if (diff !== 0) {
-          handleUpdateQuantity(cartKey, diff);
-        }
-      }
-    }}
-    onBlur={(e) => {
-      if (e.target.value === '' || e.target.value === '0') {
-        // If empty or 0, reset to 1
-        const diff = 1 - item.quantity;
-        if (diff !== 0) {
-          handleUpdateQuantity(cartKey, diff);
-        }
-      }
-    }}
-    onKeyPress={(e) => {
-      if (e.key === 'Enter') {
-        e.target.blur();
-      }
-    }}
-    disabled={cartLoading}
-    className="font-semibold text-sm sm:text-base w-12 sm:w-14 text-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
-  />
-  <button
-    onClick={() => handleUpdateQuantity(cartKey, 1)}
-    className="p-1 hover:bg-white rounded transition-colors dark:hover:bg-gray-600"
-    disabled={cartLoading}
-  >
-    <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
-  </button>
-</div>
-                        </div>
-                      </div>
-                    </div>
-                  )
-                })}
+  // Calculate subtotal safely
+  const subtotal = (effectiveUnit || 0) * (item.quantity || 0);
+  const finalTotal = Math.max(0, subtotal - (item.cashApplied || 0));
+
+  return (
+    <div key={cartKey} className="bg-white dark:bg-gray-800 rounded-xl p-3 sm:p-4 border border-gray-200 dark:border-gray-700 shadow-sm hover:shadow-md transition-shadow">
+      <div className="flex gap-3 sm:gap-4">
+        <img
+          src={getOptimizedImageUrl(item.imageUrl, { width: 100 }) || "/placeholder.svg"}
+          alt={item.productName}
+          className="w-16 h-16 sm:w-20 sm:h-20 rounded-lg object-contain flex-shrink-0"
+          loading="lazy"
+        />
+        <div className="flex-1 min-w-0">
+          <h3 className="font-semibold text-sm sm:text-base text-gray-900 truncate dark:text-white">
+            {item.productName}
+          </h3>
+          
+          {/* Custom Dimensions Display */}
+          {item.customDimensions && (
+            <div className="mt-1 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
+              <span className="font-medium">Custom: </span>
+              {item.customDimensions.length} × {item.customDimensions.breadth}
+              {item.customDimensions.height && ` × ${item.customDimensions.height}`} {item.customDimensions.unit}
+            </div>
+          )}
+          
+          {/* Variant and Size Info */}
+          {(item.colorName || item.sizeString) && (
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 dark:text-gray-400">
+              {item.colorName && item.sizeString
+                ? `${item.colorName} • ${item.sizeString}`
+                : item.colorName || item.sizeString}
+            </p>
+          )}
+          
+          {/* Price Display */}
+          <div className="flex items-center gap-2 mt-2">
+            <span className={`text-base sm:text-lg font-bold ${effectiveUnit < basePrice ? "text-green-600" : "text-blue-600"}`}>
+              ₹{(effectiveUnit || 0).toFixed(2)}
+            </span>
+            {effectiveUnit < basePrice && (
+              <span className="text-xs sm:text-sm text-gray-500 line-through dark:text-gray-400">
+                ₹{(basePrice || 0).toFixed(2)}
+              </span>
+            )}
+          </div>
+          
+          {/* Free Cash Applied */}
+          {item.cashApplied > 0 && (
+            <p className="text-xs text-green-600 mt-1 font-medium">
+              Free Cash: -₹{(item.cashApplied || 0).toFixed(2)}
+            </p>
+          )}
+        </div>
+        
+        {/* Quantity Controls and Remove Button */}
+        <div className="flex flex-col items-end justify-between">
+          <button
+            onClick={() => handleRemoveFromCart(cartKey)}
+            className="p-1.5 text-red-500 hover:bg-red-50 rounded-lg transition-colors dark:text-white"
+            disabled={cartLoading}
+          >
+            <Trash2 className="h-4 w-4" />
+          </button>
+          <div className="flex items-center gap-1 sm:gap-2 bg-gray-100 rounded-lg p-1 dark:bg-gray-700">
+            <button
+              onClick={() => handleUpdateQuantity(cartKey, -1)}
+              className="p-1 hover:bg-white rounded transition-colors dark:hover:bg-gray-600"
+              disabled={cartLoading}
+            >
+              <Minus className="h-3 w-3 sm:h-4 sm:w-4" />
+            </button>
+            <input
+              type="number"
+              value={item.quantity || 0}
+              onChange={(e) => {
+                const val = e.target.value;
+                if (val === '') return;
+                const num = Number.parseInt(val);
+                if (!isNaN(num) && num >= 1) {
+                  const diff = num - (item.quantity || 0);
+                  if (diff !== 0) {
+                    handleUpdateQuantity(cartKey, diff);
+                  }
+                }
+              }}
+              onBlur={(e) => {
+                if (e.target.value === '' || e.target.value === '0') {
+                  const diff = 1 - (item.quantity || 0);
+                  if (diff !== 0) {
+                    handleUpdateQuantity(cartKey, diff);
+                  }
+                }
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.target.blur();
+                }
+              }}
+              disabled={cartLoading}
+              className="font-semibold text-sm sm:text-base w-12 sm:w-14 text-center bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded px-1 py-0.5 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:opacity-50"
+            />
+            <button
+              onClick={() => handleUpdateQuantity(cartKey, 1)}
+              className="p-1 hover:bg-white rounded transition-colors dark:hover:bg-gray-600"
+              disabled={cartLoading}
+            >
+              <Plus className="h-3 w-3 sm:h-4 sm:w-4" />
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+})}
               </div>
             )}
           </div>

@@ -538,6 +538,31 @@ const handleAddressChange = async (newAddress) => {
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between items-start mb-2">
                           <h4 className="font-semibold text-gray-900 dark:text-gray-900 text-lg">{product.product_name}</h4>
+                          {product.customDimensions && (
+  <div className="mt-2 bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-700 rounded-lg p-3">
+    <div className="flex items-center gap-2 mb-2">
+      <svg className="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z" />
+      </svg>
+      <span className="text-sm font-semibold text-blue-800 dark:text-blue-300">Custom Dimensions</span>
+    </div>
+    <div className="grid grid-cols-2 gap-2 text-sm">
+      <div>
+        <span className="text-blue-700 dark:text-blue-400">Dimensions:</span>
+        <div className="font-medium text-blue-900 dark:text-blue-200">
+          {product.customDimensions.length} × {product.customDimensions.breadth}
+          {product.customDimensions.height && ` × ${product.customDimensions.height}`} {product.customDimensions.unit}
+        </div>
+      </div>
+      <div>
+        <span className="text-blue-700 dark:text-blue-400">Calculated Price:</span>
+        <div className="font-semibold text-blue-900 dark:text-blue-200">
+          ₹{product.customDimensions.calculatedPrice?.toFixed(2)}
+        </div>
+      </div>
+    </div>
+  </div>
+)}
                           <div
                             className={`flex items-center px-2 py-1 rounded-full text-xs font-medium ${stockStatus.bgColor} ${stockStatus.textColor}`}
                           >

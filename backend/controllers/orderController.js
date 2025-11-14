@@ -281,6 +281,7 @@ if (!cartItemsArray || cartItemsArray.length === 0) {
           price: effectiveUnitPrice,
           total: subtotal,
           cash_applied: cashApplied,
+          customDimensions: cartData.customDimensions || null,
         };
 
         if (cartData.variantId) {

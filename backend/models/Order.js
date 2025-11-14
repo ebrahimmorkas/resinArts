@@ -44,6 +44,13 @@ const orderedProductSchema = new mongoose.Schema({
         required: false,
         default: 0,
     },
+    customDimensions: {
+  length: { type: Number, required: false },
+  breadth: { type: Number, required: false },
+  height: { type: Number, required: false },
+  unit: { type: String, enum: ["cm", "m", "inch"], required: false },
+  calculatedPrice: { type: Number, required: false }
+},
 }, { _id: false });
 
 const orderSchema = mongoose.Schema({

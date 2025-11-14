@@ -16,6 +16,12 @@ export const useCart = () => {
     return context;
 };
 
+// ADD THIS HELPER FUNCTION before CartProvider:
+const generateCustomDimensionKey = (dimensions) => {
+  if (!dimensions) return '';
+  return `${dimensions.length}x${dimensions.breadth}${dimensions.height ? `x${dimensions.height}` : ''}`;
+};
+
 export const CartProvider = ({ children }) => {
     const [cartItems, setCartItems] = useState({});
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -100,25 +106,29 @@ export const CartProvider = ({ children }) => {
             let backendCart = {};
             if (response.status === 200) {
                 const cartData = response.data;
-                cartData.forEach((item) => {
-                    const cartKey = `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`;
-                    backendCart[cartKey] = {
-                        productId: item.product_id,
-                        variantName: item.variant_name || null,
-                        sizeString: item.size || null,
-                        quantity: item.quantity,
-                        price: item.price,
-                        discountedPrice: item.discounted_price,
-                        imageUrl: item.image_url,
-                        productName: item.product_name,
-                        variantId: item.variant_id,
-                        detailsId: item.details_id,
-                        sizeId: item.size_id,
-                        bulkPricing: item.bulk_pricing || [],
-                        cashApplied: item.cash_applied || 0,
-                        userId: item.user_id,
-                    };
-                });
+cartData.forEach((item) => {
+  const cartKey = item.customDimensions
+    ? `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}-${generateCustomDimensionKey(item.customDimensions)}`
+    : `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`;
+  
+  backendCart[cartKey] = {
+    productId: item.product_id,
+    variantName: item.variant_name || null,
+    sizeString: item.size || null,
+    quantity: item.quantity,
+    price: item.price,
+    discountedPrice: item.discounted_price,
+    imageUrl: item.image_url,
+    productName: item.product_name,
+    variantId: item.variant_id,
+    detailsId: item.details_id,
+    sizeId: item.size_id,
+    bulkPricing: item.bulk_pricing || [],
+    customDimensions: item.customDimensions || null, // ADD THIS LINE
+    cashApplied: item.cash_applied || 0,
+    userId: item.user_id,
+  };
+});
             }
 
             // If there's a guest cart, merge it
@@ -170,6 +180,16 @@ for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
                 discounted_price: guestItem.discountedPrice || guestItem.price,
                 bulk_pricing: guestItem.bulkPricing || [],
             };
+            //  custom dimensions handling:
+if (guestItem.customDimensions) {
+  cartItemData.custom_dimensions = {
+    length: guestItem.customDimensions.length,
+    breadth: guestItem.customDimensions.breadth,
+    height: guestItem.customDimensions.height,
+    unit: guestItem.customDimensions.unit,
+    calculatedPrice: guestItem.customDimensions.calculatedPrice
+  };
+}
 
             if (guestItem.variantId) cartItemData.variant_id = guestItem.variantId;
             if (guestItem.detailsId) cartItemData.details_id = guestItem.detailsId;
@@ -213,52 +233,56 @@ for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
         }
     };
 
-    const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
+const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
     try {
         const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
 
-        if (!user) {
-            // Guest user - save to localStorage (synchronous, no loading needed)
-            const newCartItems = {
-                ...cartItems,
-                [cartKey]: {
-                    productId,
-                    variantName: colorName || null,
-                    sizeString: sizeString || null,
-                    quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
-                    price: productData.price,
-                    discountedPrice: productData.discountedPrice || productData.price,
-                    imageUrl: productData.imageUrl,
-                    productName: productData.productName,
-                    variantId: productData.variantId,
-                    detailsId: productData.detailsId,
-                    sizeId: productData.sizeId,
-                    cashApplied: 0,
-                },
-            };
-            setCartItems(newCartItems);
-            saveCartToLocalStorage(newCartItems);
-            return;
-        }
-
-        // Logged in user - optimistic update first (instant feedback)
-        const optimisticCartItems = {
+        // FIND the section for guest users (inside addToCart) and UPDATE:
+if (!user) {
+  // Guest user - save to localStorage
+  const newCartItems = {
     ...cartItems,
     [cartKey]: {
-        productId,
-        variantName: colorName || null,
-        sizeString: sizeString || null,
-        quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
-        price: productData.price,
-        discountedPrice: productData.discountedPrice || productData.price,
-        imageUrl: productData.imageUrl,
-        productName: productData.productName,
-        variantId: productData.variantId,
-        detailsId: productData.detailsId,
-        sizeId: productData.sizeId,
-        bulkPricing: productData.bulkPricing || [], // Add this line
-        cashApplied: 0,
+      productId,
+      variantName: colorName || null,
+      sizeString: sizeString || null,
+      quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
+      price: productData.price,
+      discountedPrice: productData.discountedPrice || productData.price,
+      imageUrl: productData.imageUrl,
+      productName: productData.productName,
+      variantId: productData.variantId,
+      detailsId: productData.detailsId,
+      sizeId: productData.sizeId,
+      bulkPricing: productData.bulkPricing || [],
+      customDimensions: productData.customDimensions || null, // ADD THIS LINE
+      cashApplied: 0,
     },
+  };
+  setCartItems(newCartItems);
+  saveCartToLocalStorage(newCartItems);
+  return;
+}
+
+        // Logged in user - optimistic update first (instant feedback)
+const optimisticCartItems = {
+  ...cartItems,
+  [cartKey]: {
+    productId,
+    variantName: colorName || null,
+    sizeString: sizeString || null,
+    quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
+    price: productData.price,
+    discountedPrice: productData.discountedPrice || productData.price,
+    imageUrl: productData.imageUrl,
+    productName: productData.productName,
+    variantId: productData.variantId,
+    detailsId: productData.detailsId,
+    sizeId: productData.sizeId,
+    bulkPricing: productData.bulkPricing || [],
+    customDimensions: productData.customDimensions || null, // ADD THIS LINE
+    cashApplied: 0,
+  },
 };
         setCartItems(optimisticCartItems);
 
@@ -284,16 +308,37 @@ if (applyFreeCash && freeCash) {
     }
 }
 
-        const cartItemData = {
-            image_url: productData.imageUrl,
-            product_id: productId,
-            product_name: productData.productName,
-            quantity: quantity,
-            price: productData.price,
-            cash_applied: cashApplied,
-            discounted_price: productData.discountedPrice || productData.price,
-            bulk_pricing: productData.bulkPricing || [], 
-        };
+// Prepare custom dimensions with all required fields
+let customDimensionsData = null;
+if (productData.customDimensions) {
+  console.log('🔍 productData.customDimensions FULL:', productData.customDimensions); // ADD THIS
+  console.log('🔍 calculatedPrice from productData:', productData.customDimensions.calculatedPrice); // ADD THIS
+  
+  customDimensionsData = {
+    length: productData.customDimensions.length,
+    breadth: productData.customDimensions.breadth,
+    height: productData.customDimensions.height,
+    unit: productData.customDimensions.unit,
+    calculatedPrice: productData.customDimensions.calculatedPrice
+  };
+  
+  console.log('🔍 customDimensionsData AFTER:', customDimensionsData); // ADD THIS
+}
+
+const cartItemData = {
+  image_url: productData.imageUrl,
+  product_id: productId,
+  product_name: productData.productName,
+  quantity: quantity,
+  price: productData.price,
+  cash_applied: cashApplied,
+  discounted_price: productData.discountedPrice || productData.price,
+  bulk_pricing: productData.bulkPricing || [],
+  custom_dimensions: customDimensionsData,
+};
+
+console.log('📦 Sending to backend:', cartItemData);
+console.log('🔍 Custom Dimensions:', cartItemData.custom_dimensions);
 
         if (productData.variantId && productData.variantId !== "") {
             cartItemData.variant_id = productData.variantId;

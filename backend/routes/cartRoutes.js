@@ -169,7 +169,8 @@ router.post("/", async (req, res) => {
       price,
       cash_applied,
       discounted_price,
-      bulk_pricing, 
+      bulk_pricing,
+      custom_dimensions, // RECEIVED as snake_case
     } = req.body
 
     // Check stock availability
@@ -202,6 +203,58 @@ router.post("/", async (req, res) => {
       });
     }
 
+    // AFTER destructuring request body, BEFORE stock check:
+console.log('🔍 Backend received custom_dimensions:', custom_dimensions);
+
+if (custom_dimensions) {
+  // Validate custom dimensions with detailed logging
+  console.log('Validating dimensions:', {
+    length: custom_dimensions.length,
+    breadth: custom_dimensions.breadth,
+    height: custom_dimensions.height,
+    calculatedPrice: custom_dimensions.calculatedPrice,
+    unit: custom_dimensions.unit
+  });
+
+  if (!custom_dimensions.length || isNaN(custom_dimensions.length) || custom_dimensions.length <= 0) {
+    console.error('❌ Invalid length:', custom_dimensions.length);
+    return res.status(400).json({ 
+      error: 'Invalid length for custom dimensions',
+      received: custom_dimensions.length 
+    });
+  }
+  
+  if (!custom_dimensions.breadth || isNaN(custom_dimensions.breadth) || custom_dimensions.breadth <= 0) {
+    console.error('❌ Invalid breadth:', custom_dimensions.breadth);
+    return res.status(400).json({ 
+      error: 'Invalid breadth for custom dimensions',
+      received: custom_dimensions.breadth 
+    });
+  }
+  
+  if (custom_dimensions.height !== null && custom_dimensions.height !== undefined) {
+    if (isNaN(custom_dimensions.height) || custom_dimensions.height <= 0) {
+      console.error('❌ Invalid height:', custom_dimensions.height);
+      return res.status(400).json({ 
+        error: 'Invalid height for custom dimensions',
+        received: custom_dimensions.height 
+      });
+    }
+  }
+  
+  // CRITICAL: Check calculatedPrice exists and is valid
+  if (!custom_dimensions.calculatedPrice || isNaN(custom_dimensions.calculatedPrice) || custom_dimensions.calculatedPrice <= 0) {
+    console.error('❌ Invalid calculatedPrice:', custom_dimensions.calculatedPrice);
+    return res.status(400).json({ 
+      error: 'Invalid calculated price for custom dimensions',
+      received: custom_dimensions.calculatedPrice,
+      type: typeof custom_dimensions.calculatedPrice
+    });
+  }
+  
+  console.log('✅ Custom dimensions validation passed');
+}
+
     let savedItem;
     if (existingItem) {
       // Update quantity if item exists
@@ -218,7 +271,13 @@ router.post("/", async (req, res) => {
         cash_applied,
         discounted_price,
         bulk_pricing: bulk_pricing || [], 
+        // customDimensions: custom_dimensions || null,
       }
+
+      // ADD custom dimensions with correct field name for Mongoose
+    if (custom_dimensions) {
+      cartItemData.customDimensions = custom_dimensions; // Use camelCase for DB
+    }
 
       // Only add variant fields if they exist
       if (variant_id) cartItemData.variant_id = variant_id;
