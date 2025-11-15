@@ -12,6 +12,8 @@ import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import Navbar from "../../components/client/common/Navbar"
 import CartModal from "../../components/client/common/CartModal"
 import axios from "axios"
+import DimensionInputModal from "../../components/client/common/DimensionInputModal"
+import ViewPriceChartModal from "../../components/client/common/ViewPriceChartModal"
 
 export default function ProductDetailsPage() {
   const { productId } = useParams()
@@ -36,6 +38,8 @@ const [productError, setProductError] = useState(null)
   const [searchResults, setSearchResults] = useState([])
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+const [showDimensionModal, setShowDimensionModal] = useState(false);
+const [showPriceChartModal, setShowPriceChartModal] = useState(false);
 
   // Helper functions (copy from Home.jsx)
   const formatSize = (sizeObj) => {
@@ -535,6 +539,56 @@ if (productError || !product) {
     }
   }
 
+  // ADD THESE FUNCTIONS after handleAddToCartFromModal
+
+const handleOpenDimensionModal = () => {
+  setShowDimensionModal(true);
+};
+
+const handleCloseDimensionModal = () => {
+  setShowDimensionModal(false);
+};
+
+const handleDimensionConfirm = async (dimensionData) => {
+  if (!product) return;
+
+  console.log('🏠 ProductDetails dimensionData received:', dimensionData);
+
+  const productData = {
+    imageUrl: product.image || "/placeholder.svg",
+    productName: product.name,
+    variantId: "",
+    detailsId: "",
+    sizeId: "",
+    price: dimensionData.calculatedPrice,
+    discountedPrice: dimensionData.calculatedPrice,
+    bulkPricing: product.bulkPricing || [],
+    customDimensions: {
+      length: dimensionData.length,
+      breadth: dimensionData.breadth,
+      height: dimensionData.height,
+      unit: dimensionData.unit,
+      calculatedPrice: dimensionData.calculatedPrice
+    }
+  };
+
+  console.log('🏠 ProductDetails productData:', productData);
+  console.log('🏠 ProductDetails customDimensions:', productData.customDimensions);
+
+  await addToCart(product._id, null, null, quantity, productData);
+  
+  setShowDimensionModal(false);
+  setQuantity(1);
+};
+
+const handleOpenPriceChartModal = () => {
+  setShowPriceChartModal(true);
+};
+
+const handleClosePriceChartModal = () => {
+  setShowPriceChartModal(false);
+};
+
   const getCurrentImages = () => {
     const images = []
     if (selectedVariant && selectedVariant.variantImage) {
@@ -695,18 +749,46 @@ if (productError || !product) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
-  <div>
-    <span className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
-      ₹ {effectiveUnitPrice.toFixed(2)}
-    </span>
+      {/* Check if product has dimension pricing */}
+{product.hasDimensions && product.pricingType !== 'normal' ? (
+  <div className="space-y-3">
+    {product.pricingType === 'dynamic' ? (
+      /* Dynamic Pricing - Show base price info */
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <p className="text-sm text-blue-700 dark:text-blue-300 font-medium mb-1">
+          Base Price: ₹{product.dimensions?.[0]?.price} per {product.dimensions?.[0]?.height ? 'cubic' : 'square'} cm
+        </p>
+        <p className="text-xs text-blue-600 dark:text-blue-400">
+          Price calculated based on custom dimensions
+        </p>
+      </div>
+    ) : product.pricingType === 'static' ? (
+      /* Static Pricing - Show button */
+      <button
+        onClick={handleOpenPriceChartModal}
+        className="w-full bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+      >
+        <p className="text-base font-semibold text-purple-700 dark:text-purple-300">
+          View Price Chart
+        </p>
+      </button>
+    ) : null}
   </div>
-  {(hasActiveDiscount && originalPrice > displayPrice) || (effectiveUnitPrice < originalPrice) ? (
-    <span className="text-lg sm:text-xl text-gray-500 line-through dark:text-gray-400">
-      ₹ {originalPrice.toFixed(2)}
-    </span>
-  ) : null}
-</div>
+) : (
+  /* Normal Pricing - Original code */
+  <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
+    <div>
+      <span className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
+        ₹ {effectiveUnitPrice.toFixed(2)}
+      </span>
+    </div>
+    {(hasActiveDiscount && originalPrice > displayPrice) || (effectiveUnitPrice < originalPrice) ? (
+      <span className="text-lg sm:text-xl text-gray-500 line-through dark:text-gray-400">
+        ₹ {originalPrice.toFixed(2)}
+      </span>
+    ) : null}
+  </div>
+)}
 
               {product.hasVariants && product.variants && (
                 <div>
@@ -863,13 +945,22 @@ if (productError || !product) {
     Remove from Cart
   </button>
                 ) : (
-                  <button
-  onClick={handleAddToCartFromModal}
+         <button
+  onClick={() => {
+    // Check if product has dimension pricing
+    if (product.hasDimensions && product.pricingType !== 'normal') {
+      handleOpenDimensionModal();
+    } else {
+      handleAddToCartFromModal();
+    }
+  }}
   disabled={currentStock === 0 || quantity > currentStock || (product.hasVariants && (!selectedVariant || !selectedSize))}
   className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-green-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
 >
   <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-  {currentStock === 0 ? 'Out of Stock' : `Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}
+  {currentStock === 0 ? 'Out of Stock' : 
+   product.hasDimensions && product.pricingType !== 'normal' ? 'Enter Dimensions' :
+   `Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}
 </button>
                 )}
               </>
@@ -926,6 +1017,24 @@ if (productError || !product) {
             />
           </div>
         </div>
+      )}
+
+      {showDimensionModal && product && (
+        <DimensionInputModal
+          isOpen={showDimensionModal}
+          onClose={handleCloseDimensionModal}
+          onConfirm={handleDimensionConfirm}
+          product={product}
+          pricingType={product.pricingType}
+        />
+      )}
+
+      {showPriceChartModal && product && (
+        <ViewPriceChartModal
+          isOpen={showPriceChartModal}
+          onClose={handleClosePriceChartModal}
+          product={product}
+        />
       )}
     </div>
   )
