@@ -2710,6 +2710,17 @@ const editProduct = async (req, res) => {
     }
 
     const imagesToDelete = [];
+    
+    // Store previous values for potential restoration
+    const previousValues = {
+      price: existingProduct.price,
+      stock: existingProduct.stock,
+      bulkPricing: existingProduct.bulkPricing,
+      hasDimensions: existingProduct.hasDimensions,
+      pricingType: existingProduct.pricingType,
+      dimensions: existingProduct.dimensions,
+      staticDimensions: existingProduct.staticDimensions
+    };
 
     // Organize files by fieldname
     const filesByField = {};
@@ -2814,8 +2825,54 @@ const editProduct = async (req, res) => {
             delete variant.moreDetails[mdIndex].existingAdditionalImages;
           }
         }
-      }
+     }
     }
+
+    // Handle dimension-based pricing
+    if (productData.hasDimensionPricing === "yes" && productData.dimensionPricingData) {
+      const dimensionData = productData.dimensionPricingData;
+      const pricingType = dimensionData[0]?.pricingType || 'dynamic';
+      
+      if (pricingType === 'dynamic') {
+        productData.hasDimensions = true;
+        productData.pricingType = 'dynamic';
+        productData.dimensions = dimensionData.map(d => ({
+          length: Number(d.length) || null,
+          breadth: Number(d.breadth) || null,
+          height: d.height ? Number(d.height) : null,
+          price: Number(d.price) || null
+        }));
+        productData.staticDimensions = [];
+        productData.price = null;
+        // Keep stock and bulkPricing from productData (already set)
+      } else {
+        // Static
+        productData.hasDimensions = true;
+        productData.pricingType = 'static';
+        productData.staticDimensions = dimensionData.map(d => ({
+          length: Number(d.length) || null,
+          breadth: Number(d.breadth) || null,
+          height: d.height ? Number(d.height) : null,
+          price: Number(d.price) || null,
+          stock: Number(d.stock) || null,
+          bulkPricing: d.bulkPricing || []
+        }));
+        productData.dimensions = [];
+        productData.price = null;
+        productData.stock = null;
+        productData.bulkPricing = [];
+      }
+    } else {
+      // Normal product without dimensions
+      productData.hasDimensions = false;
+      productData.pricingType = 'normal';
+      productData.dimensions = [];
+      productData.staticDimensions = [];
+    }
+    
+    // Clean up temporary fields
+    delete productData.hasDimensionPricing;
+    delete productData.dimensionPricingData;
 
     // Update product
     const updatedProduct = await Product.findByIdAndUpdate(
