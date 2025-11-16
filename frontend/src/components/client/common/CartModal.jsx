@@ -12,6 +12,7 @@ import axios from "axios"
 import { useNavigate } from "react-router-dom"
 import { AuthContext } from "../../../../Context/AuthContext"
 import AddressSelectionModal from './AddressSelectionModal';
+import DimensionInputModal from './DimensionInputModal';
 
 export default function CartModal() {
   
@@ -71,6 +72,7 @@ export default function CartModal() {
     clearCart,
     clearFreeCashCache,
     checkFreeCashEligibility,
+    refreshCartFromBackend,
   } = useCart()
 
   const [isProcessing, setIsProcessing] = useState(false)
@@ -84,6 +86,7 @@ const [selectedAddress, setSelectedAddress] = useState({
   pincode: '',
   full_address: ''
 })
+const [editingDimension, setEditingDimension] = useState(null);
 
   const handleCartCheckout = async () => {
   try {
@@ -186,6 +189,134 @@ const [selectedAddress, setSelectedAddress] = useState({
       autoClose: 2000,
     })
   }
+
+  const handleDimensionEdit = async (dimensionData) => {
+  if (!editingDimension) return;
+
+  try {
+    const { cartKey, existingDimensions } = editingDimension;
+    const item = cartItems[cartKey];
+    
+    if (!item) {
+      toast.error('Cart item not found', {
+        position: "top-right",
+        autoClose: 2000,
+      });
+      setEditingDimension(null);
+      return;
+    }
+
+    setIsProcessing(true);
+
+    // Check if dimensions actually changed
+    const oldDims = existingDimensions;
+    const dimsChanged = oldDims.length !== dimensionData.length ||
+                        oldDims.breadth !== dimensionData.breadth ||
+                        oldDims.height !== dimensionData.height;
+
+    if (dimsChanged) {
+      // Dimensions changed - delete old entry and create new one
+      await axios.delete("http://localhost:3000/api/cart", {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: {
+          product_id: item.productId,
+          variant_name: null,
+          size: null,
+          custom_dimensions: {
+            length: oldDims.length,
+            breadth: oldDims.breadth,
+            height: oldDims.height || null,
+            unit: oldDims.unit,
+            calculatedPrice: oldDims.calculatedPrice
+          }
+        },
+      });
+
+      // Create new entry with updated dimensions
+      const newCustomDimensions = {
+        length: dimensionData.length,
+        breadth: dimensionData.breadth,
+        height: dimensionData.height || null,
+        unit: dimensionData.unit,
+        calculatedPrice: dimensionData.calculatedPrice
+      };
+
+      const cartItemData = {
+        image_url: item.imageUrl,
+        product_id: item.productId,
+        product_name: item.productName,
+        quantity: dimensionData.quantity,
+        price: dimensionData.calculatedPrice,
+        cash_applied: 0,
+        discounted_price: dimensionData.calculatedPrice,
+        bulk_pricing: item.bulkPricing || [],
+        custom_dimensions: newCustomDimensions
+      };
+
+      await axios.post("http://localhost:3000/api/cart", cartItemData, {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+    } else {
+      // Only quantity changed - just update quantity
+      const newQuantity = dimensionData.quantity;
+
+      await axios.put(
+        "http://localhost:3000/api/cart",
+        {
+          product_id: item.productId,
+          variant_name: null,
+          size: null,
+          quantity: newQuantity,
+          cash_applied: 0,
+          custom_dimensions: {
+            length: oldDims.length,
+            breadth: oldDims.breadth,
+            height: oldDims.height || null,
+            unit: oldDims.unit,
+            calculatedPrice: oldDims.calculatedPrice
+          }
+        },
+        {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        }
+      );
+    }
+
+    toast.success('Dimensions updated successfully!', {
+      position: "top-right",
+      autoClose: 2000,
+    });
+
+    // Refresh cart from backend to sync state
+    if (typeof window !== 'undefined') {
+      // Small delay to ensure backend is updated
+      setTimeout(async () => {
+        await refreshCartFromBackend();
+      }, 100);
+    }
+
+    setIsProcessing(false);
+    setEditingDimension(null);
+
+  } catch (error) {
+    console.error('Error updating dimensions:', error);
+    setIsProcessing(false);
+    toast.error(error.response?.data?.error || 'Failed to update dimensions', {
+      position: "top-right",
+      autoClose: 2000,
+    });
+  }
+};
 
   const totalFreeCashApplied = Object.values(cartItems).reduce((sum, item) => sum + (item.cashApplied || 0), 0)
   const cartTotal = getCartTotal()
@@ -444,13 +575,32 @@ useEffect(() => {
           </h3>
           
           {/* Custom Dimensions Display */}
-          {item.customDimensions && (
-            <div className="mt-1 text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded">
-              <span className="font-medium">Custom: </span>
-              {item.customDimensions.length} × {item.customDimensions.breadth}
-              {item.customDimensions.height && ` × ${item.customDimensions.height}`} {item.customDimensions.unit}
-            </div>
-          )}
+{item.customDimensions && (
+  <div className="mt-1 flex items-center justify-between gap-2">
+    <div className="text-xs text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-900/20 px-2 py-1 rounded flex-1">
+      <span className="font-medium">Custom: </span>
+      {item.customDimensions.length} × {item.customDimensions.breadth}
+      {item.customDimensions.height && ` × ${item.customDimensions.height}`} {item.customDimensions.unit}
+    </div>
+    <button
+      onClick={() => {
+        // Find the product from products context
+        const product = products.find(p => p._id === item.productId);
+        if (product) {
+          setEditingDimension({
+            cartKey: cartKey,
+            product: product,
+            quantity: item.quantity,
+            existingDimensions: item.customDimensions
+          });
+        }
+      }}
+      className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium px-1"
+    >
+      Edit
+    </button>
+  </div>
+)}
           
           {/* Variant and Size Info */}
           {(item.colorName || item.sizeString) && (
@@ -612,6 +762,23 @@ useEffect(() => {
           cancelText="Cancel"
           type="danger"
         />
+
+        {/* Dimension Edit Modal */}
+        {editingDimension && (
+          <DimensionInputModal
+            isOpen={!!editingDimension}
+            onClose={() => setEditingDimension(null)}
+            onConfirm={handleDimensionEdit}
+            product={editingDimension.product}
+            pricingType="dimension"
+            initialQuantity={editingDimension.quantity}
+            editMode={{
+              isEditing: true,
+              cartKey: editingDimension.cartKey,
+              existingDimensions: editingDimension.existingDimensions
+            }}
+          />
+        )}
       </div>
       <ToastContainer 
   position="top-right"
@@ -626,5 +793,6 @@ useEffect(() => {
   theme="light"
 />
     </>
+    
   )
 }
