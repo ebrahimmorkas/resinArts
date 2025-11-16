@@ -3084,6 +3084,48 @@ const bulkEditProducts = async (req, res) => {
           }
         }
 
+        // Handle dimension-based pricing
+        if (productData.hasDimensionPricing === "yes" && productData.dimensionPricingData) {
+          const dimensionData = productData.dimensionPricingData;
+          const pricingType = dimensionData[0]?.pricingType || 'dynamic';
+          
+          if (pricingType === 'dynamic') {
+            finalProductData.hasDimensions = true;
+            finalProductData.pricingType = 'dynamic';
+            finalProductData.dimensions = dimensionData.map(d => ({
+              length: Number(d.length) || null,
+              breadth: Number(d.breadth) || null,
+              height: d.height ? Number(d.height) : null,
+              price: Number(d.price) || null
+            }));
+            finalProductData.staticDimensions = [];
+            finalProductData.price = null;
+            // Keep stock and bulkPricing from finalProductData
+          } else {
+            // Static
+            finalProductData.hasDimensions = true;
+            finalProductData.pricingType = 'static';
+            finalProductData.staticDimensions = dimensionData.map(d => ({
+              length: Number(d.length) || null,
+              breadth: Number(d.breadth) || null,
+              height: d.height ? Number(d.height) : null,
+              price: Number(d.price) || null,
+              stock: Number(d.stock) || null,
+              bulkPricing: d.bulkPricing || []
+            }));
+            finalProductData.dimensions = [];
+            finalProductData.price = null;
+            finalProductData.stock = null;
+            finalProductData.bulkPricing = [];
+          }
+        } else {
+          // Normal product without dimensions
+          finalProductData.hasDimensions = false;
+          finalProductData.pricingType = 'normal';
+          finalProductData.dimensions = [];
+          finalProductData.staticDimensions = [];
+        }
+
         // Update product in database
         const updatedProduct = await Product.findByIdAndUpdate(
           productId,

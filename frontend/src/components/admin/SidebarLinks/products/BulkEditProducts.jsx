@@ -133,7 +133,40 @@ export default function BulkEditProducts() {
               ? product.additionalImages.map(url => ({ file: null, preview: url }))
               : [{ file: null, preview: null }],
             bulkPricing: product.bulkPricing?.length > 0 ? product.bulkPricing : [{ wholesalePrice: "", quantity: "" }],
-            hasVariants: product.hasVariants || false,
+  
+  // Dimension pricing fields
+  hasDimensionPricing: product.hasDimensions ? "yes" : "no",
+  dimensionPricingType: product.pricingType || "dynamic",
+  dimensionPricingData: product.hasDimensions
+    ? (product.pricingType === "dynamic" && product.dimensions?.length > 0
+      ? product.dimensions.map(d => ({
+          length: d.length?.toString() || "",
+          breadth: d.breadth?.toString() || "",
+          height: d.height?.toString() || "",
+          price: d.price?.toString() || "",
+          pricingType: "dynamic",
+          stock: "",
+          bulkPricing: [{ wholesalePrice: "", quantity: "" }]
+        }))
+      : product.pricingType === "static" && product.staticDimensions?.length > 0
+      ? product.staticDimensions.map(d => ({
+          length: d.length?.toString() || "",
+          breadth: d.breadth?.toString() || "",
+          height: d.height?.toString() || "",
+          price: d.price?.toString() || "",
+          pricingType: "static",
+          stock: d.stock?.toString() || "",
+          bulkPricing: d.bulkPricing?.length > 0 ? d.bulkPricing : [{ wholesalePrice: "", quantity: "" }]
+        }))
+      : [{ length: "", breadth: "", height: "", price: "", pricingType: "dynamic", stock: "", bulkPricing: [{ wholesalePrice: "", quantity: "" }] }])
+    : [{ length: "", breadth: "", height: "", price: "", pricingType: "dynamic", stock: "", bulkPricing: [{ wholesalePrice: "", quantity: "" }] }],
+  previousNormalData: {
+    price: product.price?.toString() || "",
+    stock: product.stock?.toString() || "",
+    bulkPricing: product.bulkPricing?.length > 0 ? product.bulkPricing : [{ wholesalePrice: "", quantity: "" }]
+  },
+  
+  hasVariants: product.hasVariants || false,
             variants: product.hasVariants && product.variants?.length > 0
               ? product.variants.map(variant => ({
                   colorName: variant.colorName || "",
@@ -293,6 +326,146 @@ export default function BulkEditProducts() {
     setProductsData(prev => prev.map(product => {
       if (product._id !== productId) return product
       return { ...product, [field]: product[field].filter((_, i) => i !== index) }
+    }))
+  }
+
+  // Dimension pricing handlers
+  const addDimensionPricingForProduct = (productId) => {
+    setProductsData(prev => prev.map(product => {
+      if (product._id !== productId) return product
+      return {
+        ...product,
+        dimensionPricingData: [...product.dimensionPricingData, {
+          length: "",
+          breadth: "",
+          height: "",
+          price: "",
+          pricingType: product.dimensionPricingType,
+          stock: "",
+          bulkPricing: [{ wholesalePrice: "", quantity: "" }]
+        }]
+      }
+    }))
+  }
+
+  const updateDimensionPricingForProduct = (productId, index, field, value) => {
+    setProductsData(prev => prev.map(product => {
+      if (product._id !== productId) return product
+      const newData = [...product.dimensionPricingData]
+      newData[index][field] = value
+      return { ...product, dimensionPricingData: newData }
+    }))
+  }
+
+  const removeDimensionPricingForProduct = (productId, index) => {
+    setProductsData(prev => prev.map(product => {
+      if (product._id !== productId) return product
+      return {
+        ...product,
+        dimensionPricingData: product.dimensionPricingData.filter((_, i) => i !== index)
+      }
+    }))
+  }
+
+  const addStaticDimensionBulkPricingForProduct = (productId, dimensionIndex) => {
+    setProductsData(prev => prev.map(product => {
+      if (product._id !== productId) return product
+      const newData = [...product.dimensionPricingData]
+      newData[dimensionIndex].bulkPricing.push({ wholesalePrice: "", quantity: "" })
+      return { ...product, dimensionPricingData: newData }
+    }))
+  }
+
+  const updateStaticDimensionBulkPricingForProduct = (productId, dimensionIndex, bulkIndex, field, value) => {
+    setProductsData(prev => prev.map(product => {
+      if (product._id !== productId) return product
+      const newData = [...product.dimensionPricingData]
+      newData[dimensionIndex].bulkPricing[bulkIndex][field] = value
+      return { ...product, dimensionPricingData: newData }
+    }))
+  }
+
+  const removeStaticDimensionBulkPricingForProduct = (productId, dimensionIndex, bulkIndex) => {
+    setProductsData(prev => prev.map(product => {
+      if (product._id !== productId) return product
+      const newData = [...product.dimensionPricingData]
+      newData[dimensionIndex].bulkPricing = newData[dimensionIndex].bulkPricing.filter((_, i) => i !== bulkIndex)
+      return { ...product, dimensionPricingData: newData }
+    }))
+  }
+
+  const handleDimensionPricingChangeForProduct = async (productId, value) => {
+    if (value === "yes") {
+      setProductsData(prev => prev.map(product => {
+        if (product._id !== productId) return product
+        
+        // Store current values
+        const updatedPreviousData = {
+          price: product.price,
+          stock: product.stock,
+          bulkPricing: product.bulkPricing
+        }
+        
+        return {
+          ...product,
+          hasDimensionPricing: "yes",
+          previousNormalData: updatedPreviousData,
+          price: "" // Clear price when enabling dimensions
+        }
+      }))
+    } else {
+      setProductsData(prev => prev.map(product => {
+        if (product._id !== productId) return product
+        
+        return {
+          ...product,
+          hasDimensionPricing: "no",
+          price: product.previousNormalData.price,
+          stock: product.previousNormalData.stock,
+          bulkPricing: product.previousNormalData.bulkPricing
+        }
+      }))
+    }
+  }
+
+  const handlePricingTypeSwitchForProduct = (productId, newType) => {
+    setProductsData(prev => prev.map(product => {
+      if (product._id !== productId) return product
+      if (newType === product.dimensionPricingType) return product
+      
+      if (newType === "dynamic") {
+        const firstDim = product.dimensionPricingData[0] || { length: "", breadth: "", height: "", price: "" }
+        return {
+          ...product,
+          dimensionPricingType: "dynamic",
+          dimensionPricingData: [{
+            length: "1",
+            breadth: "1",
+            height: "1",
+            price: firstDim.price,
+            pricingType: "dynamic",
+            stock: firstDim.stock || "",
+            bulkPricing: firstDim.bulkPricing || [{ wholesalePrice: "", quantity: "" }]
+          }],
+          stock: firstDim.stock || "",
+          bulkPricing: firstDim.bulkPricing && firstDim.bulkPricing.length > 0 ? firstDim.bulkPricing : [{ wholesalePrice: "", quantity: "" }]
+        }
+      } else {
+        const currentDim = product.dimensionPricingData[0] || { length: "1", breadth: "1", height: "1", price: "" }
+        return {
+          ...product,
+          dimensionPricingType: "static",
+          dimensionPricingData: [{
+            length: currentDim.length || "",
+            breadth: currentDim.breadth || "",
+            height: currentDim.height || "",
+            price: currentDim.price || "",
+            pricingType: "static",
+            stock: product.stock || "",
+            bulkPricing: product.bulkPricing && product.bulkPricing.length > 0 ? product.bulkPricing : [{ wholesalePrice: "", quantity: "" }]
+          }]
+        }
+      }
     }))
   }
 
@@ -562,6 +735,25 @@ export default function BulkEditProducts() {
           categoryPath: product.categoryPath,
           productDetails: product.productDetails.filter(pd => pd.key && pd.value),
           hasVariants: product.hasVariants,
+          hasDimensionPricing: product.hasDimensionPricing,
+          dimensionPricingData: product.hasDimensionPricing === "yes"
+            ? product.dimensionPricingData
+                .filter(d => product.dimensionPricingType === "static"
+                  ? (d.length && d.breadth && d.price && d.stock)
+                  : (d.length && d.breadth && d.price)
+                )
+                .map(d => ({
+                  length: d.length,
+                  breadth: d.breadth,
+                  height: d.height || "",
+                  price: d.price,
+                  pricingType: product.dimensionPricingType,
+                  stock: product.dimensionPricingType === "static" ? d.stock : undefined,
+                  bulkPricing: product.dimensionPricingType === "static"
+                    ? d.bulkPricing.filter(bp => bp.wholesalePrice && bp.quantity)
+                    : undefined
+                }))
+            : []
         }
 
         if (!product.mainImage && product.mainImagePreview && product.mainImagePreview.startsWith('http')) {
@@ -894,6 +1086,196 @@ export default function BulkEditProducts() {
                           ))}
                         </div>
 
+                        {/* Dimension Based Pricing Dropdown */}
+                        <div className="bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-200 rounded-xl p-6">
+                          <div className="space-y-4">
+                            <label className="text-lg font-semibold text-gray-900 dark:text-white">
+                              Does product have dimension based pricing?
+                            </label>
+                            <select
+                              value={product.hasDimensionPricing}
+                              onChange={(e) => handleDimensionPricingChangeForProduct(product._id, e.target.value)}
+                              className={selectClass}
+                            >
+                              <option value="no">No</option>
+                              <option value="yes">Yes</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        {/* Dimension Based Pricing Section */}
+                        {product.hasDimensionPricing === "yes" && (
+                          <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-6 space-y-6">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <h4 className="text-xl font-semibold text-gray-900 dark:text-white">
+                                  Dimension Based Pricing
+                                </h4>
+                                <div className="flex items-center gap-4 mt-2">
+                                  <p className="text-sm text-gray-600 dark:text-gray-400">
+                                    Mode: <span className="font-medium capitalize">{product.dimensionPricingType}</span>
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() => handlePricingTypeSwitchForProduct(product._id, product.dimensionPricingType === "dynamic" ? "static" : "dynamic")}
+                                    className="text-sm text-purple-600 hover:text-purple-800 underline"
+                                  >
+                                    Switch to {product.dimensionPricingType === "dynamic" ? "Static" : "Dynamic"}
+                                  </button>
+                                </div>
+                              </div>
+                              {product.dimensionPricingType === "static" && (
+                                <button
+                                  type="button"
+                                  className={secondaryButtonClass}
+                                  onClick={() => addDimensionPricingForProduct(product._id)}
+                                >
+                                  <Plus className="w-4 h-4" />
+                                  Add Dimension
+                                </button>
+                              )}
+                            </div>
+
+                            {product.dimensionPricingData.map((item, dimIndex) => (
+                              <div key={dimIndex} className="bg-white dark:bg-gray-900 p-6 rounded-xl border border-gray-200 dark:border-gray-700 space-y-4">
+                                {product.dimensionPricingType === "static" && product.dimensionPricingData.length > 1 && (
+                                  <div className="flex justify-between items-center mb-4">
+                                    <h5 className="font-semibold text-gray-900 dark:text-white">Dimension Set {dimIndex + 1}</h5>
+                                    <button
+                                      type="button"
+                                      className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors dark:text-white"
+                                      onClick={() => removeDimensionPricingForProduct(product._id, dimIndex)}
+                                    >
+                                      <X className="w-4 h-4" />
+                                    </button>
+                                  </div>
+                                )}
+                                
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                                  <div className="space-y-2">
+                                    <label className={labelClass}>Length (cm) *</label>
+                                    <input
+                                      type="number"
+                                      value={item.length}
+                                      onChange={(e) => updateDimensionPricingForProduct(product._id, dimIndex, "length", e.target.value)}
+                                      placeholder="Length"
+                                      className={`${inputClass} dark:text-gray-400`}
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className={labelClass}>Breadth (cm) *</label>
+                                    <input
+                                      type="number"
+                                      value={item.breadth}
+                                      onChange={(e) => updateDimensionPricingForProduct(product._id, dimIndex, "breadth", e.target.value)}
+                                      placeholder="Breadth"
+                                      className={`${inputClass} dark:text-gray-400`}
+                                      required
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className={labelClass}>Height (cm)</label>
+                                    <input
+                                      type="number"
+                                      value={item.height}
+                                      onChange={(e) => updateDimensionPricingForProduct(product._id, dimIndex, "height", e.target.value)}
+                                      placeholder="Height (optional)"
+                                      className={`${inputClass} dark:text-gray-400`}
+                                    />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className={labelClass}>Price ($) *</label>
+                                    <input
+                                      type="number"
+                                      value={item.price}
+                                      onChange={(e) => updateDimensionPricingForProduct(product._id, dimIndex, "price", e.target.value)}
+                                      placeholder="Price"
+                                      className={`${inputClass} dark:text-gray-400`}
+                                      required
+                                    />
+                                  </div>
+                                </div>
+
+                                {/* Stock and Bulk Pricing for Static Dimensions */}
+                                {product.dimensionPricingType === "static" && (
+                                  <>
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                                      <div className="space-y-2">
+                                        <label className={labelClass}>
+                                          <Package className="inline w-4 h-4 mr-2" />
+                                          Stock Quantity *
+                                        </label>
+                                        <input
+                                          type="number"
+                                          value={item.stock}
+                                          onChange={(e) => updateDimensionPricingForProduct(product._id, dimIndex, "stock", e.target.value)}
+                                          placeholder="Stock quantity"
+                                          className={`${inputClass} dark:text-gray-400`}
+                                          required
+                                        />
+                                      </div>
+                                    </div>
+
+                                    {/* Bulk Pricing for this dimension */}
+                                    <div className="bg-gray-50 dark:bg-gray-800 rounded-xl p-4 space-y-4 mt-4">
+                                      <div className="flex justify-between items-center">
+                                        <h6 className="text-md font-semibold text-gray-900 dark:text-white">
+                                          Bulk Pricing for this Dimension
+                                        </h6>
+                                        <button
+                                          type="button"
+                                          className={secondaryButtonClass}
+                                          onClick={() => addStaticDimensionBulkPricingForProduct(product._id, dimIndex)}
+                                        >
+                                          <Plus className="w-4 h-4" />
+                                          Add Bulk Price
+                                        </button>
+                                      </div>
+                                      {item.bulkPricing && item.bulkPricing.map((bp, bpIndex) => (
+                                        <div key={bpIndex} className="grid grid-cols-1 md:grid-cols-2 gap-4 bg-white dark:bg-gray-900 p-4 rounded-xl">
+                                          <div className="space-y-2">
+                                            <label className={labelClass}>Wholesale Price ($)</label>
+                                            <input
+                                              type="number"
+                                              value={bp.wholesalePrice}
+                                              onChange={(e) => updateStaticDimensionBulkPricingForProduct(product._id, dimIndex, bpIndex, "wholesalePrice", e.target.value)}
+                                              placeholder="Bulk price"
+                                              className={`${inputClass} dark:text-gray-400`}
+                                            />
+                                            {item.price && bp.wholesalePrice && parseFloat(bp.wholesalePrice) >= parseFloat(item.price) && (
+                                              <p className="text-red-500 text-sm">Must be less than regular price</p>
+                                            )}
+                                          </div>
+                                          <div className="space-y-2 flex gap-4 items-end">
+                                            <div className="flex-1">
+                                              <label className={labelClass}>Minimum Quantity</label>
+                                              <input
+                                                type="number"
+                                                value={bp.quantity}
+                                                onChange={(e) => updateStaticDimensionBulkPricingForProduct(product._id, dimIndex, bpIndex, "quantity", e.target.value)}
+                                                placeholder="Min qty"
+                                                className={`${inputClass} dark:text-gray-400`}
+                                              />
+                                            </div>
+                                            <button
+                                              type="button"
+                                              className="p-3 text-red-600 hover:bg-red-50 rounded-xl transition-colors dark:text-white"
+                                              onClick={() => removeStaticDimensionBulkPricingForProduct(product._id, dimIndex, bpIndex)}
+                                            >
+                                              <X className="w-4 h-4" />
+                                            </button>
+                                          </div>
+                                        </div>
+                                      ))}
+                                    </div>
+                                  </>
+                                )}
+                              </div>
+                            ))}
+                          </div>
+                        )}
+
                         {/* Warning Message */}
                         <div className="bg-amber-50 border border-amber-200 rounded-xl p-6">
                           <div className="flex items-start gap-3">
@@ -901,7 +1283,8 @@ export default function BulkEditProducts() {
                             <div>
                               <h4 className="font-semibold text-amber-900 mb-2">Important Notice</h4>
                               <p className="text-amber-800">
-                                Fill the fields below only if you don't have product variants. If you add variants, these basic fields will be ignored.
+                                                                Fill the fields below only if you don't have product variants or dimension-based pricing. If you add variants or enable dimension pricing, these basic fields will be ignored.
+
                               </p>
                             </div>
                           </div>
@@ -924,19 +1307,21 @@ export default function BulkEditProducts() {
                                   className={`${inputClass} dark:text-gray-400`}
                                 />
                               </div>
-                              <div className="space-y-2">
-                                <label className={`${inputClass} dark:text-white`}>
-                                  <DollarSign className="inline w-4 h-4 mr-2" />
-                                  Price ($)
-                                </label>
-                                <input
-                                  type="number"
-                                  value={product.price}
-                                  onChange={(e) => updateProductField(product._id, 'price', e.target.value)}
-                                  placeholder="Product price"
-                                  className={`${inputClass} dark:text-gray-400`}
-                                />
-                              </div>
+                              {product.hasDimensionPricing === "no" && (
+                                <div className="space-y-2">
+                                  <label className={`${inputClass} dark:text-white`}>
+                                    <DollarSign className="inline w-4 h-4 mr-2" />
+                                    Price ($)
+                                  </label>
+                                  <input
+                                    type="number"
+                                    value={product.price}
+                                    onChange={(e) => updateProductField(product._id, 'price', e.target.value)}
+                                    placeholder="Product price"
+                                    className={`${inputClass} dark:text-gray-400`}
+                                  />
+                                </div>
+                              )}
                             </div>
 
                             {/* Main Image Upload */}
