@@ -1081,52 +1081,35 @@ const handleClosePriceChartModal = () => {
                   </div>
 
                   {/* Quantity Controls */}
-                  <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
-                    <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Qty:</span>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={async () => {
-                          await updateQuantity(cartKey, -1);
-                          await refreshCartFromBackend();
-                        }}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400"
-                      >
-                        <Minus className="w-3 h-3" />
-                      </button>
-                      <input
-                        type="number"
-                        value={item.quantity}
-                        onChange={async (e) => {
-                          const val = e.target.value;
-                          if (val === '' || val === '0') return;
-                          
-                          const num = Number.parseInt(val, 10);
-                          if (!isNaN(num) && num >= 1) {
-                            const diff = num - item.quantity;
-                            if (diff !== 0) {
-                              await updateQuantity(cartKey, diff);
-                              await refreshCartFromBackend();
-                            }
-                          }
-                        }}
-                        onBlur={(e) => {
-                          if (e.target.value === '' || e.target.value === '0') {
-                            e.target.value = item.quantity;
-                          }
-                        }}
-                        className="w-12 text-center border border-gray-300 dark:border-gray-600 rounded px-1 py-1 text-sm font-semibold bg-white dark:bg-gray-900 dark:text-white"
-                      />
-                      <button
-                        onClick={async () => {
-                          await updateQuantity(cartKey, 1);
-                          await refreshCartFromBackend();
-                        }}
-                        className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400"
-                      >
-                        <Plus className="w-3 h-3" />
-                      </button>
-                    </div>
-                  </div>
+<div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
+  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Qty:</span>
+  <div className="flex items-center gap-2">
+    <button
+      onClick={async (e) => {
+        e.stopPropagation();
+        await updateQuantity(cartKey, -1);
+        await refreshCartFromBackend();
+      }}
+      disabled={item.quantity <= 1}
+      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed"
+    >
+      <Minus className="w-3 h-3" />
+    </button>
+    <span className="w-12 text-center text-sm font-semibold text-gray-900 dark:text-white">
+      {item.quantity}
+    </span>
+    <button
+      onClick={async (e) => {
+        e.stopPropagation();
+        await updateQuantity(cartKey, 1);
+        await refreshCartFromBackend();
+      }}
+      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400"
+    >
+      <Plus className="w-3 h-3" />
+    </button>
+  </div>
+</div>
 
                   {/* Individual Remove Button */}
                   <button

@@ -489,7 +489,10 @@ console.log('🔍 Custom Dimensions:', cartItemData.custom_dimensions);
     const updateQuantity = async (cartKey, change) => {
     try {
         const item = cartItems[cartKey];
-        if (!item) return;
+        if (!item) {
+            console.error('Item not found for cartKey:', cartKey);
+            return;
+        }
 
         const newQuantity = item.quantity + change;
 
@@ -540,49 +543,70 @@ console.log('🔍 Custom Dimensions:', cartItemData.custom_dimensions);
             }
         }
 
+        // Prepare update data
+        const updateData = {
+            product_id: item.productId,
+            variant_name: item.variantName,
+            size: item.sizeString,
+            quantity: newQuantity,
+            cash_applied: cashApplied,
+        };
+
+        // CRITICAL: Add custom dimensions if present
+        if (item.customDimensions) {
+            updateData.custom_dimensions = {
+                length: item.customDimensions.length,
+                breadth: item.customDimensions.breadth,
+                height: item.customDimensions.height || null,
+                unit: item.customDimensions.unit,
+                calculatedPrice: item.customDimensions.calculatedPrice
+            };
+            
+            console.log('🔍 Updating dimension cart item:', {
+                cartKey,
+                customDimensions: updateData.custom_dimensions
+            });
+        }
+
         axios.put(
-    "http://localhost:3000/api/cart",
-    {
-        product_id: item.productId,
-        variant_name: item.variantName,
-        size: item.sizeString,
-        quantity: newQuantity,
-        cash_applied: cashApplied,
-    },
-    {
-        withCredentials: true,
-        headers: {
-            "Content-Type": "application/json",
-        },
-    },
-).then(response => {
-    if (response.status === 200) {
-        setCartItems((prev) => ({
-            ...prev,
-            [cartKey]: {
-                ...prev[cartKey],
-                quantity: newQuantity,
-                cashApplied,
-            },
-        }));
-    }
-}).catch(err => {
-    // Rollback on error
-    setCartItems(cartItems);
-    
-    // Show user-friendly error message
-    const errorMessage = err.response?.data?.error || "Failed to update quantity";
-    setError(errorMessage);
-    console.error("Error updating quantity:", err);
-    
-    // Display toast notification
-    import('react-toastify').then(({ toast }) => {
-        toast.error(errorMessage, {
-            position: "top-right",
-            autoClose: 3000,
+            "http://localhost:3000/api/cart",
+            updateData,
+            {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }
+        ).then(response => {
+            if (response.status === 200) {
+                setCartItems((prev) => ({
+                    ...prev,
+                    [cartKey]: {
+                        ...prev[cartKey],
+                        quantity: newQuantity,
+                        cashApplied,
+                    },
+                }));
+                console.log('✅ Quantity updated successfully for:', cartKey);
+            }
+        }).catch(err => {
+            // Rollback on error
+            setCartItems(cartItems);
+            
+            // Show user-friendly error message
+            const errorMessage = err.response?.data?.error || "Failed to update quantity";
+            setError(errorMessage);
+            console.error("Error updating quantity:", err);
+            console.error("Update data sent:", updateData);
+            
+            // Display toast notification
+            import('react-toastify').then(({ toast }) => {
+                toast.error(errorMessage, {
+                    position: "top-right",
+                    autoClose: 3000,
+                });
+            });
         });
-    });
-});
     } catch (err) {
         setError("Failed to update quantity");
         console.error("Error updating quantity:", err);
