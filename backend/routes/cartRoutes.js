@@ -184,13 +184,43 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: 'Product is out of stock' });
     }
 
-    // Check if requested quantity exceeds available stock
-    const existingItem = await Cart.findOne({
-      user_id: req.user.id,
-      product_id,
-      variant_name: variant_name || null,
-      size: size || null,
+    // For dimension products, each dimension is a separate cart entry - don't merge
+let existingItem = null;
+
+if (!custom_dimensions) {
+  // Only check for existing item if it's NOT a dimension product
+  existingItem = await Cart.findOne({
+    user_id: req.user.id,
+    product_id,
+    variant_name: variant_name || null,
+    size: size || null,
+  });
+}
+
+// Stock check only for non-dimension products
+if (!custom_dimensions && existingItem) {
+  // Check stock availability
+  const stockInfo = await getProductStock(product_id, variant_name, size);
+  
+  if (stockInfo.error) {
+    return res.status(400).json({ error: stockInfo.error });
+  }
+
+  if (stockInfo.stock === 0) {
+    return res.status(400).json({ error: 'Product is out of stock' });
+  }
+
+  const currentCartQuantity = existingItem.quantity;
+  const totalQuantity = currentCartQuantity + quantity;
+
+  if (totalQuantity > stockInfo.stock) {
+    return res.status(400).json({ 
+      error: `Only ${stockInfo.stock} items available in stock. You already have ${currentCartQuantity} in cart.`,
+      availableStock: stockInfo.stock,
+      currentInCart: currentCartQuantity
     });
+  }
+}
 
     const currentCartQuantity = existingItem ? existingItem.quantity : 0;
     const totalQuantity = currentCartQuantity + quantity;
@@ -305,38 +335,53 @@ if (custom_dimensions) {
 // PUT /api/cart - Update item quantity
 router.put("/", async (req, res) => {
   try {
-    const { product_id, variant_name, size, quantity } = req.body;
+    const { product_id, variant_name, size, quantity, custom_dimensions } = req.body;
 
     // Validate quantity
     if (quantity < 1) {
       return res.status(400).json({ error: 'Quantity must be at least 1' });
     }
 
-    // Check stock availability
-    const stockInfo = await getProductStock(product_id, variant_name, size);
-    
-    if (stockInfo.error) {
-      return res.status(400).json({ error: stockInfo.error });
+    // Stock check only for non-dimension products
+    if (!custom_dimensions) {
+      const stockInfo = await getProductStock(product_id, variant_name, size);
+      
+      if (stockInfo.error) {
+        return res.status(400).json({ error: stockInfo.error });
+      }
+
+      if (stockInfo.stock === 0) {
+        return res.status(400).json({ error: 'Product is out of stock' });
+      }
+
+      if (quantity > stockInfo.stock) {
+        return res.status(400).json({ 
+          error: `Only ${stockInfo.stock} items available in stock`,
+          availableStock: stockInfo.stock
+        });
+      }
     }
 
-    if (stockInfo.stock === 0) {
-      return res.status(400).json({ error: 'Product is out of stock' });
-    }
+    const query = {
+      user_id: req.user.id,
+      product_id,
+      variant_name,
+      size,
+    };
 
-    if (quantity > stockInfo.stock) {
-      return res.status(400).json({ 
-        error: `Only ${stockInfo.stock} items available in stock`,
-        availableStock: stockInfo.stock
-      });
+    // If custom dimensions provided, add to query
+    if (custom_dimensions) {
+      query['customDimensions.length'] = custom_dimensions.length;
+      query['customDimensions.breadth'] = custom_dimensions.breadth;
+      query['customDimensions.unit'] = custom_dimensions.unit;
+      
+      if (custom_dimensions.height !== null && custom_dimensions.height !== undefined) {
+        query['customDimensions.height'] = custom_dimensions.height;
+      }
     }
 
     const cartItem = await Cart.findOneAndUpdate(
-      {
-        user_id: req.user.id,
-        product_id,
-        variant_name,
-        size,
-      },
+      query,
       { quantity },
       { new: true },
     );
@@ -359,18 +404,48 @@ router.put("/", async (req, res) => {
 // DELETE /api/cart - Remove item from cart
 router.delete("/", async (req, res) => {
   try {
-    const { product_id, variant_name, size } = req.body
+    const { product_id, variant_name, size, custom_dimensions } = req.body
 
-    const deletedItem = await Cart.findOneAndDelete({
+    console.log('🔍 DELETE request received:', { product_id, variant_name, size, custom_dimensions });
+
+    const query = {
       user_id: req.user.id,
       product_id,
-      variant_name,
-      size,
-    })
+    };
+
+    // If custom dimensions provided, match them exactly
+    if (custom_dimensions) {
+      query['customDimensions.length'] = custom_dimensions.length;
+      query['customDimensions.breadth'] = custom_dimensions.breadth;
+      query['customDimensions.unit'] = custom_dimensions.unit;
+      query['customDimensions.calculatedPrice'] = custom_dimensions.calculatedPrice;
+      
+      // Handle height - it can be null, undefined, or a number
+      if (custom_dimensions.height !== null && custom_dimensions.height !== undefined) {
+        query['customDimensions.height'] = custom_dimensions.height;
+      } else {
+        // Match documents where height is null or doesn't exist
+        query['$or'] = [
+          { 'customDimensions.height': null },
+          { 'customDimensions.height': { $exists: false } }
+        ];
+      }
+    } else {
+      // For non-dimension products, use variant and size
+      query.variant_name = variant_name;
+      query.size = size;
+    }
+
+    console.log('🔍 Query built:', JSON.stringify(query, null, 2));
+
+    const deletedItem = await Cart.findOneAndDelete(query)
 
     if (!deletedItem) {
+      console.log('❌ Cart item not found with query:', query);
       return res.status(404).json({ error: "Cart item not found" })
     }
+
+    console.log('✅ Deleted item:', deletedItem);
 
     res.status(200).json({ message: "Item removed from cart" })
 

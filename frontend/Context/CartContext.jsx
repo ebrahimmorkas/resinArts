@@ -16,7 +16,19 @@ export const useCart = () => {
     return context;
 };
 
-// ADD THIS HELPER FUNCTION before CartProvider:
+// Helper function to generate unique cart keys
+const generateCartKey = (productId, colorName = null, sizeString = null, customDimensions = null) => {
+  if (customDimensions) {
+    // For dimension-based products, create unique key with dimensions
+    const dimensionKey = customDimensions.height 
+      ? `${customDimensions.length}x${customDimensions.breadth}x${customDimensions.height}${customDimensions.unit}`
+      : `${customDimensions.length}x${customDimensions.breadth}${customDimensions.unit}`;
+    return `${productId}-custom-${dimensionKey}`;
+  }
+  return `${productId}-${colorName || "default"}-${sizeString || "default"}`;
+};
+
+// Keep this old one for backward compatibility during migration
 const generateCustomDimensionKey = (dimensions) => {
   if (!dimensions) return '';
   return `${dimensions.length}x${dimensions.breadth}${dimensions.height ? `x${dimensions.height}` : ''}`;
@@ -107,9 +119,12 @@ export const CartProvider = ({ children }) => {
             if (response.status === 200) {
                 const cartData = response.data;
 cartData.forEach((item) => {
-  const cartKey = item.customDimensions
-    ? `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}-${generateCustomDimensionKey(item.customDimensions)}`
-    : `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`;
+  const cartKey = generateCartKey(
+    item.product_id, 
+    item.variant_name, 
+    item.size, 
+    item.customDimensions
+  );
   
   backendCart[cartKey] = {
     productId: item.product_id,
@@ -137,8 +152,46 @@ cartData.forEach((item) => {
                 
                 // Merge guest cart with backend cart
 for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
-    if (backendCart[cartKey]) {
-        // Item exists in backend, increase quantity
+    // For dimension products, always add as new entry (different dimensions = different product)
+    if (guestItem.customDimensions) {
+        try {
+            const cartItemData = {
+                image_url: guestItem.imageUrl,
+                product_id: guestItem.productId,
+                product_name: guestItem.productName,
+                quantity: guestItem.quantity,
+                price: guestItem.price,
+                cash_applied: 0,
+                discounted_price: guestItem.discountedPrice || guestItem.price,
+                bulk_pricing: guestItem.bulkPricing || [],
+            };
+
+            if (guestItem.customDimensions) {
+                cartItemData.custom_dimensions = {
+                    length: guestItem.customDimensions.length,
+                    breadth: guestItem.customDimensions.breadth,
+                    height: guestItem.customDimensions.height,
+                    unit: guestItem.customDimensions.unit,
+                    calculatedPrice: guestItem.customDimensions.calculatedPrice
+                };
+            }
+
+            await axios.post("http://localhost:3000/api/cart", cartItemData, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            backendCart[cartKey] = {
+                ...guestItem,
+                cashApplied: 0,
+                userId: req.user?.id
+            };
+        } catch (error) {
+            console.error('Error adding guest dimension cart item:', error);
+        }
+    } else if (backendCart[cartKey]) {
+        // Non-dimension item exists in backend, increase quantity
         try {
             await axios.put(
                 "http://localhost:3000/api/cart",
@@ -159,7 +212,6 @@ for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
             backendCart[cartKey].quantity += guestItem.quantity;
         } catch (error) {
             console.error('Error merging cart item:', error);
-            // If merge fails due to stock, just use backend quantity
             if (error.response?.data?.availableStock !== undefined) {
                 backendCart[cartKey].quantity = Math.min(
                     backendCart[cartKey].quantity + guestItem.quantity,
@@ -180,16 +232,6 @@ for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
                 discounted_price: guestItem.discountedPrice || guestItem.price,
                 bulk_pricing: guestItem.bulkPricing || [],
             };
-            //  custom dimensions handling:
-if (guestItem.customDimensions) {
-  cartItemData.custom_dimensions = {
-    length: guestItem.customDimensions.length,
-    breadth: guestItem.customDimensions.breadth,
-    height: guestItem.customDimensions.height,
-    unit: guestItem.customDimensions.unit,
-    calculatedPrice: guestItem.customDimensions.calculatedPrice
-  };
-}
 
             if (guestItem.variantId) cartItemData.variant_id = guestItem.variantId;
             if (guestItem.detailsId) cartItemData.details_id = guestItem.detailsId;
@@ -210,7 +252,6 @@ if (guestItem.customDimensions) {
             };
         } catch (error) {
             console.error('Error adding guest cart item:', error);
-            // If adding fails due to stock, skip this item
         }
     }
 }
@@ -233,9 +274,57 @@ if (guestItem.customDimensions) {
         }
     };
 
+    const refreshCartFromBackend = async () => {
+  if (!user) return;
+  
+  try {
+    const response = await axios.get("http://localhost:3000/api/cart", {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const backendCart = {};
+    if (response.status === 200) {
+      const cartData = response.data;
+      cartData.forEach((item) => {
+        const cartKey = generateCartKey(
+          item.product_id,
+          item.variant_name,
+          item.size,
+          item.customDimensions
+        );
+        
+        backendCart[cartKey] = {
+          productId: item.product_id,
+          variantName: item.variant_name || null,
+          sizeString: item.size || null,
+          quantity: item.quantity,
+          price: item.price,
+          discountedPrice: item.discounted_price,
+          imageUrl: item.image_url,
+          productName: item.product_name,
+          variantId: item.variant_id,
+          detailsId: item.details_id,
+          sizeId: item.size_id,
+          bulkPricing: item.bulk_pricing || [],
+          customDimensions: item.customDimensions || null,
+          cashApplied: item.cash_applied || 0,
+          userId: item.user_id,
+        };
+      });
+    }
+    
+    setCartItems(backendCart);
+  } catch (error) {
+    console.error('Error refreshing cart:', error);
+  }
+};
+
 const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
     try {
-        const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
+        const cartKey = generateCartKey(productId, colorName, sizeString, productData.customDimensions);
 
         // FIND the section for guest users (inside addToCart) and UPDATE:
 if (!user) {
@@ -723,6 +812,7 @@ console.log('🔍 Custom Dimensions:', cartItemData.custom_dimensions);
         getUniqueCartItemsCount,
         getTotalItemsCount,
         clearCart,
+            refreshCartFromBackend, 
     };
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;
