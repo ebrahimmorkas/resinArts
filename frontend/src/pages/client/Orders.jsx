@@ -220,22 +220,30 @@ const safeNumber = (value, fallback = 0) => {
 // Simple Excel export without external library
 const exportToExcel = (data) => {
   try {
-    const headers = ['Sr No.', 'Order ID', 'Ordered At', 'Products', 'Quantity', 'Amount', 'Status', 'Payment', 'Shipping Address'];
+    const headers = ['Sr No.', 'Order ID', 'Ordered At', 'Products', 'Dimensions', 'Quantity', 'Amount', 'Status', 'Payment', 'Shipping Address'];
     
     let csvContent = headers.join(',') + '\n';
     
     data.forEach((order, index) => {
-      const row = [
-        index + 1,
-        `"${order.id}"`,
-        `"${formatDate(order.orderedAt)}"`,
-        `"${order.items.map(item => item.name).join('; ')}"`,
-        order.items.reduce((total, item) => total + safeNumber(item.quantity), 0),
-        `"$${safeNumber(order.total).toFixed(2)}"`,
-        `"${statusConfig[order.status]?.label || order.status}"`,
-        `"${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}"`,
-        `"${order.shippingAddress.replace(/\n/g, ', ').replace(/"/g, '""')}"`
-      ];
+      const dimensionsText = order.items.map(item => {
+  if (item.customDimensions) {
+    return `${item.customDimensions.length}x${item.customDimensions.breadth}x${item.customDimensions.height} ${item.customDimensions.unit}`;
+  }
+  return 'Standard';
+}).join('; ');
+
+const row = [
+  index + 1,
+  `"${order.id}"`,
+  `"${formatDate(order.orderedAt)}"`,
+  `"${order.items.map(item => item.name).join('; ')}"`,
+  `"${dimensionsText}"`,
+  order.items.reduce((total, item) => total + safeNumber(item.quantity), 0),
+  `"$${safeNumber(order.total).toFixed(2)}"`,
+  `"${statusConfig[order.status]?.label || order.status}"`,
+  `"${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}"`,
+  `"${order.shippingAddress.replace(/\n/g, ', ').replace(/"/g, '""')}"`
+];
       csvContent += row.join(',') + '\n';
     });
 
@@ -359,12 +367,13 @@ useEffect(() => {
   date: order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       orderedAt: order.createdAt,
       items: (order.orderedProducts || []).map((product) => ({
-        name: (product.product_name || 'Unknown Product') + (product.variant_name ? ` - ${product.variant_name}` : ""),
-        quantity: safeNumber(product.quantity, 1),
-        price: safeNumber(product.price, 0),
-        image: product.image_url || '',
-        size: product.size || null,
-      })),
+  name: (product.product_name || 'Unknown Product') + (product.variant_name ? ` - ${product.variant_name}` : ""),
+  quantity: safeNumber(product.quantity, 1),
+  price: safeNumber(product.price, 0),
+  image: product.image_url || '',
+  size: product.size || null,
+  customDimensions: product.customDimensions || null,
+})),
       itemsTotal: safeNumber(order.price, 0),
       shippingPrice: safeNumber(order.shipping_price, 0),
       total: safeNumber(order.total_price, 0),
@@ -584,10 +593,11 @@ useEffect(() => {
     doc.setFont(undefined, "bold");
     doc.text("Image", 20, tableStartY);
     doc.text("Item", 40, tableStartY);
-    doc.text("Qty", 120, tableStartY);
-    doc.text("Price", 140, tableStartY);
-    doc.text("Total", 170, tableStartY);
-    doc.line(20, tableStartY + 3, 190, tableStartY + 3);
+doc.text("Dimensions", 100, tableStartY);
+doc.text("Qty", 135, tableStartY);
+doc.text("Price", 155, tableStartY);
+doc.text("Total", 175, tableStartY);
+doc.line(20, tableStartY + 3, 190, tableStartY + 3);
     let yPosition = tableStartY + 10;
     doc.setFont(undefined, "normal");
     
@@ -637,11 +647,22 @@ useEffect(() => {
         doc.setFontSize(9);
       }
       
-      const itemName = item.name.length > 35 ? item.name.substring(0, 35) + "..." : item.name;
-      doc.text(itemName, 40, yPosition);
-      doc.text(safeNumber(item.quantity).toString(), 120, yPosition);
-      doc.text(`$${safeNumber(item.price).toFixed(2)}`, 140, yPosition);
-      doc.text(`$${itemTotal.toFixed(2)}`, 170, yPosition);
+     const itemName = item.name.length > 25 ? item.name.substring(0, 25) + "..." : item.name;
+doc.text(itemName, 40, yPosition);
+
+// Add dimensions
+if (item.customDimensions) {
+  const dimText = `${item.customDimensions.length}x${item.customDimensions.breadth}x${item.customDimensions.height} ${item.customDimensions.unit}`;
+  doc.setFontSize(7);
+  doc.text(dimText, 100, yPosition);
+  doc.setFontSize(9);
+} else {
+  doc.text("Standard", 100, yPosition);
+}
+
+doc.text(safeNumber(item.quantity).toString(), 135, yPosition);
+doc.text(`$${safeNumber(item.price).toFixed(2)}`, 155, yPosition);
+doc.text(`$${itemTotal.toFixed(2)}`, 175, yPosition);
       yPosition += 15;
     }
     
@@ -888,12 +909,17 @@ const handleSearchKeyPress = (e) => {
                       }}
                     />
                     <div className="flex-1">
-                      <h4 className="font-medium -800 dark:text-gray-100">{item.name}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Quantity: {safeNumber(item.quantity)}
-                        {item.size && ` • Size: ${item.size}`}
-                      </p>
-                    </div>
+  <h4 className="font-medium text-gray-800 dark:text-gray-100">{item.name}</h4>
+  <p className="text-sm text-gray-600 dark:text-gray-400">
+    Quantity: {safeNumber(item.quantity)}
+    {item.size && ` • Size: ${item.size}`}
+  </p>
+  {item.customDimensions && (
+    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+      Custom Dimensions: {item.customDimensions.length} x {item.customDimensions.breadth} x {item.customDimensions.height} {item.customDimensions.unit}
+    </p>
+  )}
+</div>
                     <div className="text-right">
                       <p className="font-semibold">${(safeNumber(item.price) * safeNumber(item.quantity)).toFixed(2)}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">${safeNumber(item.price).toFixed(2)} each</p>
@@ -1189,6 +1215,9 @@ const handleSearchKeyPress = (e) => {
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '250px' }}>
                       Products
                     </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '150px' }}>
+  Dimensions
+</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
                       Quantity
                     </th>
@@ -1218,12 +1247,30 @@ const handleSearchKeyPress = (e) => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '140px' }}>
                         {formatDate(order.orderedAt)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '250px' }}>
-                        <div className="truncate" title={order.items.map(item => item.name).join(', ')}>
-                          {order.items.length > 0 ? order.items[0].name : 'No items'}
-                          {order.items.length > 1 && ` +${order.items.length - 1} more`}
-                        </div>
-                      </td>
+                      <td className="px-6 py-4 text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '250px' }}>
+  <div className="truncate" title={order.items.map(item => item.name).join(', ')}>
+    {order.items.length > 0 ? order.items[0].name : 'No items'}
+    {order.items.length > 1 && ` +${order.items.length - 1} more`}
+  </div>
+</td>
+<td className="px-6 py-4 text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '150px' }}>
+  {order.items.some(item => item.customDimensions) ? (
+    <div className="text-xs">
+      {order.items[0].customDimensions ? (
+        <>
+          {order.items[0].customDimensions.length} x {order.items[0].customDimensions.breadth} x {order.items[0].customDimensions.height} {order.items[0].customDimensions.unit}
+        </>
+      ) : (
+        'Standard'
+      )}
+      {order.items.length > 1 && order.items.filter(item => item.customDimensions).length > 1 && (
+        <div className="text-gray-500">+{order.items.filter(item => item.customDimensions).length - 1} more</div>
+      )}
+    </div>
+  ) : (
+    <span className="text-gray-500">Standard</span>
+  )}
+</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '100px' }}>
                         {order.items.reduce((total, item) => total + safeNumber(item.quantity), 0)}
                       </td>
