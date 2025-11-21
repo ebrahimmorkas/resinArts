@@ -825,24 +825,41 @@ pdfContent.innerHTML = `
                          style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #d1d5db;" />
                   </div>
                   <div style="flex: 1;">
-                    <h4 style="margin: 0 0 12px 0; color: #111827; font-size: 18px;">${product.product_name}</h4>
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px;">
-                      <div>
-                        ${product.variant_name ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Variant:</strong> ${product.variant_name}</p>` : ''}
-                        ${product.size ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Size:</strong> ${product.size}</p>` : ''}
-                        <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹${product.price}</p>
-                      </div>
-                      <div>
-                        <p style="margin: 4px 0; font-size: 14px;"><strong>Quantity:</strong> ${product.quantity}</p>
-                        <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹${product.total}</strong></p>
-                      </div>
-                    </div>
-                    <div style="font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 8px; border-radius: 4px;">
-                      <p style="margin: 2px 0;"><strong>Product ID:</strong> ${product.product_id}</p>
-                      ${product.variant_id ? `<p style="margin: 2px 0;"><strong>Variant ID:</strong> ${product.variant_id}</p>` : ''}
-                      ${product.size_id ? `<p style="margin: 2px 0;"><strong>Size ID:</strong> ${product.size_id}</p>` : ''}
-                    </div>
-                  </div>
+  <h4 style="margin: 0 0 12px 0; color: #111827; font-size: 18px;">${product.product_name}</h4>
+  ${product.customDimensions ? `
+    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
+      <div style="font-size: 12px; font-weight: bold; color: #1e40af; margin-bottom: 5px;">📐 Custom Dimensions</div>
+      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+        <div>
+          <span style="color: #3b82f6;">Dimensions:</span>
+          <span style="font-weight: 600; color: #1e3a8a;">
+            ${product.customDimensions.length} × ${product.customDimensions.breadth}${product.customDimensions.height ? ` × ${product.customDimensions.height}` : ''} ${product.customDimensions.unit}
+          </span>
+        </div>
+        <div>
+          <span style="color: #3b82f6;">Calculated Price:</span>
+          <span style="font-weight: 600; color: #1e3a8a;">₹${product.customDimensions.calculatedPrice?.toFixed(2) || '0.00'}</span>
+        </div>
+      </div>
+    </div>
+  ` : ''}
+  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px;">
+    <div>
+      ${product.variant_name ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Variant:</strong> ${product.variant_name}</p>` : ''}
+      ${product.size ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Size:</strong> ${product.size}</p>` : ''}
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹${product.price}</p>
+    </div>
+    <div>
+      <p style="margin: 4px 0; font-size: 14px;"><strong>Quantity:</strong> ${product.quantity}</p>
+      <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹${product.total}</strong></p>
+    </div>
+  </div>
+  <div style="font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 8px; border-radius: 4px;">
+    <p style="margin: 2px 0;"><strong>Product ID:</strong> ${product.product_id}</p>
+    ${product.variant_id ? `<p style="margin: 2px 0;"><strong>Variant ID:</strong> ${product.variant_id}</p>` : ''}
+    ${product.size_id ? `<p style="margin: 2px 0;"><strong>Size ID:</strong> ${product.size_id}</p>` : ''}
+  </div>
+</div>
                 </div>
               </div>
             `).join('')}
