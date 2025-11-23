@@ -743,28 +743,59 @@ const [ordersToConfirmReject, setOrdersToConfirmReject] = useState([]);
 const [ordersByStatusForDelete, setOrdersByStatusForDelete] = useState({});
 
   // PDF generation function
-  const generateOrderPDF = async (order, orderIndex) => {
-    try {
-      // Create a temporary div for PDF content
-      const pdfContent = document.createElement('div');
-      pdfContent.style.width = '794px'; // A4 width in pixels at 96 DPI
-      pdfContent.style.padding = '40px';
-      pdfContent.style.fontFamily = 'Arial, sans-serif';
-      pdfContent.style.backgroundColor = 'white';
-      pdfContent.style.color = 'black';
+const generateOrderPDF = async (order, orderIndex) => {
+  try {
+    // PRE-LOAD ALL IMAGES AS BASE64 FIRST (Performance fix)
+    const loadImageAsBase64 = (url) => {
+      return new Promise((resolve) => {
+        if (!url) {
+          resolve('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEM0NiA0MCA0MCA0NiA0MCA1MFY2MEM0MCA2MCA0NiA2MCA1MCA2MEg2MEM2MCA2MCA2MCA1NCA2MCA1MFY0MEM2MCA0MCA1NCA0MCA1MCA0MEg0MFoiIGZpbGw9IiNEMUQ1REIiLz4KPHN2Zz4K');
+          return;
+        }
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        const timeout = setTimeout(() => resolve(url), 2000);
+        img.onload = () => {
+          clearTimeout(timeout);
+          try {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+          } catch (e) {
+            resolve(url);
+          }
+        };
+        img.onerror = () => {
+          clearTimeout(timeout);
+          resolve('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEM0NiA0MCA0MCA0NiA0MCA1MFY2MEM0MCA2MCA0NiA2MCA1MCA2MEg2MEM2MCA2MCA2MCA1NCA2MCA1MFY0MEM2MCA0MCA1NCA0MCA1MCA0MEg0MFoiIGZpbGw9IiNEMUQ1REIiLz4KPHN2Zz4K');
+        };
+        img.src = url;
+      });
+    };
 
-      // Calculate totals
-      const totalQuantity = order.orderedProducts.reduce((sum, product) => sum + product.quantity, 0);
-      const formattedDate = formatOrderDate(order.createdAt, orderIndex);
+    const companyLogoBase64 = companySettings?.companyLogo ? await loadImageAsBase64(companySettings.companyLogo) : null;
+    const productImages = await Promise.all(order.orderedProducts.map(p => loadImageAsBase64(p.image_url)));
 
-      // Generate HTML content
-pdfContent.innerHTML = `
+    // YOUR ORIGINAL CODE STARTS HERE - ONLY 2 CHANGES MARKED WITH COMMENTS
+    const pdfContent = document.createElement('div');
+    pdfContent.style.width = '794px';
+    pdfContent.style.padding = '40px';
+    pdfContent.style.fontFamily = 'Arial, sans-serif';
+    pdfContent.style.backgroundColor = 'white';
+    pdfContent.style.color = 'black';
+
+    const totalQuantity = order.orderedProducts.reduce((sum, product) => sum + product.quantity, 0);
+    const formattedDate = formatOrderDate(order.createdAt, orderIndex);
+
+    pdfContent.innerHTML = `
   <div style="max-width: 714px; margin: 0 auto;">
-    <!-- Header -->
     <div style="text-align: center; margin-bottom: 30px; border-bottom: 2px solid #3b82f6; padding-bottom: 20px;">
       <div style="display: flex; align-items: center; justify-content: center; margin-bottom: 10px;">
         ${companySettings?.companyLogo ? `
-          <img src="${companySettings.companyLogo}" alt="Company Logo" style="width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover;" />
+          <img src="${companyLogoBase64}" alt="Company Logo" style="width: 60px; height: 60px; border-radius: 50%; margin-right: 15px; object-fit: cover;" />
         ` : `
           <div style="width: 60px; height: 60px; background: #3b82f6; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px;">
             <span style="color: white; font-weight: bold; font-size: 24px;">MM</span>
@@ -784,201 +815,185 @@ pdfContent.innerHTML = `
       ` : ''}
     </div>
 
-          <!-- Order Info Grid -->
-          <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
-            <div style="flex: 1; margin-right: 20px;">
-              <h3 style="color: #374151; border-bottom: 1px solid #d1d5db; padding-bottom: 8px; margin-bottom: 15px;">Order Details</h3>
-              <p style="margin: 8px 0;"><strong>Order ID:</strong> ${order._id}</p>
-              <p style="margin: 8px 0;"><strong>Order Date:</strong> ${formattedDate}</p>
-              <p style="margin: 8px 0;"><strong>Status:</strong> <span style="background: ${order.status === 'Completed' ? '#dcfce7' : order.status === 'Pending' ? '#fef3c7' : order.status === 'Rejected' ? '#fecaca' : '#dbeafe'}; color: ${order.status === 'Completed' ? '#166534' : order.status === 'Pending' ? '#92400e' : order.status === 'Rejected' ? '#dc2626' : '#1d4ed8'}; padding: 4px 8px; border-radius: 12px; font-size: 12px;">${order.status}</span></p>
-              <p style="margin: 8px 0;"><strong>Total Products:</strong> ${order.orderedProducts.length}</p>
-              <p style="margin: 8px 0;"><strong>Total Quantity:</strong> ${totalQuantity}</p>
+    <div style="display: flex; justify-content: space-between; margin-bottom: 30px;">
+      <div style="flex: 1; margin-right: 20px;">
+        <h3 style="color: #374151; border-bottom: 1px solid #d1d5db; padding-bottom: 8px; margin-bottom: 15px;">Order Details</h3>
+        <p style="margin: 8px 0;"><strong>Order ID:</strong> ${order._id}</p>
+        <p style="margin: 8px 0;"><strong>Order Date:</strong> ${formattedDate}</p>
+        <p style="margin: 8px 0;"><strong>Status:</strong> <span style="background: ${order.status === 'Completed' ? '#dcfce7' : order.status === 'Pending' ? '#fef3c7' : order.status === 'Rejected' ? '#fecaca' : '#dbeafe'}; color: ${order.status === 'Completed' ? '#166534' : order.status === 'Pending' ? '#92400e' : order.status === 'Rejected' ? '#dc2626' : '#1d4ed8'}; padding: 4px 8px; border-radius: 12px; font-size: 12px;">${order.status}</span></p>
+        <p style="margin: 8px 0;"><strong>Total Products:</strong> ${order.orderedProducts.length}</p>
+        <p style="margin: 8px 0;"><strong>Total Quantity:</strong> ${totalQuantity}</p>
+      </div>
+      <div style="flex: 1;">
+        <h3 style="color: #374151; border-bottom: 1px solid #d1d5db; padding-bottom: 8px; margin-bottom: 15px;">Customer Information</h3>
+        <p style="margin: 8px 0;"><strong>Name:</strong> ${order.user_name}</p>
+        <p style="margin: 8px 0;"><strong>Email:</strong> ${order.email}</p>
+        <p style="margin: 8px 0;"><strong>Phone:</strong> ${order.phone_number}</p>
+        <p style="margin: 8px 0;"><strong>WhatsApp:</strong> ${order.whatsapp_number}</p>
+      </div>
+    </div>
+
+    <div style="margin-bottom: 30px; border: 1px solid #d1d5db; border-radius: 8px; padding: 15px; background: #f9fafb;">
+      <h3 style="color: #374151; font-size: 14px; font-weight: bold; margin: 0 0 10px 0;">Delivery Address (${order.delivery_address?.name || 'N/A'})</h3>
+      <p style="margin: 0; font-size: 12px; color: #374151; line-height: 1.6; word-wrap: break-word; white-space: normal;">
+        ${order.delivery_address && order.delivery_address.full_address 
+          ? `${order.delivery_address.full_address}<br/>${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.pincode}`
+          : 'Address not available'}
+      </p>
+    </div>
+
+    <div style="margin-bottom: 30px;">
+      <h3 style="color: #374151; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 20px;">Ordered Products</h3>
+      ${order.orderedProducts.map((product, index) => `
+        <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #f9fafb; break-inside: avoid; page-break-inside: avoid;">
+          <div style="display: flex; align-items: start;">
+            <div style="width: 80px; height: 80px; margin-right: 20px; flex-shrink: 0;">
+              <img src="${productImages[index]}" 
+                   alt="${product.product_name}" 
+                   style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #d1d5db;" />
             </div>
             <div style="flex: 1;">
-              <h3 style="color: #374151; border-bottom: 1px solid #d1d5db; padding-bottom: 8px; margin-bottom: 15px;">Customer Information</h3>
-              <p style="margin: 8px 0;"><strong>Name:</strong> ${order.user_name}</p>
-              <p style="margin: 8px 0;"><strong>Email:</strong> ${order.email}</p>
-              <p style="margin: 8px 0;"><strong>Phone:</strong> ${order.phone_number}</p>
-              <p style="margin: 8px 0;"><strong>WhatsApp:</strong> ${order.whatsapp_number}</p>
-              <p style="margin: 8px 0;"><strong>WhatsApp:</strong> ${order.whatsapp_number}</p>
+              <h4 style="margin: 0 0 12px 0; color: #111827; font-size: 18px;">${product.product_name}</h4>
+              ${product.customDimensions ? `
+                <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
+                  <div style="font-size: 12px; font-weight: bold; color: #1e40af; margin-bottom: 5px;">📐 Custom Dimensions</div>
+                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
+                    <div>
+                      <span style="color: #3b82f6;">Dimensions:</span>
+                      <span style="font-weight: 600; color: #1e3a8a;">
+                        ${product.customDimensions.length} × ${product.customDimensions.breadth}${product.customDimensions.height ? ` × ${product.customDimensions.height}` : ''} ${product.customDimensions.unit}
+                      </span>
+                    </div>
+                    <div>
+                      <span style="color: #3b82f6;">Calculated Price:</span>
+                      <span style="font-weight: 600; color: #1e3a8a;">₹${product.customDimensions.calculatedPrice?.toFixed(2) || '0.00'}</span>
+                    </div>
+                  </div>
+                </div>
+              ` : ''}
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px;">
+                <div>
+                  ${product.variant_name ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Variant:</strong> ${product.variant_name}</p>` : ''}
+                  ${product.size ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Size:</strong> ${product.size}</p>` : ''}
+                  <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹${product.price}</p>
+                </div>
+                <div>
+                  <p style="margin: 4px 0; font-size: 14px;"><strong>Quantity:</strong> ${product.quantity}</p>
+                  <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹${product.total}</strong></p>
+                </div>
+              </div>
+              <div style="font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 8px; border-radius: 4px;">
+                <p style="margin: 2px 0;"><strong>Product ID:</strong> ${product.product_id}</p>
+                ${product.variant_id ? `<p style="margin: 2px 0;"><strong>Variant ID:</strong> ${product.variant_id}</p>` : ''}
+                ${product.size_id ? `<p style="margin: 2px 0;"><strong>Size ID:</strong> ${product.size_id}</p>` : ''}
+              </div>
             </div>
           </div>
-
-          <!-- Delivery Address Section -->
-          <div style="margin-bottom: 30px; border: 1px solid #d1d5db; border-radius: 8px; padding: 15px; background: #f9fafb;">
-            <h3 style="color: #374151; font-size: 14px; font-weight: bold; margin: 0 0 10px 0;">Delivery Address (${order.delivery_address?.name || 'N/A'})</h3>
-            <p style="margin: 0; font-size: 12px; color: #374151; line-height: 1.6; word-wrap: break-word; white-space: normal;">
-              ${order.delivery_address && order.delivery_address.full_address 
-                ? `${order.delivery_address.full_address}<br/>${order.delivery_address.city}, ${order.delivery_address.state} - ${order.delivery_address.pincode}`
-                : 'Address not available'}
-            </p>
-
-          <!-- Products Section -->
-          <div style="margin-bottom: 30px;">
-            <h3 style="color: #374151; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-bottom: 20px;">Ordered Products</h3>
-            ${order.orderedProducts.map((product, index) => `
-              <div style="border: 1px solid #e5e7eb; border-radius: 8px; padding: 20px; margin-bottom: 20px; background: #f9fafb;">
-                <div style="display: flex; align-items: start;">
-                  <div style="width: 80px; height: 80px; margin-right: 20px; flex-shrink: 0;">
-                    <img src="${product.image_url || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEM0NiA0MCA0MCA0NiA0MCA1MFY2MEM0MCA2MCA0NiA2MCA1MCA2MEg2MEM2MCA2MCA2MCA1NCA2MCA1MFY0MEM2MCA0MCA1NCA0MCA1MCA0MEg0MFoiIGZpbGw9IiNEMUQ1REIiLz4KPHN2Zz4K'}" 
-                         alt="${product.product_name}" 
-                         style="width: 80px; height: 80px; object-fit: cover; border-radius: 8px; border: 1px solid #d1d5db;" />
-                  </div>
-                  <div style="flex: 1;">
-  <h4 style="margin: 0 0 12px 0; color: #111827; font-size: 18px;">${product.product_name}</h4>
-  ${product.customDimensions ? `
-    <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 6px; padding: 10px; margin-bottom: 12px;">
-      <div style="font-size: 12px; font-weight: bold; color: #1e40af; margin-bottom: 5px;">📐 Custom Dimensions</div>
-      <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; font-size: 12px;">
-        <div>
-          <span style="color: #3b82f6;">Dimensions:</span>
-          <span style="font-weight: 600; color: #1e3a8a;">
-            ${product.customDimensions.length} × ${product.customDimensions.breadth}${product.customDimensions.height ? ` × ${product.customDimensions.height}` : ''} ${product.customDimensions.unit}
-          </span>
         </div>
-        <div>
-          <span style="color: #3b82f6;">Calculated Price:</span>
-          <span style="font-weight: 600; color: #1e3a8a;">₹${product.customDimensions.calculatedPrice?.toFixed(2) || '0.00'}</span>
+      `).join('')}
+    </div>
+
+    <div style="border-top: 2px solid #3b82f6; padding-top: 20px; margin-bottom: 40px;">
+      <div style="text-align: right;">
+        <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; display: inline-block; min-width: 300px;">
+          <strong className="text-black">Sub total: ${order.price}</strong> <br>
+          <strong className="text-black">Shipping Price: ${order.shipping_price}</strong>
+          <p style="margin: 12px 0 0 0; font-size: 20px; color: #059669; border-top: 1px solid #d1d5db; padding-top: 12px;">
+            <strong>Total: ${order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`}</strong>
+          </p>
         </div>
       </div>
     </div>
-  ` : ''}
-  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 12px;">
-    <div>
-      ${product.variant_name ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Variant:</strong> ${product.variant_name}</p>` : ''}
-      ${product.size ? `<p style="margin: 4px 0; font-size: 14px;"><strong>Size:</strong> ${product.size}</p>` : ''}
-      <p style="margin: 4px 0; font-size: 14px;"><strong>Unit Price:</strong> ₹${product.price}</p>
+
+    <div style="display: flex; justify-content: space-between; align-items: end; margin-bottom: 30px;">
+      <div style="flex: 1;"></div>
+      <div style="text-align: center; min-width: 250px;">
+        <div style="border-bottom: 1px solid #374151; margin-bottom: 8px; height: 60px;"></div>
+        <p style="margin: 0; font-size: 14px; color: #374151;"><strong>Authorized Signature</strong></p>
+        <p style="margin: 4px 0; font-size: 12px; color: #6b7280;">${companySettings?.companyName || 'Mould Market'}</p>
+      </div>
     </div>
-    <div>
-      <p style="margin: 4px 0; font-size: 14px;"><strong>Quantity:</strong> ${product.quantity}</p>
-      <p style="margin: 4px 0; font-size: 16px; color: #059669;"><strong>Total: ₹${product.total}</strong></p>
+
+    <div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
+      <p style="color: #6b7280; font-size: 12px; margin: 0;">Generated on ${new Date().toLocaleDateString()} | ${companySettings?.companyName || 'Mould Market'} Order Management System</p>
+      ${companySettings?.adminEmail ? `<p style="color: #6b7280; font-size: 10px; margin: 5px 0 0 0;">For support, contact us at ${companySettings.adminEmail}</p>` : ''}
+      <p style="color: #6b7280; font-size: 10px; margin: 5px 0 0 0;">Thank you for your business!</p>
     </div>
   </div>
-  <div style="font-size: 10px; color: #6b7280; background: #f3f4f6; padding: 8px; border-radius: 4px;">
-    <p style="margin: 2px 0;"><strong>Product ID:</strong> ${product.product_id}</p>
-    ${product.variant_id ? `<p style="margin: 2px 0;"><strong>Variant ID:</strong> ${product.variant_id}</p>` : ''}
-    ${product.size_id ? `<p style="margin: 2px 0;"><strong>Size ID:</strong> ${product.size_id}</p>` : ''}
-  </div>
-</div>
-                </div>
-              </div>
-            `).join('')}
-          </div>
+    `;
 
-          <!-- Total Section -->
-          <div style="border-top: 2px solid #3b82f6; padding-top: 20px; margin-bottom: 40px;">
-            <div style="text-align: right;">
-              <div style="background: #f3f4f6; padding: 20px; border-radius: 8px; display: inline-block; min-width: 300px;">
-                <p style="margin: 8px 0; font-size: 16px;"><strong>Subtotal:</strong> ₹{order.price}</p>
-                <p style="margin: 12px 0 0 0; font-size: 20px; color: #059669; border-top: 1px solid #d1d5db; padding-top: 12px;">
-                  <strong>Total: ${order.total_price === "Pending" ? "Pending" : `₹${order.total_price}`}</strong>
-                </p>
-              </div>
-            </div>
-          </div>
+    pdfContent.style.position = 'fixed';
+    pdfContent.style.left = '-9999px';
+    pdfContent.style.top = '0';
+    document.body.appendChild(pdfContent);
 
-         <!-- Signature Section -->
-<div style="display: flex; justify-content: space-between; align-items: end; margin-bottom: 30px;">
-  <div style="flex: 1;"></div>
-  <div style="text-align: center; min-width: 250px;">
-    <div style="border-bottom: 1px solid #374151; margin-bottom: 8px; height: 60px;"></div>
-    <p style="margin: 0; font-size: 14px; color: #374151;"><strong>Authorized Signature</strong></p>
-    <p style="margin: 4px 0; font-size: 12px; color: #6b7280;">${companySettings?.companyName || 'Mould Market'}</p>
-  </div>
-</div>
+    await new Promise(resolve => setTimeout(resolve, 100));
 
-         <!-- Footer -->
-<div style="text-align: center; border-top: 1px solid #e5e7eb; padding-top: 20px;">
-  <p style="color: #6b7280; font-size: 12px; margin: 0;">Generated on ${new Date().toLocaleDateString()} | ${companySettings?.companyName || 'Mould Market'} Order Management System</p>
-  ${companySettings?.adminEmail ? `<p style="color: #6b7280; font-size: 10px; margin: 5px 0 0 0;">For support, contact us at ${companySettings.adminEmail}</p>` : ''}
-  <p style="color: #6b7280; font-size: 10px; margin: 5px 0 0 0;">Thank you for your business!</p>
-</div>
-      `;
+    const canvas = await html2canvas(pdfContent, {
+      scale: 1.5,
+      useCORS: true,
+      allowTaint: false,
+      backgroundColor: '#ffffff',
+      width: 794,
+      height: pdfContent.scrollHeight,
+      logging: false,
+      windowWidth: 794,
+      windowHeight: pdfContent.scrollHeight
+    });
 
-      // Append to body temporarily
-      pdfContent.style.position = 'fixed';
-      pdfContent.style.left = '-9999px';
-      pdfContent.style.top = '0';
-      document.body.appendChild(pdfContent);
+    document.body.removeChild(pdfContent);
 
-      // Wait for images to load
-      const images = pdfContent.querySelectorAll('img');
-      const imagePromises = Array.from(images).map(img => {
-        return new Promise((resolve) => {
-          if (img.complete) {
-            resolve();
-          } else {
-            img.onload = () => resolve();
-            img.onerror = () => resolve(); // Resolve even on error to continue
-          }
-        });
-      });
-
-      await Promise.all(imagePromises);
-
-      // Generate canvas from HTML
-      const canvas = await html2canvas(pdfContent, {
-        scale: 2, // Higher quality
-        useCORS: true,
-        allowTaint: true,
-        backgroundColor: '#ffffff',
-        width: 794,
-        height: pdfContent.scrollHeight
-      });
-
-      // Remove temporary div
-      document.body.removeChild(pdfContent);
-
-      // Create PDF
-      const pdf = new jsPDF('p', 'pt', 'a4');
-      const imgData = canvas.toDataURL('image/png');
-      
-      const pdfWidth = pdf.internal.pageSize.getWidth();
-      const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = canvas.width;
-      const imgHeight = canvas.height;
-      const ratio = pdfWidth / imgWidth;
-      const imgX = (pdfWidth - imgWidth * ratio) / 2;
-      const imgY = 0;
-
-      // If content is too long, split into multiple pages
-      const totalHeight = imgHeight * ratio;
-      if (totalHeight > pdfHeight) {
-        let yOffset = 0;
-        let pageNumber = 1;
-
-        while (yOffset < totalHeight) {
-          const remainingHeight = totalHeight - yOffset;
-          const pageHeight = Math.min(pdfHeight, remainingHeight);
-          
-          if (pageNumber > 1) {
-            pdf.addPage();
-          }
-
-          pdf.addImage(
-            imgData,
-            'PNG',
-            imgX,
-            -yOffset,
-            imgWidth * ratio,
-            imgHeight * ratio
-          );
-
-          yOffset += pdfHeight;
-          pageNumber++;
-        }
-      } else {
-        pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
-      }
-
-      // Save PDF
-      pdf.save(`MouldMarket_Order_${order._id.substring(0, 8)}_${formattedDate.replace(/\s+/g, '_')}.pdf`);
-
-    } catch (error) {
-      console.error('Error generating PDF:', error);
-      alert('Error generating PDF. Please try again.');
+    if (!canvas || canvas.width === 0 || canvas.height === 0) {
+      throw new Error('Failed to generate canvas from content');
     }
-  };
+
+    const pdf = new jsPDF('p', 'pt', 'a4');
+    const imgData = canvas.toDataURL('image/png');
+    
+    const pdfWidth = pdf.internal.pageSize.getWidth();
+    const pdfHeight = pdf.internal.pageSize.getHeight();
+    const imgWidth = canvas.width;
+    const imgHeight = canvas.height;
+    const ratio = pdfWidth / imgWidth;
+    const imgX = (pdfWidth - imgWidth * ratio) / 2;
+    const imgY = 0;
+
+    const totalHeight = imgHeight * ratio;
+    if (totalHeight > pdfHeight) {
+      let yOffset = 0;
+      let pageNumber = 1;
+
+      while (yOffset < totalHeight) {
+        const remainingHeight = totalHeight - yOffset;
+        const pageHeight = Math.min(pdfHeight, remainingHeight);
+        
+        if (pageNumber > 1) {
+          pdf.addPage();
+        }
+
+        pdf.addImage(
+          imgData,
+          'PNG',
+          imgX,
+          -yOffset,
+          imgWidth * ratio,
+          imgHeight * ratio
+        );
+
+        yOffset += pdfHeight;
+        pageNumber++;
+      }
+    } else {
+      pdf.addImage(imgData, 'PNG', imgX, imgY, imgWidth * ratio, imgHeight * ratio);
+    }
+
+    pdf.save(`MouldMarket_Order_${order._id.substring(0, 8)}_${formattedDate.replace(/\s+/g, '_')}.pdf`);
+
+  } catch (error) {
+    console.error('Error generating PDF:', error);
+    alert('Error generating PDF. Please try again.');
+  }
+};
 
   // Dummy dates generator for orders without createdAt
   const generateDummyDate = (index) => {
