@@ -937,7 +937,7 @@ pdfContent.innerHTML = `
       const pdfHeight = pdf.internal.pageSize.getHeight();
       const imgWidth = canvas.width;
       const imgHeight = canvas.height;
-      const ratio = Math.min(pdfWidth / imgWidth, pdfHeight / imgHeight);
+      const ratio = pdfWidth / imgWidth;
       const imgX = (pdfWidth - imgWidth * ratio) / 2;
       const imgY = 0;
 
