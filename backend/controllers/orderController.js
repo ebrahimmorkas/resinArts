@@ -441,6 +441,14 @@ if (cartData.customDimensions) {
               let itemDetails = `${index + 1}. ${item.product_name}`;
               if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
               if (item.size) itemDetails += ` - Size: ${item.size}`;
+              if (item.customDimensions) {
+      itemDetails += `\n   📐 Custom Dimensions: ${item.customDimensions.length} × ${item.customDimensions.breadth}`;
+      if (item.customDimensions.height) itemDetails += ` × ${item.customDimensions.height}`;
+      itemDetails += ` ${item.customDimensions.unit}`;
+      if (item.customDimensions.calculatedPrice) {
+        itemDetails += `\n   💰 Calculated Price: ₹${item.customDimensions.calculatedPrice.toFixed(2)}`;
+      }
+    }
               itemDetails += `\n   Quantity: ${item.quantity}`;
               itemDetails += `\n   Price: ₹${item.price.toFixed(2)}`;
               itemDetails += `\n   Total: ₹${item.total.toFixed(2)}`;
@@ -774,6 +782,14 @@ ${companySettings?.adminEmail || ''}`;
             let itemDetails = `${index + 1}. ${item.product_name}`;
             if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
             if (item.size) itemDetails += ` - Size: ${item.size}`;
+            if (item.customDimensions) {
+      itemDetails += `\n   📐 Custom Dimensions: ${item.customDimensions.length} × ${item.customDimensions.breadth}`;
+      if (item.customDimensions.height) itemDetails += ` × ${item.customDimensions.height}`;
+      itemDetails += ` ${item.customDimensions.unit}`;
+      if (item.customDimensions.calculatedPrice) {
+        itemDetails += `\n   💰 Calculated Price: ₹${item.customDimensions.calculatedPrice.toFixed(2)}`;
+      }
+    }
             itemDetails += `\n   Quantity: ${item.quantity}`;
             itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
             itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
@@ -1073,6 +1089,14 @@ const handleStatusChange = async (req, res) => {
           let itemDetails = `${index + 1}. ${item.product_name}`;
           if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
           if (item.size) itemDetails += ` - Size: ${item.size}`;
+           if (item.customDimensions) {
+      itemDetails += `\n   📐 Custom Dimensions: ${item.customDimensions.length} × ${item.customDimensions.breadth}`;
+      if (item.customDimensions.height) itemDetails += ` × ${item.customDimensions.height}`;
+      itemDetails += ` ${item.customDimensions.unit}`;
+      if (item.customDimensions.calculatedPrice) {
+        itemDetails += `\n   💰 Calculated Price: ₹${item.customDimensions.calculatedPrice.toFixed(2)}`;
+      }
+    }
           itemDetails += `\n   Quantity: ${item.quantity}`;
           itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
           itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
@@ -1593,6 +1617,14 @@ if (io) {
           let itemDetails = `${index + 1}. ${item.product_name}`;
           if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
           if (item.size) itemDetails += ` - Size: ${item.size}`;
+          if (item.customDimensions) {
+      itemDetails += `\n   📐 Custom Dimensions: ${item.customDimensions.length} × ${item.customDimensions.breadth}`;
+      if (item.customDimensions.height) itemDetails += ` × ${item.customDimensions.height}`;
+      itemDetails += ` ${item.customDimensions.unit}`;
+      if (item.customDimensions.calculatedPrice) {
+        itemDetails += `\n   💰 Calculated Price: ₹${item.customDimensions.calculatedPrice.toFixed(2)}`;
+      }
+    }
           itemDetails += `\n   Quantity: ${item.quantity}`;
           itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
           itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
@@ -1944,6 +1976,14 @@ const sendAcceptEmailWhenShippingPriceAddedAutomatically = async (req, res) => {
         let itemDetails = `${index + 1}. ${item.product_name}`;
         if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
         if (item.size) itemDetails += ` - Size: ${item.size}`;
+         if (item.customDimensions) {
+      itemDetails += `\n   📐 Custom Dimensions: ${item.customDimensions.length} × ${item.customDimensions.breadth}`;
+      if (item.customDimensions.height) itemDetails += ` × ${item.customDimensions.height}`;
+      itemDetails += ` ${item.customDimensions.unit}`;
+      if (item.customDimensions.calculatedPrice) {
+        itemDetails += `\n   💰 Calculated Price: ₹${item.customDimensions.calculatedPrice.toFixed(2)}`;
+      }
+    }
         itemDetails += `\n   Quantity: ${item.quantity}`;
         itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
         itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
@@ -2151,6 +2191,14 @@ const bulkAccept = async (req, res) => {
             let itemDetails = `${index + 1}. ${item.product_name}`;
             if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
             if (item.size) itemDetails += ` - Size: ${item.size}`;
+             if (item.customDimensions) {
+      itemDetails += `\n   📐 Custom Dimensions: ${item.customDimensions.length} × ${item.customDimensions.breadth}`;
+      if (item.customDimensions.height) itemDetails += ` × ${item.customDimensions.height}`;
+      itemDetails += ` ${item.customDimensions.unit}`;
+      if (item.customDimensions.calculatedPrice) {
+        itemDetails += `\n   💰 Calculated Price: ₹${item.customDimensions.calculatedPrice.toFixed(2)}`;
+      }
+    }
             itemDetails += `\n   Quantity: ${item.quantity}`;
             itemDetails += `\n   Unit Price: ₹${parseFloat(item.price || 0).toFixed(2)}`;
             itemDetails += `\n   Item Total: ₹${parseFloat(item.total || 0).toFixed(2)}`;
@@ -2555,6 +2603,14 @@ const bulkConfirm = async (req, res) => {
             let itemDetails = `${index + 1}. ${item.product_name}`;
             if (item.variant_name) itemDetails += ` - ${item.variant_name}`;
             if (item.size) itemDetails += ` - Size: ${item.size}`;
+             if (item.customDimensions) {
+      itemDetails += `\n   📐 Custom Dimensions: ${item.customDimensions.length} × ${item.customDimensions.breadth}`;
+      if (item.customDimensions.height) itemDetails += ` × ${item.customDimensions.height}`;
+      itemDetails += ` ${item.customDimensions.unit}`;
+      if (item.customDimensions.calculatedPrice) {
+        itemDetails += `\n   💰 Calculated Price: ₹${item.customDimensions.calculatedPrice.toFixed(2)}`;
+      }
+    }
             itemDetails += `\n   Quantity: ${item.quantity}`;
             return itemDetails;
           })
