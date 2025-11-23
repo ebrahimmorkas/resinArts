@@ -610,7 +610,7 @@ const handleDimensionConfirm = async (dimensionData) => {
           custom_dimensions: oldDims
         });
 
-        await axios.delete("http://localhost:3000/api/cart", {
+        await axios.delete("https://api.mouldmarket.in/api/cart", {
           withCredentials: true,
           headers: {
             "Content-Type": "application/json",
@@ -652,7 +652,7 @@ const handleDimensionConfirm = async (dimensionData) => {
 
         console.log('✅ Creating new dimension entry:', cartItemData);
 
-        await axios.post("http://localhost:3000/api/cart", cartItemData, {
+        await axios.post("https://api.mouldmarket.in/api/cart", cartItemData, {
           withCredentials: true,
           headers: {
             "Content-Type": "application/json",
@@ -673,7 +673,7 @@ const handleDimensionConfirm = async (dimensionData) => {
         });
 
         await axios.put(
-          "http://localhost:3000/api/cart",
+          "https://api.mouldmarket.in/api/cart",
           {
             product_id: item.productId,
             variant_name: null,
@@ -1115,7 +1115,7 @@ const handleClosePriceChartModal = () => {
                   <button
                     onClick={async () => {
                       try {
-                        await axios.delete("http://localhost:3000/api/cart", {
+                        await axios.delete("https://api.mouldmarket.in/api/cart", {
                           withCredentials: true,
                           headers: {
                             "Content-Type": "application/json",
@@ -1178,7 +1178,7 @@ const handleClosePriceChartModal = () => {
             try {
               const deletePromises = dimensionEntries.map(async ([cartKey, item]) => {
                 const dims = item.customDimensions;
-                return axios.delete("http://localhost:3000/api/cart", {
+                return axios.delete("https://api.mouldmarket.in/api/cart", {
                   withCredentials: true,
                   headers: {
                     "Content-Type": "application/json",

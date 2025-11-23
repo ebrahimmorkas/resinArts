@@ -176,7 +176,7 @@ for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
                 };
             }
 
-            await axios.post("http://localhost:3000/api/cart", cartItemData, {
+            await axios.post("https://api.mouldmarket.in/api/cart", cartItemData, {
                 withCredentials: true,
                 headers: {
                     "Content-Type": "application/json",
@@ -278,7 +278,7 @@ for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
   if (!user) return;
   
   try {
-    const response = await axios.get("http://localhost:3000/api/cart", {
+    const response = await axios.get("https://api.mouldmarket.in/api/cart", {
       withCredentials: true,
       headers: {
         "Content-Type": "application/json",
@@ -569,7 +569,7 @@ console.log('🔍 Custom Dimensions:', cartItemData.custom_dimensions);
         }
 
         axios.put(
-            "http://localhost:3000/api/cart",
+            "https://api.mouldmarket.in/api/cart",
             updateData,
             {
                 withCredentials: true,

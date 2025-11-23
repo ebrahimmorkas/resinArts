@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:3000/api" // Updated to match backend port
+const API_BASE_URL = "https://api.mouldmarket.in/api" // Updated to match backend port
 import axios from 'axios';
 
 export const fetchCategories = async () => {
@@ -60,6 +60,6 @@ export const duplicateProducts = async (productIds) => {
 
 // Fetch company settings
 export const fetchCompanySettings = async () => {
-  const response = await axios.get('http://localhost:3000/api/company-settings/', {withCredentials: true})
+  const response = await axios.get('https://api.mouldmarket.in/api/company-settings/', {withCredentials: true})
   return response.data.data
 }
