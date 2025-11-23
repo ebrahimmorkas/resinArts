@@ -66,6 +66,13 @@ const cartSchema = mongoose.Schema(
     wholesalePrice: { type: Number },
     quantity: { type: Number }
 }],
+customDimensions: {
+  length: { type: Number, required: false },
+  breadth: { type: Number, required: false },
+  height: { type: Number, required: false },
+  unit: { type: String, enum: ["cm", "m", "inch"], required: false },
+  calculatedPrice: { type: Number, required: false }
+},
     },
     {
         timestamps: true,

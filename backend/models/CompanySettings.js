@@ -96,7 +96,12 @@ const companySettingsSchema = new mongoose.Schema({
     type: Boolean,
     default: true
   },
-  
+  // Dimension based pricing
+  dimensionBasedPricing: {
+    type: String,
+    enum: ['static', 'dynamic'],
+    default: 'dynamic'
+  },
   // Shipping Price Settings
 shippingPriceSettings: {
   isManual: {

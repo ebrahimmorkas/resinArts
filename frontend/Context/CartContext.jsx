@@ -16,6 +16,24 @@ export const useCart = () => {
     return context;
 };
 
+// Helper function to generate unique cart keys
+const generateCartKey = (productId, colorName = null, sizeString = null, customDimensions = null) => {
+  if (customDimensions) {
+    // For dimension-based products, create unique key with dimensions
+    const dimensionKey = customDimensions.height 
+      ? `${customDimensions.length}x${customDimensions.breadth}x${customDimensions.height}${customDimensions.unit}`
+      : `${customDimensions.length}x${customDimensions.breadth}${customDimensions.unit}`;
+    return `${productId}-custom-${dimensionKey}`;
+  }
+  return `${productId}-${colorName || "default"}-${sizeString || "default"}`;
+};
+
+// Keep this old one for backward compatibility during migration
+const generateCustomDimensionKey = (dimensions) => {
+  if (!dimensions) return '';
+  return `${dimensions.length}x${dimensions.breadth}${dimensions.height ? `x${dimensions.height}` : ''}`;
+};
+
 export const CartProvider = ({ children }) => {
     const [cartItems, setCartItems] = useState({});
     const [isCartOpen, setIsCartOpen] = useState(false);
@@ -100,25 +118,32 @@ export const CartProvider = ({ children }) => {
             let backendCart = {};
             if (response.status === 200) {
                 const cartData = response.data;
-                cartData.forEach((item) => {
-                    const cartKey = `${item.product_id}-${item.variant_name || "default"}-${item.size || "default"}`;
-                    backendCart[cartKey] = {
-                        productId: item.product_id,
-                        variantName: item.variant_name || null,
-                        sizeString: item.size || null,
-                        quantity: item.quantity,
-                        price: item.price,
-                        discountedPrice: item.discounted_price,
-                        imageUrl: item.image_url,
-                        productName: item.product_name,
-                        variantId: item.variant_id,
-                        detailsId: item.details_id,
-                        sizeId: item.size_id,
-                        bulkPricing: item.bulk_pricing || [],
-                        cashApplied: item.cash_applied || 0,
-                        userId: item.user_id,
-                    };
-                });
+cartData.forEach((item) => {
+  const cartKey = generateCartKey(
+    item.product_id, 
+    item.variant_name, 
+    item.size, 
+    item.customDimensions
+  );
+  
+  backendCart[cartKey] = {
+    productId: item.product_id,
+    variantName: item.variant_name || null,
+    sizeString: item.size || null,
+    quantity: item.quantity,
+    price: item.price,
+    discountedPrice: item.discounted_price,
+    imageUrl: item.image_url,
+    productName: item.product_name,
+    variantId: item.variant_id,
+    detailsId: item.details_id,
+    sizeId: item.size_id,
+    bulkPricing: item.bulk_pricing || [],
+    customDimensions: item.customDimensions || null, // ADD THIS LINE
+    cashApplied: item.cash_applied || 0,
+    userId: item.user_id,
+  };
+});
             }
 
             // If there's a guest cart, merge it
@@ -127,8 +152,46 @@ export const CartProvider = ({ children }) => {
                 
                 // Merge guest cart with backend cart
 for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
-    if (backendCart[cartKey]) {
-        // Item exists in backend, increase quantity
+    // For dimension products, always add as new entry (different dimensions = different product)
+    if (guestItem.customDimensions) {
+        try {
+            const cartItemData = {
+                image_url: guestItem.imageUrl,
+                product_id: guestItem.productId,
+                product_name: guestItem.productName,
+                quantity: guestItem.quantity,
+                price: guestItem.price,
+                cash_applied: 0,
+                discounted_price: guestItem.discountedPrice || guestItem.price,
+                bulk_pricing: guestItem.bulkPricing || [],
+            };
+
+            if (guestItem.customDimensions) {
+                cartItemData.custom_dimensions = {
+                    length: guestItem.customDimensions.length,
+                    breadth: guestItem.customDimensions.breadth,
+                    height: guestItem.customDimensions.height,
+                    unit: guestItem.customDimensions.unit,
+                    calculatedPrice: guestItem.customDimensions.calculatedPrice
+                };
+            }
+
+            await axios.post("http://localhost:3000/api/cart", cartItemData, {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            });
+            backendCart[cartKey] = {
+                ...guestItem,
+                cashApplied: 0,
+                userId: req.user?.id
+            };
+        } catch (error) {
+            console.error('Error adding guest dimension cart item:', error);
+        }
+    } else if (backendCart[cartKey]) {
+        // Non-dimension item exists in backend, increase quantity
         try {
             await axios.put(
                 "https://api.mouldmarket.in/api/cart",
@@ -149,7 +212,6 @@ for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
             backendCart[cartKey].quantity += guestItem.quantity;
         } catch (error) {
             console.error('Error merging cart item:', error);
-            // If merge fails due to stock, just use backend quantity
             if (error.response?.data?.availableStock !== undefined) {
                 backendCart[cartKey].quantity = Math.min(
                     backendCart[cartKey].quantity + guestItem.quantity,
@@ -190,7 +252,6 @@ for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
             };
         } catch (error) {
             console.error('Error adding guest cart item:', error);
-            // If adding fails due to stock, skip this item
         }
     }
 }
@@ -213,52 +274,104 @@ for (const [cartKey, guestItem] of Object.entries(guestCartItems)) {
         }
     };
 
-    const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
+    const refreshCartFromBackend = async () => {
+  if (!user) return;
+  
+  try {
+    const response = await axios.get("http://localhost:3000/api/cart", {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    });
+
+    const backendCart = {};
+    if (response.status === 200) {
+      const cartData = response.data;
+      cartData.forEach((item) => {
+        const cartKey = generateCartKey(
+          item.product_id,
+          item.variant_name,
+          item.size,
+          item.customDimensions
+        );
+        
+        backendCart[cartKey] = {
+          productId: item.product_id,
+          variantName: item.variant_name || null,
+          sizeString: item.size || null,
+          quantity: item.quantity,
+          price: item.price,
+          discountedPrice: item.discounted_price,
+          imageUrl: item.image_url,
+          productName: item.product_name,
+          variantId: item.variant_id,
+          detailsId: item.details_id,
+          sizeId: item.size_id,
+          bulkPricing: item.bulk_pricing || [],
+          customDimensions: item.customDimensions || null,
+          cashApplied: item.cash_applied || 0,
+          userId: item.user_id,
+        };
+      });
+    }
+    
+    setCartItems(backendCart);
+  } catch (error) {
+    console.error('Error refreshing cart:', error);
+  }
+};
+
+const addToCart = async (productId, colorName, sizeString, quantity, productData) => {
     try {
-        const cartKey = `${productId}-${colorName || "default"}-${sizeString || "default"}`;
+        const cartKey = generateCartKey(productId, colorName, sizeString, productData.customDimensions);
 
-        if (!user) {
-            // Guest user - save to localStorage (synchronous, no loading needed)
-            const newCartItems = {
-                ...cartItems,
-                [cartKey]: {
-                    productId,
-                    variantName: colorName || null,
-                    sizeString: sizeString || null,
-                    quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
-                    price: productData.price,
-                    discountedPrice: productData.discountedPrice || productData.price,
-                    imageUrl: productData.imageUrl,
-                    productName: productData.productName,
-                    variantId: productData.variantId,
-                    detailsId: productData.detailsId,
-                    sizeId: productData.sizeId,
-                    cashApplied: 0,
-                },
-            };
-            setCartItems(newCartItems);
-            saveCartToLocalStorage(newCartItems);
-            return;
-        }
-
-        // Logged in user - optimistic update first (instant feedback)
-        const optimisticCartItems = {
+        // FIND the section for guest users (inside addToCart) and UPDATE:
+if (!user) {
+  // Guest user - save to localStorage
+  const newCartItems = {
     ...cartItems,
     [cartKey]: {
-        productId,
-        variantName: colorName || null,
-        sizeString: sizeString || null,
-        quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
-        price: productData.price,
-        discountedPrice: productData.discountedPrice || productData.price,
-        imageUrl: productData.imageUrl,
-        productName: productData.productName,
-        variantId: productData.variantId,
-        detailsId: productData.detailsId,
-        sizeId: productData.sizeId,
-        bulkPricing: productData.bulkPricing || [], // Add this line
-        cashApplied: 0,
+      productId,
+      variantName: colorName || null,
+      sizeString: sizeString || null,
+      quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
+      price: productData.price,
+      discountedPrice: productData.discountedPrice || productData.price,
+      imageUrl: productData.imageUrl,
+      productName: productData.productName,
+      variantId: productData.variantId,
+      detailsId: productData.detailsId,
+      sizeId: productData.sizeId,
+      bulkPricing: productData.bulkPricing || [],
+      customDimensions: productData.customDimensions || null, // ADD THIS LINE
+      cashApplied: 0,
     },
+  };
+  setCartItems(newCartItems);
+  saveCartToLocalStorage(newCartItems);
+  return;
+}
+
+        // Logged in user - optimistic update first (instant feedback)
+const optimisticCartItems = {
+  ...cartItems,
+  [cartKey]: {
+    productId,
+    variantName: colorName || null,
+    sizeString: sizeString || null,
+    quantity: (cartItems[cartKey]?.quantity || 0) + quantity,
+    price: productData.price,
+    discountedPrice: productData.discountedPrice || productData.price,
+    imageUrl: productData.imageUrl,
+    productName: productData.productName,
+    variantId: productData.variantId,
+    detailsId: productData.detailsId,
+    sizeId: productData.sizeId,
+    bulkPricing: productData.bulkPricing || [],
+    customDimensions: productData.customDimensions || null, // ADD THIS LINE
+    cashApplied: 0,
+  },
 };
         setCartItems(optimisticCartItems);
 
@@ -284,16 +397,37 @@ if (applyFreeCash && freeCash) {
     }
 }
 
-        const cartItemData = {
-            image_url: productData.imageUrl,
-            product_id: productId,
-            product_name: productData.productName,
-            quantity: quantity,
-            price: productData.price,
-            cash_applied: cashApplied,
-            discounted_price: productData.discountedPrice || productData.price,
-            bulk_pricing: productData.bulkPricing || [], 
-        };
+// Prepare custom dimensions with all required fields
+let customDimensionsData = null;
+if (productData.customDimensions) {
+  console.log('🔍 productData.customDimensions FULL:', productData.customDimensions); // ADD THIS
+  console.log('🔍 calculatedPrice from productData:', productData.customDimensions.calculatedPrice); // ADD THIS
+  
+  customDimensionsData = {
+    length: productData.customDimensions.length,
+    breadth: productData.customDimensions.breadth,
+    height: productData.customDimensions.height,
+    unit: productData.customDimensions.unit,
+    calculatedPrice: productData.customDimensions.calculatedPrice
+  };
+  
+  console.log('🔍 customDimensionsData AFTER:', customDimensionsData); // ADD THIS
+}
+
+const cartItemData = {
+  image_url: productData.imageUrl,
+  product_id: productId,
+  product_name: productData.productName,
+  quantity: quantity,
+  price: productData.price,
+  cash_applied: cashApplied,
+  discounted_price: productData.discountedPrice || productData.price,
+  bulk_pricing: productData.bulkPricing || [],
+  custom_dimensions: customDimensionsData,
+};
+
+console.log('📦 Sending to backend:', cartItemData);
+console.log('🔍 Custom Dimensions:', cartItemData.custom_dimensions);
 
         if (productData.variantId && productData.variantId !== "") {
             cartItemData.variant_id = productData.variantId;
@@ -355,7 +489,10 @@ if (applyFreeCash && freeCash) {
     const updateQuantity = async (cartKey, change) => {
     try {
         const item = cartItems[cartKey];
-        if (!item) return;
+        if (!item) {
+            console.error('Item not found for cartKey:', cartKey);
+            return;
+        }
 
         const newQuantity = item.quantity + change;
 
@@ -406,49 +543,70 @@ if (applyFreeCash && freeCash) {
             }
         }
 
+        // Prepare update data
+        const updateData = {
+            product_id: item.productId,
+            variant_name: item.variantName,
+            size: item.sizeString,
+            quantity: newQuantity,
+            cash_applied: cashApplied,
+        };
+
+        // CRITICAL: Add custom dimensions if present
+        if (item.customDimensions) {
+            updateData.custom_dimensions = {
+                length: item.customDimensions.length,
+                breadth: item.customDimensions.breadth,
+                height: item.customDimensions.height || null,
+                unit: item.customDimensions.unit,
+                calculatedPrice: item.customDimensions.calculatedPrice
+            };
+            
+            console.log('🔍 Updating dimension cart item:', {
+                cartKey,
+                customDimensions: updateData.custom_dimensions
+            });
+        }
+
         axios.put(
-    "https://api.mouldmarket.in/api/cart",
-    {
-        product_id: item.productId,
-        variant_name: item.variantName,
-        size: item.sizeString,
-        quantity: newQuantity,
-        cash_applied: cashApplied,
-    },
-    {
-        withCredentials: true,
-        headers: {
-            "Content-Type": "application/json",
-        },
-    },
-).then(response => {
-    if (response.status === 200) {
-        setCartItems((prev) => ({
-            ...prev,
-            [cartKey]: {
-                ...prev[cartKey],
-                quantity: newQuantity,
-                cashApplied,
-            },
-        }));
-    }
-}).catch(err => {
-    // Rollback on error
-    setCartItems(cartItems);
-    
-    // Show user-friendly error message
-    const errorMessage = err.response?.data?.error || "Failed to update quantity";
-    setError(errorMessage);
-    console.error("Error updating quantity:", err);
-    
-    // Display toast notification
-    import('react-toastify').then(({ toast }) => {
-        toast.error(errorMessage, {
-            position: "top-right",
-            autoClose: 3000,
+            "http://localhost:3000/api/cart",
+            updateData,
+            {
+                withCredentials: true,
+                headers: {
+                    "Content-Type": "application/json",
+                },
+            }
+        ).then(response => {
+            if (response.status === 200) {
+                setCartItems((prev) => ({
+                    ...prev,
+                    [cartKey]: {
+                        ...prev[cartKey],
+                        quantity: newQuantity,
+                        cashApplied,
+                    },
+                }));
+                console.log('✅ Quantity updated successfully for:', cartKey);
+            }
+        }).catch(err => {
+            // Rollback on error
+            setCartItems(cartItems);
+            
+            // Show user-friendly error message
+            const errorMessage = err.response?.data?.error || "Failed to update quantity";
+            setError(errorMessage);
+            console.error("Error updating quantity:", err);
+            console.error("Update data sent:", updateData);
+            
+            // Display toast notification
+            import('react-toastify').then(({ toast }) => {
+                toast.error(errorMessage, {
+                    position: "top-right",
+                    autoClose: 3000,
+                });
+            });
         });
-    });
-});
     } catch (err) {
         setError("Failed to update quantity");
         console.error("Error updating quantity:", err);
@@ -678,6 +836,7 @@ if (applyFreeCash && freeCash) {
         getUniqueCartItemsCount,
         getTotalItemsCount,
         clearCart,
+            refreshCartFromBackend, 
     };
 
     return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

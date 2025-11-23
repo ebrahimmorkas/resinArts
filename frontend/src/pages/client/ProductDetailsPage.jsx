@@ -1,9 +1,6 @@
 import { useState, useEffect, useContext } from "react"
 import { useParams, useNavigate, Link } from "react-router-dom"
-import { 
-  X, ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, 
-  Trash2, Star, Shield, Truck, Home, ArrowLeft 
-} from "lucide-react"
+import { X, ChevronLeft, ChevronRight, Minus, Plus, ShoppingCart, Trash2, Star, Shield, Truck, Home, ArrowLeft, Edit } from "lucide-react"
 import { ProductContext } from "../../../Context/ProductContext"
 import { CategoryContext } from "../../../Context/CategoryContext"
 import { useCart } from "../../../Context/CartContext"
@@ -12,6 +9,8 @@ import { getOptimizedImageUrl } from "../../utils/imageOptimizer"
 import Navbar from "../../components/client/common/Navbar"
 import CartModal from "../../components/client/common/CartModal"
 import axios from "axios"
+import DimensionInputModal from "../../components/client/common/DimensionInputModal"
+import ViewPriceChartModal from "../../components/client/common/ViewPriceChartModal"
 
 export default function ProductDetailsPage() {
   const { productId } = useParams()
@@ -19,7 +18,7 @@ export default function ProductDetailsPage() {
   const { products } = useContext(ProductContext)
   const { categories } = useContext(CategoryContext)
   const { discountData, loadingDiscount } = useContext(DiscountContext)
-  const { cartItems, addToCart, updateQuantity, removeFromCart } = useCart()
+  const { cartItems, addToCart, updateQuantity, removeFromCart, refreshCartFromBackend  } = useCart()
 
   const [product, setProduct] = useState(null)
   const [selectedVariant, setSelectedVariant] = useState(null)
@@ -36,6 +35,10 @@ const [productError, setProductError] = useState(null)
   const [searchResults, setSearchResults] = useState([])
   const [showSearchResults, setShowSearchResults] = useState(false)
   const [isSearching, setIsSearching] = useState(false)
+const [showDimensionModal, setShowDimensionModal] = useState(false);
+const [showPriceChartModal, setShowPriceChartModal] = useState(false);
+const [dimensionModalEditMode, setDimensionModalEditMode] = useState(null);
+const [localCartItems, setLocalCartItems] = useState({});
 
   // Helper functions (copy from Home.jsx)
   const formatSize = (sizeObj) => {
@@ -401,6 +404,11 @@ useEffect(() => {
     }
   }, [itemInCart?.quantity])
 
+  // Sync local cart with context cart
+useEffect(() => {
+  setLocalCartItems(cartItems);
+}, [cartItems]);
+
   if (loadingProduct) {
   return (
     <div className="min-h-screen bg-gray-50 w-screen overflow-x-hidden">
@@ -534,6 +542,218 @@ if (productError || !product) {
       await addToCart(product._id, null, null, quantity, productData)
     }
   }
+
+  // ADD THESE FUNCTIONS after handleAddToCartFromModal
+
+const handleOpenDimensionModal = (editMode = null) => {
+  if (editMode) {
+    setDimensionModalEditMode(editMode);
+  }
+  setShowDimensionModal(true);
+};
+
+const handleCloseDimensionModal = () => {
+  setShowDimensionModal(false);
+  setDimensionModalEditMode(null);
+};
+
+const handleDimensionConfirm = async (dimensionData) => {
+  if (!product) return;
+
+  console.log('🏠 ProductDetails dimensionData received:', dimensionData);
+
+  // Check if we're in edit mode
+  if (dimensionModalEditMode?.isEditing) {
+    // EDIT MODE: Update existing cart entry
+    const { existingDimensions } = dimensionModalEditMode;
+    
+    // Try to find item with the exact dimensions from editMode
+    let item = null;
+    let actualCartKey = null;
+    
+    for (const [key, cartItem] of Object.entries(localCartItems)) {
+      if (cartItem.productId === product._id && 
+          cartItem.customDimensions &&
+          cartItem.customDimensions.length === existingDimensions.length &&
+          cartItem.customDimensions.breadth === existingDimensions.breadth &&
+          cartItem.customDimensions.height === existingDimensions.height &&
+          cartItem.customDimensions.unit === existingDimensions.unit) {
+        item = cartItem;
+        actualCartKey = key;
+        break;
+      }
+    }
+    
+    if (!item) {
+      import('react-toastify').then(({ toast }) => {
+        toast.error('Cart item not found', {
+          position: "top-right",
+          autoClose: 2000,
+        });
+      });
+      setShowDimensionModal(false);
+      setDimensionModalEditMode(null);
+      return;
+    }
+    
+    try {
+      // Check if dimensions actually changed
+      const oldDims = item.customDimensions;
+      const dimsChanged = oldDims.length !== dimensionData.length ||
+                          oldDims.breadth !== dimensionData.breadth ||
+                          oldDims.height !== dimensionData.height;
+      
+      if (dimsChanged) {
+        // Dimensions changed - delete old entry and create new one
+        console.log('🔄 Deleting old dimension entry:', {
+          product_id: item.productId,
+          custom_dimensions: oldDims
+        });
+
+        await axios.delete("http://localhost:3000/api/cart", {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          data: {
+            product_id: item.productId,
+            variant_name: null,
+            size: null,
+            custom_dimensions: {
+              length: oldDims.length,
+              breadth: oldDims.breadth,
+              height: oldDims.height || null,
+              unit: oldDims.unit,
+              calculatedPrice: oldDims.calculatedPrice
+            }
+          },
+        });
+
+        // Create new entry with updated dimensions
+        const newCustomDimensions = {
+          length: dimensionData.length,
+          breadth: dimensionData.breadth,
+          height: dimensionData.height || null,
+          unit: dimensionData.unit,
+          calculatedPrice: dimensionData.calculatedPrice
+        };
+
+        const cartItemData = {
+          image_url: item.imageUrl,
+          product_id: item.productId,
+          product_name: item.productName,
+          quantity: dimensionData.quantity || quantity,
+          price: dimensionData.calculatedPrice,
+          cash_applied: 0,
+          discounted_price: dimensionData.calculatedPrice,
+          bulk_pricing: item.bulkPricing || [],
+          custom_dimensions: newCustomDimensions
+        };
+
+        console.log('✅ Creating new dimension entry:', cartItemData);
+
+        await axios.post("http://localhost:3000/api/cart", cartItemData, {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        
+        // Refresh cart from backend
+        await refreshCartFromBackend();
+        
+      } else {
+        // Only quantity changed
+        const newQuantity = dimensionData.quantity || quantity;
+        
+        console.log('🔄 Updating quantity only:', {
+          product_id: item.productId,
+          quantity: newQuantity,
+          custom_dimensions: oldDims
+        });
+
+        await axios.put(
+          "http://localhost:3000/api/cart",
+          {
+            product_id: item.productId,
+            variant_name: null,
+            size: null,
+            quantity: newQuantity,
+            cash_applied: 0,
+            custom_dimensions: {
+              length: oldDims.length,
+              breadth: oldDims.breadth,
+              height: oldDims.height || null,
+              unit: oldDims.unit,
+              calculatedPrice: oldDims.calculatedPrice
+            }
+          },
+          {
+            withCredentials: true,
+            headers: {
+              "Content-Type": "application/json",
+            },
+          }
+        );
+
+        // Refresh cart from backend
+        await refreshCartFromBackend();
+      }
+      
+      import('react-toastify').then(({ toast }) => {
+        toast.success('Dimensions updated successfully!', {
+          position: "top-right",
+          autoClose: 2000,
+        });
+      });
+      
+    } catch (error) {
+      console.error('Error updating dimensions:', error);
+      console.error('Error details:', error.response?.data);
+      import('react-toastify').then(({ toast }) => {
+        toast.error(error.response?.data?.error || 'Failed to update dimensions', {
+          position: "top-right",
+          autoClose: 2000,
+        });
+      });
+    }
+  } else {
+    // ADD MODE: Create new cart entry
+    const productData = {
+      imageUrl: product.image || "/placeholder.svg",
+      productName: product.name,
+      variantId: "",
+      detailsId: "",
+      sizeId: "",
+      price: dimensionData.calculatedPrice,
+      discountedPrice: dimensionData.calculatedPrice,
+      bulkPricing: product.bulkPricing || [],
+      customDimensions: {
+        length: dimensionData.length,
+        breadth: dimensionData.breadth,
+        height: dimensionData.height,
+        unit: dimensionData.unit,
+        calculatedPrice: dimensionData.calculatedPrice
+      }
+    };
+
+    console.log('🏠 ProductDetails productData:', productData);
+
+    await addToCart(product._id, null, null, dimensionData.quantity || quantity, productData);
+  }
+  
+  setShowDimensionModal(false);
+  setDimensionModalEditMode(null);
+  setQuantity(1);
+};
+
+const handleOpenPriceChartModal = () => {
+  setShowPriceChartModal(true);
+};
+
+const handleClosePriceChartModal = () => {
+  setShowPriceChartModal(false);
+};
 
   const getCurrentImages = () => {
     const images = []
@@ -695,18 +915,46 @@ if (productError || !product) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
-  <div>
-    <span className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
-      ₹ {effectiveUnitPrice.toFixed(2)}
-    </span>
+      {/* Check if product has dimension pricing */}
+{product.hasDimensions && product.pricingType !== 'normal' ? (
+  <div className="space-y-3">
+    {product.pricingType === 'dynamic' ? (
+      /* Dynamic Pricing - Show base price info */
+      <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-4">
+        <p className="text-sm text-blue-700 dark:text-blue-300 font-medium mb-1">
+          Base Price: ₹{product.dimensions?.[0]?.price} per {product.dimensions?.[0]?.height ? 'cubic' : 'square'} cm
+        </p>
+        <p className="text-xs text-blue-600 dark:text-blue-400">
+          Price calculated based on custom dimensions
+        </p>
+      </div>
+    ) : product.pricingType === 'static' ? (
+      /* Static Pricing - Show button */
+      <button
+        onClick={handleOpenPriceChartModal}
+        className="w-full bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-4 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+      >
+        <p className="text-base font-semibold text-purple-700 dark:text-purple-300">
+          View Price Chart
+        </p>
+      </button>
+    ) : null}
   </div>
-  {(hasActiveDiscount && originalPrice > displayPrice) || (effectiveUnitPrice < originalPrice) ? (
-    <span className="text-lg sm:text-xl text-gray-500 line-through dark:text-gray-400">
-      ₹ {originalPrice.toFixed(2)}
-    </span>
-  ) : null}
-</div>
+) : (
+  /* Normal Pricing - Original code */
+  <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-lg dark:bg-blue-900/20">
+    <div>
+      <span className="text-2xl sm:text-3xl font-bold text-blue-600 dark:text-blue-400">
+        ₹ {effectiveUnitPrice.toFixed(2)}
+      </span>
+    </div>
+    {(hasActiveDiscount && originalPrice > displayPrice) || (effectiveUnitPrice < originalPrice) ? (
+      <span className="text-lg sm:text-xl text-gray-500 line-through dark:text-gray-400">
+        ₹ {originalPrice.toFixed(2)}
+      </span>
+    ) : null}
+  </div>
+)}
 
               {product.hasVariants && product.variants && (
                 <div>
@@ -773,106 +1021,325 @@ if (productError || !product) {
 )}
 
               <>
-                <div>
-                  <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">
-                    {itemInCart ? "Quantity in Cart" : "Quantity"}
-                  </h3>
-                  <div className="flex items-center gap-4">
-                    <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
-                      <button
-  onClick={() => {
-    if (itemInCart) {
-      updateQuantity(cartKey, -1)
-    } else {
-      quantity > 1 && setQuantity(quantity - 1)
-    }
-  }}
-  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-  disabled={currentStock === 0 || (itemInCart ? itemInCart.quantity <= 1 : quantity <= 1)}
->
-  <Minus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
-</button>
-                      <input
-  type="text"
-  value={quantity}
-  onChange={(e) => handleQuantityChange(e.target.value)}
-  onBlur={(e) => {
-    const val = e.target.value;
-    const num = parseInt(val);
+  {/* Check if this is a dimension product with entries */}
+  {(() => {
+    const isDimensionProduct = product.hasDimensions && product.pricingType !== 'normal';
     
-    if (val === '' || val === '0' || isNaN(num) || num < 1) {
-      setQuantity(1);
-      if (itemInCart && itemInCart.quantity !== 1) {
-        const diff = 1 - itemInCart.quantity;
-        updateQuantity(cartKey, diff);
-      }
-    } else if (num > currentStock) {
-      setQuantity(currentStock);
-      if (itemInCart && itemInCart.quantity !== currentStock) {
-        const diff = currentStock - itemInCart.quantity;
-        updateQuantity(cartKey, diff);
-      }
-    } else if (itemInCart && num !== itemInCart.quantity) {
-      const diff = num - itemInCart.quantity;
-      updateQuantity(cartKey, diff);
-    }
-  }}
-  onKeyPress={(e) => {
-    if (e.key === 'Enter') {
-      e.target.blur();
-    }
-  }}
-  disabled={currentStock === 0}
-  className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center border-0 focus:outline-none dark:bg-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
-/>
-                      <button
-  onClick={() => {
-    if (itemInCart) {
-      updateQuantity(cartKey, 1)
-    } else {
-      currentStock > 0 && quantity < currentStock && setQuantity(quantity + 1)
-    }
-  }}
-  className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-  disabled={currentStock === 0 || (itemInCart ? itemInCart.quantity >= currentStock : quantity >= currentStock)}
->
-  <Plus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
-</button>
+    // Get all dimension entries for this product
+    const dimensionEntries = isDimensionProduct 
+      ? Object.entries(localCartItems).filter(([key, item]) => 
+          item.productId === product._id && item.customDimensions
+        )
+      : [];
+
+    const hasDimensionEntries = dimensionEntries.length > 0;
+
+    return isDimensionProduct && hasDimensionEntries ? (
+      // Dimension-based product with entries - Show dimension list
+      <div className="space-y-4">
+        {/* Dimension Entries List */}
+        <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4 space-y-3">
+          <div className="flex justify-between items-center mb-2">
+            <h3 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
+              Dimensions in Cart ({dimensionEntries.length})
+            </h3>
+          </div>
+
+          {/* Scrollable dimension entries */}
+          <div className="space-y-3 max-h-64 overflow-y-auto">
+            {dimensionEntries.map(([cartKey, item]) => {
+              const dims = item.customDimensions;
+              const dimensionLabel = dims.height 
+                ? `${dims.length} × ${dims.breadth} × ${dims.height} ${dims.unit}`
+                : `${dims.length} × ${dims.breadth} ${dims.unit}`;
+
+              return (
+                <div key={cartKey} className="bg-white dark:bg-gray-900 rounded-lg p-3 space-y-2 border border-gray-200 dark:border-gray-700">
+                  {/* Dimension Info and Edit Button */}
+                  <div className="flex justify-between items-start">
+                    <div className="flex-1">
+                      <p className="text-sm font-medium text-gray-900 dark:text-white">
+                        {dimensionLabel}
+                      </p>
+                      <p className="text-xs text-gray-600 dark:text-gray-400 mt-0.5">
+                        ₹{dims.calculatedPrice?.toFixed(2)} each
+                      </p>
                     </div>
+                    <button
+                      onClick={() => {
+                        handleOpenDimensionModal({
+                          isEditing: true,
+                          cartKey: cartKey,
+                          existingDimensions: dims
+                        });
+                      }}
+                      className="text-xs text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300 underline font-medium ml-2 flex items-center gap-1"
+                    >
+                      <Edit className="w-3 h-3" />
+                      Edit
+                    </button>
                   </div>
-                </div>
 
-                {currentStock === 0 && (
-                  <div className="text-sm text-red-600 dark:text-red-400 font-medium">
-                    Out of Stock
-                  </div>
-                )}
+                  {/* Quantity Controls */}
+<div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-3 py-2">
+  <span className="text-xs font-medium text-gray-600 dark:text-gray-400">Qty:</span>
+  <div className="flex items-center gap-2">
+    <button
+      onClick={async (e) => {
+        e.stopPropagation();
+        await updateQuantity(cartKey, -1);
+        await refreshCartFromBackend();
+      }}
+      disabled={item.quantity <= 1}
+      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed"
+    >
+      <Minus className="w-3 h-3" />
+    </button>
+    <span className="w-12 text-center text-sm font-semibold text-gray-900 dark:text-white">
+      {item.quantity}
+    </span>
+    <button
+      onClick={async (e) => {
+        e.stopPropagation();
+        await updateQuantity(cartKey, 1);
+        await refreshCartFromBackend();
+      }}
+      className="p-1 hover:bg-gray-200 dark:hover:bg-gray-700 rounded text-gray-600 dark:text-gray-400"
+    >
+      <Plus className="w-3 h-3" />
+    </button>
+  </div>
+</div>
 
-                {currentStock > 0 && currentStock <= 10 && (
-                  <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">
-                    Only {currentStock} left in stock
-                  </div>
-                )}
-
-               {itemInCart ? (
-  <button
-    onClick={handleRemoveFromCart}
-    className="w-full bg-red-600 hover:bg-red-700 text-red-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
-  >
-    <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-    Remove from Cart
-  </button>
-                ) : (
+                  {/* Individual Remove Button */}
                   <button
-  onClick={handleAddToCartFromModal}
-  disabled={currentStock === 0 || quantity > currentStock || (product.hasVariants && (!selectedVariant || !selectedSize))}
-  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-green-600 py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
->
-  <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
-  {currentStock === 0 ? 'Out of Stock' : `Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}
-</button>
-                )}
-              </>
+                    onClick={async () => {
+                      try {
+                        await axios.delete("http://localhost:3000/api/cart", {
+                          withCredentials: true,
+                          headers: {
+                            "Content-Type": "application/json",
+                          },
+                          data: {
+                            product_id: item.productId,
+                            variant_name: null,
+                            size: null,
+                            custom_dimensions: {
+                              length: dims.length,
+                              breadth: dims.breadth,
+                              height: dims.height || null,
+                              unit: dims.unit,
+                              calculatedPrice: dims.calculatedPrice
+                            }
+                          },
+                        });
+
+                        await refreshCartFromBackend();
+
+                        import('react-toastify').then(({ toast }) => {
+                          toast.success('Dimension removed from cart', {
+                            position: "top-right",
+                            autoClose: 2000,
+                          });
+                        });
+                      } catch (error) {
+                        console.error('Error removing dimension:', error);
+                        import('react-toastify').then(({ toast }) => {
+                          toast.error(error.response?.data?.error || 'Failed to remove item', {
+                            position: "top-right",
+                            autoClose: 2000,
+                          });
+                        });
+                      }
+                    }}
+                    className="w-full bg-red-50 hover:bg-red-100 dark:bg-red-900/20 dark:hover:bg-red-900/30 text-red-600 dark:text-red-400 py-1.5 px-2 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1"
+                  >
+                    <Trash2 className="w-3 h-3" />
+                    Remove
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Add More Dimensions Button */}
+        <button
+          onClick={() => handleOpenDimensionModal()}
+          className="w-full bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/20 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 py-2.5 sm:py-3 px-4 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+        >
+          <Plus className="w-4 h-4 sm:w-5 sm:h-5" />
+          Add More Dimensions
+        </button>
+
+        {/* Remove All Button */}
+        <button
+          onClick={async () => {
+            try {
+              const deletePromises = dimensionEntries.map(async ([cartKey, item]) => {
+                const dims = item.customDimensions;
+                return axios.delete("http://localhost:3000/api/cart", {
+                  withCredentials: true,
+                  headers: {
+                    "Content-Type": "application/json",
+                  },
+                  data: {
+                    product_id: item.productId,
+                    variant_name: null,
+                    size: null,
+                    custom_dimensions: {
+                      length: dims.length,
+                      breadth: dims.breadth,
+                      height: dims.height || null,
+                      unit: dims.unit,
+                      calculatedPrice: dims.calculatedPrice
+                    }
+                  },
+                });
+              });
+
+              await Promise.all(deletePromises);
+              await refreshCartFromBackend();
+
+              import('react-toastify').then(({ toast }) => {
+                toast.success('All dimensions removed from cart', {
+                  position: "top-right",
+                  autoClose: 2000,
+                });
+              });
+            } catch (error) {
+              console.error('Error removing all dimensions:', error);
+              import('react-toastify').then(({ toast }) => {
+                toast.error(error.response?.data?.error || 'Failed to remove items', {
+                  position: "top-right",
+                  autoClose: 2000,
+                });
+              });
+            }
+          }}
+          className="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 sm:py-3 px-4 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+        >
+          <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+          Remove All from Cart
+        </button>
+      </div>
+    ) : (
+      // Regular product or dimension product without entries
+      <div>
+        <h3 className="text-base sm:text-lg font-semibold mb-3 dark:text-white">
+          {itemInCart ? "Quantity in Cart" : "Quantity"}
+        </h3>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center border border-gray-300 dark:border-gray-600 rounded-lg">
+            <button
+              onClick={() => {
+                if (itemInCart) {
+                  updateQuantity(cartKey, -1);
+                  refreshCartFromBackend();
+                } else {
+                  quantity > 1 && setQuantity(quantity - 1);
+                }
+              }}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-l-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={currentStock === 0 || (itemInCart ? itemInCart.quantity <= 1 : quantity <= 1)}
+            >
+              <Minus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
+            </button>
+            <input
+              type="text"
+              value={quantity}
+              onChange={(e) => handleQuantityChange(e.target.value)}
+              onBlur={(e) => {
+                const val = e.target.value;
+                const num = parseInt(val);
+                
+                if (val === '' || val === '0' || isNaN(num) || num < 1) {
+                  setQuantity(1);
+                  if (itemInCart && itemInCart.quantity !== 1) {
+                    const diff = 1 - itemInCart.quantity;
+                    updateQuantity(cartKey, diff);
+                    refreshCartFromBackend();
+                  }
+                } else if (num > currentStock) {
+                  setQuantity(currentStock);
+                  if (itemInCart && itemInCart.quantity !== currentStock) {
+                    const diff = currentStock - itemInCart.quantity;
+                    updateQuantity(cartKey, diff);
+                    refreshCartFromBackend();
+                  }
+                } else if (itemInCart && num !== itemInCart.quantity) {
+                  const diff = num - itemInCart.quantity;
+                  updateQuantity(cartKey, diff);
+                  refreshCartFromBackend();
+                }
+              }}
+              onKeyPress={(e) => {
+                if (e.key === 'Enter') {
+                  e.target.blur();
+                }
+              }}
+              disabled={currentStock === 0}
+              className="w-12 sm:w-16 py-2 text-sm sm:text-base text-center border-0 focus:outline-none dark:bg-gray-900 dark:text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            />
+            <button
+              onClick={() => {
+                if (itemInCart) {
+                  updateQuantity(cartKey, 1);
+                  refreshCartFromBackend();
+                } else {
+                  currentStock > 0 && quantity < currentStock && setQuantity(quantity + 1);
+                }
+              }}
+              className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-r-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              disabled={currentStock === 0 || (itemInCart ? itemInCart.quantity >= currentStock : quantity >= currentStock)}
+            >
+              <Plus className="w-3 h-3 sm:w-4 sm:h-4 dark:text-gray-300" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  })()}
+
+  {currentStock === 0 && (
+    <div className="text-sm text-red-600 dark:text-red-400 font-medium">
+      Out of Stock
+    </div>
+  )}
+
+  {currentStock > 0 && currentStock <= 10 && (
+    <div className="text-sm text-orange-600 dark:text-orange-400 font-medium">
+      Only {currentStock} left in stock
+    </div>
+  )}
+
+  {itemInCart && !product.hasDimensions ? (
+    <button
+      onClick={handleRemoveFromCart}
+      className="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+    >
+      <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+      Remove from Cart
+    </button>
+  ) : !localCartItems || Object.keys(localCartItems).filter(key => localCartItems[key].productId === product._id && localCartItems[key].customDimensions).length === 0 ? (
+    <button
+      onClick={() => {
+        if (product.hasDimensions && product.pricingType !== 'normal') {
+          handleOpenDimensionModal();
+        } else {
+          handleAddToCartFromModal();
+        }
+      }}
+      disabled={currentStock === 0 || quantity > currentStock || (product.hasVariants && (!selectedVariant || !selectedSize))}
+      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-white py-2.5 sm:py-3 px-4 sm:px-6 rounded-lg text-sm sm:text-base font-semibold flex items-center justify-center gap-2 transition-colors"
+    >
+      <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5" />
+      {currentStock === 0 ? 'Out of Stock' : 
+       product.hasDimensions && product.pricingType !== 'normal' ? 'Enter Dimensions' :
+       `Add ${quantity} to Cart • ₹ ${totalPrice.toFixed(2)}`}
+    </button>
+  ) : null}
+</>
 
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-6 border-t dark:border-gray-700">
                 <div className="flex items-center gap-3">
@@ -926,6 +1393,26 @@ if (productError || !product) {
             />
           </div>
         </div>
+      )}
+
+      {showDimensionModal && product && (
+  <DimensionInputModal
+    isOpen={showDimensionModal}
+    onClose={handleCloseDimensionModal}
+    onConfirm={handleDimensionConfirm}
+    product={product}
+    pricingType={product.pricingType}
+    initialQuantity={quantity}
+    editMode={dimensionModalEditMode}
+  />
+)}
+
+      {showPriceChartModal && product && (
+        <ViewPriceChartModal
+          isOpen={showPriceChartModal}
+          onClose={handleClosePriceChartModal}
+          product={product}
+        />
       )}
     </div>
   )

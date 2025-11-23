@@ -14,6 +14,8 @@ import 'react-toastify/dist/ReactToastify.css'
 import Navbar from "../../components/client/common/Navbar"
 import StickyFooter from "../../components/client/common/StickyFooter";
 const CartModal = lazy(() => import("../../components/client/common/CartModal"))
+import DimensionInputModal from "../../components/client/common/DimensionInputModal"
+import ViewPriceChartModal from "../../components/client/common/ViewPriceChartModal"
 // Keep all other imports like icons, etc.
 import {
   ChevronDown, ChevronLeft, ChevronRight, X, Plus, Minus, Eye, Check, Heart, Palette, Trash2, Package, Share2, MessageCircle, Star, Shield, Truck, Instagram, Facebook, ArrowUp,
@@ -75,7 +77,16 @@ export default function Home() {
     getUniqueCartItemsCount,
     getTotalItemsCount,
     clearCart,
+    refreshCartFromBackend
   } = useCart()
+
+  // Local cart state management for immediate UI updates
+const [localCartItems, setLocalCartItems] = useState({});
+
+// Sync local cart with context cart
+useEffect(() => {
+  setLocalCartItems(cartItems);
+}, [cartItems]);
 
   const { freeCash, loadingFreeCash, freeCashErrors, clearFreeCashCache, checkFreeCashEligibility } = useContext(FreeCashContext);
 
@@ -146,6 +157,12 @@ const [categoryLoadingMore, setCategoryLoadingMore] = useState(false)
 const [categoryTotalCount, setCategoryTotalCount] = useState(0)
 const [categoryCurrentPage, setCategoryCurrentPage] = useState(1)
 const [categoryLoading, setCategoryLoading] = useState(false)
+const [showDimensionModal, setShowDimensionModal] = useState(false);
+  const [showPriceChartModal, setShowPriceChartModal] = useState(false);
+  const [dimensionModalProduct, setDimensionModalProduct] = useState(null);
+  const [dimensionModalQuantity, setDimensionModalQuantity] = useState(1);
+  const [dimensionModalSource, setDimensionModalSource] = useState(null);
+  const [dimensionModalEditMode, setDimensionModalEditMode] = useState(null);
   // Handle search from URL parameter
 // Handle search from URL parameter
 useEffect(() => {
@@ -963,9 +980,16 @@ const handleLogout = async () => {
     return null
   }
 
-  const generateCartKey = (productId, colorName = null, sizeString = null) => {
-    return `${productId}-${colorName || "default"}-${sizeString || "default"}`
+const generateCartKey = (productId, colorName = null, sizeString = null, customDimensions = null) => {
+  if (customDimensions) {
+    // For dimension-based products, create unique key with dimensions
+    const dimensionKey = customDimensions.height 
+      ? `${customDimensions.length}x${customDimensions.breadth}x${customDimensions.height}${customDimensions.unit}`
+      : `${customDimensions.length}x${customDimensions.breadth}${customDimensions.unit}`;
+    return `${productId}-custom-${dimensionKey}`;
   }
+  return `${productId}-${colorName || "default"}-${sizeString || "default"}`;
+};
 
   const parseCartKey = (cartKey) => {
     const [productId, colorName, sizeString] = cartKey.split("-")
@@ -976,7 +1000,7 @@ const handleLogout = async () => {
     }
   }
 
-const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1, sourceArray = null) => {
+const handleAddToCart = async (productId, colorName = null, sizeString = null, quantity = 1, productData, sourceArray = null) => {
   scrollPositionRef.current = window.scrollY;
   
   // Use sourceArray if provided (for category products), otherwise use global products
@@ -1002,7 +1026,8 @@ const handleAddToCart = async (productId, colorName = null, sizeString = null, q
   // Use 1+ bulk price if available, otherwise use display price
   const effectivePrice = bulkPrice1Plus ? bulkPrice1Plus.wholesalePrice : displayPrice;
 
-  const productData = {
+  // Prepare product data - merge with passed productData if exists
+  const finalProductData = productData || {
     imageUrl: variant?.variantImage || product.image || "/placeholder.svg",
     productName: product.name,
     variantId: variant?._id || "",
@@ -1011,14 +1036,269 @@ const handleAddToCart = async (productId, colorName = null, sizeString = null, q
     price: originalPrice,
     discountedPrice: effectivePrice,
     bulkPricing: bulkPricing,
+    customDimensions: null,
   };
 
-  await addToCart(productId, colorName, sizeString, quantity, productData);
+  // If productData was passed (from dimension modal), merge it
+  if (productData) {
+    finalProductData.imageUrl = variant?.variantImage || product.image || "/placeholder.svg";
+    finalProductData.productName = product.name;
+    finalProductData.variantId = variant?._id || "";
+    finalProductData.detailsId = sizeDetail?._id || "";
+    finalProductData.sizeId = sizeDetail?.size?._id || "";
+    finalProductData.bulkPricing = bulkPricing;
+  }
+
+  await addToCart(productId, colorName, sizeString, quantity, finalProductData);
   
   requestAnimationFrame(() => {
     window.scrollTo(0, scrollPositionRef.current);
   });
 };
+
+const handleOpenDimensionModal = (product, quantity = 1, source = 'card', editMode = null) => {
+  setDimensionModalProduct(product);
+  setDimensionModalQuantity(quantity);
+  setDimensionModalSource(source);
+  setDimensionModalEditMode(editMode);
+  setShowDimensionModal(true);
+};
+
+const handleDimensionConfirm = async (dimensionData) => {
+  if (!dimensionModalProduct) return;
+
+  console.log('🏠 Home received dimension data:', dimensionData);
+
+  // Check if we're in edit mode
+  if (dimensionModalEditMode?.isEditing) {
+    // EDIT MODE: Update existing cart entry
+    const { cartKey, existingDimensions } = dimensionModalEditMode;
+    
+    // Try to find item with the exact dimensions from editMode
+    let item = null;
+    let actualCartKey = null;
+    
+    for (const [key, cartItem] of Object.entries(localCartItems)) {
+      if (cartItem.productId === dimensionModalProduct._id && 
+          cartItem.customDimensions &&
+          cartItem.customDimensions.length === existingDimensions.length &&
+          cartItem.customDimensions.breadth === existingDimensions.breadth &&
+          cartItem.customDimensions.height === existingDimensions.height &&
+          cartItem.customDimensions.unit === existingDimensions.unit) {
+        item = cartItem;
+        actualCartKey = key;
+        break;
+      }
+    }
+    
+    if (!item) {
+      const { toast } = await import('react-toastify');
+      toast.error('Cart item not found', {
+        position: "top-right",
+        autoClose: 2000,
+      });
+      setShowDimensionModal(false);
+      setDimensionModalProduct(null);
+      setDimensionModalQuantity(1);
+      setDimensionModalSource(null);
+      setDimensionModalEditMode(null);
+      return;
+    }
+    
+    try {
+      setIsProcessing(true);
+      
+      // Check if dimensions actually changed
+      const oldDims = item.customDimensions;
+      const dimsChanged = oldDims.length !== dimensionData.length ||
+                          oldDims.breadth !== dimensionData.breadth ||
+                          oldDims.height !== dimensionData.height;
+      
+      if (dimsChanged) {
+        // Dimensions changed - delete old entry and create new one
+        console.log('🔄 Deleting old dimension entry:', {
+          product_id: item.productId,
+          custom_dimensions: oldDims
+        });
+
+        await axios.delete("http://localhost:3000/api/cart", {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          data: {
+            product_id: item.productId,
+            variant_name: null,
+            size: null,
+            custom_dimensions: {
+              length: oldDims.length,
+              breadth: oldDims.breadth,
+              height: oldDims.height || null,
+              unit: oldDims.unit,
+              calculatedPrice: oldDims.calculatedPrice
+            }
+          },
+        });
+
+        // Create new entry with updated dimensions
+        const newCustomDimensions = {
+          length: dimensionData.length,
+          breadth: dimensionData.breadth,
+          height: dimensionData.height || null,
+          unit: dimensionData.unit,
+          calculatedPrice: dimensionData.calculatedPrice
+        };
+
+        const cartItemData = {
+          image_url: item.imageUrl,
+          product_id: item.productId,
+          product_name: item.productName,
+          quantity: dimensionData.quantity || dimensionModalQuantity,
+          price: dimensionData.calculatedPrice,
+          cash_applied: 0,
+          discounted_price: dimensionData.calculatedPrice,
+          bulk_pricing: item.bulkPricing || [],
+          custom_dimensions: newCustomDimensions
+        };
+
+        console.log('✅ Creating new dimension entry:', cartItemData);
+
+        const response = await axios.post("http://localhost:3000/api/cart", cartItemData, {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+
+        console.log('✅ Backend response:', response.data);
+        
+        // Refresh cart from backend
+await refreshCartFromBackend();
+        
+      } else {
+        // Only quantity changed - just update quantity
+        const newQuantity = dimensionData.quantity || dimensionModalQuantity;
+        
+        console.log('🔄 Updating quantity only:', {
+          product_id: item.productId,
+          quantity: newQuantity,
+          custom_dimensions: oldDims
+        });
+
+        await axios.put(
+    "http://localhost:3000/api/cart",
+    {
+      product_id: item.productId,
+      variant_name: null,
+      size: null,
+      quantity: newQuantity,
+      cash_applied: 0,
+      custom_dimensions: {
+        length: oldDims.length,
+        breadth: oldDims.breadth,
+        height: oldDims.height || null,
+        unit: oldDims.unit,
+        calculatedPrice: oldDims.calculatedPrice
+      }
+    },
+    {
+      withCredentials: true,
+      headers: {
+        "Content-Type": "application/json",
+      },
+    }
+  );
+
+  // Refresh cart from backend
+  await refreshCartFromBackend();
+        
+      }
+      
+      const { toast } = await import('react-toastify');
+      toast.success('Dimensions updated successfully!', {
+        position: "top-right",
+        autoClose: 2000,
+      });
+      
+      setIsProcessing(false);
+    } catch (error) {
+      console.error('Error updating dimensions:', error);
+      console.error('Error details:', error.response?.data);
+      setIsProcessing(false);
+      const { toast } = await import('react-toastify');
+      toast.error(error.response?.data?.error || 'Failed to update dimensions', {
+        position: "top-right",
+        autoClose: 2000,
+      });
+    }
+  } else {
+    // ADD MODE: Create new cart entry
+    const productData = {
+      imageUrl: dimensionModalProduct.image || "/placeholder.svg",
+      productName: dimensionModalProduct.name,
+      variantId: "",
+      detailsId: "",
+      sizeId: "",
+      price: dimensionData.calculatedPrice,
+      discountedPrice: dimensionData.calculatedPrice,
+      bulkPricing: dimensionModalProduct.bulkPricing || [],
+      customDimensions: {
+        length: dimensionData.length,
+        breadth: dimensionData.breadth,
+        height: dimensionData.height || null,
+        unit: dimensionData.unit,
+        calculatedPrice: dimensionData.calculatedPrice
+      }
+    };
+
+    await handleAddToCart(
+      dimensionModalProduct._id,
+      null,
+      null,
+      dimensionData.quantity || dimensionModalQuantity,
+      productData,
+      dimensionModalSource
+    );
+  }
+
+  // Reset modal states
+  setShowDimensionModal(false);
+  setDimensionModalProduct(null);
+  setDimensionModalQuantity(1);
+  setDimensionModalSource(null);
+  setDimensionModalEditMode(null);
+};
+
+const handleCloseDimensionModal = () => {
+  setShowDimensionModal(false);
+  setDimensionModalProduct(null);
+  setDimensionModalQuantity(1);
+  setDimensionModalSource(null);
+  setDimensionModalEditMode(null);
+};
+
+// const handleDimensionConfirm = async (dimensionData) => {
+//   await handleAddToCart(
+//     product._id,
+//     null, // colorName
+//     null, // sizeString
+//     addQuantity,
+//     {
+//       ...productData,
+//       price: dimensionData.calculatedPrice,
+//       discountedPrice: dimensionData.calculatedPrice,
+//       customDimensions: {
+//         length: dimensionData.length,
+//         breadth: dimensionData.breadth,
+//         height: dimensionData.height,
+//         unit: dimensionData.unit,
+//         calculatedPrice: dimensionData.calculatedPrice
+//       }
+//     },
+//     productSource
+//   );
+//   setAddQuantity(1);
+// };
 
  const handleUpdateQuantity = async (cartKey, change) => {
   scrollPositionRef.current = window.scrollY;
@@ -1626,13 +1906,13 @@ onClick={() => {
       }
     }
 
-    const handleAddToCartWithQuantity = async () => {
+ const handleAddToCartWithQuantity = async () => {
   if (isSimpleProduct) {
-    await handleAddToCart(product._id, null, null, addQuantity, productSource)
+    await handleAddToCart(product._id, null, null, addQuantity, null, productSource)
   } else {
     if (!selectedVariant || !selectedSizeDetail) return
     const sizeString = formatSize(selectedSizeDetail.size)
-    await handleAddToCart(product._id, selectedVariant.colorName, sizeString, addQuantity, productSource)
+    await handleAddToCart(product._id, selectedVariant.colorName, sizeString, addQuantity, null, productSource)
   }
   setAddQuantity(1)
 }
@@ -1762,29 +2042,63 @@ onClick={() => {
         <div className="p-4">
           <h3 className="font-semibold -800 dark:text-gray-100 mb-2 line-clamp-2">{product.name}</h3>
 
-         <div className="flex items-center gap-2 mb-3">
-  {(() => {
-    const bulkPrice1Plus = bulkPricing.find(tier => tier.quantity === 1);
-    const showBulkPrice = bulkPrice1Plus && bulkPrice1Plus.wholesalePrice < displayPrice;
-    
-    if (showBulkPrice) {
-      return (
-        <>
-          <span className="text-lg font-bold text-gray-900 dark:text-white">₹ {bulkPrice1Plus.wholesalePrice.toFixed(2)}</span>
-          <span className="text-sm text-gray-500 line-through dark:text-gray-400">₹ {displayPrice.toFixed(2)}</span>
-        </>
-      );
-    } else {
-      return (
-        <>
-          <span className="text-lg font-bold text-gray-900 dark:text-white">₹ {displayPrice.toFixed(2)}</span>
-          {strikePrice && (
-            <span className="text-sm text-gray-500 line-through dark:text-gray-400">₹ {strikePrice.toFixed(2)}</span>
-          )}
-        </>
-      );
-    }
-  })()}
+         {/* REPLACE THIS ENTIRE SECTION */}
+<div className="flex items-center gap-2 mb-3">
+  {/* Check if product has dimension pricing */}
+  {product.hasDimensions && product.pricingType !== 'normal' ? (
+    <div className="w-full">
+      {product.pricingType === 'dynamic' ? (
+        /* Dynamic Pricing - Show dimensions */
+        <div className="bg-blue-50 dark:bg-blue-900/20 border border-blue-200 dark:border-blue-800 rounded-lg p-2">
+          <p className="text-xs text-blue-700 dark:text-blue-300 font-medium mb-1">
+            Base Price: ₹{product.dimensions?.[0]?.price} per {product.dimensions?.[0]?.height ? 'cubic' : 'square'} cm
+          </p>
+          <p className="text-xs text-blue-600 dark:text-blue-400">
+            Enter custom dimensions at checkout
+          </p>
+        </div>
+      ) : product.pricingType === 'static' ? (
+        /* Static Pricing - Show button */
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            setShowPriceChartModal(true);
+          }}
+          className="w-full bg-purple-50 dark:bg-purple-900/20 border border-purple-200 dark:border-purple-800 rounded-lg p-2 hover:bg-purple-100 dark:hover:bg-purple-900/30 transition-colors"
+        >
+          <p className="text-sm font-semibold text-purple-700 dark:text-purple-300">
+            View Price Chart
+          </p>
+        </button>
+      ) : null}
+    </div>
+  ) : (
+    /* Normal Pricing - Original code */
+    <>
+      {(() => {
+        const bulkPrice1Plus = bulkPricing.find(tier => tier.quantity === 1);
+        const showBulkPrice = bulkPrice1Plus && bulkPrice1Plus.wholesalePrice < displayPrice;
+        
+        if (showBulkPrice) {
+          return (
+            <>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">₹ {bulkPrice1Plus.wholesalePrice.toFixed(2)}</span>
+              <span className="text-sm text-gray-500 line-through dark:text-gray-400">₹ {displayPrice.toFixed(2)}</span>
+            </>
+          );
+        } else {
+          return (
+            <>
+              <span className="text-lg font-bold text-gray-900 dark:text-white">₹ {displayPrice.toFixed(2)}</span>
+              {strikePrice && (
+                <span className="text-sm text-gray-500 line-through dark:text-gray-400">₹ {strikePrice.toFixed(2)}</span>
+              )}
+            </>
+          );
+        }
+      })()}
+    </>
+  )}
 </div>
 
           {/* <div className="mb-2">
@@ -1915,10 +2229,253 @@ onClick={() => {
         ? `${product._id}-${selectedVariant.colorName}-${formatSize(selectedSizeDetail.size)}`
         : null;
     
-    const itemInCart = cartKey ? cartItems[cartKey] : null;
+    const itemInCart = cartKey ? localCartItems[cartKey] : null;
     
-    return itemInCart ? (
-  // Item is in cart - show quantity controls and remove button
+// Check if this is a dimension-based product
+const isDimensionProduct = product.hasDimensions && product.pricingType !== 'normal';
+
+// Get all dimension entries for this product
+const dimensionEntries = isDimensionProduct 
+  ? Object.entries(localCartItems).filter(([key, item]) => 
+      item.productId === product._id && item.customDimensions
+    )
+  : [];
+
+const hasDimensionEntries = dimensionEntries.length > 0;
+
+return isDimensionProduct && hasDimensionEntries ? (
+  // Dimension-based product with entries
+  <>
+    {/* Collapsed/Expandable Dimension List */}
+    <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 space-y-2">
+      <div className="flex justify-between items-center">
+        <span className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+          {dimensionEntries.length} Dimension{dimensionEntries.length > 1 ? 's' : ''} Added
+        </span>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            const [expanded, setExpanded] = React.useState(false);
+            setExpanded(!expanded);
+          }}
+          className="text-xs text-blue-600 hover:text-blue-700"
+        >
+          {/* Toggle will be handled below */}
+        </button>
+      </div>
+
+      {/* Dimension Entries List */}
+      <div className="space-y-2 max-h-48 overflow-y-auto">
+        {dimensionEntries.map(([cartKey, item]) => {
+          const dims = item.customDimensions;
+          const dimensionLabel = dims.height 
+            ? `${dims.length} × ${dims.breadth} × ${dims.height} ${dims.unit}`
+            : `${dims.length} × ${dims.breadth} ${dims.unit}`;
+
+          return (
+            <div key={cartKey} className="bg-white dark:bg-gray-900 rounded p-2 space-y-2">
+              <div className="flex justify-between items-start">
+                <div className="flex-1">
+                  <p className="text-xs font-medium text-gray-700 dark:text-gray-300">
+                    {dimensionLabel}
+                  </p>
+                  <p className="text-xs text-gray-500 dark:text-gray-400">
+                    ₹{dims.calculatedPrice?.toFixed(2)} each
+                  </p>
+                </div>
+                <button
+  onClick={(e) => {
+    e.stopPropagation();
+    // Get fresh item from localCartItems
+    const freshItem = localCartItems[cartKey];
+    if (!freshItem) {
+      const toast = require('react-toastify').toast;
+      toast.error('Item not found in cart');
+      return;
+    }
+    
+    setDimensionModalProduct(product);
+    setDimensionModalQuantity(freshItem.quantity);
+    setDimensionModalSource(productSource);
+    setDimensionModalEditMode({
+      isEditing: true,
+      cartKey: cartKey,
+      existingDimensions: freshItem.customDimensions
+    });
+    setShowDimensionModal(true);
+  }}
+  className="text-xs text-blue-600 hover:text-blue-700 underline ml-2"
+>
+  Edit
+</button>
+              </div>
+
+              {/* Quantity Controls */}
+<div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded px-2 py-1">
+  <span className="text-xs text-gray-600 dark:text-gray-400">Qty:</span>
+  <div className="flex items-center gap-2">
+    <button
+      onClick={async (e) => {
+        e.stopPropagation();
+        await handleUpdateQuantity(cartKey, -1);
+        await refreshCartFromBackend();
+      }}
+      disabled={item.quantity <= 1}
+      className="p-0.5 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400 disabled:opacity-30 disabled:cursor-not-allowed"
+    >
+      <Minus className="w-3 h-3" />
+    </button>
+    <span className="w-10 text-center text-xs font-semibold text-gray-900 dark:text-white">
+      {item.quantity}
+    </span>
+    <button
+      onClick={async (e) => {
+        e.stopPropagation();
+        await handleUpdateQuantity(cartKey, 1);
+        await refreshCartFromBackend();
+      }}
+      className="p-0.5 hover:bg-gray-200 rounded text-gray-600 dark:text-gray-400"
+    >
+      <Plus className="w-3 h-3" />
+    </button>
+  </div>
+</div>
+
+              {/* Individual Delete Button */}
+<button
+  onClick={async (e) => {
+    e.stopPropagation();
+    
+    try {
+      console.log('🗑️ Deleting single dimension:', {
+        product_id: item.productId,
+        custom_dimensions: dims
+      });
+
+      await axios.delete("http://localhost:3000/api/cart", {
+        withCredentials: true,
+        headers: {
+          "Content-Type": "application/json",
+        },
+        data: {
+          product_id: item.productId,
+          variant_name: null,
+          size: null,
+          custom_dimensions: {
+            length: dims.length,
+            breadth: dims.breadth,
+            height: dims.height || null,
+            unit: dims.unit,
+            calculatedPrice: dims.calculatedPrice
+          }
+        },
+      });
+
+      // Refresh cart from backend
+      await refreshCartFromBackend();
+
+      const { toast } = await import('react-toastify');
+      toast.success('Dimension removed from cart', {
+        position: "top-right",
+        autoClose: 2000,
+      });
+    } catch (error) {
+      console.error('Error removing dimension:', error);
+      console.error('Error details:', error.response?.data);
+      const { toast } = await import('react-toastify');
+      toast.error(error.response?.data?.error || 'Failed to remove item', {
+        position: "top-right",
+        autoClose: 2000,
+      });
+    }
+  }}
+  className="w-full bg-red-50 hover:bg-red-100 text-red-600 py-1 px-2 rounded text-xs font-medium transition-colors flex items-center justify-center gap-1"
+>
+  <Trash2 className="w-3 h-3" />
+  Remove
+</button>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+
+    {/* Add More Dimensions Button */}
+    <button
+      onClick={(e) => {
+        e.stopPropagation();
+        handleOpenDimensionModal(product, 1, productSource);
+      }}
+      className="w-full bg-blue-50 hover:bg-blue-100 text-blue-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+    >
+      <Plus className="w-4 h-4" />
+      Add More Dimensions
+    </button>
+
+  {/* Remove All Button */}
+<button
+  onClick={async (e) => {
+    e.stopPropagation();
+    setIsProcessing(true);
+    
+    try {
+      // Remove all dimension entries for this product from backend
+      const deletePromises = dimensionEntries.map(async ([cartKey, item]) => {
+        console.log('🗑️ Deleting dimension entry:', {
+          product_id: item.productId,
+          custom_dimensions: item.customDimensions
+        });
+
+        return axios.delete("http://localhost:3000/api/cart", {
+          withCredentials: true,
+          headers: {
+            "Content-Type": "application/json",
+          },
+          data: {
+            product_id: item.productId,
+            variant_name: null,
+            size: null,
+            custom_dimensions: {
+              length: item.customDimensions.length,
+              breadth: item.customDimensions.breadth,
+              height: item.customDimensions.height || null,
+              unit: item.customDimensions.unit,
+              calculatedPrice: item.customDimensions.calculatedPrice
+            }
+          },
+        });
+      });
+
+      await Promise.all(deletePromises);
+      
+      // Refresh cart from backend
+      await refreshCartFromBackend();
+      
+      const { toast } = await import('react-toastify');
+      toast.success('All dimensions removed from cart', {
+        position: "top-right",
+        autoClose: 2000,
+      });
+    } catch (error) {
+      console.error('Error removing all dimensions:', error);
+      console.error('Error details:', error.response?.data);
+      const { toast } = await import('react-toastify');
+      toast.error(error.response?.data?.error || 'Failed to remove items', {
+        position: "top-right",
+        autoClose: 2000,
+      });
+    } finally {
+      setIsProcessing(false);
+    }
+  }}
+  className="w-full bg-red-600 hover:bg-red-700 text-white py-2 px-3 rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+  disabled={isProcessing}
+>
+  <Trash2 className="w-4 h-4" />
+  {isProcessing ? 'Removing...' : 'Remove All from Cart'}
+</button>
+  </>
+) : itemInCart ? (
   <>
     <div className="flex items-center justify-between bg-gray-50 dark:bg-gray-800 rounded-lg px-3 py-2">
       <span className="text-sm text-gray-600 dark:text-gray-400">In Cart:</span>
@@ -2103,13 +2660,25 @@ onClick={() => {
       </div>
     )}
 
-    <button
-      onClick={handleAddToCartWithQuantity}
-      disabled={currentStock === 0 || (hasVariants && (!selectedVariant || !selectedSizeDetail))}
-      className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-green-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200"
-    >
-      {currentStock === 0 ? 'Out of Stock' : `Add ${addQuantity} to Cart`}
-    </button>
+<button
+  onClick={(e) => {
+    e.stopPropagation(); // IMPORTANT: Stop propagation to prevent navigation
+    
+    // Check if product has dimension pricing
+    if (product.hasDimensions && product.pricingType !== 'normal') {
+      handleOpenDimensionModal(product, addQuantity, productSource);
+    } else {
+      handleAddToCartWithQuantity();
+    }
+  }}
+  disabled={currentStock === 0 || (hasVariants && (!selectedVariant || !selectedSizeDetail))}
+  className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed text-green-600 py-2 px-3 rounded-lg text-sm font-medium transition-colors duration-200"
+>
+  {currentStock === 0 ? 'Out of Stock' : 
+   product.hasDimensions && product.pricingType !== 'normal' ? 'Enter Dimensions' :
+   `Add ${addQuantity} to Cart`}
+</button>
+
   </>
 );
   })()}
@@ -3112,6 +3681,7 @@ if (justArrivedProductsList.length > 0) {
     key={`search-${product._id}`} 
     product={product}
     productSource={products}
+    onOpenDimensionModal={handleOpenDimensionModal}
   />
 ))}
       </div>
@@ -3152,6 +3722,7 @@ if (justArrivedProductsList.length > 0) {
       key={`category-${product._id}`} 
       product={product} 
       productSource={categoryFilteredProducts}
+        onOpenDimensionModal={handleOpenDimensionModal}
     />
   ))}
 </div>
@@ -3209,6 +3780,7 @@ if (justArrivedProductsList.length > 0) {
       product={product} 
       forcedBadge={{ text: "New", color: "bg-blue-500" }}
       productSource={products}
+      onOpenDimensionModal={handleOpenDimensionModal}
     />
   ))}
 
@@ -3218,6 +3790,7 @@ if (justArrivedProductsList.length > 0) {
     product={product} 
     forcedBadge={{ text: "Restocked", color: "bg-green-500" }}
     productSource={products}
+      onOpenDimensionModal={handleOpenDimensionModal}
   />
 ))}
 
@@ -3227,6 +3800,7 @@ if (justArrivedProductsList.length > 0) {
     product={product} 
     forcedBadge={{ text: "Revised Rate", color: "bg-orange-500" }}
     productSource={products}
+      onOpenDimensionModal={handleOpenDimensionModal}
   />
 ))}
 
@@ -3240,6 +3814,7 @@ if (justArrivedProductsList.length > 0) {
     product={product} 
     forcedBadge={{ text: "Out of Stock", color: "bg-red-500" }}
     productSource={products}
+      onOpenDimensionModal={handleOpenDimensionModal}
   />
 ))}
             </div>
@@ -3259,6 +3834,7 @@ if (justArrivedProductsList.length > 0) {
     key={`search-${product._id}`} 
     product={product}
     productSource={products}
+    onOpenDimensionModal={handleOpenDimensionModal}
   />
 ))}
   </div>
@@ -3302,6 +3878,17 @@ if (justArrivedProductsList.length > 0) {
   >
     <ArrowUp className="w-6 h-6" />
   </button>
+)}
+{showDimensionModal && dimensionModalProduct && (
+  <DimensionInputModal
+    isOpen={showDimensionModal}
+    onClose={handleCloseDimensionModal}
+    onConfirm={handleDimensionConfirm}
+    product={dimensionModalProduct}
+    pricingType="dimension"
+    initialQuantity={dimensionModalQuantity}
+    editMode={dimensionModalEditMode}
+  />
 )}
 <ToastContainer />
     </div>

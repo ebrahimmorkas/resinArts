@@ -169,7 +169,8 @@ router.post("/", async (req, res) => {
       price,
       cash_applied,
       discounted_price,
-      bulk_pricing, 
+      bulk_pricing,
+      custom_dimensions, // RECEIVED as snake_case
     } = req.body
 
     // Check stock availability
@@ -183,13 +184,43 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ error: 'Product is out of stock' });
     }
 
-    // Check if requested quantity exceeds available stock
-    const existingItem = await Cart.findOne({
-      user_id: req.user.id,
-      product_id,
-      variant_name: variant_name || null,
-      size: size || null,
+    // For dimension products, each dimension is a separate cart entry - don't merge
+let existingItem = null;
+
+if (!custom_dimensions) {
+  // Only check for existing item if it's NOT a dimension product
+  existingItem = await Cart.findOne({
+    user_id: req.user.id,
+    product_id,
+    variant_name: variant_name || null,
+    size: size || null,
+  });
+}
+
+// Stock check only for non-dimension products
+if (!custom_dimensions && existingItem) {
+  // Check stock availability
+  const stockInfo = await getProductStock(product_id, variant_name, size);
+  
+  if (stockInfo.error) {
+    return res.status(400).json({ error: stockInfo.error });
+  }
+
+  if (stockInfo.stock === 0) {
+    return res.status(400).json({ error: 'Product is out of stock' });
+  }
+
+  const currentCartQuantity = existingItem.quantity;
+  const totalQuantity = currentCartQuantity + quantity;
+
+  if (totalQuantity > stockInfo.stock) {
+    return res.status(400).json({ 
+      error: `Only ${stockInfo.stock} items available in stock. You already have ${currentCartQuantity} in cart.`,
+      availableStock: stockInfo.stock,
+      currentInCart: currentCartQuantity
     });
+  }
+}
 
     const currentCartQuantity = existingItem ? existingItem.quantity : 0;
     const totalQuantity = currentCartQuantity + quantity;
@@ -201,6 +232,58 @@ router.post("/", async (req, res) => {
         currentInCart: currentCartQuantity
       });
     }
+
+    // AFTER destructuring request body, BEFORE stock check:
+console.log('🔍 Backend received custom_dimensions:', custom_dimensions);
+
+if (custom_dimensions) {
+  // Validate custom dimensions with detailed logging
+  console.log('Validating dimensions:', {
+    length: custom_dimensions.length,
+    breadth: custom_dimensions.breadth,
+    height: custom_dimensions.height,
+    calculatedPrice: custom_dimensions.calculatedPrice,
+    unit: custom_dimensions.unit
+  });
+
+  if (!custom_dimensions.length || isNaN(custom_dimensions.length) || custom_dimensions.length <= 0) {
+    console.error('❌ Invalid length:', custom_dimensions.length);
+    return res.status(400).json({ 
+      error: 'Invalid length for custom dimensions',
+      received: custom_dimensions.length 
+    });
+  }
+  
+  if (!custom_dimensions.breadth || isNaN(custom_dimensions.breadth) || custom_dimensions.breadth <= 0) {
+    console.error('❌ Invalid breadth:', custom_dimensions.breadth);
+    return res.status(400).json({ 
+      error: 'Invalid breadth for custom dimensions',
+      received: custom_dimensions.breadth 
+    });
+  }
+  
+  if (custom_dimensions.height !== null && custom_dimensions.height !== undefined) {
+    if (isNaN(custom_dimensions.height) || custom_dimensions.height <= 0) {
+      console.error('❌ Invalid height:', custom_dimensions.height);
+      return res.status(400).json({ 
+        error: 'Invalid height for custom dimensions',
+        received: custom_dimensions.height 
+      });
+    }
+  }
+  
+  // CRITICAL: Check calculatedPrice exists and is valid
+  if (!custom_dimensions.calculatedPrice || isNaN(custom_dimensions.calculatedPrice) || custom_dimensions.calculatedPrice <= 0) {
+    console.error('❌ Invalid calculatedPrice:', custom_dimensions.calculatedPrice);
+    return res.status(400).json({ 
+      error: 'Invalid calculated price for custom dimensions',
+      received: custom_dimensions.calculatedPrice,
+      type: typeof custom_dimensions.calculatedPrice
+    });
+  }
+  
+  console.log('✅ Custom dimensions validation passed');
+}
 
     let savedItem;
     if (existingItem) {
@@ -218,7 +301,13 @@ router.post("/", async (req, res) => {
         cash_applied,
         discounted_price,
         bulk_pricing: bulk_pricing || [], 
+        // customDimensions: custom_dimensions || null,
       }
+
+      // ADD custom dimensions with correct field name for Mongoose
+    if (custom_dimensions) {
+      cartItemData.customDimensions = custom_dimensions; // Use camelCase for DB
+    }
 
       // Only add variant fields if they exist
       if (variant_id) cartItemData.variant_id = variant_id;
@@ -246,38 +335,53 @@ router.post("/", async (req, res) => {
 // PUT /api/cart - Update item quantity
 router.put("/", async (req, res) => {
   try {
-    const { product_id, variant_name, size, quantity } = req.body;
+    const { product_id, variant_name, size, quantity, custom_dimensions } = req.body;
 
     // Validate quantity
     if (quantity < 1) {
       return res.status(400).json({ error: 'Quantity must be at least 1' });
     }
 
-    // Check stock availability
-    const stockInfo = await getProductStock(product_id, variant_name, size);
-    
-    if (stockInfo.error) {
-      return res.status(400).json({ error: stockInfo.error });
+    // Stock check only for non-dimension products
+    if (!custom_dimensions) {
+      const stockInfo = await getProductStock(product_id, variant_name, size);
+      
+      if (stockInfo.error) {
+        return res.status(400).json({ error: stockInfo.error });
+      }
+
+      if (stockInfo.stock === 0) {
+        return res.status(400).json({ error: 'Product is out of stock' });
+      }
+
+      if (quantity > stockInfo.stock) {
+        return res.status(400).json({ 
+          error: `Only ${stockInfo.stock} items available in stock`,
+          availableStock: stockInfo.stock
+        });
+      }
     }
 
-    if (stockInfo.stock === 0) {
-      return res.status(400).json({ error: 'Product is out of stock' });
-    }
+    const query = {
+      user_id: req.user.id,
+      product_id,
+      variant_name,
+      size,
+    };
 
-    if (quantity > stockInfo.stock) {
-      return res.status(400).json({ 
-        error: `Only ${stockInfo.stock} items available in stock`,
-        availableStock: stockInfo.stock
-      });
+    // If custom dimensions provided, add to query
+    if (custom_dimensions) {
+      query['customDimensions.length'] = custom_dimensions.length;
+      query['customDimensions.breadth'] = custom_dimensions.breadth;
+      query['customDimensions.unit'] = custom_dimensions.unit;
+      
+      if (custom_dimensions.height !== null && custom_dimensions.height !== undefined) {
+        query['customDimensions.height'] = custom_dimensions.height;
+      }
     }
 
     const cartItem = await Cart.findOneAndUpdate(
-      {
-        user_id: req.user.id,
-        product_id,
-        variant_name,
-        size,
-      },
+      query,
       { quantity },
       { new: true },
     );
@@ -300,18 +404,48 @@ router.put("/", async (req, res) => {
 // DELETE /api/cart - Remove item from cart
 router.delete("/", async (req, res) => {
   try {
-    const { product_id, variant_name, size } = req.body
+    const { product_id, variant_name, size, custom_dimensions } = req.body
 
-    const deletedItem = await Cart.findOneAndDelete({
+    console.log('🔍 DELETE request received:', { product_id, variant_name, size, custom_dimensions });
+
+    const query = {
       user_id: req.user.id,
       product_id,
-      variant_name,
-      size,
-    })
+    };
+
+    // If custom dimensions provided, match them exactly
+    if (custom_dimensions) {
+      query['customDimensions.length'] = custom_dimensions.length;
+      query['customDimensions.breadth'] = custom_dimensions.breadth;
+      query['customDimensions.unit'] = custom_dimensions.unit;
+      query['customDimensions.calculatedPrice'] = custom_dimensions.calculatedPrice;
+      
+      // Handle height - it can be null, undefined, or a number
+      if (custom_dimensions.height !== null && custom_dimensions.height !== undefined) {
+        query['customDimensions.height'] = custom_dimensions.height;
+      } else {
+        // Match documents where height is null or doesn't exist
+        query['$or'] = [
+          { 'customDimensions.height': null },
+          { 'customDimensions.height': { $exists: false } }
+        ];
+      }
+    } else {
+      // For non-dimension products, use variant and size
+      query.variant_name = variant_name;
+      query.size = size;
+    }
+
+    console.log('🔍 Query built:', JSON.stringify(query, null, 2));
+
+    const deletedItem = await Cart.findOneAndDelete(query)
 
     if (!deletedItem) {
+      console.log('❌ Cart item not found with query:', query);
       return res.status(404).json({ error: "Cart item not found" })
     }
+
+    console.log('✅ Deleted item:', deletedItem);
 
     res.status(200).json({ message: "Item removed from cart" })
 

@@ -140,6 +140,15 @@ const BulkUploadImageToCloudinary = async (imagePath, folder = 'products') => {
 // Start of function to add single product
 const addProduct = async (req, res) => {
   try {
+    // 🚫 Limit total products to 100
+    const MAX_PRODUCTS = 100000000;
+    const productCount = await Product.countDocuments();
+    if (productCount >= MAX_PRODUCTS) {
+      return res.status(400).json({
+        error: `Cannot add more than ${MAX_PRODUCTS} products.`,
+      });
+    }
+
     // Parse JSON fields from FormData
     const productData = JSON.parse(req.body.productData)
     const {
@@ -153,6 +162,8 @@ const addProduct = async (req, res) => {
       bulkPricing,
       hasVariants,
       variants,
+      hasDimensionPricing,
+  dimensionPricingData,
     } = productData
 
     // Map uploaded files by their fieldname for easier access
@@ -183,20 +194,40 @@ const addProduct = async (req, res) => {
       }
     }
 
-    // Prepare basic product data
-    const newProductData = {
-      name,
-      mainCategory,
-      subCategory,
-      categoryPath,
-      productDetails: productDetails || [],
-      stock: hasVariants ? undefined : stock, // Only include if no variants
-      price: hasVariants ? undefined : price, // Only include if no variants
-      image: hasVariants ? undefined : imageUrl, // Only include if no variants
-      additionalImages: hasVariants ? [] : additionalImagesUrls, // Only include if no variants
-      bulkPricing: hasVariants ? [] : bulkPricing, // Only include if no variants
-      hasVariants,
-    }
+ // Prepare basic product data
+const newProductData = {
+  name,
+  mainCategory,
+  subCategory,
+  categoryPath,
+  productDetails: productDetails || [],
+  stock: hasVariants ? undefined : stock, // Only exclude if has variants
+  price: hasVariants || hasDimensionPricing === "yes" ? undefined : price, // Exclude if variants or dimension pricing
+  image: hasVariants ? undefined : imageUrl, // Only include if no variants
+  additionalImages: hasVariants ? [] : additionalImagesUrls, // Only include if no variants
+  bulkPricing: hasVariants ? [] : bulkPricing, // Only exclude if has variants
+  hasVariants,
+  hasDimensions: hasDimensionPricing === "yes",
+  pricingType: hasDimensionPricing === "yes" ? dimensionPricingData[0]?.pricingType || "dynamic" : "normal",
+  dimensions: hasDimensionPricing === "yes" && dimensionPricingData[0]?.pricingType === "dynamic" 
+    ? dimensionPricingData.map(d => ({
+        length: Number(d.length) || null,
+        breadth: Number(d.breadth) || null,
+        height: d.height ? Number(d.height) : null,
+        price: Number(d.price) || null
+      })) 
+    : [],
+  staticDimensions: hasDimensionPricing === "yes" && dimensionPricingData[0]?.pricingType === "static"
+    ? dimensionPricingData.map(d => ({
+        length: Number(d.length) || null,
+        breadth: Number(d.breadth) || null,
+        height: d.height ? Number(d.height) : null,
+        price: Number(d.price) || null,
+        stock: Number(d.stock) || null,
+        bulkPricing: d.bulkPricing ? d.bulkPricing.filter(bp => bp.wholesalePrice && bp.quantity) : []
+      }))
+    : [],
+}
 
     // Process variants if they exist
     if (hasVariants && variants && variants.length > 0) {
@@ -516,6 +547,95 @@ for (const productNameLower of existingProductsMap.keys()) {
     results.totalProcessed = Object.keys(productGroups).length;
     console.log(`Processing ${results.totalProcessed} products...`);
 
+    // Helper function to parse dimensions
+    const parseDimensions = (dimensionsString) => {
+      if (!dimensionsString || dimensionsString.trim() === '' || dimensionsString.trim() === '[]') {
+        return { hasDimensions: false, pricingType: 'normal', dimensions: [], staticDimensions: [] };
+      }
+
+      try {
+        const parsed = JSON.parse(dimensionsString);
+        
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          return { hasDimensions: false, pricingType: 'normal', dimensions: [], staticDimensions: [] };
+        }
+
+        // Check if dynamic (single entry with "1*1*1" key)
+        if (parsed.length === 1) {
+          const firstKey = Object.keys(parsed[0])[0];
+          if (firstKey === "1*1*1") {
+            const price = parseFloat(parsed[0][firstKey]);
+            return {
+              hasDimensions: true,
+              pricingType: 'dynamic',
+              dimensions: [{
+                length: 1,
+                breadth: 1,
+                height: 1,
+                price: price
+              }],
+              staticDimensions: []
+            };
+          }
+        }
+
+        // Otherwise it's static
+        const staticDimensions = [];
+        for (const dimObj of parsed) {
+          const dimKey = Object.keys(dimObj)[0];
+          const dimValue = dimObj[dimKey];
+          
+          // Parse dimension key (e.g., "12*12*12")
+          const parts = dimKey.split('*').map(p => parseFloat(p.trim()));
+          
+          if (parts.length < 2) {
+            throw new Error(`Invalid dimension format: ${dimKey}`);
+          }
+
+          const length = parts[0] || null;
+          const breadth = parts[1] || null;
+          const height = parts[2] || null;
+
+          // dimValue should be an object with price, stock, bulkPricing
+          let price, stock, bulkPricing = [];
+          
+          if (typeof dimValue === 'object' && dimValue !== null) {
+            price = parseFloat(dimValue.price) || null;
+            stock = parseInt(dimValue.stock) || null;
+            bulkPricing = dimValue.bulkPricing || [];
+          } else {
+            // If just a number/string, treat as price only
+            price = parseFloat(dimValue) || null;
+            stock = null;
+            bulkPricing = [];
+          }
+
+          staticDimensions.push({
+            length: length,
+            breadth: breadth,
+            height: height,
+            price: price,
+            stock: stock,
+            bulkPricing: bulkPricing
+          });
+        }
+
+        return {
+          hasDimensions: true,
+          pricingType: 'static',
+          dimensions: [],
+          staticDimensions: staticDimensions
+        };
+
+      } catch (error) {
+        console.error('Error parsing dimensions:', error);
+        throw new Error(`Invalid dimensions format: ${error.message}`);
+      }
+    };
+
+    results.totalProcessed = Object.keys(productGroups).length;
+    console.log(`Processing ${results.totalProcessed} products...`);
+
     // Helper function to find image in extracted folder
     const findImageInTemp = (filename) => {
       if (!filename || filename.trim() === '') return null;
@@ -630,6 +750,9 @@ for (const productNameLower of existingProductsMap.keys()) {
         if (!hasVariants) {
           console.log('Processing simple product...');
           
+          // Parse dimensions first
+          const dimensionData = parseDimensions(firstRow.dimensions);
+          
           // Handle simple product
           let mainImageUrl = '';
           if (firstRow.mainImage) {
@@ -679,9 +802,27 @@ for (const productNameLower of existingProductsMap.keys()) {
 
           productData.image = mainImageUrl;
           productData.additionalImages = additionalImageUrls;
-          productData.price = parseFloat(firstRow.price) || 0;
-          productData.stock = parseInt(firstRow.stock) || 0;
-          productData.bulkPricing = bulkPricing;
+          
+          // If dimensions are present, don't set price, stock, bulkPricing at product level
+          if (dimensionData.hasDimensions) {
+            console.log(`Product has dimension-based pricing (${dimensionData.pricingType})`);
+            productData.price = null;
+            productData.stock = dimensionData.pricingType === 'dynamic' ? (parseInt(firstRow.stock) || 0) : null;
+            productData.bulkPricing = dimensionData.pricingType === 'dynamic' ? bulkPricing : [];
+            productData.hasDimensions = true;
+            productData.pricingType = dimensionData.pricingType;
+            productData.dimensions = dimensionData.dimensions;
+            productData.staticDimensions = dimensionData.staticDimensions;
+          } else {
+            productData.price = parseFloat(firstRow.price) || 0;
+            productData.stock = parseInt(firstRow.stock) || 0;
+            productData.bulkPricing = bulkPricing;
+            productData.hasDimensions = false;
+            productData.pricingType = 'normal';
+            productData.dimensions = [];
+            productData.staticDimensions = [];
+          }
+          
           productData.variants = [];
 
           if (firstRow.discountStartDate) {
@@ -700,8 +841,13 @@ for (const productNameLower of existingProductsMap.keys()) {
             productData.discountBulkPricing = discountBulkPricing;
           }
 
-        } else {
+       } else {
           console.log('Processing product with variants...');
+          
+          // Check if dimensions column has data for variant products
+          if (firstRow.dimensions && firstRow.dimensions.trim() !== '' && firstRow.dimensions.trim() !== '[]') {
+            throw new Error('Products with variants cannot have dimension-based pricing. Please remove dimensions column data for variant products.');
+          }
           
           // Handle product with variants
           productData.image = '';
@@ -709,6 +855,10 @@ for (const productNameLower of existingProductsMap.keys()) {
           productData.bulkPricing = [];
           productData.stock = null;
           productData.price = null;
+          productData.hasDimensions = false;
+          productData.pricingType = 'normal';
+          productData.dimensions = [];
+          productData.staticDimensions = [];
 
           const variantGroups = {};
           for (const row of productRows) {
@@ -1017,6 +1167,92 @@ const bulkOverrideProducts = async (req, res) => {
       failCount: 0
     };
 
+    // Helper function to parse dimensions
+    const parseDimensions = (dimensionsString) => {
+      if (!dimensionsString || dimensionsString.trim() === '' || dimensionsString.trim() === '[]') {
+        return { hasDimensions: false, pricingType: 'normal', dimensions: [], staticDimensions: [] };
+      }
+
+      try {
+        const parsed = JSON.parse(dimensionsString);
+        
+        if (!Array.isArray(parsed) || parsed.length === 0) {
+          return { hasDimensions: false, pricingType: 'normal', dimensions: [], staticDimensions: [] };
+        }
+
+        // Check if dynamic (single entry with "1*1*1" key)
+        if (parsed.length === 1) {
+          const firstKey = Object.keys(parsed[0])[0];
+          if (firstKey === "1*1*1") {
+            const price = parseFloat(parsed[0][firstKey]);
+            return {
+              hasDimensions: true,
+              pricingType: 'dynamic',
+              dimensions: [{
+                length: 1,
+                breadth: 1,
+                height: 1,
+                price: price
+              }],
+              staticDimensions: []
+            };
+          }
+        }
+
+        // Otherwise it's static
+        const staticDimensions = [];
+        for (const dimObj of parsed) {
+          const dimKey = Object.keys(dimObj)[0];
+          const dimValue = dimObj[dimKey];
+          
+          // Parse dimension key (e.g., "12*12*12")
+          const parts = dimKey.split('*').map(p => parseFloat(p.trim()));
+          
+          if (parts.length < 2) {
+            throw new Error(`Invalid dimension format: ${dimKey}`);
+          }
+
+          const length = parts[0] || null;
+          const breadth = parts[1] || null;
+          const height = parts[2] || null;
+
+          // dimValue should be an object with price, stock, bulkPricing
+          let price, stock, bulkPricing = [];
+          
+          if (typeof dimValue === 'object' && dimValue !== null) {
+            price = parseFloat(dimValue.price) || null;
+            stock = parseInt(dimValue.stock) || null;
+            bulkPricing = dimValue.bulkPricing || [];
+          } else {
+            // If just a number/string, treat as price only
+            price = parseFloat(dimValue) || null;
+            stock = null;
+            bulkPricing = [];
+          }
+
+          staticDimensions.push({
+            length: length,
+            breadth: breadth,
+            height: height,
+            price: price,
+            stock: stock,
+            bulkPricing: bulkPricing
+          });
+        }
+
+        return {
+          hasDimensions: true,
+          pricingType: 'static',
+          dimensions: [],
+          staticDimensions: staticDimensions
+        };
+
+      } catch (error) {
+        console.error('Error parsing dimensions:', error);
+        throw new Error(`Invalid dimensions format: ${error.message}`);
+      }
+    };
+
     // Helper function to find images
     const findImageInTemp = (filename) => {
       if (!filename || filename.trim() === '') return null;
@@ -1148,8 +1384,12 @@ const bulkOverrideProducts = async (req, res) => {
           hasVariants: hasVariants,
         };
 
-        if (!hasVariants) {
+       if (!hasVariants) {
           // Simple product
+          
+          // Parse dimensions first
+          const dimensionData = parseDimensions(firstRow.dimensions);
+          
           let mainImageUrl = '';
           if (firstRow.mainImage) {
             const imagePath = findImageInTemp(firstRow.mainImage);
@@ -1195,9 +1435,28 @@ if (firstRow.additionalImages && firstRow.additionalImages.trim() !== '') {
 
           productData.image = mainImageUrl;
           productData.additionalImages = additionalImageUrls;
-          productData.price = parseFloat(firstRow.price) || 0;
-          productData.stock = parseInt(firstRow.stock) || 0;
-          productData.bulkPricing = bulkPricing;
+          
+          // If dimensions are present, don't set price, stock, bulkPricing at product level
+          if (dimensionData.hasDimensions) {
+            console.log(`Product has dimension-based pricing (${dimensionData.pricingType})`);
+            productData.price = null;
+            productData.stock = dimensionData.pricingType === 'dynamic' ? (parseInt(firstRow.stock) || 0) : null;
+            productData.bulkPricing = dimensionData.pricingType === 'dynamic' ? bulkPricing : [];
+            productData.hasDimensions = true;
+            productData.pricingType = dimensionData.pricingType;
+            productData.dimensions = dimensionData.dimensions;
+            productData.staticDimensions = dimensionData.staticDimensions;
+          } else {
+            // Normal product without dimensions - completely override
+            productData.price = parseFloat(firstRow.price) || 0;
+            productData.stock = parseInt(firstRow.stock) || 0;
+            productData.bulkPricing = bulkPricing;
+            productData.hasDimensions = false;
+            productData.pricingType = 'normal';
+            productData.dimensions = [];
+            productData.staticDimensions = [];
+          }
+          
           productData.variants = [];
 
           if (firstRow.discountStartDate) {
@@ -1216,13 +1475,23 @@ if (firstRow.additionalImages && firstRow.additionalImages.trim() !== '') {
             productData.discountBulkPricing = discountBulkPricing;
           }
 
-        } else {
+       } else {
           // Product with variants - same logic as bulkUploadProducts
+          
+          // Check if dimensions column has data for variant products
+          if (firstRow.dimensions && firstRow.dimensions.trim() !== '' && firstRow.dimensions.trim() !== '[]') {
+            throw new Error('Products with variants cannot have dimension-based pricing. Please remove dimensions column data for variant products.');
+          }
+          
           productData.image = '';
           productData.additionalImages = [];
           productData.bulkPricing = [];
           productData.stock = null;
           productData.price = null;
+          productData.hasDimensions = false;
+          productData.pricingType = 'normal';
+          productData.dimensions = [];
+          productData.staticDimensions = [];
 
           const variantGroups = {};
           for (const row of productRows) {
@@ -1495,7 +1764,7 @@ const fetchProducts = async (req, res) => {
     if (isAdminRequest) {
       const products = await Product.find({})               // <-- NO isActive filter
         .select(
-          'name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing'
+          'name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing hasDimensions pricingType dimensions staticDimensions'
         )
         .populate('mainCategory', 'categoryName isActive')
         .populate('subCategory', 'categoryName isActive')
@@ -1554,7 +1823,7 @@ if (categoryId) {
 
 const products = await Product.find(filter)
   .select(
-    'name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing'
+    'name mainCategory subCategory categoryPath price stock discountPrice discountStartDate discountEndDate bulkPricing discountBulkPricing image hasVariants createdAt lastRestockedAt isActive variants.colorName variants.variantImage variants.isActive variants.commonPrice variants.commonStock variants.discountCommonPrice variants.discountStartDate variants.discountEndDate variants.bulkPricing variants.discountBulkPricing variants._id variants.moreDetails._id variants.moreDetails.price variants.moreDetails.stock variants.moreDetails.size variants.moreDetails.isActive variants.moreDetails.discountPrice variants.moreDetails.discountStartDate variants.moreDetails.discountEndDate variants.moreDetails.bulkPricingCombinations variants.moreDetails.discountBulkPricing hasDimensions pricingType dimensions staticDimensions'
   )
   .populate('mainCategory', 'categoryName isActive')
   .populate('subCategory', 'categoryName isActive')
@@ -2441,6 +2710,17 @@ const editProduct = async (req, res) => {
     }
 
     const imagesToDelete = [];
+    
+    // Store previous values for potential restoration
+    const previousValues = {
+      price: existingProduct.price,
+      stock: existingProduct.stock,
+      bulkPricing: existingProduct.bulkPricing,
+      hasDimensions: existingProduct.hasDimensions,
+      pricingType: existingProduct.pricingType,
+      dimensions: existingProduct.dimensions,
+      staticDimensions: existingProduct.staticDimensions
+    };
 
     // Organize files by fieldname
     const filesByField = {};
@@ -2545,8 +2825,54 @@ const editProduct = async (req, res) => {
             delete variant.moreDetails[mdIndex].existingAdditionalImages;
           }
         }
-      }
+     }
     }
+
+    // Handle dimension-based pricing
+    if (productData.hasDimensionPricing === "yes" && productData.dimensionPricingData) {
+      const dimensionData = productData.dimensionPricingData;
+      const pricingType = dimensionData[0]?.pricingType || 'dynamic';
+      
+      if (pricingType === 'dynamic') {
+        productData.hasDimensions = true;
+        productData.pricingType = 'dynamic';
+        productData.dimensions = dimensionData.map(d => ({
+          length: Number(d.length) || null,
+          breadth: Number(d.breadth) || null,
+          height: d.height ? Number(d.height) : null,
+          price: Number(d.price) || null
+        }));
+        productData.staticDimensions = [];
+        productData.price = null;
+        // Keep stock and bulkPricing from productData (already set)
+      } else {
+        // Static
+        productData.hasDimensions = true;
+        productData.pricingType = 'static';
+        productData.staticDimensions = dimensionData.map(d => ({
+          length: Number(d.length) || null,
+          breadth: Number(d.breadth) || null,
+          height: d.height ? Number(d.height) : null,
+          price: Number(d.price) || null,
+          stock: Number(d.stock) || null,
+          bulkPricing: d.bulkPricing || []
+        }));
+        productData.dimensions = [];
+        productData.price = null;
+        productData.stock = null;
+        productData.bulkPricing = [];
+      }
+    } else {
+      // Normal product without dimensions
+      productData.hasDimensions = false;
+      productData.pricingType = 'normal';
+      productData.dimensions = [];
+      productData.staticDimensions = [];
+    }
+    
+    // Clean up temporary fields
+    delete productData.hasDimensionPricing;
+    delete productData.dimensionPricingData;
 
     // Update product
     const updatedProduct = await Product.findByIdAndUpdate(
@@ -2756,6 +3082,48 @@ const bulkEditProducts = async (req, res) => {
 
             finalProductData.variants.push(variantObj);
           }
+        }
+
+        // Handle dimension-based pricing
+        if (productData.hasDimensionPricing === "yes" && productData.dimensionPricingData) {
+          const dimensionData = productData.dimensionPricingData;
+          const pricingType = dimensionData[0]?.pricingType || 'dynamic';
+          
+          if (pricingType === 'dynamic') {
+            finalProductData.hasDimensions = true;
+            finalProductData.pricingType = 'dynamic';
+            finalProductData.dimensions = dimensionData.map(d => ({
+              length: Number(d.length) || null,
+              breadth: Number(d.breadth) || null,
+              height: d.height ? Number(d.height) : null,
+              price: Number(d.price) || null
+            }));
+            finalProductData.staticDimensions = [];
+            finalProductData.price = null;
+            // Keep stock and bulkPricing from finalProductData
+          } else {
+            // Static
+            finalProductData.hasDimensions = true;
+            finalProductData.pricingType = 'static';
+            finalProductData.staticDimensions = dimensionData.map(d => ({
+              length: Number(d.length) || null,
+              breadth: Number(d.breadth) || null,
+              height: d.height ? Number(d.height) : null,
+              price: Number(d.price) || null,
+              stock: Number(d.stock) || null,
+              bulkPricing: d.bulkPricing || []
+            }));
+            finalProductData.dimensions = [];
+            finalProductData.price = null;
+            finalProductData.stock = null;
+            finalProductData.bulkPricing = [];
+          }
+        } else {
+          // Normal product without dimensions
+          finalProductData.hasDimensions = false;
+          finalProductData.pricingType = 'normal';
+          finalProductData.dimensions = [];
+          finalProductData.staticDimensions = [];
         }
 
         // Update product in database

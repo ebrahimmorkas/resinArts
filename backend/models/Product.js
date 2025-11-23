@@ -83,6 +83,26 @@ const productSchema = mongoose.Schema(
      isActive: { type: Boolean, default: true },
     deactivatedBy: { type: String, enum: ['manual', 'category', null], default: null },
     deactivatedDueToCategory: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', default: null },
+    hasDimensions: {type: Boolean, default: false},
+    pricingType: {
+      type: 'String',
+      enum: ['static', 'dynamic', 'normal'],
+      default: 'normal',
+    },
+    dimensions: [{
+      length: { type: Number, required: false },
+      breadth: { type: Number, required: false },
+      height: { type: Number, required: false },
+      price: { type: Number, required: false }
+    }],
+    staticDimensions: [{
+      length: { type: Number, required: false },
+      breadth: { type: Number, required: false },
+      height: { type: Number, required: false },
+      price: { type: Number, required: false },
+      stock: { type: Number, required: false },
+      bulkPricing: [bulkPricingSchema]
+    }],
   },
   {
     timestamps: true,

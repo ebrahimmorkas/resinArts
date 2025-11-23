@@ -220,22 +220,30 @@ const safeNumber = (value, fallback = 0) => {
 // Simple Excel export without external library
 const exportToExcel = (data) => {
   try {
-    const headers = ['Sr No.', 'Order ID', 'Ordered At', 'Products', 'Quantity', 'Amount', 'Status', 'Payment', 'Shipping Address'];
+    const headers = ['Sr No.', 'Order ID', 'Ordered At', 'Products', 'Dimensions', 'Quantity', 'Amount', 'Status', 'Payment', 'Shipping Address'];
     
     let csvContent = headers.join(',') + '\n';
     
     data.forEach((order, index) => {
-      const row = [
-        index + 1,
-        `"${order.id}"`,
-        `"${formatDate(order.orderedAt)}"`,
-        `"${order.items.map(item => item.name).join('; ')}"`,
-        order.items.reduce((total, item) => total + safeNumber(item.quantity), 0),
-        `"$${safeNumber(order.total).toFixed(2)}"`,
-        `"${statusConfig[order.status]?.label || order.status}"`,
-        `"${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}"`,
-        `"${order.shippingAddress.replace(/\n/g, ', ').replace(/"/g, '""')}"`
-      ];
+      const dimensionsText = order.items.map(item => {
+  if (item.customDimensions) {
+    return `${item.customDimensions.length}x${item.customDimensions.breadth}x${item.customDimensions.height} ${item.customDimensions.unit}`;
+  }
+  return 'Standard';
+}).join('; ');
+
+const row = [
+  index + 1,
+  `"${order.id}"`,
+  `"${formatDate(order.orderedAt)}"`,
+  `"${order.items.map(item => item.name).join('; ')}"`,
+  `"${dimensionsText}"`,
+  order.items.reduce((total, item) => total + safeNumber(item.quantity), 0),
+  `"$${safeNumber(order.total).toFixed(2)}"`,
+  `"${statusConfig[order.status]?.label || order.status}"`,
+  `"${paymentStatusConfig[order.paymentStatus]?.label || order.paymentStatus}"`,
+  `"${order.shippingAddress.replace(/\n/g, ', ').replace(/"/g, '""')}"`
+];
       csvContent += row.join(',') + '\n';
     });
 
@@ -359,12 +367,13 @@ useEffect(() => {
   date: order.createdAt ? new Date(order.createdAt).toISOString().split("T")[0] : new Date().toISOString().split("T")[0],
       orderedAt: order.createdAt,
       items: (order.orderedProducts || []).map((product) => ({
-        name: (product.product_name || 'Unknown Product') + (product.variant_name ? ` - ${product.variant_name}` : ""),
-        quantity: safeNumber(product.quantity, 1),
-        price: safeNumber(product.price, 0),
-        image: product.image_url || '',
-        size: product.size || null,
-      })),
+  name: (product.product_name || 'Unknown Product') + (product.variant_name ? ` - ${product.variant_name}` : ""),
+  quantity: safeNumber(product.quantity, 1),
+  price: safeNumber(product.price, 0),
+  image: product.image_url || '',
+  size: product.size || null,
+  customDimensions: product.customDimensions || null,
+})),
       itemsTotal: safeNumber(order.price, 0),
       shippingPrice: safeNumber(order.shipping_price, 0),
       total: safeNumber(order.total_price, 0),
@@ -486,143 +495,151 @@ useEffect(() => {
     exportToExcel(filteredOrders);
   };
 
- const downloadInvoice = async (order, e) => {
+const downloadInvoice = async (order, e) => {
   e.stopPropagation();
   try {
     const doc = new jsPDF();
-    
-    // Center "INVOICE" text
-    doc.setFontSize(18);
-    doc.setFont(undefined, "bold");
-    const invoiceText = "INVOICE";
-    const invoiceTextWidth = doc.getTextWidth(invoiceText);
     const pageWidth = doc.internal.pageSize.getWidth();
-    doc.text(invoiceText, (pageWidth - invoiceTextWidth) / 2, 20);
-    
-    // Logo and Company Name centered below INVOICE
-    let logoY = 30;
-    const logoSize = 25;
-    const centerX = pageWidth / 2;
-    
-    // Load company logo if available
-    if (companySettings?.companyLogo) {
-      try {
-        const logoImg = await new Promise((resolve, reject) => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    let yPosition = 20; // Starting Y
+
+    // === FIRST PAGE HEADER (only once) ===
+    const addFirstPageHeader = () => {
+      // INVOICE Title
+      doc.setFontSize(18);
+      doc.setFont("helvetica", "bold");
+      const title = "INVOICE";
+      doc.text(title, pageWidth / 2, yPosition, { align: "center" });
+      yPosition += 15;
+
+      let logoY = yPosition;
+      const logoSize = 25;
+
+      // Logo
+      if (companySettings?.companyLogo) {
+        try {
           const img = new Image();
           img.crossOrigin = "anonymous";
-          img.onload = function () {
-            resolve(this);
-          };
-          img.onerror = function () {
-            reject(new Error('Logo load failed'));
-          };
           img.src = companySettings.companyLogo;
-        });
-        
-        // Add logo centered
-        doc.addImage(logoImg, "JPEG", centerX - logoSize / 2, logoY, logoSize, logoSize);
-        logoY += logoSize + 5;
-      } catch (error) {
-        console.log("Could not add logo to PDF");
+          img.onload = () => {
+            doc.addImage(img, "JPEG", pageWidth / 2 - logoSize / 2, logoY, logoSize, logoSize);
+          };
+        } catch (e) { /* ignore */ }
       }
-    }
-    
-    // Company name centered below logo
-    doc.setFontSize(24);
-    doc.setFont(undefined, "bold");
-    const companyName = loadingSettings ? "Loading..." : companySettings?.companyName || "OULA MARKET";
-    const companyNameWidth = doc.getTextWidth(companyName);
-    doc.text(companyName, (pageWidth - companyNameWidth) / 2, logoY + 5);
-    
-    // Contact information (left aligned)
-    let contactY = logoY + 15;
-    doc.setFontSize(10);
-    doc.setFont(undefined, "normal");
-    doc.text(`Email: ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, contactY);
-    doc.text(`Phone: ${companySettings?.adminPhoneNumber || "+1 (555) 123-4567"}`, 20, contactY + 6);
-    doc.text(`WhatsApp: ${companySettings?.adminWhatsappNumber || "+1 (555) 987-6543"}`, 20, contactY + 12);
-    
-    const addressLines = doc.splitTextToSize(
-      `Address: ${companySettings?.adminAddress || "123 Business Ave"}, ${companySettings?.adminCity || "Commerce City"}, ${companySettings?.adminState || "CC"} ${companySettings?.adminPincode || "12345"}`,
-      170
-    );
-    let addressY = contactY + 18;
-    addressLines.forEach((line) => {
-      doc.text(line, 20, addressY);
-      addressY += 6;
-    });
-    
-    // Invoice details (right aligned)
-    doc.setFontSize(9);
-    doc.setFont(undefined, "normal");
-    doc.text(`Invoice #: ${order.id}`, 120, contactY);
-    doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, contactY + 6);
-    doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, contactY + 12);
-    
-    // Bill To section (Delivery Address)
-    const billToY = addressY + 10;
+      yPosition += logoSize + 10;
+
+      // Company Name
+      doc.setFontSize(24);
+      doc.setFont("helvetica", "bold");
+      const companyName = companySettings?.companyName || "OULA MARKET";
+      doc.text(companyName, pageWidth / 2, yPosition, { align: "center" });
+      yPosition += 20;
+
+      // Contact Info (left)
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Email: ${companySettings?.adminEmail || "support@oulamarket.com"}`, 20, yPosition);
+      doc.text(`Phone: ${companySettings?.adminPhoneNumber || "+91 XXXXX XXXXX"}`, 20, yPosition + 6);
+      doc.text(`WhatsApp: ${companySettings?.adminWhatsappNumber || "+91 XXXXX XXXXX"}`, 20, yPosition + 12);
+
+      const addr = `Address: ${companySettings?.adminAddress || "123 Business Ave"}, ${companySettings?.adminCity || "City"}, ${companySettings?.adminState || "State"} ${companySettings?.adminPincode || "000000"}`;
+      const addrLines = doc.splitTextToSize(addr, 170);
+      addrLines.forEach((line, i) => doc.text(line, 20, yPosition + 18 + i * 6));
+
+      // Invoice Details (right)
+      doc.setFontSize(9);
+      doc.text(`Invoice #: ${order.id}`, 120, yPosition);
+      doc.text(`Date: ${formatDate(order.orderedAt)}`, 120, yPosition + 6);
+      doc.text(`Status: ${statusConfig[order.status]?.label || order.status}`, 120, yPosition + 12);
+
+      yPosition += 40;
+    };
+
+    // === CHECK IF NEW PAGE NEEDED ===
+    const checkPageBreak = (requiredSpace = 50) => {
+      if (yPosition + requiredSpace > pageHeight - 30) {
+        doc.addPage();
+        yPosition = 20; // Reset Y for new page
+        // Only table header repeats on new pages
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text("Image", 20, yPosition);
+        doc.text("Item", 40, yPosition);
+        doc.text("Dimensions", 100, yPosition);
+        doc.text("Qty", 135, yPosition);
+        doc.text("Price", 155, yPosition);
+        doc.text("Total", 175, yPosition);
+        doc.line(20, yPosition + 3, 190, yPosition + 3);
+        yPosition += 12;
+      }
+    };
+
+    // First page header
+    addFirstPageHeader();
+
+    // Bill To
     doc.setFontSize(12);
-    doc.setFont(undefined, "bold");
-    doc.text("DELIVER TO:", 20, billToY);
+    doc.setFont("helvetica", "bold");
+    doc.text("DELIVER TO:", 20, yPosition);
+    yPosition += 10;
     doc.setFontSize(10);
-    doc.setFont(undefined, "normal");
-    // Split address properly for better formatting
-    const addressLinesBill = doc.splitTextToSize(order.shippingAddress, 170);
-    let addressYBill = billToY + 10;
-    addressLinesBill.forEach((line) => {
-      doc.text(line, 20, addressYBill);
-      addressYBill += 5;
+    doc.setFont("helvetica", "normal");
+    const shippingLines = doc.splitTextToSize(order.shippingAddress, 170);
+    shippingLines.forEach(line => {
+      checkPageBreak(8);
+      doc.text(line, 20, yPosition);
+      yPosition += 6;
     });
-    
-    // Items section
-    const itemsStartY = addressYBill + 10;
+    yPosition += 15;
+
+    // Items Header (only once, unless page break)
     doc.setFontSize(12);
-    doc.setFont(undefined, "bold");
-    doc.text("ITEMS:", 20, itemsStartY);
-    const tableStartY = itemsStartY + 10;
+    doc.setFont("helvetica", "bold");
+    doc.text("ITEMS:", 20, yPosition);
+    yPosition += 10;
+
     doc.setFontSize(9);
-    doc.setFont(undefined, "bold");
-    doc.text("Image", 20, tableStartY);
-    doc.text("Item", 40, tableStartY);
-    doc.text("Qty", 120, tableStartY);
-    doc.text("Price", 140, tableStartY);
-    doc.text("Total", 170, tableStartY);
-    doc.line(20, tableStartY + 3, 190, tableStartY + 3);
-    let yPosition = tableStartY + 10;
-    doc.setFont(undefined, "normal");
-    
-    // Load all images first
-    const imagePromises = order.items.map(item => {
-      return new Promise((resolve) => {
-        if (item.image && item.image !== "/placeholder.svg") {
-          const img = new Image();
-          img.crossOrigin = "anonymous";
-          img.onload = function () {
-            resolve({ success: true, img: this });
-          };
-          img.onerror = function () {
+    doc.setFont("helvetica", "bold");
+    doc.text("Image", 20, yPosition);
+    doc.text("Item", 40, yPosition);
+    doc.text("Dimensions", 100, yPosition);
+    doc.text("Qty", 135, yPosition);
+    doc.text("Price", 155, yPosition);
+    doc.text("Total", 175, yPosition);
+    doc.line(20, yPosition + 3, 190, yPosition + 3);
+    yPosition += 12;
+
+    // Pre-load images
+    const loadedImages = await Promise.all(
+      order.items.map(item => {
+        return new Promise(resolve => {
+          if (item.image && item.image !== "/placeholder.svg") {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.onload = () => resolve({ success: true, img });
+            img.onerror = () => resolve({ success: false });
+            img.src = item.image;
+          } else {
             resolve({ success: false });
-          };
-          img.src = item.image;
-        } else {
-          resolve({ success: false });
-        }
-      });
-    });
+          }
+        });
+      })
+    );
 
-    const loadedImages = await Promise.all(imagePromises);
-
-    // Now add items with loaded images
+    // Add items
     for (let i = 0; i < order.items.length; i++) {
       const item = order.items[i];
-      const imageData = loadedImages[i];
-      const itemTotal = safeNumber(item.price) * safeNumber(item.quantity);
-      
-      if (imageData.success) {
+      const imgData = loadedImages[i];
+      const total = safeNumber(item.price) * safeNumber(item.quantity);
+
+      checkPageBreak(20);
+
+      // Image
+      if (imgData.success) {
         try {
-          doc.addImage(imageData.img, "JPEG", 20, yPosition - 5, 15, 10);
-        } catch (error) {
-          console.log("Could not add image to PDF");
+          doc.addImage(imgData.img, "JPEG", 20, yPosition - 5, 15, 10);
+        } catch (e) {
           doc.setFillColor(240, 240, 240);
           doc.rect(20, yPosition - 5, 15, 10, "F");
           doc.setFontSize(6);
@@ -636,39 +653,54 @@ useEffect(() => {
         doc.text("IMG", 25, yPosition);
         doc.setFontSize(9);
       }
-      
-      const itemName = item.name.length > 35 ? item.name.substring(0, 35) + "..." : item.name;
-      doc.text(itemName, 40, yPosition);
-      doc.text(safeNumber(item.quantity).toString(), 120, yPosition);
-      doc.text(`$${safeNumber(item.price).toFixed(2)}`, 140, yPosition);
-      doc.text(`$${itemTotal.toFixed(2)}`, 170, yPosition);
+
+      const name = item.name.length > 25 ? item.name.substring(0, 25) + "..." : item.name;
+      doc.text(name, 40, yPosition);
+
+      if (item.customDimensions) {
+        const dim = `${item.customDimensions.length}x${item.customDimensions.breadth}x${item.customDimensions.height} ${item.customDimensions.unit}`;
+        doc.setFontSize(7);
+        doc.text(dim, 100, yPosition);
+        doc.setFontSize(9);
+      } else {
+        doc.text("Standard", 100, yPosition);
+      }
+
+      doc.text(String(safeNumber(item.quantity)), 135, yPosition);
+      doc.text(`$${safeNumber(item.price).toFixed(2)}`, 155, yPosition);
+      doc.text(`$${total.toFixed(2)}`, 175, yPosition);
+
       yPosition += 15;
     }
-    
+
+    // Final Totals
+    checkPageBreak(60);
     yPosition += 5;
     doc.line(20, yPosition, 190, yPosition);
     yPosition += 10;
-    doc.setFont(undefined, "normal");
-    doc.text(`Items Subtotal:`, 120, yPosition);
+
+    doc.setFont("helvetica", "normal");
+    doc.text("Items Subtotal:", 120, yPosition);
     doc.text(`$${safeNumber(order.itemsTotal).toFixed(2)}`, 170, yPosition);
     yPosition += 8;
-    doc.text(`Shipping:`, 120, yPosition);
+    doc.text("Shipping:", 120, yPosition);
     doc.text(`$${safeNumber(order.shippingPrice).toFixed(2)}`, 170, yPosition);
     yPosition += 8;
-    doc.setFont(undefined, "bold");
+    doc.setFont("helvetica", "bold");
     doc.setFontSize(12);
-    doc.text(`TOTAL:`, 120, yPosition);
+    doc.text("TOTAL:", 120, yPosition);
     doc.text(`$${safeNumber(order.total).toFixed(2)}`, 170, yPosition);
+
     yPosition += 20;
     doc.setFontSize(8);
-    doc.setFont(undefined, "normal");
+    doc.setFont("helvetica", "normal");
     doc.text("Thank you for your business!", 20, yPosition);
-    doc.text(`For support, contact us at ${companySettings?.adminEmail || "Email Address not disclosed"}`, 20, yPosition + 5);
-    const filename = `invoice-${order.id.substring(0, 10)}.pdf`;
-    doc.save(filename);
+    doc.text(`For support, contact us at ${companySettings?.adminEmail || "Email not disclosed"}`, 20, yPosition + 5);
+
+    doc.save(`invoice-${order.id.substring(0, 10)}.pdf`);
   } catch (error) {
-    console.error("Error generating invoice:", error);
-    alert('Error generating invoice. Please try again.');
+    console.error("Invoice error:", error);
+    alert("Failed to generate invoice");
   }
 };
 
@@ -888,12 +920,17 @@ const handleSearchKeyPress = (e) => {
                       }}
                     />
                     <div className="flex-1">
-                      <h4 className="font-medium -800 dark:text-gray-100">{item.name}</h4>
-                      <p className="text-sm text-gray-600 dark:text-gray-400">
-                        Quantity: {safeNumber(item.quantity)}
-                        {item.size && ` • Size: ${item.size}`}
-                      </p>
-                    </div>
+  <h4 className="font-medium text-gray-800 dark:text-gray-100">{item.name}</h4>
+  <p className="text-sm text-gray-600 dark:text-gray-400">
+    Quantity: {safeNumber(item.quantity)}
+    {item.size && ` • Size: ${item.size}`}
+  </p>
+  {item.customDimensions && (
+    <p className="text-sm text-blue-600 dark:text-blue-400 mt-1">
+      Custom Dimensions: {item.customDimensions.length} x {item.customDimensions.breadth} x {item.customDimensions.height} {item.customDimensions.unit}
+    </p>
+  )}
+</div>
                     <div className="text-right">
                       <p className="font-semibold">${(safeNumber(item.price) * safeNumber(item.quantity)).toFixed(2)}</p>
                       <p className="text-sm text-gray-600 dark:text-gray-400">${safeNumber(item.price).toFixed(2)} each</p>
@@ -1189,6 +1226,9 @@ const handleSearchKeyPress = (e) => {
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '250px' }}>
                       Products
                     </th>
+                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '150px' }}>
+  Dimensions
+</th>
                     <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700" style={{ minWidth: '100px' }}>
                       Quantity
                     </th>
@@ -1218,12 +1258,30 @@ const handleSearchKeyPress = (e) => {
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '140px' }}>
                         {formatDate(order.orderedAt)}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '250px' }}>
-                        <div className="truncate" title={order.items.map(item => item.name).join(', ')}>
-                          {order.items.length > 0 ? order.items[0].name : 'No items'}
-                          {order.items.length > 1 && ` +${order.items.length - 1} more`}
-                        </div>
-                      </td>
+                      <td className="px-6 py-4 text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '250px' }}>
+  <div className="truncate" title={order.items.map(item => item.name).join(', ')}>
+    {order.items.length > 0 ? order.items[0].name : 'No items'}
+    {order.items.length > 1 && ` +${order.items.length - 1} more`}
+  </div>
+</td>
+<td className="px-6 py-4 text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '150px' }}>
+  {order.items.some(item => item.customDimensions) ? (
+    <div className="text-xs">
+      {order.items[0].customDimensions ? (
+        <>
+          {order.items[0].customDimensions.length} x {order.items[0].customDimensions.breadth} x {order.items[0].customDimensions.height} {order.items[0].customDimensions.unit}
+        </>
+      ) : (
+        'Standard'
+      )}
+      {order.items.length > 1 && order.items.filter(item => item.customDimensions).length > 1 && (
+        <div className="text-gray-500">+{order.items.filter(item => item.customDimensions).length - 1} more</div>
+      )}
+    </div>
+  ) : (
+    <span className="text-gray-500">Standard</span>
+  )}
+</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-center text-gray-900 dark:text-gray-100" style={{ minWidth: '100px' }}>
                         {order.items.reduce((total, item) => total + safeNumber(item.quantity), 0)}
                       </td>

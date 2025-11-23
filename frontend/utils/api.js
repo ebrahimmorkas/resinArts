@@ -1,4 +1,5 @@
-const API_BASE_URL = "https://api.mouldmarket.in/api" // Updated to match backend port
+const API_BASE_URL = "http://localhost:3000/api" // Updated to match backend port
+import axios from 'axios';
 
 export const fetchCategories = async () => {
   try {
@@ -25,9 +26,9 @@ export const addProduct = async (formData) => {
     })
 
     if (!response.ok) {
-      const errorData = await response.json()
-      throw new Error(errorData.message || `HTTP error! status: ${response.status}`)
-    }
+  const errorData = await response.json()
+  throw new Error(errorData.error || errorData.message || `HTTP error! status: ${response.status}`)
+}
     return await response.json()
   } catch (error) {
     console.error("Error adding product:", error)
@@ -56,3 +57,9 @@ export const duplicateProducts = async (productIds) => {
     throw error;
   }
 };
+
+// Fetch company settings
+export const fetchCompanySettings = async () => {
+  const response = await axios.get('http://localhost:3000/api/company-settings/', {withCredentials: true})
+  return response.data.data
+}
